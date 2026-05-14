@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "jsx": "react-jsx",
+    "lib": ["ES2023", "DOM"],
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "components": ["src/components"],
+      "components/*": ["src/components/*"],
+      "ui": ["src/components/ui"],
+      "ui/*": ["src/components/ui/*"],
+      "lib": ["src/lib"],
+      "lib/*": ["src/lib/*"],
+      "hooks": ["src/hooks"],
+      "hooks/*": ["src/hooks/*"],
+      "utils": ["src/lib"],
+      "utils/*": ["src/lib/*"]
+    },
+    "erasableSyntaxOnly": false
+  },
+  "include": ["src"]
+}

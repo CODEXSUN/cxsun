@@ -56,7 +56,7 @@ function ask(query) {
 
 // ── Main ─────────────────────────────────────────────
 const env = loadDotEnv()
-const defaults = { server: 6001, frontend: 6000 }
+const defaults = { server: 6001, frontend: 6010 }
 const envKey = APP === 'server' ? 'PORT' : 'VITE_PORT'
 let port = Number(env[envKey]) || defaults[APP]
 
@@ -64,7 +64,7 @@ const launch = (finalPort) => {
   const cwd = resolve(ROOT, `apps/${APP}`)
   const cmd = APP === 'server'
     ? `tsx watch src/main.ts`
-    : `vite`
+    : `vite --host 0.0.0.0`
   const child = spawn(cmd, [], {
     cwd,
     stdio: 'inherit',

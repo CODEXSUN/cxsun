@@ -1,0 +1,14 @@
+{
+  "name": "@cxsun/web-app",
+  "version": "1.0.09",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cxsun/shared": "*",
+    "@cxsun/ui": "*",
+    "lucide-react": "^1.14.0"
+  }
+}

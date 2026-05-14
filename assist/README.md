@@ -1,39 +1,71 @@
 # AI Agent Assist System
 
-**Project version: 1.0.08**
+**Project version:** 1.0.09
 
-A structured rules and context system to guide AI agents working on this project.
+This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
+
+## Current Application Shape
+
+The live workspace is a TypeScript monorepo with npm workspaces:
+
+```
+cxsun/
+├── apps/
+│   ├── server/      # Active Node.js/Fastify backend
+│   ├── frontend/    # Active React + Vite frontend
+│   └── cli/         # Local workflow helpers
+├── packages/
+│   ├── shared/      # Shared types, constants, and pure utilities
+│   ├── web/         # Reserved web package
+│   ├── desktop/     # Reserved Electron package
+│   └── mobile/      # Reserved Expo package
+└── assist/          # AI rules, context, templates, and session tracking
+```
+
+Root scripts use the active apps:
+
+- `npm run dev` starts `apps/server` and `apps/frontend`.
+- `npm run dev:server` starts only the backend.
+- `npm run dev:frontend` starts only the frontend.
+- `npm run check` runs the standard assist verification script.
+- `npm run typecheck:active` typechecks all current workspaces.
+- `npm run build:active` builds the active backend and frontend apps.
 
 ## Directory Structure
 
 ```
 assist/
-├── README.md          # This file — system overview
-├── rules/             # AI behavior & coding rules (loaded by agent)
-├── templates/         # Templates for common tasks (PRs, commits, issues)
+├── README.md          # This file, system overview
+├── rules/             # AI behavior, coding, git, versioning, architecture, verification
+├── templates/         # Templates for commits, pull requests, and server modules
 ├── scripts/           # Helper scripts for agent workflows
-├── context/           # Project context & decision records
+├── context/           # Long-term project context, decisions, and workspace map
 ├── agents/            # Role-specific agent configurations
-├── execution/         # Session planning & task tracking
-└── documentation/     # CHANGELOG and other docs
+├── execution/         # Current session plan and task checklist
+└── documentation/     # Changelog, prompt review, and other docs
 ```
 
-## How It Works
+## Session Startup
 
-1. **`rules/`** — Place `.md` rule files that the AI agent reads at session start. These define constraints, code style, operational guidelines, and architecture (`architecture.md`).
-2. **`templates/`** — Standardized templates for git commits, pull requests, bug reports, etc.
-3. **`scripts/`** — Shell scripts the agent can invoke for repeated tasks (lint, test, build, deploy).
-4. **`context/`** — Long-term project memory: architecture decisions, API contracts, migration notes.
-5. **`agents/`** — Per-role agent personalities (e.g., `architect.md`, `code-reviewer.md`, `tester.md`).
-6. **`execution/`** — Session planning and task tracking with phased, numbered checkboxes. Erased and recreated each session start.
-7. **`documentation/`** — Changelog and project documentation.
+At the start of each work session:
 
-## Usage
+1. Read this file.
+2. Read `assist/rules/`.
+3. Read `assist/context/`.
+4. Refresh `assist/execution/planning.md` and `assist/execution/task.md` for the current session.
+5. Copy the exact user prompt into `assist/documentation/prompt-review.md` before starting the requested work.
 
-Tell your AI agent to load the rules at the start of each session:
+## Key References
+
+- `assist/context/workspaces.md` maps each workspace to its role and commands.
+- `assist/rules/architecture.md` describes current app placement and module boundaries.
+- `assist/rules/verification.md` describes required checks by change type.
+- `assist/templates/server-module.md` gives the preferred backend module layout.
+
+## Verification
+
+Use targeted workspace commands while developing, then run the standard check before finalizing meaningful changes:
 
 ```
-Please read assist/rules/ and assist/context/ before proceeding.
+npm run check
 ```
-
-Or configure your AI tool to automatically include these files.

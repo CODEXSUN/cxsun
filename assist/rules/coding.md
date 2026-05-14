@@ -2,25 +2,25 @@
 
 ## General
 
-- Use existing libraries and utilities — don't add new dependencies unless necessary.
+- Use existing libraries and utilities. Do not add new dependencies unless necessary.
 - Prefer editing existing files over creating new ones.
-- Use TypeScript types properly — avoid `any`.
-- Components should be small and focused (single responsibility).
+- Use TypeScript types properly. Avoid `any`.
+- Components should be small and focused.
 - Use async/await over raw promises.
-- Handle errors gracefully — no silent swallows.
+- Handle errors gracefully. Do not silently swallow failures.
 
 ## File Size
 
 - Source files must not exceed 700 lines.
 - Preferred range is 500 lines or fewer.
-- Files 500–700 lines are allowed only when cohesive and hard to split without harming clarity.
+- Files from 500 to 700 lines are allowed only when cohesive and hard to split without harming clarity.
 - Any file approaching 500 lines must be reviewed for extraction into smaller modules.
 - Files over 700 lines must be split before the change is complete.
 - Generated files, lockfiles, build artifacts, and vendor files are exempt.
 
 ## Complexity
 
-- Keep it simple. Do not overthink or over-engineer solutions.
+- Keep solutions simple and easy to reason about.
 - If a function or module is getting complex, break it down.
 
 ## Readability
@@ -36,40 +36,44 @@
 
 ## Formatting
 
-- Follow the repository's Prettier and ESLint configuration.
+- Follow the repository's Prettier and ESLint configuration when present.
 - Keep related code grouped in a predictable order.
 - Use blank lines to separate logical sections, not to pad files.
 - Prefer readable formatting over compressed cleverness.
 - Do not use dense one-line implementations when they reduce clarity.
 
-## Refactoring Trigger
+## Active Work Areas
 
-When a file reaches 500 lines, future edits must either:
-
-- Keep the file below 700 lines and document why it remains cohesive.
-- Split the file into smaller focused units.
-- Move reusable logic into an appropriate module layer.
+- Put active backend work under `apps/server`.
+- Put active frontend work under `apps/frontend`.
+- Put shared framework-free code under `packages/shared`.
+- Use `apps/cli` for workflow helpers.
+- Treat `packages/web` and `packages/mobile` as placeholders unless the user explicitly asks to activate them.
+- Treat `packages/desktop` as a minimal reserved Electron package until real desktop work is requested.
 
 ## Architecture
 
-- Follow **Modular Monolithic** structure — single deployable unit with clear module boundaries.
-- Follow **Domain-Driven Design (DDD)** — each module represents a bounded context/domain.
-- Follow **Event-Driven** communication between modules — use events, not direct cross-module imports.
+- Follow a modular monolith for the backend: one deployable server app with clear module boundaries.
+- Follow Domain-Driven Design for business modules: each module represents a bounded context/domain.
+- Use events or explicit public contracts for cross-module behavior.
+- Do not import another module's internals directly.
+- Keep `@cxsun/shared` limited to types, constants, and pure utilities.
 
-## Module Structure
+## Backend Module Structure
 
-Each module must follow this shape:
+New or expanded business modules should follow this shape:
 
 ```
-modules/<module-name>/
+apps/server/src/modules/<module-name>/
 ├── domain/           # Entities, value objects, domain events
 ├── application/      # Use cases, application services, DTOs
 ├── infrastructure/   # Repositories, external adapters, database
 │   └── database/
-│       ├── migrations/  # Database migrations
-│       └── seeders/     # Database seeders
+│       ├── migrations/
+│       └── seeders/
 ├── interface/        # Controllers, resolvers, middleware
-└── index.ts          # Public API — only export what others may consume
+├── <module>.module.ts
+└── index.ts          # Public API only
 ```
 
-Modules communicate exclusively through events. No direct imports between modules.
+The existing `health` module has a few flat files from early bootstrap work. Do not use that as the pattern for larger business modules.

@@ -1,79 +1,62 @@
 # cxsun
 
-**Version: 1.0.08**
+**Version:** 1.0.09
 
-React + TypeScript + Vite
+CXSun is a TypeScript monorepo for an ERP + ecommerce + multi-tenant platform. The current working application is a Node.js/Fastify backend paired with a React + Vite frontend using Tailwind CSS and shadcn-style UI primitives.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Workspace Layout
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+cxsun/
+├── apps/
+│   ├── server/      # Active backend API
+│   ├── frontend/    # Active React + Vite frontend
+│   └── cli/         # Local workflow helpers
+├── packages/
+│   ├── shared/      # Shared types, constants, and pure utilities
+│   ├── web/         # Reserved web package
+│   ├── desktop/     # Reserved Electron package
+│   └── mobile/      # Reserved Expo package
+└── assist/          # AI agent rules, context, templates, and session tracking
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Local SQLite storage is initialized at:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+storage/database/cxsun.sqlite
 ```
+
+## Common Commands
+
+```bash
+npm run dev
+npm run dev:server
+npm run dev:frontend
+npm run check
+npm run typecheck:active
+npm run build:active
+```
+
+Default local ports:
+
+- Frontend: `6010`
+- Backend: `6001`
+
+## Active Development
+
+- Backend work belongs in `apps/server`.
+- Frontend work belongs in `apps/frontend`.
+- Shared cross-workspace types, constants, and pure utilities belong in `packages/shared`.
+- Reserved packages should stay typecheckable while minimal.
+- Frontend styles belong under `apps/frontend/src/assets/css`.
+- Backend persistence currently uses Kysely with SQLite.
+
+## AI Assist
+
+Before AI-assisted work, read:
+
+- `assist/README.md`
+- `assist/rules/`
+- `assist/context/`
+
+The assist system documents the current architecture, verification flow, workspace map, and server module template.

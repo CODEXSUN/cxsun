@@ -1,10 +1,13 @@
 # Core Rules
 
 - Read `assist/README.md` first to understand the system.
-- Always confirm before running destructive commands (delete, force push, etc.).
+- Read `assist/rules/` and `assist/context/` before implementation work.
+- Always confirm before running destructive commands such as delete, reset, force push, or killing unknown processes.
 - Do not commit secrets, credentials, or `.env` files.
-- Follow existing code conventions in the project — match style, imports, and patterns.
-- If the project has lint/typecheck commands, run them after making changes.
+- Follow existing project conventions. Match style, imports, file placement, and naming.
+- Use `apps/server` and `apps/frontend` as the active implementation targets unless the user explicitly asks for another workspace.
+- Run targeted lint/typecheck/build commands after making code changes when available.
 - Keep responses concise. Avoid unnecessary explanation unless asked.
-- Only create commits or PRs when explicitly requested.
-- At session start: erase previous committed plans in `assist/execution/`, create a fresh `planning.md` (phases) and `task.md` (numbered checkboxes), then begin coding.
+- Only create commits, tags, branches, or pull requests when explicitly requested.
+- At session start, refresh `assist/execution/planning.md` and `assist/execution/task.md` for the current session.
+- Before starting work on each prompt, copy the exact user message into `assist/documentation/prompt-review.md`.

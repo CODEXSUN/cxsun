@@ -1,0 +1,6 @@
+@layer utilities {
+  .cx-container {
+    width: min(1180px, calc(100% - 32px));
+    margin-inline: auto;
+  }
+}

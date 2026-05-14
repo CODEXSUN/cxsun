@@ -15,6 +15,7 @@ dist-ssr
 .next
 out
 .expo
+storage/
 
 # Editor directories and files
 .vscode/*

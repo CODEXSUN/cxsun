@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { execSync } from 'child_process'
-import { createInterface } from 'readline'
-import { readFileSync, writeFileSync } from 'fs'
+import { execFileSync, execSync } from 'child_process'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { resolve } from 'path'
+import { createInterface } from 'readline'
 
 const ROOT = resolve(import.meta.dirname, '../..')
 const today = () => new Date().toISOString().slice(0, 10)
@@ -11,43 +11,71 @@ const today = () => new Date().toISOString().slice(0, 10)
 function run(cmd, opts = {}) {
   const stdio = opts.silent ? 'pipe' : 'inherit'
   const result = execSync(cmd, {
-    encoding: 'utf8',
     cwd: ROOT,
+    encoding: 'utf8',
     stdio,
     ...opts,
   })
   return result ? result.trim() : ''
 }
 
-// Read all piped stdin upfront when non-interactive
-let _pipedAnswers
+function runGit(args, opts = {}) {
+  const stdio = opts.silent ? 'pipe' : 'inherit'
+  const result = execFileSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio,
+    ...opts,
+  })
+  return result ? result.trim() : ''
+}
+
+let cachedPipedAnswers
+
 async function pipedAnswers() {
-  if (_pipedAnswers) return _pipedAnswers
-  if (process.stdin.isTTY) return (_pipedAnswers = [])
+  if (cachedPipedAnswers) {
+    return cachedPipedAnswers
+  }
+
+  if (process.stdin.isTTY) {
+    cachedPipedAnswers = []
+    return cachedPipedAnswers
+  }
+
   const chunks = []
-  for await (const chunk of process.stdin) chunks.push(chunk)
-  _pipedAnswers = Buffer.concat(chunks).toString().trim().split('\n')
-  return _pipedAnswers
+  for await (const chunk of process.stdin) {
+    chunks.push(chunk)
+  }
+
+  cachedPipedAnswers = Buffer.concat(chunks).toString().trim().split('\n')
+  return cachedPipedAnswers
 }
 
 async function ask(query) {
   process.stdout.write(query)
+
   const answers = await pipedAnswers()
-  if (answers.length > 0) return answers.shift()
-  // Interactive fallback
+  if (answers.length > 0) {
+    return answers.shift()
+  }
+
   const rl = createInterface({ input: process.stdin, output: process.stdout })
-  return new Promise((resolve) => rl.question('', (a) => { rl.close(); resolve(a) }))
+  return new Promise((resolveAnswer) => {
+    rl.question('', (answer) => {
+      rl.close()
+      resolveAnswer(answer)
+    })
+  })
 }
 
-function getCurrentVersion() {
+function readPackageVersion() {
   const pkg = JSON.parse(readFileSync(resolve(ROOT, 'package.json'), 'utf8'))
   return pkg.version
 }
 
 function bumpPatch(version) {
   const parts = version.split('.')
-  const patch = (Number(parts[2] || 0) + 1)
-  parts[2] = String(patch).padStart(2, '0')
+  parts[2] = String(Number(parts[2] || 0) + 1).padStart(2, '0')
   return parts.join('.')
 }
 
@@ -58,50 +86,59 @@ function getRef(version) {
 function getChangelogTitle() {
   const path = resolve(ROOT, 'assist/documentation/CHANGELOG.md')
   const text = readFileSync(path, 'utf8')
-  const match = text.match(
-    /### \[v [\d.]+\] \d{4}-\d{2}-\d{2} - (.+)/,
-  )
+  const match = text.match(/### \[v [\d.]+\] \d{4}-\d{2}-\d{2} - (.+)/)
   return match ? match[1] : 'update'
 }
 
-function bumpAllVersionRefs(oldVer, newVer) {
+function bumpAllVersionRefs(newVer) {
   const targets = [
-    resolve(ROOT, 'package.json'),
-    resolve(ROOT, 'apps/cli/package.json'),
-    resolve(ROOT, 'apps/server/package.json'),
-    resolve(ROOT, 'apps/frontend/package.json'),
-    resolve(ROOT, 'apps/frontend/index.html'),
-    resolve(ROOT, 'packages/shared/package.json'),
-    resolve(ROOT, 'packages/web/package.json'),
-    resolve(ROOT, 'packages/desktop/package.json'),
-    resolve(ROOT, 'packages/mobile/package.json'),
-    resolve(ROOT, 'README.md'),
-    resolve(ROOT, 'assist/README.md'),
-    resolve(ROOT, 'assist/documentation/CHANGELOG.md'),
-    resolve(ROOT, 'assist/templates/commit.md'),
-  ]
+    'package.json',
+    'package-lock.json',
+    'apps/cli/package.json',
+    'apps/server/package.json',
+    'apps/frontend/package.json',
+    'apps/frontend/index.html',
+    'apps/web/package.json',
+    'packages/shared/package.json',
+    'packages/ui/package.json',
+    'packages/web/package.json',
+    'packages/desktop/package.json',
+    'packages/mobile/package.json',
+    'README.md',
+    'assist/README.md',
+    'assist/documentation/CHANGELOG.md',
+    'assist/templates/commit.md',
+  ].map((path) => resolve(ROOT, path))
 
-  const versionPattern = new RegExp(`1\\.0\\.\\d{2,}`, 'g')
-
+  const versionPattern = /1\.0\.\d{2,}/g
+  const newPatch = Number(newVer.split('.')[2] || 0)
   let updated = 0
+
   for (const file of targets) {
+    if (!existsSync(file)) {
+      continue
+    }
+
     let content = readFileSync(file, 'utf8')
     const matches = content.match(versionPattern)
-    if (matches) {
-      const unique = [...new Set(matches)]
-      for (const v of unique) {
-        const vNum = parseInt(v.split('.')[2], 10)
-        const newNum = parseInt(newVer.split('.')[2], 10)
-        if (vNum < newNum) {
-          content = content.split(v).join(newVer)
-        }
-      }
-      if (matches.some(m => m !== newVer)) {
-        writeFileSync(file, content, 'utf8')
-        updated++
+
+    if (!matches) {
+      continue
+    }
+
+    for (const version of new Set(matches)) {
+      const patch = Number(version.split('.')[2] || 0)
+      if (patch < newPatch) {
+        content = content.split(version).join(newVer)
       }
     }
+
+    if (content !== readFileSync(file, 'utf8')) {
+      writeFileSync(file, content, 'utf8')
+      updated++
+    }
   }
+
   return updated
 }
 
@@ -109,7 +146,6 @@ function addChangelogEntry(version, title) {
   const path = resolve(ROOT, 'assist/documentation/CHANGELOG.md')
   let content = readFileSync(path, 'utf8')
 
-  // Update Version State block
   content = content.replace(
     /- \*\*Current version:\*\* `[\d.]+`/,
     `- **Current version:** \`${version}\``,
@@ -123,7 +159,6 @@ function addChangelogEntry(version, title) {
     `- **Changelog label:** \`v ${version}\``,
   )
 
-  // Insert new version section after the Version State block
   const marker = '\n---\n\n'
   const entry = `## v-${version}\n\n### [v ${version}] ${today()} - ${title}\n\n`
   content = content.replace(marker, marker + entry)
@@ -132,13 +167,11 @@ function addChangelogEntry(version, title) {
 }
 
 async function main() {
-  // ---- Discover current state ----
-  const oldVer = getCurrentVersion()
+  const oldVer = readPackageVersion()
   const newVer = bumpPatch(oldVer)
   const ref = getRef(newVer)
   const prevTitle = getChangelogTitle()
 
-  // ---- Show status ----
   const status = run('git status --porcelain', { silent: true })
   const files = status ? status.split('\n').filter(Boolean) : []
 
@@ -147,59 +180,45 @@ async function main() {
   console.log(`  Uncommitted:     ${files.length} files\n`)
 
   if (files.length > 0) {
-    files.forEach((f) => console.log(`    ${f}`))
+    files.forEach((file) => console.log(`    ${file}`))
     console.log('')
   }
 
-  // ---- Bump confirmation ----
-  const bumpAns = await ask(`  Bump to ${newVer}? [Y/n]: `)
-  const doBump = bumpAns.trim().toLowerCase() !== 'n'
-
-  if (!doBump) {
+  const bumpAnswer = await ask(`  Bump to ${newVer}? [Y/n]: `)
+  if (bumpAnswer.trim().toLowerCase() === 'n') {
     console.log('\n  Cancelled.\n')
     return
   }
 
-  // ---- Commit message ----
-  const defaultMsg = `#${ref} ${prevTitle}`
-  const msgAns = await ask(`  Commit message [${defaultMsg}]: `)
-  const msg = msgAns.trim() || defaultMsg
+  const defaultMessage = `#${ref} ${prevTitle}`
+  const messageAnswer = await ask(`  Commit message [${defaultMessage}]: `)
+  const message = messageAnswer.trim() || defaultMessage
+  const changelogTitle = message.replace(/^#\S+\s+/, '')
 
-  // Extract title from message for changelog
-  const titleFromMsg = msg.replace(/^#\S+\s+/, '')
+  console.log('\n  > git pull --rebase --autostash')
+  runGit(['pull', '--rebase', '--autostash'])
   console.log('')
 
-  // ---- Bump versions in all files ----
-  const n = bumpAllVersionRefs(oldVer, newVer)
-  console.log(`  ✓ Updated ${n} files from ${oldVer} → ${newVer}`)
+  const updated = bumpAllVersionRefs(newVer)
+  console.log(`  Updated ${updated} files from ${oldVer} -> ${newVer}`)
 
-  // ---- Add changelog entry ----
-  addChangelogEntry(newVer, titleFromMsg)
-  console.log(`  ✓ Added CHANGELOG entry for v${newVer}`)
+  addChangelogEntry(newVer, changelogTitle)
+  console.log(`  Added CHANGELOG entry for v${newVer}`)
 
-  // ---- Git pull ----
-  try {
-    console.log('  » git pull --rebase')
-    run('git pull --rebase')
-    console.log('')
-  } catch {
-    console.log('  ⚠ pull skipped (will push anyway)\n')
-  }
+  console.log('  > git add -A')
+  runGit(['add', '-A'])
 
-  // ---- Commit & push ----
-  console.log('  » git add -A')
-  run('git add -A')
+  console.log(`  > git commit -m "${message}"`)
+  runGit(['commit', '-m', message])
 
-  console.log(`  » git commit -m "${msg}"`)
-  run(`git commit -m "${msg.replace(/"/g, '\\"')}"`)
+  console.log('  > git push')
+  runGit(['push'])
 
-  console.log('  » git push')
-  run('git push')
-
-  console.log(`\n  ✓ Done — ${msg}\n`)
+  console.log(`\n  Done - ${message}\n`)
 }
 
-main().catch((e) => {
-  console.error(`\n  ✗ ${e.message}\n`)
+main().catch((error) => {
+  console.error(`\n  Error: ${error.message}\n`)
   process.exit(1)
 })
+
