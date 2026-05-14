@@ -2,9 +2,18 @@
 
 ## Version State
 
-- **Current version:** `1.0.00`
-- **Release tag:** `v-1.0.00`
-- **Changelog label:** `v 1.0.00`
+- **Current version:** `1.0.01`
+- **Release tag:** `v-1.0.01`
+- **Changelog label:** `v 1.0.01`
+
+---
+
+## v-1.0.01
+
+### [v 1.0.01] 2026-05-14 - updated log
+
+- Refactored commit message format
+- Updated commit template to `#<ref> v<version> <description> as #<ref> - <title>`
 
 ---
 

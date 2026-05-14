@@ -2,16 +2,10 @@
 
 Format:
 ```
-#<issue-number> <message>
+#<ref> v<version> <description> as #<ref> - <title>
 ```
 
-With version (if applicable):
+Example:
 ```
-#<issue-number> v<version> <message>
-```
-
-Examples:
-```
-#1 init new application
-#2 v1.0.01 add user authentication
+#01 v1.0.01 updated log as #01 - updated log
 ```
