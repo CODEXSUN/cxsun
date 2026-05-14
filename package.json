@@ -1,14 +1,21 @@
 {
   "name": "cxsun",
   "private": true,
-  "version": "1.0.05",
+  "version": "1.0.06",
   "type": "module",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "scripts": {
-    "github:now": "node apps/cli/github-helper.mjs",
-    "dev:frontend": "npm -w apps/frontend run dev",
+    "dev": "concurrently -k -n server,web \"npm -w apps/server run dev\" \"npm -w apps/frontend run dev\"",
     "dev:server": "npm -w apps/server run dev",
+    "dev:frontend": "npm -w apps/frontend run dev",
+    "build:server": "npm -w apps/server run build",
     "build:frontend": "npm -w apps/frontend run build",
-    "build:server": "npm -w apps/server run build"
+    "github:now": "node apps/cli/github-helper.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
