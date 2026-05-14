@@ -162,13 +162,12 @@ async function main() {
   }
 
   // ---- Commit message ----
-  const defaultMsg = `#${ref} v${newVer} ${prevTitle}`
+  const defaultMsg = `#${ref} ${prevTitle}`
   const msgAns = await ask(`  Commit message [${defaultMsg}]: `)
   const msg = msgAns.trim() || defaultMsg
 
   // Extract title from message for changelog
-  // Strips "#XX vX.X.XX " prefix to get the descriptive title
-  const titleFromMsg = msg.replace(/^#\S+\s+v\S+\s+/, '')
+  const titleFromMsg = msg.replace(/^#\S+\s+/, '')
   console.log('')
 
   // ---- Bump versions in all files ----

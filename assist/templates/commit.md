@@ -2,10 +2,10 @@
 
 Format:
 ```
-#<ref> v<version> <description> as #<ref> - <title>
+#<ref> <description>
 ```
 
 Example:
 ```
-#01 v1.0.02 updated log as #01 - updated log
+#02 normalized all version refs
 ```
