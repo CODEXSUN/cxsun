@@ -2,32 +2,36 @@
 
 ## Version State
 
-- **Current version:** `1.0.03`
-- **Release tag:** `v-1.0.03`
-- **Changelog label:** `v 1.0.03`
+- **Current version:** `1.0.05`
+- **Release tag:** `v-1.0.05`
+- **Changelog label:** `v 1.0.05`
 
 ---
 
-## v-1.0.03
+## v-1.0.05
 
-### [v 1.0.03] 2026-05-14 - removed version from commit message
+### [v 1.0.05] 2026-05-14 - fix frontend duplicate workspace conflict
 
-## v-1.0.03
+## v-1.0.05
 
-### [v 1.0.03] 2026-05-14 - normalized all version refs
+### [v 1.0.05] 2026-05-14 - removed version from commit message
 
-## v-1.0.03
+## v-1.0.05
 
-### [v 1.0.03] 2026-05-14 - updated log
+### [v 1.0.05] 2026-05-14 - normalized all version refs
+
+## v-1.0.05
+
+### [v 1.0.05] 2026-05-14 - updated log
 
 - Refactored commit message format
 - Updated commit template to `#<ref> v<version> <description> as #<ref> - <title>`
 
 ---
 
-## v-1.0.03
+## v-1.0.05
 
-### [v 1.0.03] 2026-05-14 - init new application
+### [v 1.0.05] 2026-05-14 - init new application
 
 - Added `assist/` directory with AI agent rules, templates, scripts, context, and agent configs
 - Added `CHANGELOG.md` for versioned action tracking

@@ -1,6 +1,6 @@
 # AI Agent Assist System
 
-**Project version: 1.0.03**
+**Project version: 1.0.05**
 
 A structured rules and context system to guide AI agents working on this project.
 

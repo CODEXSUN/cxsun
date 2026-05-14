@@ -72,7 +72,6 @@ function bumpAllVersionRefs(oldVer, newVer) {
     resolve(ROOT, 'apps/frontend/package.json'),
     resolve(ROOT, 'apps/frontend/index.html'),
     resolve(ROOT, 'packages/shared/package.json'),
-    resolve(ROOT, 'packages/server/package.json'),
     resolve(ROOT, 'packages/web/package.json'),
     resolve(ROOT, 'packages/desktop/package.json'),
     resolve(ROOT, 'packages/mobile/package.json'),
