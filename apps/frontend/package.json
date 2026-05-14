@@ -1,7 +1,7 @@
 {
   "name": "@cxsun/frontend",
   "private": true,
-  "version": "1.0.00",
+  "version": "1.0.02",
   "type": "module",
   "scripts": {
     "dev": "vite",

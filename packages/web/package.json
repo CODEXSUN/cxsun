@@ -1,6 +1,6 @@
 {
   "name": "@cxsun/web",
-  "version": "1.0.00",
+  "version": "1.0.02",
   "private": true,
   "type": "module",
   "scripts": {

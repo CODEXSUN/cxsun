@@ -7,5 +7,5 @@ Format:
 
 Example:
 ```
-#01 v1.0.01 updated log as #01 - updated log
+#01 v1.0.02 updated log as #01 - updated log
 ```
