@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { AlertCircle, CheckCircle2, RefreshCw, Terminal } from "lucide-react"
+import { AlertCircle, CheckCircle2, GitBranch, RefreshCw, Terminal } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert"
 import { Badge } from "src/components/ui/badge"
@@ -159,14 +159,6 @@ export function SystemUpdateView() {
         </div>
       </div>
 
-      <Alert variant="destructive">
-        <AlertCircle />
-        <AlertTitle>Tracked rollback enabled</AlertTitle>
-        <AlertDescription>
-          This action runs `git reset --hard` before pulling updates. It does not run `git clean`, so `.env`, `storage/`, and `build/` remain untouched.
-        </AlertDescription>
-      </Alert>
-
       {preflight ? (
         <Card>
           <CardHeader>
@@ -178,10 +170,14 @@ export function SystemUpdateView() {
             </div>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <InfoTile label="Local version" value={preflight.localVersion} />
-            <InfoTile label="Cloud version" value={preflight.cloudVersion ?? "unknown"} />
-            <InfoTile label="Branch" value={preflight.branch || "unknown"} />
+            <InfoTile label="Local version" value={preflight.localVersion || "not found"} />
+            <InfoTile label="GitHub version" value={preflight.cloudVersion ?? "not found"} />
+            <InfoTile label="Branch" value={preflight.branch || preflight.upstream || "not found"} />
             <InfoTile label="Workspace" value={preflight.dirty ? "dirty" : "clean"} />
+            <InfoTile label="Local commit" value={shortCommit(preflight.localCommit)} />
+            <InfoTile label="Cloud commit" value={shortCommit(preflight.cloudCommit)} />
+            <InfoTile label="Upstream" value={preflight.upstream ?? "not configured"} />
+            <InfoTile label="Checked at" value={formatDate(preflight.checkedAt)} />
           </CardContent>
         </Card>
       ) : null}
@@ -269,8 +265,25 @@ function HealthCard({ label, ok }: { label: string; ok: boolean }) {
 function InfoTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
-      <p className="mt-1 break-all font-mono text-sm">{value}</p>
+      <p className="flex items-center gap-1 text-xs font-medium uppercase text-muted-foreground">
+        <GitBranch className="size-3" />
+        {label}
+      </p>
+      <p className="mt-1 break-all font-mono text-sm">{value || "not found"}</p>
     </div>
   )
+}
+
+function shortCommit(value: string | null) {
+  return value ? value.slice(0, 12) : "not found"
+}
+
+function formatDate(value: string) {
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return date.toLocaleString()
 }

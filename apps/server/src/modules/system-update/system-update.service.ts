@@ -61,26 +61,21 @@ export class SystemUpdateService {
 
   async preflight(): Promise<SystemUpdatePreflight> {
     const repositoryRoot = findWorkspaceRoot()
+    const localVersion = readPackageVersion(repositoryRoot)
+    const branch = await getBranch(repositoryRoot)
+    const upstream = await getUpstream(repositoryRoot)
+    const localCommit = await getLocalCommit(repositoryRoot)
+    const dirty = await getDirty(repositoryRoot)
 
     try {
-      await execFileAsync('git', ['fetch', '--all', '--prune'], {
-        cwd: repositoryRoot,
-        encoding: 'utf8',
-        maxBuffer: 1024 * 1024 * 8,
-        windowsHide: true,
-      })
+      await fetchRemoteMetadata(repositoryRoot)
 
-      const branch = await runText(repositoryRoot, 'git', ['branch', '--show-current'])
-      const upstream = await getUpstream(repositoryRoot)
-      const localCommit = await runText(repositoryRoot, 'git', ['rev-parse', 'HEAD'])
       const cloudCommit = upstream
         ? await runText(repositoryRoot, 'git', ['rev-parse', upstream])
         : null
-      const dirty = Boolean(await runText(repositoryRoot, 'git', ['status', '--porcelain']))
-      const localVersion = readPackageVersion(repositoryRoot)
       const cloudVersion = upstream
         ? await readCloudPackageVersion(repositoryRoot, upstream)
-        : null
+        : await readGitHubPackageVersion()
       const result: SystemUpdatePreflight = {
         ok: true,
         repositoryRoot,
@@ -105,13 +100,13 @@ export class SystemUpdateService {
       const result: SystemUpdatePreflight = {
         ok: false,
         repositoryRoot,
-        localVersion: readPackageVersion(repositoryRoot),
-        cloudVersion: null,
-        localCommit: '',
+        localVersion,
+        cloudVersion: await readGitHubPackageVersion(),
+        localCommit,
         cloudCommit: null,
-        branch: '',
-        upstream: null,
-        dirty: false,
+        branch,
+        upstream,
+        dirty,
         updateAvailable: false,
         backendHealth: await checkUrl(backendHealthUrl()),
         frontendHealth: await checkUrl(frontendUrl()),
@@ -197,6 +192,23 @@ async function runText(cwd: string, command: string, args: string[]) {
   return result.stdout.trim()
 }
 
+async function fetchRemoteMetadata(repositoryRoot: string) {
+  await execFileAsync('git', ['fetch', '--all', '--prune'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 8,
+    windowsHide: true,
+  })
+}
+
+async function getBranch(repositoryRoot: string) {
+  try {
+    return await runText(repositoryRoot, 'git', ['branch', '--show-current'])
+  } catch {
+    return ''
+  }
+}
+
 async function getUpstream(repositoryRoot: string) {
   try {
     return await runText(repositoryRoot, 'git', [
@@ -210,6 +222,22 @@ async function getUpstream(repositoryRoot: string) {
   }
 }
 
+async function getLocalCommit(repositoryRoot: string) {
+  try {
+    return await runText(repositoryRoot, 'git', ['rev-parse', 'HEAD'])
+  } catch {
+    return ''
+  }
+}
+
+async function getDirty(repositoryRoot: string) {
+  try {
+    return Boolean(await runText(repositoryRoot, 'git', ['status', '--porcelain']))
+  } catch {
+    return false
+  }
+}
+
 async function readCloudPackageVersion(repositoryRoot: string, upstream: string) {
   try {
     const packageJson = await runText(repositoryRoot, 'git', [
@@ -217,6 +245,23 @@ async function readCloudPackageVersion(repositoryRoot: string, upstream: string)
       `${upstream}:package.json`,
     ])
     return (JSON.parse(packageJson) as { version?: string }).version ?? null
+  } catch {
+    return null
+  }
+}
+
+async function readGitHubPackageVersion() {
+  try {
+    const response = await fetch(
+      'https://raw.githubusercontent.com/CODEXSUN/cxsun/main/package.json',
+      { signal: AbortSignal.timeout(10_000) },
+    )
+
+    if (!response.ok) {
+      return null
+    }
+
+    return ((await response.json()) as { version?: string }).version ?? null
   } catch {
     return null
   }

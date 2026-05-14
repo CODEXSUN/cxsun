@@ -12,9 +12,12 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.12
 
-### [v 1.0.12] 2026-05-14 5:20 pm - version update
+### [v 1.0.12] 2026-05-14 5:20 pm - Fixed System Update preflight
 
 - Bumped workspace version to 1.0.12
+- Fixed System Update preflight so local version, GitHub version, branch, upstream, and commits are always shown when available
+- Removed the tracked rollback warning banner from the System Update dashboard page
+
 ## v-1.0.11
 
 ### [v 1.0.11] 2026-05-14 5:10 pm - cli version bump
