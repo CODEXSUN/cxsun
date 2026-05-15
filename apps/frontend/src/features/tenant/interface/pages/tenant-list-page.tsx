@@ -300,23 +300,55 @@ function TenantShowPage({
     >
       <MasterListShowLayout>
         <div className="space-y-4">
-          <MasterListShowCard title="Tenant profile">
-            <DetailGrid rows={[["Name", tenant.name], ["Code", tenant.code], ["Slug", tenant.slug], ["Status", <StatusBadge key="status" status={tenant.status} />]]} />
-          </MasterListShowCard>
-          <MasterListShowCard title="Company metrics">
-            <DetailGrid rows={[["Companies", tenant.companyCount], ["Active companies", tenant.activeCompanyCount], ["Company concepts", tenant.companyConceptCount]]} />
-          </MasterListShowCard>
-          <MasterListShowCard title="Payload settings">
-            <pre className="max-h-80 overflow-auto rounded-md bg-muted/40 p-3 text-xs">{formatJsonText(tenant.payloadSettings)}</pre>
-          </MasterListShowCard>
+          <TenantShowCard title="Tenant profile">
+            <DetailTable
+              rows={[
+                ["Name", tenant.name],
+                ["Code", tenant.code],
+                ["Slug", tenant.slug],
+                ["Status", <StatusBadge key="status" status={tenant.status} />],
+              ]}
+            />
+          </TenantShowCard>
+          <TenantShowCard title="Company metrics">
+            <DetailTable
+              rows={[
+                ["Companies", tenant.companyCount],
+                ["Active companies", tenant.activeCompanyCount],
+                ["Company concepts", tenant.companyConceptCount],
+              ]}
+            />
+          </TenantShowCard>
+          <TenantShowCard title="Payload settings">
+            <DetailTable
+              rows={[
+                ["Settings JSON", <pre key="payload" className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs leading-6">{formatJsonText(tenant.payloadSettings)}</pre>],
+              ]}
+            />
+          </TenantShowCard>
         </div>
         <div className="space-y-4">
-          <MasterListShowCard title="Database">
-            <DetailGrid rows={[["Type", tenant.dbType], ["Host", tenant.dbHost], ["Port", tenant.dbPort], ["Database", tenant.dbName], ["User", tenant.dbUser], ["Secret", tenant.dbSecretRef]]} />
-          </MasterListShowCard>
-          <MasterListShowCard title="Timestamps">
-            <DetailGrid rows={[["Created", formatTenantDate(tenant.createdAt)], ["Updated", formatTenantDate(tenant.updatedAt)], ["Deleted", formatTenantDate(tenant.deletedAt)]]} />
-          </MasterListShowCard>
+          <TenantShowCard title="Database">
+            <DetailTable
+              rows={[
+                ["Type", tenant.dbType],
+                ["Host", tenant.dbHost],
+                ["Port", tenant.dbPort],
+                ["Database", tenant.dbName],
+                ["User", tenant.dbUser],
+                ["Secret", tenant.dbSecretRef],
+              ]}
+            />
+          </TenantShowCard>
+          <TenantShowCard title="Timestamps">
+            <DetailTable
+              rows={[
+                ["Created", formatTenantDate(tenant.createdAt)],
+                ["Updated", formatTenantDate(tenant.updatedAt)],
+                ["Deleted", formatTenantDate(tenant.deletedAt)],
+              ]}
+            />
+          </TenantShowCard>
         </div>
       </MasterListShowLayout>
     </MasterListPageFrame>
@@ -581,16 +613,32 @@ function SwitchRow({
   )
 }
 
-function DetailGrid({ rows }: { rows: Array<[string, ReactNode]> }) {
+function DetailTable({ rows }: { rows: Array<[string, ReactNode]> }) {
   return (
-    <dl className="grid gap-3 sm:grid-cols-2">
-      {rows.map(([label, value]) => (
-        <div key={label} className="rounded-md bg-muted/30 px-3 py-2">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd className="mt-1 text-sm font-medium text-foreground">{value || "Not set"}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="-mx-5 -mb-5 -mt-5 overflow-hidden rounded-b-md border-t border-border/70">
+      <table className="w-full border-collapse text-sm">
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label} className="border-b border-border/60 last:border-b-0">
+              <th className="w-40 border-r border-border/70 bg-muted/35 px-3 py-2.5 text-left align-top text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {label}
+              </th>
+              <td className="px-3 py-2.5 align-top font-medium text-foreground">
+                {value || "Not set"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function TenantShowCard({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <MasterListShowCard title={title} className="gap-0 py-0 [&>div:first-child]:px-4 [&>div:first-child]:py-3">
+      {children}
+    </MasterListShowCard>
   )
 }
 

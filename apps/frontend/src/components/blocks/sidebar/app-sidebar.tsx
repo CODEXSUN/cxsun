@@ -8,12 +8,11 @@ import {
   Factory,
   Globe2,
   Headset,
-  Landmark,
   NotebookPen,
   RefreshCw,
-  ShieldCheck,
   UserRoundCog,
   Users,
+  type LucideIcon,
 } from "lucide-react"
 
 import { BrandLogo } from "src/components/blocks/branding/brand-logo"
@@ -29,10 +28,23 @@ import {
   SidebarSeparator,
 } from "src/components/ui/sidebar"
 import { version } from "../../../../package.json"
+import { getDashboardApp, type DashboardAppId, type DashboardAppMenuItem } from "src/components/blocks/dashboard/dashboard-apps"
+
+interface SidebarNavItem {
+  title: string
+  url: string
+  icon?: LucideIcon
+  page?: DashboardPage
+  defaultOpen?: boolean
+  isActive?: boolean
+  onSelect?: () => void
+  items?: SidebarNavItem[]
+}
 
 export type DashboardMode = "super-admin" | "admin" | "tenant"
 export type DashboardPage =
   | "overview"
+  | "app-dashboard"
   | "tenant"
   | "tenant-domain"
   | "industry"
@@ -43,6 +55,7 @@ export type DashboardPage =
   | "helpdesk"
   | "bugs"
   | "tenant-roles"
+  | `app-${string}`
 
 const superAdminNav = [
   {
@@ -85,20 +98,6 @@ const adminNav = [
   },
 ] as const
 
-const tenantNav = [
-  {
-    title: "Tenant Workspace",
-    url: "#",
-    icon: Building2,
-    defaultOpen: true,
-    items: [
-      { title: "Company", url: "#", icon: Building2 },
-      { title: "Roles", url: "#", icon: ShieldCheck },
-      { title: "Default Company", url: "#", icon: Landmark },
-    ],
-  },
-] as const
-
 function dashboardPageUrl(basePath: string, page: DashboardPage) {
   return page === "overview" ? basePath : `${basePath}/${page}`
 }
@@ -130,6 +129,7 @@ export function AppSidebar({
   user,
   basePath = "/app",
   dashboardMode = "tenant",
+  activeApp = "application",
   onTenantChange,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
@@ -140,27 +140,28 @@ export function AppSidebar({
   user?: { name: string; email: string }
   basePath?: "/app" | "/admin" | "/sa"
   dashboardMode?: DashboardMode
+  activeApp?: DashboardAppId
   onTenantChange?: (tenantSlug: string) => void
 }) {
+  const selectedApp = getDashboardApp(activeApp)
+  const tenantAppNav = selectedApp.menuGroups.map((group, index) => ({
+    title: group.title,
+    url: "#",
+    icon: group.icon,
+    defaultOpen: index === 0 || group.items.some((item) => appMenuItemHasPage(item, activePage)),
+    items: group.items.map((item) => mapAppMenuItem(item)),
+  }))
   const sourceNav =
     dashboardMode === "super-admin"
       ? superAdminNav
       : dashboardMode === "admin"
         ? adminNav
-        : tenantNav
+        : tenantAppNav
 
   const navMain = sourceNav.map((item) => ({
       ...item,
       defaultOpen: "defaultOpen" in item ? item.defaultOpen : true,
-      items: item.items.map((subItem) => {
-        const subPage = pageFromTitle(subItem.title) ?? "overview"
-        return {
-          ...subItem,
-          url: dashboardPageUrl(basePath, subPage),
-          isActive: activePage === subPage,
-          onSelect: () => onNavigate?.(subPage),
-        }
-      }),
+      items: item.items.map((subItem) => mapNavItem(subItem, { activePage, basePath, onNavigate })),
     }))
 
   return (
@@ -193,4 +194,32 @@ export function AppSidebar({
       <SidebarRail />
     </Sidebar>
   )
+}
+
+function mapAppMenuItem(item: DashboardAppMenuItem): SidebarNavItem {
+  return {
+    ...item,
+    url: "#",
+    items: item.items?.map((child) => mapAppMenuItem(child)),
+  }
+}
+
+function mapNavItem(
+  item: SidebarNavItem,
+  context: { activePage: DashboardPage; basePath: string; onNavigate?: (page: DashboardPage) => void },
+): SidebarNavItem {
+  const subPage = item.page ?? pageFromTitle(item.title) ?? "overview"
+  const children: SidebarNavItem[] | undefined = item.items?.map((child) => mapNavItem(child, context))
+
+  return {
+    ...item,
+    items: children,
+    url: dashboardPageUrl(context.basePath, subPage),
+    isActive: context.activePage === subPage || Boolean(children?.some((child) => child.isActive)),
+    onSelect: children?.length ? undefined : () => context.onNavigate?.(subPage),
+  }
+}
+
+function appMenuItemHasPage(item: DashboardAppMenuItem, page: DashboardPage): boolean {
+  return item.page === page || Boolean(item.items?.some((child) => appMenuItemHasPage(child, page)))
 }

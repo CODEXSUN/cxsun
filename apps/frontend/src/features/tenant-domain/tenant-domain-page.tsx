@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Globe2, Pencil, Plus, RefreshCw, Save, X } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Globe2, Pencil, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
-import { Card, CardContent } from "src/components/ui/card"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
 import { Switch } from "src/components/ui/switch"
@@ -147,6 +146,8 @@ export function TenantDomainPage() {
         isLoading={domainsQuery.isFetching}
         onBack={() => navigate({ mode: "list" })}
         onEdit={() => navigate({ mode: "edit", id: route.id })}
+        onRestore={() => { if (domain) void changeStatus(domain, "active") }}
+        onSuspend={() => { if (domain) void changeStatus(domain, "suspend") }}
       />
     )
   }
@@ -311,11 +312,15 @@ function TenantDomainShowPage({
   isLoading,
   onBack,
   onEdit,
+  onRestore,
+  onSuspend,
 }: {
   domain?: TenantDomainRecord
   isLoading: boolean
   onBack(): void
   onEdit(): void
+  onRestore(): void
+  onSuspend(): void
 }) {
   return (
     <MasterListPageFrame
@@ -323,15 +328,26 @@ function TenantDomainShowPage({
       description="Review tenant domain mapping, status, and resolver settings."
       technicalName="page.tenant-domain.show"
       action={
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button onClick={onBack} type="button" variant="outline" className="h-9 rounded-md">
             <ArrowLeft className="size-4" />
-            Master list
+            Back
           </Button>
           {domain ? (
             <Button onClick={onEdit} type="button" className="h-9 rounded-md">
               <Pencil className="size-4" />
-              Edit domain
+              Edit
+            </Button>
+          ) : null}
+          {domain && domain.status === "suspend" ? (
+            <Button onClick={onRestore} type="button" variant="outline" className="h-9 rounded-md">
+              <RotateCcw className="size-4" />
+              Restore
+            </Button>
+          ) : domain ? (
+            <Button onClick={onSuspend} type="button" variant="destructive" className="h-9 rounded-md">
+              <Trash2 className="size-4" />
+              Suspend
             </Button>
           ) : null}
         </div>
@@ -343,26 +359,27 @@ function TenantDomainShowPage({
         </MasterListTableCard>
       ) : (
         <div className="grid gap-4 xl:grid-cols-[1fr_0.8fr]">
-          <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
-            <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
-              <DetailItem label="Domain" value={domain.domain} mono />
-              <DetailItem label="Label" value={domain.label} />
-              <DetailItem label="Tenant" value={`${domain.tenant_name} (${domain.tenant_slug})`} />
-              <DetailItem label="Primary" value={domain.is_primary ? "Yes" : "No"} />
-              <div className="grid gap-1">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</span>
-                <DomainStatusBadge status={domain.status} />
-              </div>
-              <DetailItem label="Updated" value={formatDate(domain.updated_at)} />
-              <DetailItem label="Created" value={formatDate(domain.created_at)} />
-              <DetailItem label="Suspended at" value={formatDate(domain.deleted_at)} />
-            </CardContent>
-          </Card>
-          <MasterListShowCard title="Resolver settings" description="Stored JSON payload used by the domain resolver.">
-            <pre className="max-h-[420px] overflow-auto rounded-md border border-border/70 bg-muted/30 p-4 text-xs leading-6 text-muted-foreground">
-              {formatJson(domain.settings)}
-            </pre>
-          </MasterListShowCard>
+          <DomainShowCard title="Domain mapping">
+            <DetailTable
+              rows={[
+                ["Domain", <span key="domain" className="font-mono">{domain.domain}</span>],
+                ["Label", domain.label],
+                ["Tenant", `${domain.tenant_name} (${domain.tenant_slug})`],
+                ["Primary", domain.is_primary ? "Yes" : "No"],
+                ["Status", <DomainStatusBadge key="status" status={domain.status} />],
+                ["Updated", formatDate(domain.updated_at)],
+                ["Created", formatDate(domain.created_at)],
+                ["Suspended at", formatDate(domain.deleted_at)],
+              ]}
+            />
+          </DomainShowCard>
+          <DomainShowCard title="Resolver settings">
+            <DetailTable
+              rows={[
+                ["Settings JSON", <pre key="settings" className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs leading-6 text-muted-foreground">{formatJson(domain.settings)}</pre>],
+              ]}
+            />
+          </DomainShowCard>
         </div>
       )}
     </MasterListPageFrame>
@@ -560,12 +577,32 @@ function DomainStatusBadge({ status }: { status: TenantDomainStatus }) {
   )
 }
 
-function DetailItem({ label, mono = false, value }: { label: string; mono?: boolean; value: string }) {
+function DetailTable({ rows }: { rows: Array<[string, ReactNode]> }) {
   return (
-    <div className="grid gap-1">
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <span className={cn("text-sm text-foreground", mono && "font-mono")}>{value}</span>
+    <div className="-mx-5 -mb-5 -mt-5 overflow-hidden rounded-b-md border-t border-border/70">
+      <table className="w-full border-collapse text-sm">
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label} className="border-b border-border/60 last:border-b-0">
+              <th className="w-40 border-r border-border/70 bg-muted/35 px-3 py-2.5 text-left align-top text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {label}
+              </th>
+              <td className="px-3 py-2.5 align-top font-medium text-foreground">
+                {value || "Not set"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
+  )
+}
+
+function DomainShowCard({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <MasterListShowCard title={title} className="gap-0 py-0 [&>div:first-child]:px-4 [&>div:first-child]:py-3">
+      {children}
+    </MasterListShowCard>
   )
 }
 

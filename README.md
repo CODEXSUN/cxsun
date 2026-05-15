@@ -1,154 +1,119 @@
-# cxsun
+<p align="center">
+  <img src="apps/frontend/public/logo.svg" alt="CXSun Logo" width="120" />
+</p>
 
-**Version:** 1.0.15
+# CXSun
 
-CXSun is a TypeScript monorepo for an ERP + ecommerce + multi-tenant platform. The current working application is a Node.js/Fastify backend paired with a React + Vite frontend using Tailwind CSS and shadcn-style UI primitives.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+**Version:** 1.0.18
 
-## Workspace Layout
+CXSun is a comprehensive, enterprise-grade TypeScript monorepo designed for high-performance ERP, E-commerce, and Multi-tenant SaaS platforms. It provides a robust foundation for building scalable, AI-native applications with a focus on data isolation and modularity.
 
-```
+## 🚀 Overview
+
+The platform is engineered with a modern, multi-tenant architecture to support complex business requirements:
+
+- **Platform Layer:** Global orchestration managing tenants, industries, and system-wide configurations powered by SQLite for high-speed local lookups.
+- **Tenant Layer:** Secure data isolation for each tenant using dedicated MariaDB databases, ensuring privacy and scalability.
+- **AI-Native Integration:** Built-in AI assist system designed to accelerate development cycles and provide intelligent operational support.
+- **Modern Tech Stack:** Leveraging Fastify for a high-performance backend and React/Vite for a responsive, modern frontend experience.
+
+## 🛠️ Usage
+
+CXSun can be used as a foundation for various business applications:
+- **ERP Systems:** Manage enterprise resources, supply chains, and business processes.
+- **E-commerce Platforms:** Deploy multi-vendor or multi-store retail solutions.
+- **SaaS Products:** Build and scale multi-tenant software services with ease.
+
+---
+
+## 📋 Requirements
+
+- **Node.js:** v20+
+- **Package Manager:** npm v10+
+- **Databases:**
+  - **SQLite:** For platform-level orchestration (stored in `storage/database/`).
+  - **MariaDB/MySQL:** For tenant-specific business data.
+- **Optional:** Redis (caching), Docker (deployment).
+
+## ⚙️ Setup & Installation
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/CODEXSUN/cxsun.git
+    cd cxsun
+    ```
+
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+3.  **Environment Configuration:**
+    ```bash
+    cp .env.sample .env
+    ```
+    *Update `.env` with your local database credentials.*
+
+4.  **Launch the platform:**
+    ```bash
+    npm run dev
+    ```
+
+## 💻 Development Commands
+
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Start server and frontend concurrently |
+| `npm run dev:server` | Start Fastify backend in development mode |
+| `npm run dev:frontend` | Start React + Vite frontend in development mode |
+| `npm run check` | Execute project-wide health checks |
+| `npm run build:active` | Compile production builds for apps |
+
+## 🏗️ Project Structure
+
+```text
 cxsun/
 ├── apps/
-│   ├── server/      # Active backend API
-│   ├── frontend/    # Active React + Vite frontend
-│   └── cli/         # Local workflow helpers
+│   ├── server/          # High-performance Fastify backend
+│   ├── frontend/        # Modern React + Vite frontend
+│   └── cli/             # Internal developer experience tools
 ├── packages/
-│   ├── shared/      # Shared types, constants, and pure utilities
-│   ├── web/         # Reserved web package
-│   ├── desktop/     # Reserved Electron package
-│   └── mobile/      # Reserved Expo package
-└── assist/          # AI agent rules, context, templates, and session tracking
+│   ├── shared/          # Universal types and utilities
+│   └── ui/              # Component library (Tailwind + shadcn/ui)
+├── assist/              # AI-native agent context and rules
+└── storage/             # Persistent data and database storage
 ```
 
-## Tenant Runtime Flow
+## 🤝 Contributing
 
-The current backend uses a two-layer persistence model:
+We welcome contributions from the community! To get started:
 
-- Platform database: local SQLite at `storage/database/cxsun.sqlite`.
-- Tenant databases: MariaDB databases resolved per tenant and opened on demand.
+1.  **Fork** the repository.
+2.  **Create** a new feature branch (`git checkout -b feature/amazing-feature`).
+3.  **Commit** your changes (`git commit -m 'Add some amazing feature'`).
+4.  **Push** to the branch (`git push origin feature/amazing-feature`).
+5.  **Open** a Pull Request.
 
-Request flow for tenant-owned data:
+Please ensure your code adheres to our TypeScript standards and includes appropriate tests.
 
-```text
-URL host / domain
-  -> tenant_domains in platform SQLite
-  -> tenants master record
-  -> JWT + user_tenants access check
-  -> tenant MariaDB connection
-  -> tenant-local data such as companies and tenant RBAC
-```
-
-The active surfaces are:
-
-- Domain resolution: `GET /api/v1/tenant-domains/resolve`
-- Tenant diagnostics: `GET /api/v1/tenants/context`
-- Auth: `POST /api/v1/auth/login`
-- Platform master data: `GET/POST /api/v1/industries`, `GET/POST /api/v1/tenants`
-- Tenant-owned data: `GET/POST /api/v1/companies`, resolved through `Authorization` and `x-tenant-code`
-
-Tenant databases are provisioned during server startup for MariaDB-backed tenants. The server reads the platform records first, creates/migrates tenant databases, seeds tenant-local companies/RBAC, and then starts the Fastify API.
-
-## Dashboard Boundaries
-
-Authenticated users are routed to separate dashboard surfaces by role:
-
-- `super-admin`: platform orchestration across tenants, industries, companies, client manager, updates, and system-level controls.
-- `admin`: software operations for the people running the product, including helpdesk, bug triage, client notes, and updates.
-- Tenant roles such as `tenant-admin` and `tenant-user`: isolated tenant dashboard for tenant-local companies and tenant-local RBAC roles.
-
-Tenant dashboard pages must not expose platform tenant/industry/client-manager orchestration. Tenant-local roles and companies live inside the resolved tenant database.
-
-Current frontend URL families:
-
-- Tenant/client: `/app/*`, login at `/login`.
-- Admin software desk: `/admin/*`, login at `/admin/login`.
-- Super-admin orchestration: `/sa/*`, login at `/sg/login` with `/sa/login` also accepted.
-
-Examples:
-
-- `/app/company` opens tenant-local company management.
-- `/admin/company` opens the admin helpdesk/company support desk.
-- `/sa/company` opens the super-admin company surface.
-
-Local SQLite storage is initialized at:
-
-```text
-storage/database/cxsun.sqlite
-```
-
-## Common Commands
+## 🧪 Testing
 
 ```bash
-npm run dev
-npm run dev:server
-npm run dev:frontend
-npm run check
-npm run typecheck:active
-npm run build:active
+# Run specific module tests
+npm -w apps/server run test:master-data
 ```
 
-Build outputs are written to the root `build/` folder:
+## 🐳 Deployment
 
-- Backend: `build/server`
-- Frontend: `build/frontend`
-- Other emitted workspace output: `build/apps/*` and `build/packages/*`
-
-Default local ports:
-
-- Frontend: `6010`
-- Backend: `6001`
-
-## Active Development
-
-- Backend work belongs in `apps/server`.
-- Frontend work belongs in `apps/frontend`.
-- Shared cross-workspace types, constants, and pure utilities belong in `packages/shared`.
-- Reserved packages should stay typecheckable while minimal.
-- Frontend styles belong under `apps/frontend/src/assets/css`.
-- Backend platform persistence uses Kysely with SQLite.
-- Tenant-owned company data uses Kysely with MariaDB through per-tenant connections.
-
-## Docker Deploy Environment
-
-The container setup is intentionally simple. It clones the GitHub repository, installs dependencies, builds into root `build/`, and runs the backend plus frontend preview.
-
+Deploy using Docker Compose:
 ```bash
 docker compose -f .container/docker-compose.yml up --build
 ```
 
-The container clones `https://github.com/CODEXSUN/cxsun.git` by default.
+## 📄 License
 
-On first start the entrypoint creates `.env` from `.env.sample`, then configures the active ports before building.
+Distributed under the **MIT License**. See `LICENSE` for more information.
 
-Container ports:
-
-- Backend: `6001`
-- Frontend: `6010`
-
-Override ports when needed:
-
-```bash
-PORT=7001 VITE_PORT=7010 VITE_API_BASE_URL=http://localhost:7001 docker compose -f .container/docker-compose.yml up --build
-```
-
-Manual update flow:
-
-```bash
-docker compose -f .container/docker-compose.yml exec cxsun bash
-cd /workspace/cxsun
-git pull --ff-only
-npm ci
-npm run build:active
-exit
-docker compose -f .container/docker-compose.yml restart cxsun
-```
-
-## AI Assist
-
-Before AI-assisted work, read:
-
-- `assist/README.md`
-- `assist/rules/`
-- `assist/context/`
-
-The assist system documents the current architecture, verification flow, workspace map, and server module template.
+---
+*For in-depth technical documentation, refer to [assist/README.md](assist/README.md).*

@@ -23,13 +23,7 @@ interface NavItem {
   isActive?: boolean
   defaultOpen?: boolean
   onSelect?: () => void
-  items?: {
-    title: string
-    url: string
-    icon?: LucideIcon
-    isActive?: boolean
-    onSelect?: () => void
-  }[]
+  items?: NavItem[]
 }
 
 export function NavMain({ items }: { items: NavItem[] }) {
@@ -75,20 +69,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
                   <SidebarMenuSub className="mx-0 mt-1 gap-1 border-l-0 px-6 py-0 group-data-[collapsible=icon]:hidden">
-                    {item.items.map((subItem) => (
-                      <SidebarMenuSubItem key={subItem.title}>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={subItem.isActive}
-                          className="h-9 rounded-xl px-3 font-medium text-muted-foreground transition-[background,color,box-shadow] duration-300 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:shadow-sm [&_svg]:size-4"
-                        >
-                          <a href={subItem.url} onClick={handleSelect(subItem.onSelect)}>
-                            {subItem.icon ? <subItem.icon /> : null}
-                            <span>{subItem.title}</span>
-                          </a>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
+                    {item.items.map((subItem) => <NestedSubItem key={subItem.title} item={subItem} />)}
                   </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarMenuItem>
@@ -98,6 +79,53 @@ export function NavMain({ items }: { items: NavItem[] }) {
       </SidebarMenu>
     </SidebarGroup>
   )
+}
+
+function NestedSubItem({ item }: { item: NavItem }) {
+  const isParentActive = item.isActive || Boolean(item.items?.some(hasActiveItem))
+
+  if (item.items?.length) {
+    return (
+      <Collapsible asChild defaultOpen={isParentActive} className="group/nested-collapsible">
+        <SidebarMenuSubItem>
+          <CollapsibleTrigger asChild>
+            <button
+              className="flex h-9 w-full items-center gap-2 rounded-xl px-3 text-left text-sm font-medium text-muted-foreground transition-[background,color,box-shadow] duration-300 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground data-[state=open]:text-sidebar-accent-foreground [&_svg]:size-4"
+              type="button"
+            >
+              {item.icon ? <item.icon /> : null}
+              <span className="min-w-0 flex-1 truncate">{item.title}</span>
+              <ChevronRight className="size-4 text-muted-foreground transition-transform duration-300 group-data-[state=open]/nested-collapsible:rotate-90" />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down">
+            <SidebarMenuSub className="ml-4 mt-1 gap-1 border-l px-3 py-1">
+              {item.items.map((child) => <NestedSubItem key={child.title} item={child} />)}
+            </SidebarMenuSub>
+          </CollapsibleContent>
+        </SidebarMenuSubItem>
+      </Collapsible>
+    )
+  }
+
+  return (
+    <SidebarMenuSubItem>
+      <SidebarMenuSubButton
+        asChild
+        isActive={item.isActive}
+        className="h-9 rounded-xl px-3 font-medium text-muted-foreground transition-[background,color,box-shadow] duration-300 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:shadow-sm [&_svg]:size-4"
+      >
+        <a href={item.url} onClick={handleSelect(item.onSelect)}>
+          {item.icon ? <item.icon /> : null}
+          <span>{item.title}</span>
+        </a>
+      </SidebarMenuSubButton>
+    </SidebarMenuSubItem>
+  )
+}
+
+function hasActiveItem(item: NavItem): boolean {
+  return Boolean(item.isActive || item.items?.some(hasActiveItem))
 }
 
 function handleSelect(onSelect?: () => void) {

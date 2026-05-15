@@ -1,13 +1,14 @@
 {
   "name": "@cxsun/server",
   "private": true,
-  "version": "1.0.15",
+  "version": "1.0.18",
   "type": "module",
   "scripts": {
     "dev": "node ../../apps/cli/preflight.mjs server",
     "build": "tsc",
     "start": "node ../../build/server/main.js",
     "lint": "eslint .",
+    "test:master-data": "tsx src/modules/master-data/tests/master-data-contract.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

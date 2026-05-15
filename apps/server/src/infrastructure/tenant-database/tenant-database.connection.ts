@@ -4,6 +4,10 @@ import { Kysely, MysqlDialect, sql } from 'kysely'
 import type { TenantDatabaseSchema } from './tenant-database.schema.js'
 import type { Tenant } from '../../modules/tenant/domain/tenant.types.js'
 import { getDatabase } from '../database/connection.js'
+import { migrateCommonModuleTables } from '../../modules/common/index.js'
+import { migrateContactMasterTable } from '../../modules/master/contact/index.js'
+import { migrateProductMasterTable } from '../../modules/master/product/index.js'
+import { migrateOrderMasterTable } from '../../modules/master/order/index.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
 
@@ -91,6 +95,10 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
 
   await ensureCompanyColumns(database)
   await createCompanyChildTables(database)
+  await migrateCommonModuleTables(database)
+  await migrateContactMasterTable(database)
+  await migrateProductMasterTable(database)
+  await migrateOrderMasterTable(database)
 
   await database.schema
     .createTable('rbac_roles')

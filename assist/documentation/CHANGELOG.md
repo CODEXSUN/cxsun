@@ -2,13 +2,47 @@
 
 ## Version State
 
-- **Current version:** `1.0.15`
-- **Release tag:** `v-1.0.15`
-- **Changelog label:** `v 1.0.15`
+- **Current version:** `1.0.18`
+- **Release tag:** `v-1.0.18`
+- **Changelog label:** `v 1.0.18`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.18
+
+### [v 1.0.18] 2026-05-15 10:57 pm - standalone common modules and foundation structure
+
+- Bumped workspace version to 1.0.18
+- Added `modules/foundation/master-record` for shared master-record contracts, events, aggregate, repository, input normalization, event bus, and migration helpers
+- Converted all common records into standalone `common/<group>/<module>` backend modules with domain, application, infrastructure, interface, database, and module registration files
+- Added standalone common HTTP endpoints under `/api/v1/common/<moduleKey>` while preserving the existing `master-data` compatibility API for current frontend screens
+- Wired standalone common modules into the app module and tenant database provisioning path
+- Added contract checks so each common module must keep its module, service, repository, controller, migration, and grouped definition files
+- Kept contact, product, and order as standalone master modules under `modules/master`
+
+## v-1.0.17
+
+### [v 1.0.17] 2026-05-15 7:25 pm - user manager mapped controls and company show tables
+
+- Bumped workspace version to 1.0.17
+- Moved mapped tenant users into a full-width second-row list under the tenant profile
+- Added search, status filters, column visibility controls, pagination, and 3-dot row actions to the mapped users list
+- Wired mapped user Edit, Suspend, and Restore actions through the real platform user upsert API
+- Kept mapped users tenant-scoped through `user_tenants` while showing tenant mapping context in the list
+- Updated the Company show page to the same compact grouped key/data table tone as tenant show pages
+
+## v-1.0.16
+
+### [v 1.0.16] 2026-05-15 5:34 pm - master user manager
+
+- Bumped workspace version to 1.0.16
+- Added real super-admin User Manager backed by platform `users`, `user_tenants`, and `tenants` tables
+- Added user tenant summary, tenant user detail, and platform user upsert API endpoints under `/api/v1/users`
+- Wired User Manager list, show, and individual upsert pages into the super-admin Admin group
+- Matched Tenant, Domain, Industry, and Client Manager show pages to the same compact key/data table format
+- Kept master-table user identity separate from tenant access assignment while preserving dashboard surface boundaries
 
 ## v-1.0.15
 

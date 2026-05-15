@@ -280,20 +280,41 @@ function IndustryShowPage({ industry, onBack, onDestroy, onEdit, onRestore }: {
     >
       <MasterListShowLayout>
         <div className="space-y-4">
-          <MasterListShowCard title="Industry profile">
-            <DetailGrid rows={[["Name", industry.name], ["Code", industry.code], ["Status", <StatusBadge key="status" status={industry.status} />], ["Features", formatFeatures(industry.default_features)]]} />
-          </MasterListShowCard>
-          <MasterListShowCard title="Payload schema">
-            <pre className="max-h-80 overflow-auto rounded-md bg-muted/40 p-3 text-xs">{formatJsonText(industry.payload_schema)}</pre>
-          </MasterListShowCard>
+          <IndustryShowCard title="Industry profile">
+            <DetailTable
+              rows={[
+                ["Name", industry.name],
+                ["Code", industry.code],
+                ["Status", <StatusBadge key="status" status={industry.status} />],
+                ["Features", formatFeatures(industry.default_features)],
+              ]}
+            />
+          </IndustryShowCard>
+          <IndustryShowCard title="Payload schema">
+            <DetailTable
+              rows={[
+                ["Schema JSON", <pre key="schema" className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs leading-6">{formatJsonText(industry.payload_schema)}</pre>],
+              ]}
+            />
+          </IndustryShowCard>
         </div>
         <div className="space-y-4">
-          <MasterListShowCard title="UI settings">
-            <pre className="max-h-80 overflow-auto rounded-md bg-muted/40 p-3 text-xs">{formatJsonText(industry.default_ui_settings)}</pre>
-          </MasterListShowCard>
-          <MasterListShowCard title="Timestamps">
-            <DetailGrid rows={[["Created", formatDate(industry.created_at)], ["Updated", formatDate(industry.updated_at)], ["Deleted", formatDate(industry.deleted_at)]]} />
-          </MasterListShowCard>
+          <IndustryShowCard title="UI settings">
+            <DetailTable
+              rows={[
+                ["Settings JSON", <pre key="settings" className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs leading-6">{formatJsonText(industry.default_ui_settings)}</pre>],
+              ]}
+            />
+          </IndustryShowCard>
+          <IndustryShowCard title="Timestamps">
+            <DetailTable
+              rows={[
+                ["Created", formatDate(industry.created_at)],
+                ["Updated", formatDate(industry.updated_at)],
+                ["Deleted", formatDate(industry.deleted_at)],
+              ]}
+            />
+          </IndustryShowCard>
         </div>
       </MasterListShowLayout>
     </MasterListPageFrame>
@@ -549,16 +570,32 @@ function SwitchRow({
   )
 }
 
-function DetailGrid({ rows }: { rows: Array<[string, ReactNode]> }) {
+function DetailTable({ rows }: { rows: Array<[string, ReactNode]> }) {
   return (
-    <dl className="grid gap-3 sm:grid-cols-2">
-      {rows.map(([label, value]) => (
-        <div key={label} className="rounded-md bg-muted/30 px-3 py-2">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd className="mt-1 text-sm font-medium text-foreground">{value || "Not set"}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="-mx-5 -mb-5 -mt-5 overflow-hidden rounded-b-md border-t border-border/70">
+      <table className="w-full border-collapse text-sm">
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label} className="border-b border-border/60 last:border-b-0">
+              <th className="w-40 border-r border-border/70 bg-muted/35 px-3 py-2.5 text-left align-top text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {label}
+              </th>
+              <td className="px-3 py-2.5 align-top font-medium text-foreground">
+                {value || "Not set"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function IndustryShowCard({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <MasterListShowCard title={title} className="gap-0 py-0 [&>div:first-child]:px-4 [&>div:first-child]:py-3">
+      {children}
+    </MasterListShowCard>
   )
 }
 

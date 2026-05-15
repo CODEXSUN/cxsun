@@ -16,7 +16,6 @@ import {
   MasterListPaginationCard,
   MasterListRowActions,
   MasterListShowCard,
-  MasterListShowLayout,
   MasterListTableCard,
   MasterListToolbarCard,
   MasterListUpsertCard,
@@ -367,52 +366,46 @@ function CompanyShowPage({
         </div>
       }
     >
-      <MasterListShowLayout>
-        <div className="space-y-4">
-          <MasterListShowCard title="Profile">
-            <DetailGrid
-              rows={[
-                ["Legal name", company.legalName],
-                ["Tagline", company.tagline],
-                ["Website", company.website],
-                ["Email", company.primaryEmail],
-                ["Phone", company.primaryPhone],
-                ["Incorporated", formatDate(company.dateOfIncorporation)],
-                ["Description", company.description],
-              ]}
-            />
-          </MasterListShowCard>
-          <MasterListShowCard title="Compliance">
-            <DetailGrid
-              rows={[
-                ["GSTIN/UIN", company.gstinUin],
-                ["PAN", company.pan],
-                ["TAN", company.tan],
-                ["MSME", [company.msmeNo, company.msmeCategory].filter(Boolean).join(" / ")],
-                ["TDS", company.tdsAvailable ? [company.tdsSection, company.tdsRatePercent && `${company.tdsRatePercent}%`].filter(Boolean).join(" / ") : "No"],
-                ["TCS", company.tcsAvailable ? [company.tcsSection, company.tcsRatePercent && `${company.tcsRatePercent}%`].filter(Boolean).join(" / ") : "No"],
-              ]}
-            />
-          </MasterListShowCard>
-          <SubTable title="Addresses" rows={company.addresses.map((address) => [address.addressLine1, [address.cityId, address.stateId, address.pincodeId].filter(Boolean).join(", "), address.isDefault ? "Default" : ""])} />
-          <SubTable title="Bank accounts" rows={company.bankAccounts.map((bank) => [bank.bankName, bank.accountNumber, bank.ifsc])} />
-        </div>
-        <div className="space-y-4">
-          <MasterListShowCard title="Status">
-            <div className="space-y-3">
-              <StatusBadge company={company} />
-              {canManagePlatform ? (
-                <DetailGrid rows={[["Tenant", company.tenantName], ["Industry", company.industryName], ["Tenant id", company.tenantId], ["Industry id", company.industryId]]} />
-              ) : (
-                <p className="text-sm text-muted-foreground">Tenant and industry ids are managed by the platform.</p>
-              )}
-            </div>
-          </MasterListShowCard>
-          <SubTable title="Emails" rows={company.emails.map((email) => [email.email, email.emailType, email.isActive ? "Active" : "Disabled"])} />
-          <SubTable title="Phones" rows={company.phones.map((phone) => [phone.phoneNumber, phone.phoneType, phone.isPrimary ? "Primary" : ""])} />
-          <SubTable title="Social links" rows={company.socialLinks.map((link) => [link.platform, link.url, link.isActive ? "Active" : "Disabled"])} />
-        </div>
-      </MasterListShowLayout>
+      <div className="grid gap-4">
+        <CompanyShowCard title="Company profile">
+          <DetailTable
+            rows={[
+              ["Name", company.name],
+              ["Code", company.code],
+              ["Legal name", company.legalName],
+              ["Tagline", company.tagline],
+              ["Website", company.website],
+              ["Email", company.primaryEmail],
+              ["Phone", company.primaryPhone],
+              ["Incorporated", formatDate(company.dateOfIncorporation)],
+              ["Description", company.description],
+              ["Status", <StatusBadge key="status" company={company} />],
+            ]}
+          />
+        </CompanyShowCard>
+        {canManagePlatform ? (
+          <CompanyShowCard title="Tenant and industry">
+            <DetailTable rows={[["Tenant", company.tenantName], ["Tenant id", company.tenantId], ["Industry", company.industryName], ["Industry id", company.industryId]]} />
+          </CompanyShowCard>
+        ) : null}
+        <CompanyShowCard title="Compliance">
+          <DetailTable
+            rows={[
+              ["GSTIN/UIN", company.gstinUin],
+              ["PAN", company.pan],
+              ["TAN", company.tan],
+              ["MSME", [company.msmeNo, company.msmeCategory].filter(Boolean).join(" / ")],
+              ["TDS", company.tdsAvailable ? [company.tdsSection, company.tdsRatePercent && `${company.tdsRatePercent}%`].filter(Boolean).join(" / ") : "No"],
+              ["TCS", company.tcsAvailable ? [company.tcsSection, company.tcsRatePercent && `${company.tcsRatePercent}%`].filter(Boolean).join(" / ") : "No"],
+            ]}
+          />
+        </CompanyShowCard>
+        <SubTable title="Addresses" rows={company.addresses.map((address) => [address.addressLine1, [address.cityId, address.stateId, address.pincodeId].filter(Boolean).join(", "), address.isDefault ? "Default" : ""])} />
+        <SubTable title="Bank accounts" rows={company.bankAccounts.map((bank) => [bank.bankName, bank.accountNumber, bank.ifsc])} />
+        <SubTable title="Emails" rows={company.emails.map((email) => [email.email, email.emailType, email.isActive ? "Active" : "Disabled"])} />
+        <SubTable title="Phones" rows={company.phones.map((phone) => [phone.phoneNumber, phone.phoneType, phone.isPrimary ? "Primary" : ""])} />
+        <SubTable title="Social links" rows={company.socialLinks.map((link) => [link.platform, link.url, link.isActive ? "Active" : "Disabled"])} />
+      </div>
     </MasterListPageFrame>
   )
 }
@@ -890,37 +883,49 @@ function ListHeader({ children, className }: { children: ReactNode; className?: 
   return <th className={cn("border-b border-border/70 px-4 py-2.5 text-left font-medium text-foreground", className)}>{children}</th>
 }
 
-function DetailGrid({ rows }: { rows: Array<[string, ReactNode]> }) {
+function DetailTable({ rows }: { rows: Array<[string, ReactNode]> }) {
   return (
-    <dl className="grid gap-3 sm:grid-cols-2">
-      {rows.map(([label, value]) => (
-        <div key={label} className="rounded-md bg-muted/30 px-3 py-2">
-          <dt className="text-xs text-muted-foreground">{label}</dt>
-          <dd className="mt-1 text-sm font-medium text-foreground">{value || "Not set"}</dd>
-        </div>
-      ))}
-    </dl>
+    <div className="-mx-5 -mb-5 -mt-5 overflow-hidden rounded-b-md border-t border-border/70">
+      <table className="w-full border-collapse text-sm">
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label} className="border-b border-border/60 last:border-b-0">
+              <th className="w-44 border-r border-border/70 bg-muted/35 px-3 py-2.5 text-left align-top text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</th>
+              <td className="px-3 py-2.5 align-top font-medium text-foreground">{value || "Not set"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
 function SubTable({ rows, title }: { title: string; rows: Array<Array<ReactNode>> }) {
   return (
-    <MasterListShowCard title={title}>
+    <CompanyShowCard title={title}>
       {rows.length ? (
-        <div className="space-y-2">
-          {rows.map((row, index) => (
-            <div key={index} className="grid gap-2 rounded-md border border-border/60 px-3 py-2 text-sm md:grid-cols-3">
-              {row.map((cell, cellIndex) => (
-                <span key={cellIndex} className="truncate text-muted-foreground">{cell || "Not set"}</span>
+        <div className="-mx-5 -mb-5 -mt-5 overflow-hidden rounded-b-md border-t border-border/70">
+          <table className="w-full border-collapse text-sm">
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index} className="border-b border-border/60 last:border-b-0">
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex} className={cn("px-3 py-2.5 align-top text-muted-foreground", cellIndex === 0 && "border-r border-border/70 bg-muted/35 font-medium text-foreground")}>{cell || "Not set"}</td>
+                  ))}
+                </tr>
               ))}
-            </div>
-          ))}
+            </tbody>
+          </table>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No rows added.</p>
+        <div className="-mx-5 -mb-5 -mt-5 border-t border-border/70 px-3 py-8 text-center text-sm text-muted-foreground">No rows added.</div>
       )}
-    </MasterListShowCard>
+    </CompanyShowCard>
   )
+}
+
+function CompanyShowCard({ children, title }: { children: ReactNode; title: string }) {
+  return <MasterListShowCard title={title} className="gap-0 py-0 [&>div:first-child]:px-4 [&>div:first-child]:py-3">{children}</MasterListShowCard>
 }
 
 function setFormField<K extends keyof CompanyUpsertInput>(

@@ -72,3 +72,46 @@ Add multi-theme support to the active Vite frontend, including blue, emerald, or
 - Add tenant-domain list/upsert API endpoints.
 - Wire domain management into the super-admin sidebar and `/sa/tenant-domain` route.
 - Verify frontend/server/full checks without warnings.
+
+### Phase 10: Tenant common and master modules
+
+- Read temp common/master module definitions and strict modular monolith, DDD, event-driven, and queue standards.
+- Add individual tenant modules for each common/master area instead of one generic common module.
+- Keep reusable code as shared module primitives, but give each common/master a removable module folder with domain, application, infrastructure, interface, and database shape.
+- Add per-module tenant tables with integer auto-increment primary keys and an additional unique 8-character public UUID.
+- Add common module pages with popup upsert/list behavior and master module pages with list/show/upsert behavior like the tenant master page.
+- Wire tenant dashboard app routes to the individual module pages and verify server/frontend checks.
+
+### Phase 11: Master-data contract hardening
+
+- Add no-dependency contract verification for master-data module definitions and migration assumptions.
+- Verify every common/master module has a unique individual table, valid key, and 8-digit public UUID contract.
+- Expose a targeted script so the module contract can be checked before broader builds.
+
+### Phase 12: Standalone master module split
+
+- Split contact, product, and order out of the generic master-data route into standalone backend modules.
+- Give each module its own domain definition, application service, repository adapter, controller, database migration export, and module registration.
+- Route frontend master pages for contacts, products, and orders to the standalone module APIs.
+- Keep the shared master-data code only as reusable primitives for later module splits.
+
+### Phase 13: Master folder organization
+
+- Move standalone contact, product, and order master modules under `apps/server/src/modules/master/`.
+- Keep public API routes unchanged while updating internal imports and tenant provisioning.
+- Verify the master-data contract and active builds after the move.
+
+### Phase 14: Common folder organization
+
+- Move common module definitions into `apps/server/src/modules/common/<group>/<module>/`.
+- Keep shared master-data services as reusable primitives while sourcing definitions from the common registry.
+- Update contract coverage to assert the grouped common folder pattern.
+- Verify the common registry, backend typecheck, backend build, and frontend typecheck.
+
+### Phase 15: Standalone common modules and foundation split
+
+- Add a foundation module area for the shared master-record engine, event bus, repository, migration helper, and definition contracts.
+- Convert every common definition folder into a standalone module with application, infrastructure, interface, database, and module registration files.
+- Keep the `master-data` API as a compatibility registry for frontend common list screens.
+- Wire standalone common modules into the app module and tenant provisioning path.
+- Verify contract coverage, backend typecheck/build, and frontend typecheck.

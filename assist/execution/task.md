@@ -98,3 +98,54 @@
 - [x] `9.3` Add domain master list, show page, and upsert page
 - [x] `9.4` Wire domain page to super-admin sidebar and route
 - [x] `9.5` Verify clean checks
+
+## Phase 10: Tenant common and master modules
+
+- [x] `10.1` Record current prompt into prompt review
+- [x] `10.2` Read assist rules/context and temp common/master source
+- [x] `10.3` Record corrected modular/DDD/event/queue requirement
+- [x] `10.4` Add individual common/master backend module folders, migrations, persistence, events, and queue hooks
+- [x] `10.5` Add common popup list frontend
+- [x] `10.6` Add master list/show/upsert frontend
+- [x] `10.7` Wire common/master dashboard routes
+- [x] `10.8` Run targeted verification
+
+## Phase 11: Master-data contract hardening
+
+- [x] `11.1` Record next prompt
+- [x] `11.2` Add master-data contract verification script
+- [x] `11.3` Run targeted contract, typecheck, and build checks
+
+## Phase 12: Standalone master module split
+
+- [x] `12.1` Record split prompt
+- [x] `12.2` Split contacts backend module
+- [x] `12.3` Split products backend module
+- [x] `12.4` Split orders backend module
+- [x] `12.5` Wire tenant provisioning and app module imports
+- [x] `12.6` Route frontend master pages to standalone APIs
+- [x] `12.7` Run verification
+
+## Phase 13: Master folder organization
+
+- [x] `13.1` Record master folder prompt
+- [x] `13.2` Move contact/product/order modules under master folder
+- [x] `13.3` Update imports, provisioning, and contract test
+- [x] `13.4` Run verification
+
+## Phase 14: Common folder organization
+
+- [x] `14.1` Record common folder prompt
+- [x] `14.2` Move common definitions under grouped common module folders
+- [x] `14.3` Wire master-data registry to grouped common modules
+- [x] `14.4` Add contract coverage for common folder pattern
+- [x] `14.5` Run verification
+
+## Phase 15: Standalone common modules and foundation split
+
+- [x] `15.1` Record standalone/foundation prompt
+- [x] `15.2` Move shared master-record primitives into foundation structure
+- [x] `15.3` Generate standalone common module services, repositories, controllers, migrations, and module classes
+- [x] `15.4` Wire app imports and tenant provisioning to standalone common modules
+- [x] `15.5` Update contract coverage for standalone common module files
+- [x] `15.6` Run verification

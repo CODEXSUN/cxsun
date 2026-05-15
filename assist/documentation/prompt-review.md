@@ -657,3 +657,67 @@ so it can be easy
 read readme and log and version pump and commit all and push all
 ```
 
+## Current Prompt
+
+```
+create log and update change log and bump version
+```
+
+## Current Prompt
+
+```
+read  assist readme and update changelog and pump version
+```
+
+## Current Prompt
+
+```
+read assist readme and rules and follow strict 
+
+
+read temp and find for all common modules , master modules and write it in our application with our structure from e2e frontend to backend + test + api
+
+make all common modules in comman list with pop up upsert + list 
+make all master modules in master list with show + upsert same as tenant 
+```
+
+## Current Prompt
+
+```
+make all modules in modular + DDD + event driven  + queue shape , make each common individual it will ease to reuse or drop or enhace in future instead of making single common module and make master also individual
+
+in migration make common primary as integer with auto increment , same for master with uuid additional as unique to go public make uuid to  8 digit length
+```
+
+## Current Prompt
+
+```
+next
+```
+
+## Current Prompt
+
+```
+i asked to create all modules individually you have created as single so split one by one 
+
+first split contact , product , order as standalone module 
+```
+
+## Current Prompt
+
+```
+move these contact , product , order to Master folder and wire it up 
+```
+
+## Current Prompt
+
+```
+ok fine make the same for all common inside common/<group>/<module> pattern
+```
+
+## Current Prompt
+
+```
+ok i have already told this make all modules standonly and also structure core and foundation modules in structure
+```
+
