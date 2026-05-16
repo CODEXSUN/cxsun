@@ -7,6 +7,7 @@ import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
 import { Progress } from "src/components/ui/progress"
 import { cn } from "src/lib/utils"
+import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 const configuredApiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:6001"
@@ -55,7 +56,7 @@ interface SystemUpdatePreflight {
   error?: string
 }
 
-export function SystemUpdateView() {
+export function SystemUpdateView({ session }: { session: AuthSession }) {
   const [status, setStatus] = useState<SystemUpdateStatus | null>(null)
   const [running, setRunning] = useState(false)
   const [checking, setChecking] = useState(false)
@@ -63,10 +64,12 @@ export function SystemUpdateView() {
 
   useEffect(() => {
     void loadStatus()
-  }, [])
+  }, [session])
 
   async function loadStatus() {
-    const response = await fetch(`${apiBaseUrl}/api/system-update/status`)
+    const response = await fetch(`${apiBaseUrl}/api/system-update/status`, {
+      headers: authHeaders(session),
+    })
     if (!response.ok) {
       return
     }
@@ -81,7 +84,9 @@ export function SystemUpdateView() {
     setError(null)
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/system-update/preflight`)
+      const response = await fetch(`${apiBaseUrl}/api/system-update/preflight`, {
+        headers: authHeaders(session),
+      })
       const payload = (await response.json()) as SystemUpdatePreflight
 
       setStatus((current) => ({
@@ -114,6 +119,7 @@ export function SystemUpdateView() {
 
     try {
       const response = await fetch(`${apiBaseUrl}/api/system-update/run`, {
+        headers: authHeaders(session),
         method: "POST",
       })
       const payload = (await response.json()) as SystemUpdateResult

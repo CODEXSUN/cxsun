@@ -20,6 +20,7 @@ import {
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
+import type { AuthSession } from "src/features/auth/auth-client"
 import {
   emptyPlatformUser,
   listTenantUsers,
@@ -47,11 +48,11 @@ const mappedUserStatusFilters = [
   { id: "suspend", label: "Suspended" },
 ]
 
-export function UserManagerPage() {
+export function UserManagerPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
   const [state, setState] = useState<UserManagerState>({ mode: "list" })
-  const summariesQuery = useQuery({ queryKey: ["user-manager", "tenant-summary"], queryFn: listUserTenantSummaries })
-  const upsertMutation = useMutation({ mutationFn: upsertPlatformUser })
+  const summariesQuery = useQuery({ queryKey: ["user-manager", "tenant-summary", session.selectedTenant.slug], queryFn: () => listUserTenantSummaries(session) })
+  const upsertMutation = useMutation({ mutationFn: (input: PlatformUserUpsertInput) => upsertPlatformUser(session, input) })
   const summaries = summariesQuery.data ?? []
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export function UserManagerPage() {
     return (
       <TenantUsersShowPage
         tenant={state.tenant}
+        session={session}
         onAdd={() => setState({ mode: "upsert", tenant: state.tenant, user: null })}
         onBack={() => setState({ mode: "list" })}
         onEdit={(user) => setState({ mode: "upsert", tenant: state.tenant, user })}
@@ -205,16 +207,18 @@ function TenantUsersShowPage({
   onAdd,
   onBack,
   onEdit,
+  session,
   tenant,
 }: {
   onAdd(): void
   onBack(): void
   onEdit(user: TenantUserRecord): void
+  session: AuthSession
   tenant: TenantUserSummary
 }) {
   const queryClient = useQueryClient()
-  const usersQuery = useQuery({ queryKey: ["user-manager", "tenant-users", tenant.tenant_id], queryFn: () => listTenantUsers(tenant.tenant_id) })
-  const statusMutation = useMutation({ mutationFn: upsertPlatformUser })
+  const usersQuery = useQuery({ queryKey: ["user-manager", "tenant-users", tenant.tenant_id, session.selectedTenant.slug], queryFn: () => listTenantUsers(session, tenant.tenant_id) })
+  const statusMutation = useMutation({ mutationFn: (input: PlatformUserUpsertInput) => upsertPlatformUser(session, input) })
   const users = usersQuery.data ?? []
   const mappedUserCount = usersQuery.data ? users.length : tenant.user_count
   const [searchValue, setSearchValue] = useState("")

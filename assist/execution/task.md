@@ -189,3 +189,11 @@
 - [x] `19.7` Fix class-level `@UseGuards` metadata handling
 - [x] `19.8` Recheck server/frontend typecheck and builds
 - [x] `19.9` Update assist changelog, architecture context, rules, and templates for the upgraded structure
+
+## Phase 20: E2E auth and tenant transaction check
+
+- [x] `20.1` Record current prompt into prompt review
+- [x] `20.2` Fix server preflight environment forwarding
+- [x] `20.3` Restart live server with local JWT secret
+- [x] `20.4` Verify login, tenant context, company transaction, and all common table transactions
+- [x] `20.5` Run targeted verification

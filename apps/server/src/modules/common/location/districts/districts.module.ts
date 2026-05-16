@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { DistrictsCommonService } from './application/districts.service.js'
-import { DistrictsCommonRepository } from './infrastructure/persistence/districts.repository.js'
-import { DistrictsCommonV1Controller } from './interface/http/districts-v1.controller.js'
+import { DistrictsCommonService } from './service.js'
+import { DistrictsCommonRepository } from './repository.js'
+import { DistrictsCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [DistrictsCommonV1Controller],

@@ -23,6 +23,7 @@ import {
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
+import type { AuthSession } from "src/features/auth/auth-client"
 import {
   destroyIndustry,
   emptyIndustry,
@@ -54,7 +55,7 @@ const defaultColumns: Record<IndustryColumnId, boolean> = {
   status: true,
 }
 
-export function IndustryPage() {
+export function IndustryPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
   const [selectedIndustry, setSelectedIndustry] = useState<IndustryRecord | null>(null)
   const [upsertState, setUpsertState] = useState<IndustryUpsertState | null>(null)
@@ -63,10 +64,10 @@ export function IndustryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
   const [visibleColumns, setVisibleColumns] = useState(defaultColumns)
-  const industriesQuery = useQuery({ queryKey: ["industries"], queryFn: () => listIndustries() })
-  const upsertMutation = useMutation({ mutationFn: upsertIndustry })
-  const destroyMutation = useMutation({ mutationFn: (industry: IndustryRecord) => destroyIndustry(industry.id) })
-  const restoreMutation = useMutation({ mutationFn: (industry: IndustryRecord) => restoreIndustry(industry.id) })
+  const industriesQuery = useQuery({ queryKey: ["industries", session.selectedTenant.slug], queryFn: () => listIndustries(session) })
+  const upsertMutation = useMutation({ mutationFn: (input: IndustryUpsertInput) => upsertIndustry(session, input) })
+  const destroyMutation = useMutation({ mutationFn: (industry: IndustryRecord) => destroyIndustry(session, industry.id) })
+  const restoreMutation = useMutation({ mutationFn: (industry: IndustryRecord) => restoreIndustry(session, industry.id) })
   const industries = industriesQuery.data ?? []
   const isLoading = industriesQuery.isFetching
 
@@ -98,7 +99,7 @@ export function IndustryPage() {
     toast.success(input.id ? "Industry updated" : "Industry created", {
       description: `${industry.name} is ready in the master list.`,
     })
-    await queryClient.invalidateQueries({ queryKey: ["industries"] })
+    await queryClient.invalidateQueries({ queryKey: ["industries", session.selectedTenant.slug] })
     setUpsertState(null)
     setSelectedIndustry(upsertState?.returnTo === "show" ? industry : null)
   }
@@ -109,7 +110,7 @@ export function IndustryPage() {
       toast.error("Industry suspended", {
         description: `${industry.name} is hidden from active defaults until it is restored.`,
       })
-      await queryClient.invalidateQueries({ queryKey: ["industries"] })
+      await queryClient.invalidateQueries({ queryKey: ["industries", session.selectedTenant.slug] })
     } catch (error) {
       toast.error("Industry suspend failed", {
         description: error instanceof Error ? error.message : "Unable to suspend industry.",
@@ -123,7 +124,7 @@ export function IndustryPage() {
       toast.success("Industry restored", {
         description: `${industry.name} is active again and available for tenant defaults.`,
       })
-      await queryClient.invalidateQueries({ queryKey: ["industries"] })
+      await queryClient.invalidateQueries({ queryKey: ["industries", session.selectedTenant.slug] })
     } catch (error) {
       toast.error("Industry restore failed", {
         description: error instanceof Error ? error.message : "Unable to restore industry.",

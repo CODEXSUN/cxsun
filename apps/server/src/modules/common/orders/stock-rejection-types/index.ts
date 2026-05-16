@@ -1,2 +1,3 @@
 export { StockRejectionTypesCommonModule } from './stock-rejection-types.module.js'
-export { migrateStockRejectionTypesCommonTable } from './database/migrations/stock-rejection-types.migration.js'
+export { migrateStockRejectionTypesCommonTable } from './migration.js'
+export { seedStockRejectionTypesCommonTable } from './seeder.js'

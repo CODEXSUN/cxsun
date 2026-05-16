@@ -1,2 +1,3 @@
 export { AccountingYearCommonModule } from './accounting-year.module.js'
-export { migrateAccountingYearCommonTable } from './database/migrations/accounting-year.migration.js'
+export { migrateAccountingYearCommonTable } from './migration.js'
+export { seedAccountingYearCommonTable } from './seeder.js'

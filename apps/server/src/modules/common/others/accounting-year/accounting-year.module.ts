@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { AccountingYearCommonService } from './application/accounting-year.service.js'
-import { AccountingYearCommonRepository } from './infrastructure/persistence/accounting-year.repository.js'
-import { AccountingYearCommonV1Controller } from './interface/http/accounting-year-v1.controller.js'
+import { AccountingYearCommonService } from './service.js'
+import { AccountingYearCommonRepository } from './repository.js'
+import { AccountingYearCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [AccountingYearCommonV1Controller],

@@ -1,4 +1,4 @@
-import { apiBaseUrl } from "src/features/auth/auth-client"
+import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type PlatformUserStatus = "active" | "inactive" | "suspend"
 
@@ -38,30 +38,30 @@ export interface PlatformUserUpsertInput {
   status: PlatformUserStatus
 }
 
-export async function listUserTenantSummaries() {
+export async function listUserTenantSummaries(session: AuthSession) {
   const response = await fetch(`${apiBaseUrl}/api/v1/users/tenant-summary`, {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: authHeaders(session),
   })
   if (!response.ok) throw new Error(`User tenant summary failed with status ${response.status}.`)
   return (await response.json()) as TenantUserSummary[]
 }
 
-export async function listTenantUsers(tenantId: number) {
+export async function listTenantUsers(session: AuthSession, tenantId: number) {
   const response = await fetch(`${apiBaseUrl}/api/v1/users/tenant/${tenantId}`, {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: authHeaders(session),
   })
   if (!response.ok) throw new Error(`Tenant users failed with status ${response.status}.`)
   return (await response.json()) as TenantUserRecord[]
 }
 
-export async function upsertPlatformUser(input: PlatformUserUpsertInput) {
+export async function upsertPlatformUser(session: AuthSession, input: PlatformUserUpsertInput) {
   const response = await fetch(`${apiBaseUrl}/api/v1/users/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",

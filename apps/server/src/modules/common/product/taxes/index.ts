@@ -1,2 +1,3 @@
 export { TaxesCommonModule } from './taxes.module.js'
-export { migrateTaxesCommonTable } from './database/migrations/taxes.migration.js'
+export { migrateTaxesCommonTable } from './migration.js'
+export { seedTaxesCommonTable } from './seeder.js'

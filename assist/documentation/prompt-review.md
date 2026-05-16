@@ -814,3 +814,114 @@ manager
 staff -> all staff who editer data
 user - > all empolyees
 ```
+
+## Current Prompt
+
+```
+read assist readme.md and fix this error and test e2e
+
+login + tenant + company transaction + common transaction on all tables and finalise all are green
+
+rver\\src\\infrastructure\\auth\\jwt.ts:29:25)\n    at AuthService.login (E:\\Workspace\\cxsun\\apps\\server\\src\\modules\\auth\\application\\auth.service.ts:38:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"},"msg":"JWT_SECRET environment variable is required"}
+[server] {"level":50,"time":1778909657260,"pid":22056,"hostname":"SUNDAR","reqId":"req-f","req":{"method":"POST","url":"/api/v1/auth/login","host":"localhost:6001","remoteAddress":"127.0.0.1","remotePort":50181},"res":{"statusCode":500},"err":{"type":"Error","message":"JWT_SECRET environment variable is required","stack":"Error: JWT_SECRET environment variable is required\n    at getJwtSecret (E:\\Workspace\\cxsun\\apps\\server\\src\\infrastructure\\auth\\jwt.ts:16:11)\n    at signature (E:\\Workspace\\cxsun\\apps\\server\\src\\infrastructure\\auth\\jwt.ts:68:31)\n    at signJwt (E:\\Workspace\\cxsun\\apps\\server\\src\\infrastructure\\auth\\jwt.ts:29:25)\n    at AuthService.login (E:\\Workspace\\cxsun\\apps\\server\\src\\modules\\auth\\application\\auth.service.ts:38:19)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"},"msg":"JWT_SECRET environment variable is required"}
+[server] {"level":30,"time":1778909657260,"pid":22056,"hostname":"SUNDAR","reqId":"req-f","res":{"statusCode":500},"responseTime":49.50859999936074,"msg":"request completed"}
+```
+
+## Current Prompt
+
+```
+make it for all modules
+```
+
+## Current Prompt
+
+```
+on tenant 
+
+react-dom-client.development.js:28004 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+chext_driver.js:539 Initialized driver at: Sat May 16 2026 15:20:57 GMT+0530 (India Standard Time)
+chext_loader.js:73 Initialized chextloader at: 1778925057928
+:6001/api/v1/companies:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+:6001/api/v1/companies:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+:6001/api/v1/companies:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+:6001/api/v1/companies:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+```
+
+## Current Prompt
+
+```
+fix all api for super admin , admin , user not to fail
+```
+
+## Current Prompt
+
+```
+make all common modules single input full width not side by side input all in one column and space even and space between label and input and organise neat and remove
+`Public uuid is generated as an 8 digit unique value.` keep only concious text as live original software to client, dont write anoymous helper text make it relavent to all commons
+[image attached]
+```
+
+## Current Prompt
+
+```
+13187598 make uuid alphanumeric generic to all make helper and wire it to dispatch uuid when called as global function or at helper folder
+```
+
+## Current Prompt
+
+```
+hide uuid and id on list and make frontend serial to all common not with backend serial and uuid
+```
+
+## Current Prompt
+
+```
+it will confuses some where so remove code field in all common modules and keep only name
+
+except 
+
+country , state
+```
+
+## Current Prompt
+
+```
+i am not under stand nameOnly why
+
+import type { MasterDataColumnDefinition, MasterDataModuleDefinition } from '../../../../../foundation/master-record/domain/value-objects/master-data-definition.js'
+
+const nameOnly: MasterDataColumnDefinition[] = [
+  { key: 'name', label: 'Name', type: 'string', required: true, nullable: false },
+]
+
+export const addressTypesCommonDefinition: MasterDataModuleDefinition = {
+  key: 'addressTypes',
+  label: 'Address Types',
+  kind: 'common',
+  tableName: 'common_address_types',
+  idPrefix: 'address-type',
+  group: 'contacts',
+  defaultSortKey: 'name',
+  columns: nameOnly,
+}
+
+which is best aproach
+
+refactor it I recommend changing all nameOnly definitions to direct columns: [...] and
+
+solve not to complex code structure organise it to simple and fast to understand and not rounding around functions and files for small transactions so make stright approach on all module that is accepted in global standard
+
+and also make dedicated modular codebase to identify and rework easier not to mix with shared and common if we want to fix one model all modules wil affect this should not happened in our code base
+```
+
+## Current Prompt
+
+```
+and also consolidate folder inside modules not too much blob and filename with native nature naming within modules and also make this for long term development and easy to add field or remove fields where ever in situatuions
+```
+
+## Current Prompt
+
+```
+read assist readme.md and check for common modules at present we have modified 
+```

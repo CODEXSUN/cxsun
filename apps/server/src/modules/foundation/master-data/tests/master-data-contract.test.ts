@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { commonModuleFolderContracts } from '../../../common/registry.js'
 import { contactMasterDefinition } from '../../../master/contact/domain/value-objects/contact-master.definition.js'
 import { masterDataIdentityMigrationContract } from '../../master-record/database/migrations/master-record.migration.js'
+import { dispatchPublicUuid, PUBLIC_UUID_LENGTH } from '../../../../shared/helpers/public-uuid.js'
 import { masterDataDefinitions } from '../domain/value-objects/master-data-definition.js'
 import { orderMasterDefinition } from '../../../master/order/domain/value-objects/order-master.definition.js'
 import { productMasterDefinition } from '../../../master/product/domain/value-objects/product-master.definition.js'
@@ -35,11 +36,26 @@ for (const definition of allDefinitions) {
   assertUnique(definition.columns, 'key', `${definition.key} column`)
 }
 
+for (const definition of commonDefinitions) {
+  const columnKeys = definition.columns.map((column) => column.key)
+  if (definition.key === 'countries' || definition.key === 'states') {
+    assert.ok(columnKeys.includes('code'), `${definition.key} must keep Code`)
+    continue
+  }
+
+  assert.deepEqual(columnKeys, ['name'], `${definition.key} common module must only expose Name`)
+}
+
 for (const definition of standaloneMasterDefinitions) {
   assert.ok(
     definition.tableName.startsWith('masters_'),
     `${definition.key} master table must use masters_ prefix`,
   )
+}
+
+for (const masterModule of ['contact', 'product', 'order']) {
+  const seederPath = join(testDirectory, '../../../master', masterModule, 'database/seeders', `${masterModule}-master.seeder.ts`)
+  assert.ok(existsSync(seederPath), `${masterModule} master must have a seeder`)
 }
 
 for (const folderContract of commonModuleFolderContracts) {
@@ -54,8 +70,7 @@ for (const folderContract of commonModuleFolderContracts) {
     '../../../common',
     folderContract.group,
     folderContract.module,
-    'domain/value-objects',
-    `${folderContract.module}.definition.ts`,
+    'definition.ts',
   )
   assert.ok(existsSync(definitionPath), `${folderContract.key} must live under common/<group>/<module>`)
   assert.ok(folderContract.moduleClass, `${folderContract.key} must declare a standalone module class`)
@@ -63,10 +78,11 @@ for (const folderContract of commonModuleFolderContracts) {
 
   const moduleRoot = join(testDirectory, '../../../common', folderContract.group, folderContract.module)
   assert.ok(existsSync(join(moduleRoot, `${folderContract.module}.module.ts`)), `${folderContract.key} must have a module class file`)
-  assert.ok(existsSync(join(moduleRoot, 'application', `${folderContract.module}.service.ts`)), `${folderContract.key} must have an application service`)
-  assert.ok(existsSync(join(moduleRoot, 'infrastructure/persistence', `${folderContract.module}.repository.ts`)), `${folderContract.key} must have a repository`)
-  assert.ok(existsSync(join(moduleRoot, 'interface/http', `${folderContract.module}-v1.controller.ts`)), `${folderContract.key} must have an HTTP controller`)
-  assert.ok(existsSync(join(moduleRoot, 'database/migrations', `${folderContract.module}.migration.ts`)), `${folderContract.key} must have a migration`)
+  assert.ok(existsSync(join(moduleRoot, 'service.ts')), `${folderContract.key} must have an application service`)
+  assert.ok(existsSync(join(moduleRoot, 'repository.ts')), `${folderContract.key} must have a repository`)
+  assert.ok(existsSync(join(moduleRoot, 'controller.ts')), `${folderContract.key} must have an HTTP controller`)
+  assert.ok(existsSync(join(moduleRoot, 'migration.ts')), `${folderContract.key} must have a migration`)
+  assert.ok(existsSync(join(moduleRoot, 'seeder.ts')), `${folderContract.key} must have a seeder`)
 }
 
 assert.equal(masterDataIdentityMigrationContract.primaryKeyColumn, 'id')
@@ -74,6 +90,11 @@ assert.equal(masterDataIdentityMigrationContract.primaryKeyDefinition, 'INT NOT 
 assert.equal(masterDataIdentityMigrationContract.publicUuidColumn, 'uuid')
 assert.equal(masterDataIdentityMigrationContract.publicUuidDefinition, 'CHAR(8) NOT NULL UNIQUE')
 assert.equal(masterDataIdentityMigrationContract.publicUuidLength, 8)
+
+const generatedPublicUuid = dispatchPublicUuid()
+assert.equal(generatedPublicUuid.length, PUBLIC_UUID_LENGTH)
+assert.match(generatedPublicUuid, /^[A-Z0-9]{8}$/)
+assert.match(generatedPublicUuid, /[A-Z]/)
 
 console.info(
   `master-data contract ok: ${commonDefinitions.length} common modules, ${standaloneMasterDefinitions.length} standalone master modules`,

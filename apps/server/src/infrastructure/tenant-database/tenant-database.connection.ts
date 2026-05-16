@@ -1,15 +1,15 @@
 import mysql from 'mysql2'
 import { createConnection } from 'mysql2/promise'
 import { Kysely, MysqlDialect, sql } from 'kysely'
-import { randomInt } from 'crypto'
 import type { TenantDatabaseSchema } from './tenant-database.schema.js'
 import type { Tenant } from '../../core/tenant/domain/tenant.types.js'
 import { getDatabase } from '../database/connection.js'
+import { dispatchPublicUuid } from '../../shared/helpers/public-uuid.js'
 import { migrateCommonModuleTables, seedCommonModuleTables } from '../../modules/common/index.js'
 import { migrateSalesEntryTables } from '../../modules/entries/sales/index.js'
 import { migrateContactMasterTable, seedContactMasterTable } from '../../modules/master/contact/index.js'
-import { migrateProductMasterTable } from '../../modules/master/product/index.js'
-import { migrateOrderMasterTable } from '../../modules/master/order/index.js'
+import { migrateProductMasterTable, seedProductMasterTable } from '../../modules/master/product/index.js'
+import { migrateOrderMasterTable, seedOrderMasterTable } from '../../modules/master/order/index.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
 
@@ -189,6 +189,8 @@ function toMetricNumber(value: number | string | bigint | null | undefined) {
 
 async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
   await seedCommonModuleTables(database)
+  await seedProductMasterTable(database)
+  await seedOrderMasterTable(database)
   const years = await seedAccountingYears(database)
   const seededCompanies = tenantCompanyCatalog[tenant.slug] ?? [
     {
@@ -238,7 +240,7 @@ async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
     await ensurePolicy(database, policy)
   }
 
-  for (const roleCode of ['admin', 'manager', 'staff']) {
+  for (const roleCode of ['admin', 'manager', 'staff', 'user']) {
     await ensureRolePolicy(database, roleCode, 'company.manage')
   }
 
@@ -793,5 +795,5 @@ async function nextUniquePublicUuid(database: TenantDatabase, table: string) {
 }
 
 function nextPublicUuid() {
-  return String(randomInt(10_000_000, 100_000_000))
+  return dispatchPublicUuid()
 }

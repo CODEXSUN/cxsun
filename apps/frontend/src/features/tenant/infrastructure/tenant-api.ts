@@ -1,3 +1,4 @@
+import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { TenantRecord, TenantUpsertInput } from "../domain/tenant"
 
 interface TenantApiRecord {
@@ -32,10 +33,10 @@ const configuredApiBaseUrl =
 const apiBaseUrl = configuredApiBaseUrl.replace(/\/api(\/v\d+)?\/?$/, "").replace(/\/$/, "")
 const tenantApiPath = "/api/v1/tenants"
 
-export async function listTenants(options?: { signal?: AbortSignal }) {
+export async function listTenants(session: AuthSession, options?: { signal?: AbortSignal }) {
   const response = await fetch(`${apiBaseUrl}${tenantApiPath}`, {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: authHeaders(session),
     signal: options?.signal,
   })
 
@@ -47,12 +48,12 @@ export async function listTenants(options?: { signal?: AbortSignal }) {
   return records.map(toTenantRecord)
 }
 
-export async function upsertTenant(input: TenantUpsertInput) {
+export async function upsertTenant(session: AuthSession, input: TenantUpsertInput) {
   const response = await fetch(`${apiBaseUrl}${tenantApiPath}/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",
@@ -71,12 +72,12 @@ export async function upsertTenant(input: TenantUpsertInput) {
   return toTenantRecord(result.tenant)
 }
 
-export async function softDeleteTenant(tenantId: number) {
+export async function softDeleteTenant(session: AuthSession, tenantId: number) {
   const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/destroy`, {
     body: "{}",
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",
@@ -93,12 +94,12 @@ export async function softDeleteTenant(tenantId: number) {
   }
 }
 
-export async function restoreTenant(tenantId: number) {
+export async function restoreTenant(session: AuthSession, tenantId: number) {
   const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/restore`, {
     body: "{}",
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",

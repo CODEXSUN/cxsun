@@ -31,11 +31,6 @@ import { migrateStatesCommonTable } from './location/states/index.js'
 import { migrateDistrictsCommonTable } from './location/districts/index.js'
 import { migrateCitiesCommonTable } from './location/cities/index.js'
 import { migratePincodesCommonTable } from './location/pincodes/index.js'
-import { seedCountriesCommonTable } from './location/countries/index.js'
-import { seedStatesCommonTable } from './location/states/index.js'
-import { seedDistrictsCommonTable } from './location/districts/index.js'
-import { seedCitiesCommonTable } from './location/cities/index.js'
-import { seedPincodesCommonTable } from './location/pincodes/index.js'
 import { migrateContactGroupsCommonTable } from './contacts/contact-groups/index.js'
 import { migrateContactTypesCommonTable } from './contacts/contact-types/index.js'
 import { migrateAddressTypesCommonTable } from './contacts/address-types/index.js'
@@ -59,6 +54,34 @@ import { migratePaymentTermsCommonTable } from './others/payment-terms/index.js'
 import { migrateAccountingYearCommonTable } from './others/accounting-year/index.js'
 import { migrateMonthsCommonTable } from './others/months/index.js'
 import { migrateStockRejectionTypesCommonTable } from './orders/stock-rejection-types/index.js'
+import { seedCountriesCommonTable } from './location/countries/index.js'
+import { seedStatesCommonTable } from './location/states/index.js'
+import { seedDistrictsCommonTable } from './location/districts/index.js'
+import { seedCitiesCommonTable } from './location/cities/index.js'
+import { seedPincodesCommonTable } from './location/pincodes/index.js'
+import { seedContactGroupsCommonTable } from './contacts/contact-groups/index.js'
+import { seedContactTypesCommonTable } from './contacts/contact-types/index.js'
+import { seedAddressTypesCommonTable } from './contacts/address-types/index.js'
+import { seedBankNamesCommonTable } from './contacts/bank-names/index.js'
+import { seedProductGroupsCommonTable } from './product/product-groups/index.js'
+import { seedProductCategoriesCommonTable } from './product/product-categories/index.js'
+import { seedProductTypesCommonTable } from './product/product-types/index.js'
+import { seedUnitsCommonTable } from './product/units/index.js'
+import { seedHsnCodesCommonTable } from './product/hsn-codes/index.js'
+import { seedTaxesCommonTable } from './product/taxes/index.js'
+import { seedBrandsCommonTable } from './product/brands/index.js'
+import { seedColoursCommonTable } from './product/colours/index.js'
+import { seedSizesCommonTable } from './product/sizes/index.js'
+import { seedCurrenciesCommonTable } from './others/currencies/index.js'
+import { seedOrderTypesCommonTable } from './orders/order-types/index.js'
+import { seedStylesCommonTable } from './product/styles/index.js'
+import { seedTransportsCommonTable } from './orders/transports/index.js'
+import { seedWarehousesCommonTable } from './orders/warehouses/index.js'
+import { seedDestinationsCommonTable } from './orders/destinations/index.js'
+import { seedPaymentTermsCommonTable } from './others/payment-terms/index.js'
+import { seedAccountingYearCommonTable } from './others/accounting-year/index.js'
+import { seedMonthsCommonTable } from './others/months/index.js'
+import { seedStockRejectionTypesCommonTable } from './orders/stock-rejection-types/index.js'
 import type { Kysely } from 'kysely'
 import type { TenantDatabaseSchema } from '../../infrastructure/tenant-database/tenant-database.schema.js'
 
@@ -132,4 +155,27 @@ export async function seedCommonModuleTables(database: Kysely<TenantDatabaseSche
   await seedDistrictsCommonTable(database)
   await seedCitiesCommonTable(database)
   await seedPincodesCommonTable(database)
+  await seedContactGroupsCommonTable(database)
+  await seedContactTypesCommonTable(database)
+  await seedAddressTypesCommonTable(database)
+  await seedBankNamesCommonTable(database)
+  await seedProductGroupsCommonTable(database)
+  await seedProductCategoriesCommonTable(database)
+  await seedProductTypesCommonTable(database)
+  await seedUnitsCommonTable(database)
+  await seedHsnCodesCommonTable(database)
+  await seedTaxesCommonTable(database)
+  await seedBrandsCommonTable(database)
+  await seedColoursCommonTable(database)
+  await seedSizesCommonTable(database)
+  await seedCurrenciesCommonTable(database)
+  await seedOrderTypesCommonTable(database)
+  await seedStylesCommonTable(database)
+  await seedTransportsCommonTable(database)
+  await seedWarehousesCommonTable(database)
+  await seedDestinationsCommonTable(database)
+  await seedPaymentTermsCommonTable(database)
+  await seedAccountingYearCommonTable(database)
+  await seedMonthsCommonTable(database)
+  await seedStockRejectionTypesCommonTable(database)
 }

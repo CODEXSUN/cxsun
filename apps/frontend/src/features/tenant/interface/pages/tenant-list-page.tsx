@@ -23,6 +23,7 @@ import {
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
+import type { AuthSession } from "src/features/auth/auth-client"
 import {
   buildTenantColumnOptions,
   compareTenantRecords,
@@ -42,13 +43,14 @@ import {
   type TenantColumnId,
   type TenantFormState,
   type TenantRecord,
+  type TenantUpsertInput,
 } from "../../domain/tenant"
 
 type TenantSortDirection = "asc" | "desc"
 type TenantUpsertState = { tenant: TenantRecord | null; returnTo: "list" | "show" }
 type TenantTab = "identity" | "database" | "settings"
 
-export function TenantListPage() {
+export function TenantListPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
   const [selectedTenant, setSelectedTenant] = useState<TenantRecord | null>(null)
   const [upsertState, setUpsertState] = useState<TenantUpsertState | null>(null)
@@ -61,10 +63,10 @@ export function TenantListPage() {
     key: "updated",
     direction: "desc",
   })
-  const tenantsQuery = useQuery({ queryKey: ["tenants"], queryFn: () => listTenants() })
-  const upsertMutation = useMutation({ mutationFn: upsertTenant })
-  const destroyMutation = useMutation({ mutationFn: (tenant: TenantRecord) => softDeleteTenant(tenant.id) })
-  const restoreMutation = useMutation({ mutationFn: (tenant: TenantRecord) => restoreTenant(tenant.id) })
+  const tenantsQuery = useQuery({ queryKey: ["tenants", session.selectedTenant.slug], queryFn: () => listTenants(session) })
+  const upsertMutation = useMutation({ mutationFn: (input: TenantUpsertInput) => upsertTenant(session, input) })
+  const destroyMutation = useMutation({ mutationFn: (tenant: TenantRecord) => softDeleteTenant(session, tenant.id) })
+  const restoreMutation = useMutation({ mutationFn: (tenant: TenantRecord) => restoreTenant(session, tenant.id) })
   const tenants = tenantsQuery.data ?? []
   const isLoading = tenantsQuery.isFetching
 

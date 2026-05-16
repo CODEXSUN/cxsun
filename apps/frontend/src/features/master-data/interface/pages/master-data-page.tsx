@@ -100,7 +100,7 @@ export function MasterDataPage({ moduleKey, session }: { moduleKey: string; sess
   return (
     <MasterListPageFrame
       title={definition?.label ?? "Master"}
-      description="Tenant master module with list, show, upsert, events, queue jobs, and 8 digit public uuid."
+      description="Tenant master values used across operational workflows and public references."
       technicalName={`page.master.${moduleKey}`}
       action={
         <div className="flex items-center gap-2">
@@ -321,4 +321,3 @@ function StatusBadge({ active }: { active: boolean }) {
 function ListHeader({ children, className }: { children: ReactNode; className?: string }) {
   return <th className={cn("border-b border-border/70 px-4 py-3.5 text-left font-medium text-foreground", className)}>{children}</th>
 }
-

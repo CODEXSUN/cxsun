@@ -8,6 +8,7 @@ import { MasterDataModule } from './foundation/master-data/index.js'
 import { OrdersModule } from './master/order/index.js'
 import { ProductsModule } from './master/product/index.js'
 import { SiteModule } from './site/index.js'
+import { SalesEntryModule } from './entries/sales/index.js'
 import { SystemUpdateModule } from '../core/system/system-update/system-update.module.js'
 import { HealthModule } from '../core/health/health.module.js'
 import { IndustryModule } from '../core/industry/industry.module.js'
@@ -32,6 +33,7 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     ContactsModule,
     ProductsModule,
     OrdersModule,
+    SalesEntryModule,
     CompanyModule,
   ],
   guards: [AuthGuard],

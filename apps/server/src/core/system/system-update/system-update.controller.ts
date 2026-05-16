@@ -1,8 +1,11 @@
 import { Controller, Get, Post } from '../../decorators/controller.js'
 import { Inject } from '../../decorators/inject.js'
+import { UseGuards } from '../../decorators/guards.js'
+import { AuthGuard } from '../../guards/auth.guard.js'
 import { SystemUpdateService } from './system-update.service.js'
 
 @Controller('api/system-update')
+@UseGuards(AuthGuard)
 export class SystemUpdateController {
   constructor(
     @Inject(SystemUpdateService)

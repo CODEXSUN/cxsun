@@ -78,7 +78,7 @@ Add multi-theme support to the active Vite frontend, including blue, emerald, or
 - Read temp common/master module definitions and strict modular monolith, DDD, event-driven, and queue standards.
 - Add individual tenant modules for each common/master area instead of one generic common module.
 - Keep reusable code as shared module primitives, but give each common/master a removable module folder with domain, application, infrastructure, interface, and database shape.
-- Add per-module tenant tables with integer auto-increment primary keys and an additional unique 8-character public UUID.
+- Add per-module tenant tables with integer auto-increment primary keys and an additional unique 8-character alphanumeric public UUID.
 - Add common module pages with popup upsert/list behavior and master module pages with list/show/upsert behavior like the tenant master page.
 - Wire tenant dashboard app routes to the individual module pages and verify server/frontend checks.
 
@@ -153,3 +153,9 @@ Add multi-theme support to the active Vite frontend, including blue, emerald, or
 - Keep tenant entries under `apps/server/src/modules/entries/<module>`.
 - Fix route guard metadata so class-level `@UseGuards` is honored.
 - Update assist architecture docs and changelog to reflect the upgraded structure.
+
+### Phase 20: E2E auth and tenant transaction check
+
+- Fix local process startup so the active server receives root `.env` values.
+- Verify login, tenant context, tenant company transaction, and all common-module table transactions.
+- Run targeted builds and the standard active workspace check.

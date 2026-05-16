@@ -1,2 +1,3 @@
 export { StylesCommonModule } from './styles.module.js'
-export { migrateStylesCommonTable } from './database/migrations/styles.migration.js'
+export { migrateStylesCommonTable } from './migration.js'
+export { seedStylesCommonTable } from './seeder.js'

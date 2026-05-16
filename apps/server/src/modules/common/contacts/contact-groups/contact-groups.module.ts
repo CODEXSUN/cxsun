@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { ContactGroupsCommonService } from './application/contact-groups.service.js'
-import { ContactGroupsCommonRepository } from './infrastructure/persistence/contact-groups.repository.js'
-import { ContactGroupsCommonV1Controller } from './interface/http/contact-groups-v1.controller.js'
+import { ContactGroupsCommonService } from './service.js'
+import { ContactGroupsCommonRepository } from './repository.js'
+import { ContactGroupsCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [ContactGroupsCommonV1Controller],

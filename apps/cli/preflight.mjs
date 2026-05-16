@@ -69,7 +69,7 @@ const launch = (finalPort) => {
     cwd,
     stdio: 'inherit',
     shell: true,
-    env: { ...process.env, [envKey]: String(finalPort) },
+    env: { ...process.env, ...env, [envKey]: String(finalPort) },
   })
   child.on('exit', (code) => process.exit(code ?? 0))
 }

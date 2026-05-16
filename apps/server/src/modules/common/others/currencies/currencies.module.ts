@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { CurrenciesCommonService } from './application/currencies.service.js'
-import { CurrenciesCommonRepository } from './infrastructure/persistence/currencies.repository.js'
-import { CurrenciesCommonV1Controller } from './interface/http/currencies-v1.controller.js'
+import { CurrenciesCommonService } from './service.js'
+import { CurrenciesCommonRepository } from './repository.js'
+import { CurrenciesCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [CurrenciesCommonV1Controller],

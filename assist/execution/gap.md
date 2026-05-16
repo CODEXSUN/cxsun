@@ -132,12 +132,7 @@ All marked with proper `Generated<number>` for auto-increment IDs, `boolean` for
 
 ### 17. ✅ RESOLVED: UUID generation improved
 
-All 3 `Math.random()` locations replaced with `crypto.randomInt(10_000_000, 100_000_000)`:
-- `master-record.repository.ts:94`
-- `master-record.seeder.ts:41`
-- `sales-entry.repository.ts:315`
-
-Still 8-digit numeric format (fits `CHAR(8)` column). CSPRNG eliminates predictability. Full UUID migration (`crypto.randomUUID()` + `CHAR(36)`) deferred.
+All public record UUID creation now goes through the shared 8-character uppercase alphanumeric helper (fits the existing `CHAR(8)` column). Full UUID migration (`crypto.randomUUID()` + `CHAR(36)`) deferred.
 
 ### 18. Pending: no request body validation
 

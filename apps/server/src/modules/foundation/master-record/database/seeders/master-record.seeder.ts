@@ -1,6 +1,6 @@
-import { randomInt } from 'crypto'
 import type { Kysely } from 'kysely'
 import type { TenantDatabaseSchema } from '../../../../../infrastructure/tenant-database/tenant-database.schema.js'
+import { dispatchPublicUuid } from '../../../../../shared/helpers/public-uuid.js'
 import type { MasterDataModuleDefinition } from '../../domain/value-objects/master-data-definition.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
@@ -39,7 +39,7 @@ export async function seedMasterRecordDefinition(
     await dynamic
       .insertInto(definition.tableName)
       .values({
-        uuid: String(randomInt(10_000_000, 100_000_000)),
+        uuid: dispatchPublicUuid(),
         ...row,
         is_active: true,
         created_at: timestamp,

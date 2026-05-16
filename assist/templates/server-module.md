@@ -49,7 +49,7 @@ apps/server/src/modules/<group-or-boundary>/<module-name>/
 - Keep infrastructure code out of domain and application layers.
 - Keep public HTTP routes stable when moving internal module folders.
 - For tenant-owned modules, resolve access and database through `TenantContextService`.
-- For every application-owned table, keep integer auto-increment `id` as the primary key and an additional unique 8-character public `uuid`:
+- For every application-owned table, keep integer auto-increment `id` as the primary key and an additional unique 8-character alphanumeric public `uuid`:
 
 ```sql
 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -57,4 +57,4 @@ uuid CHAR(8) NOT NULL UNIQUE
 ```
 
 - Use `id` internally for joins and persistence. Use `uuid` in APIs, URLs, UI state, and other public references.
-- Keep `uuid` at 8 characters for now; move to 16 characters later only through a planned migration.
+- Generate new `uuid` values through the shared public UUID helper. Keep `uuid` at 8 characters for now; move to 16 characters later only through a planned migration.

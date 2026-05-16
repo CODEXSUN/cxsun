@@ -1,7 +1,7 @@
-import { randomInt } from 'crypto'
 import { sql, type Kysely } from 'kysely'
 import { Injectable } from '../../../../../core/decorators/injectable.js'
 import type { TenantRuntimeContext } from '../../../../../core/tenant/tenant-context.service.js'
+import { dispatchPublicUuid } from '../../../../../shared/helpers/public-uuid.js'
 import type { MasterRecord } from '../../domain/entities/master-record.entity.js'
 import type { MasterDataColumnDefinition, MasterDataModuleDefinition } from '../../domain/value-objects/master-data-definition.js'
 
@@ -92,7 +92,7 @@ export class MasterRecordRepository {
 
   private async nextUuid(context: TenantRuntimeContext, definition: MasterDataModuleDefinition) {
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const uuid = String(randomInt(10_000_000, 100_000_000))
+      const uuid = dispatchPublicUuid()
       const existing = await this.find(context, definition, uuid)
 
       if (!existing) {

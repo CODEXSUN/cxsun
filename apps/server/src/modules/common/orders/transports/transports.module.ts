@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { TransportsCommonService } from './application/transports.service.js'
-import { TransportsCommonRepository } from './infrastructure/persistence/transports.repository.js'
-import { TransportsCommonV1Controller } from './interface/http/transports-v1.controller.js'
+import { TransportsCommonService } from './service.js'
+import { TransportsCommonRepository } from './repository.js'
+import { TransportsCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [TransportsCommonV1Controller],

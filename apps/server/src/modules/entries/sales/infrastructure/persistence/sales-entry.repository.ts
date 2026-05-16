@@ -1,8 +1,8 @@
-import { randomInt } from 'crypto'
 import { sql, type Kysely } from 'kysely'
 import { BadRequestException } from '../../../../../core/exceptions/http.exception.js'
 import { Injectable } from '../../../../../core/decorators/injectable.js'
 import type { TenantRuntimeContext } from '../../../../../core/tenant/tenant-context.service.js'
+import { dispatchPublicUuid } from '../../../../../shared/helpers/public-uuid.js'
 import type { SalesEntry, SalesEntryItem } from '../../domain/entities/sales-entry.entity.js'
 
 type DynamicDatabase = Record<string, Record<string, unknown>>
@@ -316,7 +316,7 @@ export class SalesEntryRepository {
   }
 
   private nextUuid() {
-    return String(randomInt(10_000_000, 100_000_000))
+    return dispatchPublicUuid()
   }
 
   private database(context: TenantRuntimeContext) {

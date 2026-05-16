@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { HsnCodesCommonService } from './application/hsn-codes.service.js'
-import { HsnCodesCommonRepository } from './infrastructure/persistence/hsn-codes.repository.js'
-import { HsnCodesCommonV1Controller } from './interface/http/hsn-codes-v1.controller.js'
+import { HsnCodesCommonService } from './service.js'
+import { HsnCodesCommonRepository } from './repository.js'
+import { HsnCodesCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [HsnCodesCommonV1Controller],

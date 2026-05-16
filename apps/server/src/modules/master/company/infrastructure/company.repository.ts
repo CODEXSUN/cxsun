@@ -1,8 +1,8 @@
 import { sql } from 'kysely'
-import { randomInt } from 'crypto'
 import { Injectable } from '../../../../core/decorators/injectable.js'
 import { getDatabase } from '../../../../infrastructure/database/connection.js'
 import { syncTenantCompanyMetrics } from '../../../../infrastructure/tenant-database/tenant-database.connection.js'
+import { dispatchPublicUuid } from '../../../../shared/helpers/public-uuid.js'
 import type { TenantRuntimeContext } from '../../../../core/tenant/tenant-context.service.js'
 import type { Company, CompanyStatus } from '../domain/company.types.js'
 import type { NormalizedCompanyData } from '../domain/company.aggregate.js'
@@ -403,5 +403,5 @@ function affectedRows(result: unknown) {
 }
 
 function nextPublicUuid() {
-  return String(randomInt(10_000_000, 100_000_000))
+  return dispatchPublicUuid()
 }

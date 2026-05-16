@@ -1,2 +1,3 @@
 export { DestinationsCommonModule } from './destinations.module.js'
-export { migrateDestinationsCommonTable } from './database/migrations/destinations.migration.js'
+export { migrateDestinationsCommonTable } from './migration.js'
+export { seedDestinationsCommonTable } from './seeder.js'

@@ -21,9 +21,10 @@ import {
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
+import type { AuthSession } from "src/features/auth/auth-client"
 import { destroyClient, emptyClient, listClients, restoreClient, toClientInput, upsertClient, type ClientRecord, type ClientUpsertInput } from "./client-client"
 
-export function ClientPage() {
+export function ClientPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
   const [searchValue, setSearchValue] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
@@ -32,8 +33,8 @@ export function ClientPage() {
   const [selectedClient, setSelectedClient] = useState<ClientRecord | null>(null)
   const [editing, setEditing] = useState<ClientRecord | null>(null)
   const [creating, setCreating] = useState(false)
-  const clientsQuery = useQuery({ queryKey: ["clients"], queryFn: listClients })
-  const upsertMutation = useMutation({ mutationFn: upsertClient })
+  const clientsQuery = useQuery({ queryKey: ["clients", session.selectedTenant.slug], queryFn: () => listClients(session) })
+  const upsertMutation = useMutation({ mutationFn: (input: ClientUpsertInput) => upsertClient(session, input) })
   const clients = clientsQuery.data ?? []
 
   useEffect(() => {
@@ -60,22 +61,22 @@ export function ClientPage() {
     toast.success(input.id ? "Client note updated" : "Client note created", {
       description: `${client.name} is stored in the independent client manager.`,
     })
-    await queryClient.invalidateQueries({ queryKey: ["clients"] })
+    await queryClient.invalidateQueries({ queryKey: ["clients", session.selectedTenant.slug] })
     setEditing(null)
     setCreating(false)
     setSelectedClient(null)
   }
 
   async function destroy(client: ClientRecord) {
-    await destroyClient(client.id)
+    await destroyClient(session, client.id)
     toast.error("Client note suspended", { description: `${client.name} is hidden from active notes.` })
-    await queryClient.invalidateQueries({ queryKey: ["clients"] })
+    await queryClient.invalidateQueries({ queryKey: ["clients", session.selectedTenant.slug] })
   }
 
   async function restore(client: ClientRecord) {
-    await restoreClient(client.id)
+    await restoreClient(session, client.id)
     toast.success("Client note restored", { description: `${client.name} is active again.` })
-    await queryClient.invalidateQueries({ queryKey: ["clients"] })
+    await queryClient.invalidateQueries({ queryKey: ["clients", session.selectedTenant.slug] })
   }
 
   if (creating || editing) {

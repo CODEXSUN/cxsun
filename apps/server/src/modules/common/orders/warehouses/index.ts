@@ -1,2 +1,3 @@
 export { WarehousesCommonModule } from './warehouses.module.js'
-export { migrateWarehousesCommonTable } from './database/migrations/warehouses.migration.js'
+export { migrateWarehousesCommonTable } from './migration.js'
+export { seedWarehousesCommonTable } from './seeder.js'

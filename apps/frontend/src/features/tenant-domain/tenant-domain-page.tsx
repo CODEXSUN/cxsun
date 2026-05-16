@@ -21,7 +21,7 @@ import {
 } from "src/components/blocks/lists/master-list"
 import { listTenants } from "src/features/tenant/infrastructure/tenant-api"
 import { cn } from "src/lib/utils"
-import { apiBaseUrl } from "src/features/auth/auth-client"
+import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 type TenantDomainStatus = "active" | "not_active" | "suspend"
 type TenantDomainRoute =
@@ -55,10 +55,10 @@ interface TenantDomainForm {
   settings: string
 }
 
-async function listDomains() {
+async function listDomains(session: AuthSession) {
   const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains`, {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: authHeaders(session),
   })
 
   if (!response.ok) {
@@ -68,12 +68,12 @@ async function listDomains() {
   return (await response.json()) as TenantDomainRecord[]
 }
 
-async function upsertDomain(input: TenantDomainForm) {
+async function upsertDomain(session: AuthSession, input: TenantDomainForm) {
   const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",
@@ -92,11 +92,11 @@ async function upsertDomain(input: TenantDomainForm) {
   return result.domain
 }
 
-export function TenantDomainPage() {
+export function TenantDomainPage({ session }: { session: AuthSession }) {
   const [route, setRoute] = useState<TenantDomainRoute>(() => tenantDomainRouteFromPath())
-  const domainsQuery = useQuery({ queryKey: ["tenant-domains"], queryFn: listDomains })
+  const domainsQuery = useQuery({ queryKey: ["tenant-domains", session.selectedTenant.slug], queryFn: () => listDomains(session) })
   const queryClient = useQueryClient()
-  const upsertMutation = useMutation({ mutationFn: upsertDomain })
+  const upsertMutation = useMutation({ mutationFn: (input: TenantDomainForm) => upsertDomain(session, input) })
   const domains = domainsQuery.data ?? []
 
   useEffect(() => {
@@ -126,16 +126,16 @@ export function TenantDomainPage() {
     toast.success(status === "suspend" ? "Domain suspended" : "Domain restored", {
       description: `${nextDomain.domain} is now ${status === "suspend" ? "suspended" : "active"}.`,
     })
-    await queryClient.invalidateQueries({ queryKey: ["tenant-domains"] })
+    await queryClient.invalidateQueries({ queryKey: ["tenant-domains", session.selectedTenant.slug] })
   }
 
   if (route.mode === "new") {
-    return <TenantDomainUpsertPage domains={domains} mode="new" onBack={() => navigate({ mode: "list" })} onSaved={(domain) => navigate({ mode: "show", id: domain.id })} />
+    return <TenantDomainUpsertPage domains={domains} mode="new" session={session} onBack={() => navigate({ mode: "list" })} onSaved={(domain) => navigate({ mode: "show", id: domain.id })} />
   }
 
   if (route.mode === "edit") {
     const domain = domains.find((record) => record.id === route.id)
-    return <TenantDomainUpsertPage domain={domain} domains={domains} isLoading={domainsQuery.isFetching} mode="edit" onBack={() => navigate({ mode: "show", id: route.id })} onSaved={(savedDomain) => navigate({ mode: "show", id: savedDomain.id })} />
+    return <TenantDomainUpsertPage domain={domain} domains={domains} isLoading={domainsQuery.isFetching} mode="edit" session={session} onBack={() => navigate({ mode: "show", id: route.id })} onSaved={(savedDomain) => navigate({ mode: "show", id: savedDomain.id })} />
   }
 
   if (route.mode === "show") {
@@ -393,6 +393,7 @@ function TenantDomainUpsertPage({
   mode,
   onBack,
   onSaved,
+  session,
 }: {
   domain?: TenantDomainRecord
   domains: TenantDomainRecord[]
@@ -400,10 +401,11 @@ function TenantDomainUpsertPage({
   mode: "new" | "edit"
   onBack(): void
   onSaved(domain: TenantDomainRecord): void
+  session: AuthSession
 }) {
   const queryClient = useQueryClient()
-  const tenantsQuery = useQuery({ queryKey: ["tenants"], queryFn: () => listTenants() })
-  const upsertMutation = useMutation({ mutationFn: upsertDomain })
+  const tenantsQuery = useQuery({ queryKey: ["tenants", session.selectedTenant.slug], queryFn: () => listTenants(session) })
+  const upsertMutation = useMutation({ mutationFn: (input: TenantDomainForm) => upsertDomain(session, input) })
   const tenants = tenantsQuery.data ?? []
   const [form, setForm] = useState<TenantDomainForm>(() => domain ? toForm(domain) : emptyForm(tenants[0]?.id))
 
@@ -430,7 +432,7 @@ function TenantDomainUpsertPage({
     toast.success(form.id ? "Domain updated" : "Domain created", {
       description: `${savedDomain.domain} is mapped to ${savedDomain.tenant_name}.`,
     })
-    await queryClient.invalidateQueries({ queryKey: ["tenant-domains"] })
+    await queryClient.invalidateQueries({ queryKey: ["tenant-domains", session.selectedTenant.slug] })
     onSaved(savedDomain)
   }
 

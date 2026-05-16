@@ -12,6 +12,16 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.18
 
+### [v 1.0.18] 2026-05-16 5:52 pm - flattened common seeders and default records
+
+- Flattened standalone common module internals into direct module files for faster module-level maintenance.
+- Added `seeder.ts` to every common module and wired all 28 common seeders into tenant database startup.
+- Seeded a default hyphen record for every common module so optional or unknown references have a safe default value.
+- Added default hyphen seed records for contact, product, and order master modules.
+- Kept country seeds focused with India first, the hyphen fallback second, and a short important-country list.
+- Reordered country and state common definitions so list columns show name before code and reference fields.
+- Extended master-data contract checks to require common module seeders and standalone master seeders.
+
 ### [v 1.0.18] 2026-05-16 - migration manager and tenant public ids
 
 - Added a core migration manager with CLI scripts for `db:migrate`, `db:seed`, `db:setup`, and `db:fresh`.

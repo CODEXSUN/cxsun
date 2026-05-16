@@ -64,6 +64,7 @@
 - New database tables must use `id INT AUTO_INCREMENT PRIMARY KEY` as the internal primary key.
 - New database tables must also include `uuid CHAR(8) NOT NULL UNIQUE` as the public identifier.
 - Internal code should use `id` for joins and foreign keys; API/frontend/public references should use `uuid`.
+- Generate public UUIDs through the shared public UUID helper so new IDs are uppercase alphanumeric, not numeric-only.
 - Keep the current public UUID length at 8 characters. Plan a deliberate move to 16 characters when the product grows enough to need a larger public id space.
 
 ## Backend Module Structure

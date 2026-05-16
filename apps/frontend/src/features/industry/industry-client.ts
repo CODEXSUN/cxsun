@@ -1,4 +1,4 @@
-import { apiBaseUrl } from "src/features/auth/auth-client"
+import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface IndustryRecord {
   id: number
@@ -23,10 +23,10 @@ export interface IndustryUpsertInput {
   default_ui_settings: Record<string, unknown>
 }
 
-export async function listIndustries() {
+export async function listIndustries(session: AuthSession) {
   const response = await fetch(`${apiBaseUrl}/api/v1/industries`, {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: authHeaders(session),
   })
 
   if (!response.ok) {
@@ -36,12 +36,12 @@ export async function listIndustries() {
   return (await response.json()) as IndustryRecord[]
 }
 
-export async function upsertIndustry(input: IndustryUpsertInput) {
+export async function upsertIndustry(session: AuthSession, input: IndustryUpsertInput) {
   const response = await fetch(`${apiBaseUrl}/api/v1/industries/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",
@@ -60,20 +60,20 @@ export async function upsertIndustry(input: IndustryUpsertInput) {
   return result.industry
 }
 
-export async function destroyIndustry(id: number) {
-  await mutateIndustry(id, "destroy")
+export async function destroyIndustry(session: AuthSession, id: number) {
+  await mutateIndustry(session, id, "destroy")
 }
 
-export async function restoreIndustry(id: number) {
-  await mutateIndustry(id, "restore")
+export async function restoreIndustry(session: AuthSession, id: number) {
+  await mutateIndustry(session, id, "restore")
 }
 
-async function mutateIndustry(id: number, action: "destroy" | "restore") {
+async function mutateIndustry(session: AuthSession, id: number, action: "destroy" | "restore") {
   const response = await fetch(`${apiBaseUrl}/api/v1/industries/${id}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: {
-      Accept: "application/json",
+      ...authHeaders(session),
       "Content-Type": "application/json",
     },
     method: "POST",

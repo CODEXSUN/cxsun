@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { StockRejectionTypesCommonService } from './application/stock-rejection-types.service.js'
-import { StockRejectionTypesCommonRepository } from './infrastructure/persistence/stock-rejection-types.repository.js'
-import { StockRejectionTypesCommonV1Controller } from './interface/http/stock-rejection-types-v1.controller.js'
+import { StockRejectionTypesCommonService } from './service.js'
+import { StockRejectionTypesCommonRepository } from './repository.js'
+import { StockRejectionTypesCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [StockRejectionTypesCommonV1Controller],

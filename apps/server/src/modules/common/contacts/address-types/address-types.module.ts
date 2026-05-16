@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { AddressTypesCommonService } from './application/address-types.service.js'
-import { AddressTypesCommonRepository } from './infrastructure/persistence/address-types.repository.js'
-import { AddressTypesCommonV1Controller } from './interface/http/address-types-v1.controller.js'
+import { AddressTypesCommonService } from './service.js'
+import { AddressTypesCommonRepository } from './repository.js'
+import { AddressTypesCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [AddressTypesCommonV1Controller],

@@ -1,4 +1,4 @@
-import { apiBaseUrl } from "src/features/auth/auth-client"
+import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type ClientStatus = "active" | "inactive" | "suspend"
 
@@ -20,21 +20,21 @@ export interface ClientRecord {
 
 export type ClientUpsertInput = Omit<ClientRecord, "id" | "created_at" | "updated_at" | "deleted_at"> & { id?: number }
 
-export async function listClients() {
+export async function listClients(session: AuthSession) {
   const response = await fetch(`${apiBaseUrl}/api/v1/clients`, {
     cache: "no-store",
-    headers: { Accept: "application/json" },
+    headers: authHeaders(session),
   })
 
   if (!response.ok) throw new Error(`Client list failed with status ${response.status}.`)
   return (await response.json()) as ClientRecord[]
 }
 
-export async function upsertClient(input: ClientUpsertInput) {
+export async function upsertClient(session: AuthSession, input: ClientUpsertInput) {
   const response = await fetch(`${apiBaseUrl}/api/v1/clients/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
   if (!response.ok) throw new Error(`Client save failed with status ${response.status}.`)
@@ -43,19 +43,19 @@ export async function upsertClient(input: ClientUpsertInput) {
   return result.client
 }
 
-export async function destroyClient(id: number) {
-  await mutateClient(id, "destroy")
+export async function destroyClient(session: AuthSession, id: number) {
+  await mutateClient(session, id, "destroy")
 }
 
-export async function restoreClient(id: number) {
-  await mutateClient(id, "restore")
+export async function restoreClient(session: AuthSession, id: number) {
+  await mutateClient(session, id, "restore")
 }
 
-async function mutateClient(id: number, action: "destroy" | "restore") {
+async function mutateClient(session: AuthSession, id: number, action: "destroy" | "restore") {
   const response = await fetch(`${apiBaseUrl}/api/v1/clients/${id}/${action}`, {
     body: "{}",
     cache: "no-store",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
   if (!response.ok) throw new Error(`Client ${action} failed with status ${response.status}.`)

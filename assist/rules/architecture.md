@@ -128,7 +128,7 @@ uuid CHAR(8) NOT NULL UNIQUE
 
 - Use `id` for internal joins, foreign keys, repository lookups, and database performance.
 - Use `uuid` for API payloads, frontend routing, public references, and anything exposed outside the persistence layer.
-- At present, public IDs are 8 characters. When scale or collision risk grows, move new public IDs to 16 characters with a planned migration.
+- At present, public IDs are 8 uppercase alphanumeric characters generated through the shared public UUID helper. When scale or collision risk grows, move new public IDs to 16 characters with a planned migration.
 - Do not use the public `uuid` as the primary key unless the architecture rules are intentionally changed.
 
 ## Multi-Tenant Runtime

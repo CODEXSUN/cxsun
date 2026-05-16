@@ -91,8 +91,8 @@ export function CompanyPage({ session }: { session: AuthSession }) {
     queryFn: () => listCompanies(session),
   })
   const industriesQuery = useQuery({
-    queryKey: ["industries", "company-options"],
-    queryFn: () => listIndustries(),
+    queryKey: ["industries", "company-options", session.selectedTenant.slug],
+    queryFn: () => listIndustries(session),
   })
   const upsertMutation = useMutation({
     mutationFn: (input: CompanyUpsertInput) => upsertCompany(session, input),

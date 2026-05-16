@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { PaymentTermsCommonService } from './application/payment-terms.service.js'
-import { PaymentTermsCommonRepository } from './infrastructure/persistence/payment-terms.repository.js'
-import { PaymentTermsCommonV1Controller } from './interface/http/payment-terms-v1.controller.js'
+import { PaymentTermsCommonService } from './service.js'
+import { PaymentTermsCommonRepository } from './repository.js'
+import { PaymentTermsCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [PaymentTermsCommonV1Controller],

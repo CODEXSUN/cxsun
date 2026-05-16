@@ -228,21 +228,21 @@ export function DashboardView({
           onLogout={logout}
         />
         {visiblePage === "tenant" ? (
-          <TenantListPage />
+          <TenantListPage session={session} />
         ) : visiblePage === "tenant-domain" ? (
-          <TenantDomainPage />
+          <TenantDomainPage session={session} />
         ) : visiblePage === "industry" ? (
-          <IndustryPage />
+          <IndustryPage session={session} />
         ) : visiblePage === "company" && mode === "admin" ? (
           <SupportPage type="helpdesk" />
         ) : visiblePage === "company" ? (
           <CompanyPage session={session} />
         ) : visiblePage === "client" ? (
-          <ClientPage />
+          <ClientPage session={session} />
         ) : visiblePage === "system-update" ? (
-          <SystemUpdateView />
+          <SystemUpdateView session={session} />
         ) : visiblePage === "user-manager" ? (
-          <UserManagerPage />
+          <UserManagerPage session={session} />
         ) : visiblePage === "helpdesk" ? (
           <SupportPage type="helpdesk" />
         ) : visiblePage === "bugs" ? (

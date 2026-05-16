@@ -172,6 +172,7 @@ Each route family has its own auth gate and browser session key.
 - Keep platform orchestration data in platform SQLite.
 - Do not let tenant login unlock admin or super-admin surfaces.
 - Do not let hidden menu filtering be the only security boundary; route guards and server checks must also enforce access.
+- Generate public record UUIDs through the shared alphanumeric public UUID helper.
 - Treat super-admin, admin, and tenant dashboards as separate products that share UI foundations, not as one mixed dashboard.
 - Add new features first to the correct surface, then wire shared UI only where it does not blur ownership.
 - Prefer simple, explicit module boundaries over clever cross-module imports.

@@ -5,9 +5,9 @@ import { AuthRepository } from '../../../auth/infrastructure/auth.repository.js'
 import { MasterRecordEventBus } from '../../../foundation/master-record/application/services/master-record-event-bus.js'
 import { TenantRepository } from '../../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
-import { PincodesCommonService } from './application/pincodes.service.js'
-import { PincodesCommonRepository } from './infrastructure/persistence/pincodes.repository.js'
-import { PincodesCommonV1Controller } from './interface/http/pincodes-v1.controller.js'
+import { PincodesCommonService } from './service.js'
+import { PincodesCommonRepository } from './repository.js'
+import { PincodesCommonV1Controller } from './controller.js'
 
 @Module({
   controllers: [PincodesCommonV1Controller],
