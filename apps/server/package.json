@@ -1,13 +1,14 @@
 {
   "name": "@cxsun/server",
   "private": true,
-  "version": "1.0.18",
+  "version": "1.0.20",
   "type": "module",
   "scripts": {
     "dev": "node ../../apps/cli/preflight.mjs server",
     "build": "tsc",
     "start": "node ../../build/server/main.js",
     "db": "tsx src/core/migration-manager/cli.ts",
+    "db:refresh": "tsx src/core/migration-manager/cli.ts fresh --tenant=aaran",
     "db:fresh": "tsx src/core/migration-manager/cli.ts fresh",
     "db:migrate": "tsx src/core/migration-manager/cli.ts migrate",
     "db:seed": "tsx src/core/migration-manager/cli.ts seed",

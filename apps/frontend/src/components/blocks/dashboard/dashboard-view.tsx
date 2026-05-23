@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { AppSidebar, type DashboardMode, type DashboardPage } from 'src/components/blocks/sidebar/app-sidebar'
 import { SiteHeader } from 'src/components/blocks/layout/site-header'
 import { SidebarInset, SidebarProvider } from 'src/components/ui/sidebar'
@@ -17,6 +18,8 @@ import {
 } from 'src/features/auth/auth-client'
 import { TenantListPage } from 'src/features/tenant/interface/pages/tenant-list-page'
 import { CompanyPage } from 'src/features/company/company-page'
+import { getDefaultCompanyContext } from 'src/features/company/company-client'
+import { DefaultCompanyPage } from 'src/features/company/default-company-page'
 import { IndustryPage } from 'src/features/industry/industry-page'
 import { ClientPage } from 'src/features/client/client-page'
 import { TenantDomainPage } from 'src/features/tenant-domain/tenant-domain-page'
@@ -124,6 +127,11 @@ export function DashboardView({
   }, [basePath])
 
   const needsLogin = !session || !roleMatchesSurface(session.selectedTenant.role, authSurface)
+  const defaultCompanyContextQuery = useQuery({
+    enabled: Boolean(session && !needsLogin && mode === "tenant"),
+    queryKey: ["default-company-context", session?.selectedTenant.slug],
+    queryFn: () => getDefaultCompanyContext(session as AuthSession),
+  })
 
   useEffect(() => {
     if (!needsLogin || window.location.pathname === loginPath) {
@@ -216,6 +224,7 @@ export function DashboardView({
         activeApp={activeApp}
         onNavigate={navigate}
         onTenantChange={changeTenant}
+        defaultCompanyContext={defaultCompanyContextQuery.data ?? null}
         selectedTenant={session.selectedTenant.slug}
         tenants={session.tenants}
         user={session.user}
@@ -239,6 +248,8 @@ export function DashboardView({
           <SupportPage type="helpdesk" />
         ) : visiblePage === "company" ? (
           <CompanyPage session={session} />
+        ) : visiblePage === "app-application-default-company" ? (
+          <DefaultCompanyPage session={session} />
         ) : visiblePage === "client" ? (
           <ClientPage session={session} />
         ) : visiblePage === "system-update" ? (

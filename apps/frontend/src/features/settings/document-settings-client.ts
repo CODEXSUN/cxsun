@@ -8,7 +8,11 @@ export interface DocumentNumberSetting {
   accountingYearId: string
   kind: DocumentEntryKind
   prefix: string
+  prefixEnabled: boolean
   separator: string
+  separatorEnabled: boolean
+  suffix: string
+  suffixEnabled: boolean
   nextNumber: number
   padding: number
   autoEnabled: boolean
@@ -18,7 +22,11 @@ export interface DocumentNumberSetting {
 export interface DocumentNumberSettingInput {
   kind: DocumentEntryKind
   prefix: string
+  prefixEnabled: boolean
   separator: string
+  separatorEnabled: boolean
+  suffix: string
+  suffixEnabled: boolean
   nextNumber: number
   padding: number
   autoEnabled: boolean
@@ -70,3 +78,16 @@ export async function saveDocumentNumberSettings(
   return (await response.json()) as DocumentNumberSetting[]
 }
 
+export async function nextDocumentNumberSetting(session: AuthSession, kind: DocumentEntryKind, options?: { signal?: AbortSignal }) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/document-settings/numbers/${kind}/next`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+    signal: options?.signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Next document number request failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as DocumentNumberSetting
+}

@@ -62,7 +62,7 @@ export function buildDraft(definition: MasterDataModuleDefinition, record?: Mast
   }
 
   for (const column of definition.columns) {
-    draft[column.key] = record?.[column.key] ?? defaultValue(column)
+    draft[column.key] = column.type === "date" ? dateInputValue(record?.[column.key]) : record?.[column.key] ?? defaultValue(column)
   }
 
   return draft
@@ -87,6 +87,7 @@ export function formatValue(record: MasterDataRecord, column: MasterDataColumnDe
   const value = record[column.key]
   if (column.type === "boolean") return value ? "Yes" : "No"
   if (value === null || value === undefined || value === "") return "-"
+  if (column.type === "date") return formatPlainDate(String(value))
   return String(value)
 }
 
@@ -104,4 +105,33 @@ function defaultValue(column: MasterDataColumnDefinition) {
   if (column.type === "boolean") return false
   if (column.type === "number") return ""
   return ""
+}
+
+function formatPlainDate(value: string) {
+  const exactDate = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (exactDate) {
+    const [, year, month, day] = exactDate
+    const date = new Date(Number(year), Number(month) - 1, Number(day))
+    return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(date)
+  }
+
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium" }).format(date)
+}
+
+function dateInputValue(value: unknown) {
+  if (value === null || value === undefined || value === "") return ""
+
+  const rawValue = String(value)
+  if (!rawValue.includes("T")) {
+    return rawValue.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? rawValue
+  }
+
+  const date = new Date(rawValue)
+  if (Number.isNaN(date.getTime())) return ""
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
 }

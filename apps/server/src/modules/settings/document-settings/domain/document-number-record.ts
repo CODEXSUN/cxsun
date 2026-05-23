@@ -11,7 +11,11 @@ export interface DocumentNumberSettingRecord {
   accountingYearId: string
   kind: DocumentEntryKind
   prefix: string
+  prefixEnabled: boolean
   separator: string
+  separatorEnabled: boolean
+  suffix: string
+  suffixEnabled: boolean
   nextNumber: number
   padding: number
   autoEnabled: boolean
@@ -22,11 +26,14 @@ export interface DocumentNumberSettingRecord {
 export interface DocumentNumberSettingInput {
   kind: DocumentEntryKind
   prefix?: string | null
+  prefixEnabled?: boolean | number | null
   separator?: string | null
+  separatorEnabled?: boolean | number | null
+  suffix?: string | null
+  suffixEnabled?: boolean | number | null
   nextNumber?: number | string | null
   padding?: number | string | null
   autoEnabled?: boolean | number | null
 }
 
 export const documentEntryKinds = ['sales', 'purchase', 'payment', 'receipt'] as const
-

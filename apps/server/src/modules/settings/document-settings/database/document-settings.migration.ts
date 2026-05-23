@@ -11,7 +11,11 @@ export async function migrateDocumentSettingsTables(database: TenantDatabase) {
     .addColumn('accounting_year_id', 'integer', (col) => col.notNull())
     .addColumn('entry_kind', 'varchar(40)', (col) => col.notNull())
     .addColumn('prefix', 'varchar(40)', (col) => col.notNull())
+    .addColumn('prefix_enabled', 'boolean', (col) => col.notNull().defaultTo(true))
     .addColumn('separator', 'varchar(8)', (col) => col.notNull().defaultTo('-'))
+    .addColumn('separator_enabled', 'boolean', (col) => col.notNull().defaultTo(true))
+    .addColumn('suffix', 'varchar(40)', (col) => col.notNull().defaultTo(''))
+    .addColumn('suffix_enabled', 'boolean', (col) => col.notNull().defaultTo(false))
     .addColumn('next_number', 'integer', (col) => col.notNull().defaultTo(1))
     .addColumn('padding', 'integer', (col) => col.notNull().defaultTo(4))
     .addColumn('auto_enabled', 'boolean', (col) => col.notNull().defaultTo(true))
@@ -30,5 +34,23 @@ export async function migrateDocumentSettingsTables(database: TenantDatabase) {
   } catch {
     // Existing tenant databases may already have this index.
   }
+
+  await addDocumentNumberColumnIfMissing(database, 'prefix_enabled', 'BOOLEAN NOT NULL DEFAULT TRUE')
+  await addDocumentNumberColumnIfMissing(database, 'separator_enabled', 'BOOLEAN NOT NULL DEFAULT TRUE')
+  await addDocumentNumberColumnIfMissing(database, 'suffix', "VARCHAR(40) NOT NULL DEFAULT ''")
+  await addDocumentNumberColumnIfMissing(database, 'suffix_enabled', 'BOOLEAN NOT NULL DEFAULT FALSE')
 }
 
+async function addDocumentNumberColumnIfMissing(database: TenantDatabase, column: string, definition: string) {
+  const existing = await sql<{ COLUMN_NAME: string }>`
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'document_number_settings'
+      AND COLUMN_NAME = ${column}
+  `.execute(database)
+
+  if (existing.rows.length > 0) return
+
+  await sql.raw(`ALTER TABLE document_number_settings ADD COLUMN ${column} ${definition}`).execute(database)
+}

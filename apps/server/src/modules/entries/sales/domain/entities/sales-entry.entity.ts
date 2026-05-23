@@ -5,7 +5,11 @@ export interface SalesEntryItem {
   product_id: string | null
   product_name: string
   description: string | null
+  colour: string | null
   hsn_code: string | null
+  po_no: string | null
+  dc_no: string | null
+  size: string | null
   unit: string | null
   quantity: number
   rate: number
@@ -61,6 +65,20 @@ export interface SalesEntry {
   balance_amount: number
   status: string
   payment_status: string
+  irn: string | null
+  ack_no: string | null
+  ack_date: Date | string | null
+  signed_qr: string | null
+  eway_bill_no: string | null
+  eway_bill_date: Date | string | null
+  transport_id: string | null
+  transport_name: string | null
+  transport_gst: string | null
+  transport_address: string | null
+  transport_contact_no: string | null
+  transport_contact_person: string | null
+  vehicle_no: string | null
+  eway_part: string | null
   notes: string | null
   terms: string | null
   is_active: boolean | number

@@ -103,6 +103,7 @@ export const dashboardApps: DashboardAppDefinition[] = [
         items: [
           { title: "Dashboard", page: "overview", icon: LayoutDashboard },
           { title: "Company", page: "company", icon: Building2 },
+          { ...item("application", "default-company", "Default Company", Building2) },
           { title: "Roles", page: "tenant-roles", icon: Settings },
         ],
       },
@@ -128,7 +129,7 @@ export const dashboardApps: DashboardAppDefinition[] = [
           { ...item("billing", "contacts-common", "Contacts", UsersRound), items: [item("billing", "contact-group", "Groups", ContactRound), item("billing", "contact-type", "Types", UserRoundCog), item("billing", "address-type", "Address Types", MapPin), item("billing", "bank-name", "Bank Names", Banknote)] },
           { ...item("billing", "product-common", "Product", Package), items: [item("billing", "product-group", "Product Groups", Layers3), item("billing", "category", "Product Categories", Shapes), item("billing", "product-type", "Product Types", PackageSearch), item("billing", "unit", "Units", Scale), item("billing", "hsn-code", "HSN Codes", Barcode), item("billing", "tax", "Taxes", BadgePercent), item("billing", "brand", "Brands", Tags), item("billing", "colour", "Colours", Palette), item("billing", "size", "Sizes", Ruler), item("billing", "style", "Styles", Brush)] },
           { ...item("billing", "orders-common", "Orders", ShoppingBag), items: [item("billing", "order-type", "Order Types", ReceiptText), item("billing", "transport", "Transports", Truck), item("billing", "warehouse", "Warehouses", Warehouse), item("billing", "destination", "Destinations", MapPinned), item("billing", "stock-rejection-type", "Stock Rejection Types", FileText)] },
-          { ...item("billing", "others-common", "Others", Settings), items: [item("billing", "currency", "Currencies", CircleDollarSign), item("billing", "payment-term", "Payment Terms", CreditCard), item("billing", "accounting-year", "Accounting Year", CalendarDays), item("billing", "month", "Months", CalendarDays)] },
+          { ...item("billing", "others-common", "Others", Settings), items: [item("billing", "currency", "Currencies", CircleDollarSign), item("billing", "payment-term", "Payment Terms", CreditCard), item("billing", "month", "Months", CalendarDays)] },
         ],
       },
       { title: "Settings", icon: Settings, items: [item("billing", "settings", "Sales Settings", Settings), item("billing", "document-settings", "Document Settings", FileCog), item("billing", "accounting-year", "Accounting Year", CalendarDays)] },

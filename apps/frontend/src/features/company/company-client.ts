@@ -103,6 +103,17 @@ export interface CompanyRecord {
   deletedAt: string | null
 }
 
+export interface DefaultCompanyContext {
+  id: number | null
+  companyId: number
+  companyName: string
+  companyCode: string
+  accountingYearId: number
+  accountingYearName: string
+  accountingYearStartDate: string | null
+  accountingYearEndDate: string | null
+}
+
 export type CompanyUpsertInput = Omit<
   CompanyRecord,
   "id" | "tenantId" | "tenantName" | "industryId" | "industryCode" | "industryName" | "createdAt" | "updatedAt" | "deletedAt"
@@ -119,6 +130,43 @@ export async function listCompanies(session: AuthSession) {
   }
 
   return (await response.json()) as CompanyRecord[]
+}
+
+export async function getDefaultCompanyContext(session: AuthSession) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/companies/default-context`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Default company context failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as DefaultCompanyContext | null
+}
+
+export async function updateDefaultCompanyContext(session: AuthSession, input: { companyId: number; accountingYearId: number }) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/companies/default-context`, {
+    body: JSON.stringify(input),
+    cache: "no-store",
+    headers: {
+      ...authHeaders(session),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error(`Default company save failed with status ${response.status}.`)
+  }
+
+  const result = (await response.json()) as { ok: boolean; context?: DefaultCompanyContext; error?: string }
+
+  if (!result.ok || !result.context) {
+    throw new Error(result.error ?? "Default company save failed.")
+  }
+
+  return result.context
 }
 
 export async function getCompany(session: AuthSession, id: number) {
@@ -217,10 +265,7 @@ export function emptyCompany(): CompanyUpsertInput {
     status: "active",
     settings: { timezone: "Asia/Calcutta", currency: "INR" },
     features: ["company.manage"],
-    logos: [
-      { logoUrl: "/storage/logo/logo.svg", logoType: "logo", isActive: true },
-      { logoUrl: "/storage/logo/favicon.svg", logoType: "favicon", isActive: true },
-    ],
+    logos: [],
     addresses: [],
     emails: [],
     phones: [],

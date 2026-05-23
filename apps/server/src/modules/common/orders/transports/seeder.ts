@@ -4,17 +4,9 @@ import { seedMasterRecordDefinition } from '../../../foundation/master-record/da
 import { transportsCommonDefinition } from './definition.js'
 
 const transportsSeedRows = [
-  { name: '-' },
-  { name: 'Own Vehicle' },
-  { name: 'Customer Pickup' },
-  { name: 'Courier' },
-  { name: 'Road Transport' },
-  { name: 'Rail Cargo' },
-  { name: 'Air Cargo' },
-  { name: 'Sea Cargo' },
-  { name: 'Porter' },
-  { name: 'Delhivery' },
-  { name: 'Blue Dart' },
+  { name: '-', gst: '', vehicle_no: '', address: '', contact_no: '', contact_person: '' },
+  { name: 'Own Vehicle', gst: '', vehicle_no: '', address: '', contact_no: '', contact_person: '' },
+  { name: 'Customer Pickup', gst: '', vehicle_no: '', address: '', contact_no: '', contact_person: '' },
 ]
 
 export function seedTransportsCommonTable(database: Kysely<TenantDatabaseSchema>) {

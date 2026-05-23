@@ -36,10 +36,16 @@ export class ContactMasterService {
 
   async upsert(headers: TenantRequestHeaders, input: Record<string, unknown>) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
-    const payload = normalizeMasterInput(this.definition, input)
+    const normalizedInput = {
+      ...input,
+      code: contactCode(input.code, input.name, input.legalName),
+      primaryEmail: primaryEmail(input.emails),
+      primaryPhone: primaryPhone(input.phones),
+    }
+    const payload = normalizeMasterInput(this.definition, normalizedInput)
     const record = input.id || input.uuid
-      ? await this.records.update(context, String(input.uuid ?? input.id), payload)
-      : await this.records.insert(context, payload)
+      ? await this.records.update(context, String(input.uuid ?? input.id), payload, normalizedInput)
+      : await this.records.insert(context, payload, normalizedInput)
     if (!record) throw new NotFoundException('Contact master record was not found.')
     const aggregate = MasterRecordAggregate.fromRecord(this.definition, record)
     await this.eventBus.publish(input.id || input.uuid ? aggregate.updatedEvent() : aggregate.createdEvent())
@@ -61,4 +67,39 @@ export class ContactMasterService {
     await this.eventBus.publish(MasterRecordAggregate.fromRecord(this.definition, record).restoredEvent())
     return { ok: true }
   }
+}
+
+function contactCode(code: unknown, name: unknown, legalName: unknown) {
+  const currentCode = String(code ?? '').trim()
+  if (currentCode) return currentCode.toUpperCase()
+
+  const source = String(name ?? legalName ?? 'CONTACT').trim()
+  const slug = source
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  return slug ? slug.slice(0, 80) : 'CONTACT'
+}
+
+function primaryEmail(value: unknown) {
+  if (!Array.isArray(value)) return null
+
+  const rows = value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({ email: String(item.email ?? '').trim(), isPrimary: item.isPrimary === true || item.is_primary === true || item.isPrimary === 1 || item.is_primary === 1 }))
+    .filter((item) => item.email)
+
+  return rows.find((item) => item.isPrimary)?.email ?? rows[0]?.email ?? null
+}
+
+function primaryPhone(value: unknown) {
+  if (!Array.isArray(value)) return null
+
+  const rows = value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+    .map((item) => ({ phone: String(item.phoneNumber ?? item.phone_number ?? '').trim(), isPrimary: item.isPrimary === true || item.is_primary === true || item.isPrimary === 1 || item.is_primary === 1 }))
+    .filter((item) => item.phone)
+
+  return rows.find((item) => item.isPrimary)?.phone ?? rows[0]?.phone ?? null
 }

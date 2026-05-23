@@ -9,9 +9,9 @@ import { migrateCommonModuleTables, seedCommonModuleTables } from '../../modules
 import { migrateSalesEntryTables } from '../../modules/entries/sales/index.js'
 import { migrateCompanySettingsTables } from '../../modules/settings/company-settings/index.js'
 import { migrateDocumentSettingsTables } from '../../modules/settings/document-settings/index.js'
-import { migrateContactMasterTable, seedContactMasterTable } from '../../modules/master/contact/index.js'
-import { migrateProductMasterTable, seedProductMasterTable } from '../../modules/master/product/index.js'
-import { migrateOrderMasterTable, seedOrderMasterTable } from '../../modules/master/order/index.js'
+import { migrateContactMasterTable } from '../../modules/master/contact/index.js'
+import { migrateProductMasterTable } from '../../modules/master/product/index.js'
+import { migrateOrderMasterTable } from '../../modules/master/order/index.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
 
@@ -32,6 +32,7 @@ export function getTenantDatabase(tenant: Tenant): TenantDatabase {
         user: tenant.db_user,
         password: getTenantDatabasePassword(tenant.db_secret_ref),
         database: tenant.db_name,
+        dateStrings: ['DATE'],
         connectionLimit: Number(process.env.TENANT_DB_CONNECTION_LIMIT ?? 5),
         connectTimeout: Number(process.env.TENANT_DB_CONNECT_TIMEOUT_MS ?? 2_000),
       }),
@@ -100,6 +101,7 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
 
   await ensureCompanyColumns(database)
   await createCompanyChildTables(database)
+  await createContactCommunicationTables(database)
   await migrateCommonModuleTables(database)
   await migrateSalesEntryTables(database)
   await migrateCompanySettingsTables(database)
@@ -193,30 +195,26 @@ function toMetricNumber(value: number | string | bigint | null | undefined) {
 
 async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
   await seedCommonModuleTables(database)
-  await seedProductMasterTable(database)
-  await seedOrderMasterTable(database)
   const years = await seedAccountingYears(database)
-  const seededCompanies = tenantCompanyCatalog[tenant.slug] ?? [
-    {
-      code: normalizeTenantCompanyCode(tenant),
-      name: `${tenant.name} Company`,
-      industryCode: 'software',
-      concept: `${tenant.name} licensed software workspace.`,
-    },
-  ]
+  const existingDefault = await database
+    .selectFrom('default_companies')
+    .select('id')
+    .where('is_active', '=', true)
+    .executeTakeFirst()
 
-  for (const [index, companySeed] of seededCompanies.entries()) {
-    const industryId = await findIndustryId(companySeed.industryCode)
-    const companyId = await ensureTenantCompany(database, tenant, {
-      ...companySeed,
-      industryId,
-      isPrimary: index === 0,
-    })
-    await seedCompanyChildren(database, companyId)
-    await ensureDefaultCompany(database, tenant, companyId, years.currentYearId, industryId)
+  if (!existingDefault && years.currentYearId) {
+    const company = await database
+      .selectFrom('companies')
+      .select(['id', 'industry_id'])
+      .where('deleted_at', 'is', null)
+      .orderBy('is_primary', 'desc')
+      .orderBy('id', 'asc')
+      .executeTakeFirst()
+
+    if (company) {
+      await ensureDefaultCompany(database, tenant, Number(company.id), years.currentYearId, Number(company.industry_id ?? 0))
+    }
   }
-
-  await seedContactMasterTable(database, tenant)
 
   await retireLegacyRoles(database)
 
@@ -251,103 +249,6 @@ async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
   for (const roleCode of ['admin']) {
     await ensureRolePolicy(database, roleCode, 'rbac.manage')
   }
-}
-
-const tenantCompanyCatalog: Record<string, Array<{
-  code: string
-  name: string
-  industryCode: string
-  concept: string
-}>> = {
-  aaran: [
-    { code: 'AARAN_ASSOCIATES', name: 'Aaran Associates', industryCode: 'accountant', concept: 'Auditor office and bookkeeping practice.' },
-    { code: 'AARAN_INFO_TECH', name: 'Aaran Info Tech', industryCode: 'computer', concept: 'Computer sales and service.' },
-    { code: 'TIRUPUR_DIRECT', name: 'Tirupur Direct', industryCode: 'ecommerce', concept: 'Tirupur based garment ecommerce.' },
-    { code: 'TENKASI_SPORTS', name: 'Tenkasi Sports', industryCode: 'ecommerce', concept: 'Sports goods sales and local commerce.' },
-  ],
-  sathish: [
-    { code: 'GANAPATHI_PRINTING', name: 'Ganapathi Printing', industryCode: 'offset_printing', concept: 'Offset printing business.' },
-  ],
-  sampath: [
-    { code: 'COTTON_KNITS', name: 'Cotton Knits', industryCode: 'garment', concept: 'Garment manufacturing unit.' },
-    { code: 'POLYMADE_INDIA', name: 'Polymade India', industryCode: 'garment', concept: 'Garment manufacturing unit.' },
-  ],
-  sathasivam: [
-    { code: 'SUKKRAA_GARMENTS', name: 'Sukkraa Garments', industryCode: 'garment', concept: 'Garment manufacturing unit.' },
-    { code: 'MATHAN_KNITTERS', name: 'Mathan Knitters', industryCode: 'garment', concept: 'Garment manufacturing unit.' },
-  ],
-}
-
-async function findIndustryId(code: string) {
-  const industry = await getDatabase()
-    .selectFrom('industries')
-    .select('id')
-    .where('code', '=', code)
-    .executeTakeFirst()
-
-  return industry?.id ?? 0
-}
-
-async function ensureTenantCompany(
-  database: TenantDatabase,
-  tenant: Tenant,
-  data: {
-    code: string
-    name: string
-    industryId: number
-    concept: string
-    isPrimary: boolean
-  },
-) {
-  const existing = await database
-    .selectFrom('companies')
-    .select('id')
-    .where('code', '=', data.code)
-    .executeTakeFirst()
-
-  const row = {
-    tenant_id: tenant.id,
-    industry_id: data.industryId,
-    code: data.code,
-    name: data.name,
-    legal_name: data.name,
-    tagline: data.concept,
-    short_about: data.concept,
-    gstin_uin: null,
-    pan: null,
-    date_of_incorporation: null,
-    msme_no: null,
-    msme_category: null,
-    tan: null,
-    tds_available: false,
-    tds_section: null,
-    tds_rate_percent: null,
-    tcs_available: false,
-    tcs_section: null,
-    tcs_rate_percent: null,
-    website: null,
-    description: data.concept,
-    primary_email: `hello@${tenant.slug}.local`,
-    primary_phone: null,
-    is_primary: data.isPrimary,
-    is_active: true,
-    status: 'active',
-    settings: JSON.stringify({ timezone: 'Asia/Calcutta', currency: 'INR' }),
-    features: JSON.stringify(['company.manage']),
-    deleted_at: null,
-  }
-
-  if (existing) {
-    await database
-      .updateTable('companies')
-      .set({ ...row, updated_at: new Date() })
-      .where('id', '=', existing.id)
-      .execute()
-    return existing.id
-  }
-
-  const result = await database.insertInto('companies').values({ ...row, uuid: nextPublicUuid() }).executeTakeFirst()
-  return Number(result.insertId)
 }
 
 async function ensureCompanyColumns(database: TenantDatabase) {
@@ -395,6 +296,7 @@ async function createCompanyChildTables(database: TenantDatabase) {
     .addColumn('start_date', 'date', (col) => col.notNull())
     .addColumn('end_date', 'date', (col) => col.notNull())
     .addColumn('books_start', 'date', (col) => col.notNull())
+    .addColumn('is_current_year', 'boolean', (col) => col.notNull().defaultTo(false))
     .addColumn('is_active', 'boolean', (col) => col.notNull().defaultTo(true))
     .addColumn('created_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .addColumn('updated_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
@@ -497,6 +399,80 @@ async function createCompanyLookupTable(database: TenantDatabase, table: string,
   `).execute(database)
 }
 
+async function createContactCommunicationTables(database: TenantDatabase) {
+  await sql.raw(`
+    CREATE TABLE IF NOT EXISTS contact_emails (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      uuid CHAR(8) NULL,
+      contact_id INT NOT NULL,
+      email VARCHAR(180) NOT NULL,
+      email_type VARCHAR(80) NOT NULL,
+      is_primary TINYINT(1) NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).execute(database)
+
+  await sql.raw(`
+    CREATE TABLE IF NOT EXISTS contact_phones (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      uuid CHAR(8) NULL,
+      contact_id INT NOT NULL,
+      phone_number VARCHAR(80) NOT NULL,
+      phone_type VARCHAR(80) NOT NULL,
+      is_primary TINYINT(1) NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).execute(database)
+
+  await sql.raw(`
+    CREATE TABLE IF NOT EXISTS contact_social_links (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      uuid CHAR(8) NULL,
+      contact_id INT NOT NULL,
+      platform VARCHAR(80) NOT NULL,
+      url VARCHAR(500) NOT NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).execute(database)
+
+  await sql.raw(`
+    CREATE TABLE IF NOT EXISTS contact_bank_accounts (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      uuid CHAR(8) NULL,
+      contact_id INT NOT NULL,
+      bank_name VARCHAR(160) NOT NULL,
+      account_number VARCHAR(80) NOT NULL,
+      account_holder_name VARCHAR(180) NOT NULL,
+      ifsc VARCHAR(40) NOT NULL,
+      branch VARCHAR(160) NULL,
+      is_primary TINYINT(1) NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).execute(database)
+
+  await sql.raw(`
+    CREATE TABLE IF NOT EXISTS contact_gst_details (
+      id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      uuid CHAR(8) NULL,
+      contact_id INT NOT NULL,
+      gstin VARCHAR(30) NOT NULL,
+      state VARCHAR(120) NOT NULL,
+      is_default TINYINT(1) NOT NULL DEFAULT 0,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `).execute(database)
+}
+
 async function addColumnIfMissing(database: TenantDatabase, table: string, column: string, definition: string) {
   const existing = await sql<{ COLUMN_NAME: string }>`
     SELECT COLUMN_NAME
@@ -514,43 +490,51 @@ async function addColumnIfMissing(database: TenantDatabase, table: string, colum
 }
 
 async function seedAccountingYears(database: TenantDatabase) {
-  const now = new Date()
-  const currentFinancialYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1
-  let currentYearId = 0
+  const existingYears = await database
+    .selectFrom('accounting_years')
+    .select(['id', 'name', 'is_current_year'])
+    .execute()
 
-  for (let startYear = currentFinancialYear - 3; startYear <= currentFinancialYear + 5; startYear += 1) {
-    const name = `FY ${startYear}-${String(startYear + 1).slice(-2)}`
-    const startDate = `${startYear}-04-01`
-    const endDate = `${startYear + 1}-03-31`
-    const existing = await database
-      .selectFrom('accounting_years')
-      .select('id')
-      .where('name', '=', name)
-      .where('start_date', '=', startDate)
-      .executeTakeFirst()
+  for (const year of existingYears) {
+    const dates = parseFinancialYearDates(year.name)
+    if (!dates) continue
 
-    if (existing) {
-      if (startYear === currentFinancialYear) currentYearId = existing.id
-      continue
-    }
-
-    const result = await database
-      .insertInto('accounting_years')
-      .values({
-        uuid: nextPublicUuid(),
-        name,
-        start_date: startDate,
-        end_date: endDate,
-        books_start: startDate,
-        is_active: true,
-        deleted_at: null,
+    await database
+      .updateTable('accounting_years')
+      .set({
+        start_date: dates.startDate,
+        end_date: dates.endDate,
+        books_start: dates.startDate,
       })
-      .executeTakeFirst()
-
-    if (startYear === currentFinancialYear) currentYearId = Number(result.insertId)
+      .where('id', '=', year.id)
+      .execute()
   }
 
-  return { currentYearId }
+  const currentYear = await database
+    .selectFrom('accounting_years')
+    .select('id')
+    .where('is_current_year', '=', true)
+    .where('deleted_at', 'is', null)
+    .orderBy('id', 'desc')
+    .executeTakeFirst()
+
+  return { currentYearId: currentYear?.id ?? 0 }
+}
+
+function financialYearSeed(startYear: number) {
+  return {
+    startYear,
+    name: `FY ${startYear}-${String(startYear + 1).slice(-2)}`,
+    startDate: `${startYear}-04-01`,
+    endDate: `${startYear + 1}-03-31`,
+  }
+}
+
+function parseFinancialYearDates(name: string) {
+  const match = /^FY\s+(\d{4})-(\d{2})$/.exec(name.trim())
+  if (!match) return null
+
+  return financialYearSeed(Number(match[1]))
 }
 
 async function ensureDefaultCompany(
@@ -565,11 +549,24 @@ async function ensureDefaultCompany(
   const existing = await database
     .selectFrom('default_companies')
     .select('id')
-    .where('company_id', '=', companyId)
-    .where('accounting_year_id', '=', accountingYearId)
+    .orderBy('id', 'asc')
     .executeTakeFirst()
 
-  if (existing) return
+  if (existing) {
+    await database
+      .updateTable('default_companies')
+      .set({
+        tenant_id: tenant.id,
+        industry_id: industryId,
+        company_id: companyId,
+        accounting_year_id: accountingYearId,
+        is_active: true,
+        updated_at: new Date(),
+      })
+      .where('id', '=', existing.id)
+      .execute()
+    return
+  }
 
   await database
     .insertInto('default_companies')
@@ -582,41 +579,6 @@ async function ensureDefaultCompany(
       is_active: true,
     })
     .execute()
-}
-
-async function seedCompanyChildren(database: TenantDatabase, companyId: number) {
-  const logo = await database.selectFrom('company_logos').select('id').where('company_id', '=', companyId).executeTakeFirst()
-  if (!logo) {
-    await database.insertInto('company_logos').values([
-      { uuid: nextPublicUuid(), company_id: companyId, logo_url: '/storage/logo/logo.svg', logo_type: 'logo', is_active: true },
-      { uuid: nextPublicUuid(), company_id: companyId, logo_url: '/storage/logo/favicon.svg', logo_type: 'favicon', is_active: true },
-    ]).execute()
-  }
-
-  const address = await database.selectFrom('address_book').select('id').where('owner_type', '=', 'company').where('owner_id', '=', companyId).executeTakeFirst()
-  if (!address) {
-    await database.insertInto('address_book').values({
-      owner_type: 'company',
-      uuid: nextPublicUuid(),
-      owner_id: companyId,
-      address_type_id: 'billing',
-      address_line1: 'Primary business address',
-      address_line2: null,
-      city_id: null,
-      district_id: null,
-      state_id: null,
-      country_id: null,
-      pincode_id: null,
-      latitude: null,
-      longitude: null,
-      is_default: true,
-      is_active: true,
-    }).execute()
-  }
-}
-
-function normalizeTenantCompanyCode(tenant: Tenant) {
-  return tenant.slug.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 64)
 }
 
 async function retireLegacyRoles(database: TenantDatabase) {
@@ -705,6 +667,11 @@ const tenantUuidTables = [
   'address_book',
   'company_emails',
   'company_phones',
+  'contact_emails',
+  'contact_phones',
+  'contact_social_links',
+  'contact_bank_accounts',
+  'contact_gst_details',
   'company_social_links',
   'company_bank_accounts',
   'rbac_roles',

@@ -29,6 +29,7 @@ import {
 } from "src/components/ui/sidebar"
 import { version } from "../../../../package.json"
 import { getDashboardApp, type DashboardAppId, type DashboardAppMenuItem } from "src/components/blocks/dashboard/dashboard-apps"
+import type { DefaultCompanyContext } from "src/features/company/company-client"
 
 interface SidebarNavItem {
   title: string
@@ -107,7 +108,7 @@ function pageFromTitle(title: string): DashboardPage | undefined {
     Bugs: "bugs",
     Company: "company",
     "Client Manager": "client",
-    "Default Company": "company",
+    "Default Company": "app-application-default-company",
     Domain: "tenant-domain",
     Helpdesk: "helpdesk",
     Industry: "industry",
@@ -130,6 +131,7 @@ export function AppSidebar({
   basePath = "/app",
   dashboardMode = "tenant",
   activeApp = "application",
+  defaultCompanyContext,
   onTenantChange,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
@@ -141,6 +143,7 @@ export function AppSidebar({
   basePath?: "/app" | "/admin" | "/sa"
   dashboardMode?: DashboardMode
   activeApp?: DashboardAppId
+  defaultCompanyContext?: DefaultCompanyContext | null
   onTenantChange?: (tenantSlug: string) => void
 }) {
   const selectedApp = getDashboardApp(activeApp)
@@ -175,6 +178,8 @@ export function AppSidebar({
             value: tenant.slug,
           }))}
           label={dashboardMode === "tenant" ? "Tenant workspace" : "Companies"}
+          displayName={dashboardMode === "tenant" ? defaultCompanyContext?.companyName : undefined}
+          displayPeriod={dashboardMode === "tenant" ? defaultCompanyContext?.accountingYearName : undefined}
           value={selectedTenant}
           onValueChange={onTenantChange}
         />

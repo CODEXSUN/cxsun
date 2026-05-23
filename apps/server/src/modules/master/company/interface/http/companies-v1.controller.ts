@@ -16,6 +16,16 @@ export class CompaniesV1Controller {
     return this.companyService.list(headers)
   }
 
+  @Get('default-context')
+  async defaultContext(@Headers() headers: TenantRequestHeaders) {
+    return this.companyService.defaultContext(headers)
+  }
+
+  @Post('default-context')
+  async setDefaultContext(@Headers() headers: TenantRequestHeaders, @Body() body: { companyId: number; accountingYearId: number }) {
+    return this.companyService.setDefaultContext(headers, body)
+  }
+
   @Get(':id')
   async get(@Headers() headers: TenantRequestHeaders, @Param('id') id: string) {
     return this.companyService.get(headers, Number(id))

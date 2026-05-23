@@ -8,6 +8,7 @@ import { SalesEntryEventBus } from './application/sales-entry-event-bus.js'
 import { SalesEntryService } from './application/sales-entry.service.js'
 import { SalesEntryRepository } from './infrastructure/persistence/sales-entry.repository.js'
 import { SalesEntryV1Controller } from './interface/http/sales-entry-v1.controller.js'
+import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
 
 @Module({
   controllers: [SalesEntryV1Controller],
@@ -18,6 +19,7 @@ import { SalesEntryV1Controller } from './interface/http/sales-entry-v1.controll
     TenantContextService,
     MasterQueueService,
     SalesEntryEventBus,
+    DocumentNumberRepository,
     SalesEntryRepository,
     SalesEntryService,
   ],

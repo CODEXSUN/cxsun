@@ -44,7 +44,6 @@ const dashboardCopy = {
       { label: "Tenant Scope", value: "Isolated", trend: "Runtime resolves tenant DB", description: "Requests use JWT and selected tenant", direction: "up" as const },
       { label: "Companies", value: "Tenant DB", trend: "Company records are local", description: "No cross-tenant company access", direction: "up" as const },
       { label: "Roles", value: "Tenant RBAC", trend: "Role policies live tenant-side", description: "rbac_roles and role policies are per tenant", direction: "up" as const },
-      { label: "Default Company", value: "Ready", trend: "Workspace default belongs here", description: "Default company remains tenant-local", direction: "up" as const },
     ],
     cards: [
       { title: "Companies", body: "Create and maintain company records inside the selected tenant database.", Icon: Building2 },

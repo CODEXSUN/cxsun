@@ -18,6 +18,17 @@ export class CompanyService {
     return this.companies.list(context)
   }
 
+  async defaultContext(headers: TenantRequestHeaders) {
+    const context = await this.tenantContext.resolve(headers, 'company.manage')
+    return this.companies.defaultContext(context)
+  }
+
+  async setDefaultContext(headers: TenantRequestHeaders, input: { companyId: number; accountingYearId: number }) {
+    const context = await this.tenantContext.resolve(headers, 'company.manage')
+    const result = await this.companies.setDefaultContext(context, input)
+    return result ? { ok: true, context: result } : { ok: false, error: 'Company or accounting year was not found.' }
+  }
+
   async get(headers: TenantRequestHeaders, id: number) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const company = await this.companies.findById(context, id)

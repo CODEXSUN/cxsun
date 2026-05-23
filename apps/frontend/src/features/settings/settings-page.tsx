@@ -146,7 +146,7 @@ export function DocumentSettingsPage({ session }: { session: AuthSession }) {
           if (!draft) return null
           return (
             <Card key={kind} className="rounded-md border-border/70">
-              <CardHeader className="pb-3">
+              <CardHeader className="px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <CardTitle className="text-base">{documentNumberLabels[kind]}</CardTitle>
@@ -158,12 +158,13 @@ export function DocumentSettingsPage({ session }: { session: AuthSession }) {
                   </label>
                 </div>
               </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-4">
-                <DocField label="Prefix" value={draft.prefix} onChange={(value) => setDraft(kind, { ...draft, prefix: value.toUpperCase() })} />
-                <DocField label="Separator" value={draft.separator} onChange={(value) => setDraft(kind, { ...draft, separator: value.slice(0, 3) })} />
+              <CardContent className="grid min-w-0 gap-3 px-4 pb-4 pt-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                <DocField enabled={draft.prefixEnabled} label="Prefix" value={draft.prefix} onChange={(value) => setDraft(kind, { ...draft, prefix: value.toUpperCase() })} onEnabledChange={(prefixEnabled) => setDraft(kind, { ...draft, prefixEnabled })} />
+                <DocField enabled={draft.separatorEnabled} label="Separator" value={draft.separator} onChange={(value) => setDraft(kind, { ...draft, separator: value.slice(0, 3) })} onEnabledChange={(separatorEnabled) => setDraft(kind, { ...draft, separatorEnabled })} />
+                <DocField enabled={draft.suffixEnabled} label="Suffix" value={draft.suffix} onChange={(value) => setDraft(kind, { ...draft, suffix: value.toUpperCase() })} onEnabledChange={(suffixEnabled) => setDraft(kind, { ...draft, suffixEnabled })} />
                 <DocField label="Next number" type="number" value={String(draft.nextNumber)} onChange={(value) => setDraft(kind, { ...draft, nextNumber: Number(value || 1) })} />
                 <DocField label="Padding" type="number" value={String(draft.padding)} onChange={(value) => setDraft(kind, { ...draft, padding: Number(value || 1) })} />
-                <div className="rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-sm text-muted-foreground md:col-span-4">
+                <div className="min-w-0 rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-sm text-muted-foreground sm:col-span-2 lg:col-span-3 xl:col-span-5">
                   Saved preview: <span className="font-medium text-foreground">{record?.preview ?? "-"}</span>
                 </div>
               </CardContent>
@@ -208,11 +209,14 @@ function SettingSwitchRow({ setting, onToggle }: { setting: SoftwareToggleSettin
   )
 }
 
-function DocField({ label, onChange, type = "text", value }: { label: string; onChange(value: string): void; type?: "number" | "text"; value: string }) {
+function DocField({ enabled, label, onChange, onEnabledChange, type = "text", value }: { enabled?: boolean; label: string; onChange(value: string): void; onEnabledChange?(enabled: boolean): void; type?: "number" | "text"; value: string }) {
   return (
-    <label className="grid gap-2 rounded-md border border-border/70 bg-background px-3 py-3">
-      <span className="text-sm font-medium text-foreground">{label}</span>
-      <input className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-foreground/40" min={type === "number" ? 1 : undefined} type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+    <label className="grid min-w-0 gap-2 rounded-md border border-border/70 bg-background px-3 py-2.5">
+      <span className="flex items-center justify-between gap-3 text-sm font-medium text-foreground">
+        {label}
+        {onEnabledChange ? <Switch checked={Boolean(enabled)} onCheckedChange={onEnabledChange} /> : null}
+      </span>
+      <input className="h-9 min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-foreground/40 disabled:bg-muted/40 disabled:text-muted-foreground" disabled={onEnabledChange ? !enabled : false} min={type === "number" ? 1 : undefined} type={type} value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
   )
 }
@@ -224,7 +228,11 @@ function toInput(setting: DocumentNumberSetting): DocumentNumberSettingInput {
     nextNumber: setting.nextNumber,
     padding: setting.padding,
     prefix: setting.prefix,
+    prefixEnabled: setting.prefixEnabled,
     separator: setting.separator,
+    separatorEnabled: setting.separatorEnabled,
+    suffix: setting.suffix,
+    suffixEnabled: setting.suffixEnabled,
   }
 }
 
@@ -234,13 +242,20 @@ function sanitizeInput(input: DocumentNumberSettingInput): DocumentNumberSetting
     nextNumber: Math.max(1, Math.floor(Number(input.nextNumber || 1))),
     padding: Math.max(1, Math.min(12, Math.floor(Number(input.padding || 1)))),
     prefix: input.prefix.trim().toUpperCase(),
+    prefixEnabled: Boolean(input.prefixEnabled),
     separator: input.separator || "-",
+    separatorEnabled: Boolean(input.separatorEnabled),
+    suffix: input.suffix.trim().toUpperCase(),
+    suffixEnabled: Boolean(input.suffixEnabled),
   }
 }
 
 function preview(input: DocumentNumberSettingInput) {
   const serial = String(input.nextNumber).padStart(input.padding, "0")
-  return [input.prefix.trim(), serial].filter(Boolean).join(input.separator || "-")
+  const prefix = input.prefixEnabled ? input.prefix.trim() : ""
+  const suffix = input.suffixEnabled ? input.suffix.trim() : ""
+  const separator = input.separatorEnabled ? input.separator : ""
+  return [prefix, serial, suffix].filter(Boolean).join(separator)
 }
 
 function isAbortError(error: unknown) {

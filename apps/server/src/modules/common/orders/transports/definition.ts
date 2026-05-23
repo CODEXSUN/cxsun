@@ -10,5 +10,10 @@ export const transportsCommonDefinition: MasterDataModuleDefinition = {
   defaultSortKey: 'name',
   columns: [
     { key: 'name', label: 'Name', type: 'string', required: true, nullable: false },
+    { key: 'gst', label: 'GST', type: 'string', nullable: true },
+    { key: 'vehicle_no', label: 'Vehicle no', type: 'string', nullable: true },
+    { key: 'address', label: 'Address', type: 'string', nullable: true },
+    { key: 'contact_no', label: 'Contact no', type: 'string', nullable: true },
+    { key: 'contact_person', label: 'Contact person', type: 'string', nullable: true },
   ],
 }

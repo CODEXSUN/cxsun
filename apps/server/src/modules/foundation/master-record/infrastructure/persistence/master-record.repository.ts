@@ -119,5 +119,6 @@ export { MasterRecordRepository as MasterDataRepository }
 export function columnSqlType(column: MasterDataColumnDefinition) {
   if (column.type === 'boolean') return 'TINYINT(1)'
   if (column.type === 'number') return column.numberMode === 'decimal' ? 'DOUBLE' : 'INT'
+  if (column.type === 'date') return 'DATE'
   return 'VARCHAR(255)'
 }

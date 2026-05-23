@@ -1071,3 +1071,477 @@ read assist/readme and rules and copy all the settings and sales setting from te
 ```
 make rule all module page is to routed as its own feature and standalone page
 ```
+
+## Current Prompt
+
+```
+add side menu in setting group and refactor accounting year  fields name , start date , end date
+```
+
+## Current Prompt
+
+```
+add script to db:refresh to tenant=aaran
+```
+
+## Current Prompt
+
+```
+make accounting year seeder proper from 1-4-20.. to 31-3-20.. respective for all
+```
+
+## Current Prompt
+
+```
+make start date as 1-apr and ending as 31-march and upsert is not picking date
+```
+
+## Current Prompt
+
+```
+add accounting year  starts from  2017 and add new tag for current year field
+```
+
+## Current Prompt
+
+```
+add default company table and wire company id and accounting year id  as first row for loading at startup and change side menu top company switch with accounting year on default 
+```
+
+## Current Prompt
+
+```
+add side menu in application for default company
+```
+
+## Current Prompt
+
+```
+add edit option to switch default company make this with shad cn select
+```
+
+## Current Prompt
+
+```
+still accounting year is making mistake 
+
+Accounting Year
+FY 2026-27
+
+31 Mar 2026 to 30 Mar 2027
+
+accounting year starts 1 apr to 31 march fix all seeder and any related
+```
+
+## Current Prompt
+
+```
+no hard coded for accounting year and company only get from database
+```
+
+## Current Prompt
+
+```
+when default company switch change or update primary also
+```
+
+## Current Prompt
+
+```
+in company upsert make industry to same width of before and shad cn theme
+```
+
+## Current Prompt
+
+```
+in sales make invoice no as auto next number and can also manual over ride and can use prefix and no prefix or suffix also make doucment settings to handle this and make each prefix and separator switches to on /off
+```
+
+## Current Prompt
+
+```
+make all card to tighten and responsive to on row
+```
+
+## Current Prompt
+
+```
+in sales get order no from master order
+```
+
+## Current Prompt
+
+```
+in sales make customer name as auto complete lookup with create option with pop up and create contact with nessary fields for invoice make pop up with animation tab with details | address | tax details and also check duplicate gstin is entering
+```
+
+## Current Prompt
+
+```
+fix popup ux merge
+```
+
+## Current Prompt
+
+```
+in popup make in details make customer name as first and code as second and in address add country , state, district, city , pincode and move gst to details page and remove tax details 
+```
+
+## Current Prompt
+
+```
+remove pan  from details and make country , states , districts , city , pincode connect with existing auto complete lookup and can create inline
+```
+
+## Current Prompt
+
+```
+in popup autocomplete is hiding on back of popup make it come to front
+```
+
+## Current Prompt
+
+```
+in sales customer name show only customer name in input after select
+```
+
+## Current Prompt
+
+```
+alos in auto complete drop down also
+```
+
+## Current Prompt
+
+```
+same for order no and product , remove hsn code and unit add colour and size , po and dc and description as text and colour and size as autocomplete with simple inline create funtions
+```
+
+## Current Prompt
+
+```
+read assist readme and create changelog
+```
+
+## Current Prompt
+
+```
+pump to new version
+```
+
+## Current Prompt
+
+```
+in sales make sales type label to sales tax type and make select to full width and make same height of other controls
+```
+
+## Current Prompt
+
+```
+change this to auto complete lookup box it feels same tone on customer name
+```
+
+## Current Prompt
+
+```
+make all inputs in single row it will swap against industry basic from sales settings
+
+offset have po , dc , product , description , qty ,rate , amount
+garment have product , description , colour , size , qty , rate , amount
+
+so prepare this as per layout selected and make it responsive
+
+after add item row move focus on first input
+```
+
+## Current Prompt
+
+```
+reduce gap between inputs and make product name more space 
+```
+
+## Current Prompt
+
+```
+make top label to center of input
+```
+
+## Current Prompt
+
+```
+still gap between inputs reduce or tighten this spaces
+```
+
+## Current Prompt
+
+```
+in this description don't get from product keep as simple text box for additional description and get gst percent from product and calculate gst as per sales type , make sales type default when invoice new created and add 
+gst percent + cgst amount + sgst amount and switch Igst amount as per sales type and calculate total per row and display
+```
+
+## Current Prompt
+
+```
+remove amount input and reduce gap
+```
+
+## Current Prompt
+
+```
+make all label to center of input except product
+```
+
+## Current Prompt
+
+```
+in show table merge product - Description to particulars and if description has data add hypen else remove hypen separator add taxable amount after rate and reformat
+
+make po , dc , qty , gst %  to text align center of cell
+make rate, cgst , sgst , igst , total and taxable to text right align
+```
+
+## Current Prompt
+
+```
+add hsn code and units  get from product and add to show table
+```
+
+## Current Prompt
+
+```
+move units after rate
+```
+
+## Current Prompt
+
+```
+and make table to fit into page responsive 
+```
+
+## Current Prompt
+
+```
+make row in vertical center and tighten serial # , tighten hsn code , gst % tighten  and fix action space and make equal space on cell and between icons
+```
+
+## Current Prompt
+
+```
+in this address get address from contact with auto complete lookup and get billing and shipping address by default if no shipping get billing address to shipping if address not found as to create or when typed as create with small pop up with all 
+
+address type , address 1 , address 2 , country default india , state , district , city and pincode with same quick create inline options and finalise and more concious 
+```
+
+## Current Prompt
+
+```
+in contact when edit contact type is not loading in edit and  check this error
+
+react-dom_client.js?v=01145ea3:14337 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools 
+chext_driver.js:539 Initialized driver at: Fri May 22 2026 20:54:43 GMT+0530 (India Standard Time)
+ Initialized chextloader at: 1779463483980
+:6001/api/v1/contacts/upsert:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+contact-client.ts:138 Uncaught (in promise) Error: Contact save failed with status 400.
+    at upsertContact (contact-client.ts:138:27)
+:6001/api/v1/contacts/upsert:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+contact-client.ts:138 Uncaught (in promise) Error: Contact save failed with status 400.
+    at upsertContact (contact-client.ts:138:27)
+:6001/api/v1/contacts/upsert:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+contact-client.ts:138 Uncaught (in promise) Error: Contact save failed with status 400.
+    at upsertContact (contact-client.ts:138:27)
+:6001/api/v1/contacts/upsert:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+contact-client.ts:138 Uncaught (in promise) Error: Contact save failed with status 400.
+    at upsertContact (contact-client.ts:138:27)
+:6001/api/v1/contacts/upsert:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+contact-client.ts:138 Uncaught (in promise) Error: Contact save failed with status 400.
+    at upsertContact (contact-client.ts:138:27)
+:6001/api/v1/contacts/upsert:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+contact-client.ts:138 Uncaught (in promise) Error: Contact save failed with status 400.
+    at upsertContact (contact-client.ts:138:27)
+```
+
+## Current Prompt
+
+```
+address is not saving check all files from frontend to backend is persists properly
+```
+
+## Current Prompt
+
+```
+if address type is not select make first record as default make the same for all foriegn ids
+```
+
+## Current Prompt
+
+```
+in contact communication tab is not persists mail id and phone is not showing on show page and edit
+```
+
+## Current Prompt
+
+```
+check all company , contact , product and all related tables frontend and backend are persist with proper chanel and tenant database check e2e and finalise with report
+```
+
+## Current Prompt
+
+```
+fix all  persistence issues and make smooth to next
+```
+
+## Current Prompt
+
+```
+check for any hard coded persitence is present for tenant datas leave user as its and remaining should come from database
+```
+
+## Current Prompt
+
+```
+in contact communication change email type and phone type to enum and select options from frontend , make it with shadcn theme component and change primary check to switch
+```
+
+## Current Prompt
+
+```
+in contact remove tax details tab extra GST Details card
+```
+
+in contact remove tax details tab extra GST Details card
+
+tighten switch button card height for all in contact
+
+in communication select is not wiring properly under input make this align proper and same height and corner to md as same as input box fix this
+
+make switch to same height of input
+
+fix swicth card in communication Primary email and Primary phone in same vertical center row
+
+align verticall middle for tds and tcs avilable
+
+in communication email type fix height of select input to standard and leave small padding inside drop down
+
+in Social Links
+align vertical center and make platform as enum as before
+
+make round corner radius of select match to input for all
+
+in show page arrange address , emails , phone ,bank .socials to table format as before with lable and data
+
+add timestamp at bottom like product for contact
+
+in sales billing address and shipping address auto complete is showing ids for common fix this
+
+in sales changes e-invoice add status banner and add generate button to post and generate e invoice we do later just show message pop up sending and hide with success message at present and add Ack no, Signed QR separately
+
+do the same for eway
+
+in eway get transport id , name , part b or a , vechile no as input  and show the same in envoice generate
+
+refactor common transports to align with this and connect with sales eway remove transport id and keep only transport with auto complete lookup with create option 
+
+change common transports fields add transport gst , address ,
+
+once again fields
+
+name
+gst
+vechile no
+address
+contact no
+contact person
+
+in sales if no transport or heypen then get vechile no only as part b if transport details is present make as part a
+
+make this e way compatiable to our gst compliances
+
+remove eway details in einvoice tab
+
+make status in terms tab to match with contact email type select tone
+
+remove paid from invoice and add round off with automatic round off with manual override option
+
+align right the same for round off
+
+wire sales settings po , dc , colour , size toggle to sales 
+
+fix sales items input area to fit the screen responsive when add or remove po, dc , colour , size
+
+industry specfic
+
+po and dc comes for offset
+colour and size for garment
+
+fit this
+
+change round off to normal input text and parse input
+
+change show page as per this 
+
+logo , irn details , billing and ship to address
+same size and font match
+
+item tables switch according to industry and double border on header like same tone 
+
+refer temp / billing / sales / show page 
+
+make these below irn
+
+Ack No.:
+-
+Ack Date:
+-
+E-Way Bill No.:
+-
+Date:
+-
+
+eway and einvoice data is not persisting when manually typing
+
+make Ack No.:
+152625564080914
+Ack Date:
+16 May 2026
+
+in same row and 
+
+E-Way Bill No.:
+152625564080914
+Date:
+16 May 2026
+
+in same row
+
+buyer block
+
+Buyer (Bill to)
+M/s. VAANARAYA INTERNATIONAL
+83 R4/118 CHEYUR ROAD ST-1-VALLUVAR STREET
+AVINASHI - 641602,  
+GSTIN/UIN : 
+State Name :                                  State Code :
+
+
+in 
+first line contact name with m/s
+second address line 1 + 2
+city , district , pincode
+gst
+state name and state code as same as mentioned
+
+add move space for Ack No.: and E-Way Bill No.:
+
+## Current Prompt
+
+```
+read assist/readme and check for work and wait
+```
+
+## Current Prompt
+
+```
+ok we work on sales 
+
+create changelog with next number for uncommit and then we start
+```

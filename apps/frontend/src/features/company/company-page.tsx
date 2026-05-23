@@ -535,10 +535,10 @@ function buildCompanyUpsertTabs({
             <TextField label="Legal name" value={form.legalName} onChange={(value) => setFormField(setForm, "legalName", value)} />
             <FieldShell label="Industry">
               <Select value={form.industryId ? String(form.industryId) : "none"} onValueChange={(value) => setFormField(setForm, "industryId", value === "none" ? null : Number(value))}>
-                <SelectTrigger className="h-11 rounded-xl">
+                <SelectTrigger className="h-11 w-full rounded-xl border-input bg-background px-3">
                   <SelectValue placeholder="Select industry" />
                 </SelectTrigger>
-                <SelectContent className="rounded-md">
+                <SelectContent position="popper" align="start" className="rounded-md">
                   <SelectItem value="none">Not classified</SelectItem>
                   {industries.map((industry) => (
                     <SelectItem key={industry.id} value={String(industry.id)}>

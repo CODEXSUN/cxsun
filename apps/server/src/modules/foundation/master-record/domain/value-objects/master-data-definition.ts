@@ -1,5 +1,5 @@
 export type MasterDataKind = 'common' | 'master'
-export type MasterDataColumnType = 'string' | 'number' | 'boolean'
+export type MasterDataColumnType = 'string' | 'number' | 'boolean' | 'date'
 
 export interface MasterDataColumnDefinition {
   key: string

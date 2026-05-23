@@ -36,7 +36,11 @@ export class DocumentNumberRepository {
       .updateTable('document_number_settings')
       .set({
         prefix: cleanPrefix(input.prefix ?? current.prefix),
+        prefix_enabled: booleanInput(input.prefixEnabled, current.prefixEnabled),
         separator: cleanSeparator(input.separator ?? current.separator),
+        separator_enabled: booleanInput(input.separatorEnabled, current.separatorEnabled),
+        suffix: cleanSuffix(input.suffix ?? current.suffix),
+        suffix_enabled: booleanInput(input.suffixEnabled, current.suffixEnabled),
         next_number: clampInteger(input.nextNumber ?? current.nextNumber, 1, 999_999_999),
         padding: clampInteger(input.padding ?? current.padding, 1, 12),
         auto_enabled: Boolean(input.autoEnabled ?? current.autoEnabled),
@@ -81,7 +85,11 @@ export class DocumentNumberRepository {
           accounting_year_id: Number(docContext.accountingYearId),
           entry_kind: kind,
           prefix: defaultPrefix(kind),
+          prefix_enabled: true,
           separator: '-',
+          separator_enabled: true,
+          suffix: '',
+          suffix_enabled: false,
           next_number: 1,
           padding: 4,
           auto_enabled: true,
@@ -90,6 +98,30 @@ export class DocumentNumberRepository {
     } catch {
       // A concurrent first request may have created this row.
     }
+  }
+
+  async consumeNext(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext) {
+    const docContext = await resolveDocumentContext(context, contextInput)
+    const current = await this.getOrCreateSetting(context, kind, docContext)
+
+    if (!current.autoEnabled) {
+      return ''
+    }
+
+    await context.database
+      .updateTable('document_number_settings')
+      .set({
+        next_number: current.nextNumber + 1,
+        updated_at: new Date(),
+      })
+      .where('id', '=', Number(current.id))
+      .execute()
+
+    return current.preview
+  }
+
+  async previewNext(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext) {
+    return this.getOrCreateSetting(context, kind, await resolveDocumentContext(context, contextInput))
   }
 }
 
@@ -123,6 +155,10 @@ function toRecord(row: Record<string, unknown>, context: Required<DocumentNumber
   const padding = Number(row.padding ?? 4)
   const prefix = String(row.prefix ?? defaultPrefix(kind))
   const separator = String(row.separator ?? '-')
+  const suffix = String(row.suffix ?? '')
+  const prefixEnabled = booleanValue(row.prefix_enabled)
+  const separatorEnabled = booleanValue(row.separator_enabled)
+  const suffixEnabled = booleanValue(row.suffix_enabled)
   return {
     id: String(row.id),
     accountingYearId: context.accountingYearId,
@@ -132,15 +168,31 @@ function toRecord(row: Record<string, unknown>, context: Required<DocumentNumber
     nextNumber,
     padding,
     prefix,
-    preview: formatDocumentNumber(prefix, separator, nextNumber, padding),
+    prefixEnabled,
+    preview: formatDocumentNumber({ prefix, prefixEnabled, separator, separatorEnabled, suffix, suffixEnabled, nextNumber, padding }),
     separator,
+    separatorEnabled,
+    suffix,
+    suffixEnabled,
     updatedAt: row.updated_at instanceof Date ? row.updated_at : new Date(String(row.updated_at)),
   }
 }
 
-export function formatDocumentNumber(prefix: string, separator: string, nextNumber: number, padding: number) {
-  const serial = String(nextNumber).padStart(padding, '0')
-  return [prefix.trim(), serial].filter(Boolean).join(separator)
+export function formatDocumentNumber(input: {
+  nextNumber: number
+  padding: number
+  prefix: string
+  prefixEnabled: boolean
+  separator: string
+  separatorEnabled: boolean
+  suffix: string
+  suffixEnabled: boolean
+}) {
+  const serial = String(input.nextNumber).padStart(input.padding, '0')
+  const prefix = input.prefixEnabled ? input.prefix.trim() : ''
+  const suffix = input.suffixEnabled ? input.suffix.trim() : ''
+  const separator = input.separatorEnabled ? input.separator : ''
+  return [prefix, serial, suffix].filter(Boolean).join(separator)
 }
 
 function normalizeKind(value: string): DocumentEntryKind {
@@ -156,6 +208,10 @@ function cleanPrefix(value: string | null | undefined) {
   return value?.trim().toUpperCase() ?? ''
 }
 
+function cleanSuffix(value: string | null | undefined) {
+  return value?.trim().toUpperCase() ?? ''
+}
+
 function cleanSeparator(value: string | null | undefined) {
   const trimmed = value?.trim() ?? '-'
   return trimmed.slice(0, 3) || '-'
@@ -167,7 +223,15 @@ function clampInteger(value: number | string | null | undefined, min: number, ma
   return Math.min(max, Math.max(min, numericValue))
 }
 
+function booleanInput(value: boolean | number | null | undefined, fallback: boolean) {
+  if (value === null || value === undefined) return fallback
+  return value === true || value === 1
+}
+
+function booleanValue(value: unknown) {
+  return value === true || value === 1 || value === '1'
+}
+
 function kindOrder(kind: DocumentEntryKind) {
   return documentEntryKinds.indexOf(kind)
 }
-

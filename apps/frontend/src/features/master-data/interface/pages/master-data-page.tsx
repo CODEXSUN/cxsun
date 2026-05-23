@@ -292,12 +292,18 @@ function EditorField({ column, draft, setDraft }: {
       <Label className="text-sm font-medium">{column.label}</Label>
       <Input
         className="h-11 rounded-xl"
-        type={column.type === "number" ? "number" : "text"}
+        type={inputType(column)}
         value={String(draft[column.key] ?? "")}
         onChange={(event) => setDraft((current) => ({ ...current, [column.key]: column.type === "number" ? Number(event.target.value || 0) : event.target.value }))}
       />
     </div>
   )
+}
+
+function inputType(column: MasterDataColumnDefinition) {
+  if (column.type === "number") return "number"
+  if (column.type === "date") return "date"
+  return "text"
 }
 
 function ActiveField({ draft, setDraft }: {

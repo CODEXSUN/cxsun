@@ -295,12 +295,18 @@ function EditorField({ column, definition, draft, session, setDraft }: {
       <Label className="text-sm font-medium">{column.label}</Label>
       <Input
         className="h-11 w-full rounded-xl"
-        type={column.type === "number" ? "number" : "text"}
+        type={inputType(column)}
         value={String(draft[column.key] ?? "")}
         onChange={(event) => setDraft((current) => ({ ...current, [column.key]: column.type === "number" ? Number(event.target.value || 0) : event.target.value }))}
       />
     </div>
   )
+}
+
+function inputType(column: MasterDataColumnDefinition) {
+  if (column.type === "number") return "number"
+  if (column.type === "date") return "date"
+  return "text"
 }
 
 function StatusBadge({ active }: { active: boolean }) {
@@ -328,6 +334,10 @@ function searchCommonRecords(records: MasterDataRecord[], searchValue: string, d
 }
 
 function formatRecordValue(record: MasterDataRecord, column: MasterDataColumnDefinition, referenceLookup: ReadonlyMap<string, string>) {
+  if (column.key === "is_current_year") {
+    return <CurrentYearBadge current={Boolean(record[column.key])} />
+  }
+
   if (isReferenceColumn(column.key)) {
     const value = record[column.key]
     if (value === null || value === undefined || value === "") return "-"
@@ -335,6 +345,17 @@ function formatRecordValue(record: MasterDataRecord, column: MasterDataColumnDef
   }
 
   return formatValue(record, column)
+}
+
+function CurrentYearBadge({ current }: { current: boolean }) {
+  if (!current) return "-"
+
+  return (
+    <Badge variant="outline" className="h-6 gap-1 rounded-md border-sky-200 bg-sky-50 px-2 text-[11px] text-sky-700">
+      <CheckCircle2 className="size-3" />
+      current
+    </Badge>
+  )
 }
 
 function referenceLookupModuleKey(moduleKey: string) {

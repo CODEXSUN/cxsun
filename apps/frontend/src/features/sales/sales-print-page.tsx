@@ -1,7 +1,6 @@
 import { useMemo, type ReactNode } from "react"
 import type { CompanyRecord } from "src/features/company/company-client"
 import { MainPrintTemplate } from "./main-print-template"
-import { portalQrPath } from "./sales-print-qr"
 import { getSalesPrintLinePlan } from "./sales-print-line-plan"
 import type { SalesEntry, SalesEntryItem } from "./sales-client"
 
@@ -21,9 +20,13 @@ export function SalesInvoiceDocument({
   documentTitle = "TAX INVOICE",
   record,
   showBankAccountNumber = true,
+  showColour = false,
+  showDc = true,
   showFooterDetails = true,
   showLogo = true,
+  showPo = true,
   showQrAccountDetails = true,
+  showSize = false,
 }: {
   readonly company?: CompanyRecord | null
   readonly copy?: SalesPrintCopy
@@ -31,12 +34,18 @@ export function SalesInvoiceDocument({
   readonly documentTitle?: string
   readonly record: SalesEntry
   readonly showBankAccountNumber?: boolean
+  readonly showColour?: boolean
+  readonly showDc?: boolean
   readonly showFooterDetails?: boolean
   readonly showLogo?: boolean
+  readonly showPo?: boolean
   readonly showQrAccountDetails?: boolean
+  readonly showSize?: boolean
 }) {
   const totals = useMemo(() => calculatePrintTotals(record.items, Number(record.round_off ?? 0)), [record])
   const isCgstSgst = (record.place_of_supply ?? "cgst-sgst") !== "igst"
+  const itemColumns = printItemColumns(isCgstSgst, { showColour, showDc, showPo, showSize })
+  const preQtyColumnCount = itemColumns.findIndex((column) => column.key === "quantity")
   const itemLinePlan = getSalesPrintLinePlan(record.items)
   const companyName = printableText(company?.legalName) || printableText(company?.name) || "CXSun Tenant Company"
   const companyAddressLines = company ? companyAddress(company) : []
@@ -54,19 +63,14 @@ export function SalesInvoiceDocument({
       <table className={`${tableClass} border-b-0`}>
         <tbody>
           <tr>
-            <td className={`${baseCell} h-[120px] w-[130px] border-r-0 text-center align-middle`}>
+            <td className={`${baseCell} h-[112px] w-[130px] border-r-0 text-center align-middle`}>
               {showLogo ? <CompanyLogo company={company ?? null} companyName={companyName} /> : null}
             </td>
-            <td className={`${baseCell} border-r-0 text-center leading-[1.6]`}>
-              <div className={`${times} text-[34px] font-bold leading-tight`}>{companyName}</div>
+            <td className={`${baseCell} border-r-0 text-center leading-[1.55]`}>
+              <div className={`${times} text-[32px] font-bold leading-tight`}>{companyName}</div>
               {companyAddressLines.map((line) => <div key={line} className={times}>{line}</div>)}
               {companyContactLine ? <div className={times}>{companyContactLine}</div> : null}
               {company?.gstinUin ? <div className={times}>GSTIN: {company.gstinUin}</div> : null}
-            </td>
-            <td className={`${baseCell} w-[145px] border-r-0 align-middle`}>
-              <div className="mx-auto flex size-[132px] items-center justify-center p-[2px]">
-                <PrintQr value={record.uuid} />
-              </div>
             </td>
           </tr>
         </tbody>
@@ -74,30 +78,22 @@ export function SalesInvoiceDocument({
       <table className={tableClass}>
         <tbody>
           <tr>
-            <td className={`${baseCell} border-t border-gray-400 border-r-0 p-[5px]`} colSpan={3}>
-              <div className="grid grid-cols-2">
-                <div className="border-r border-gray-400 pr-[10px]">
-                  <BillDetailsBlock lines={[
-                    { label: "Invoice No:", value: record.invoice_no, strong: true },
-                    { label: "Date:", value: formatDate(record.invoice_date), strong: true },
-                    { label: "Reference:", value: record.reference_no ?? "" },
-                  ]} />
-                </div>
-                <div className="pl-[10px]">
-                  <BillDetailsBlock lines={[
-                    { label: "Status:", value: record.status },
-                    { label: "Payment:", value: record.payment_status },
-                    { label: "Due date:", value: formatDate(record.due_date) },
-                  ]} labelWidthClassName="grid-cols-[104px_1fr]" />
-                </div>
-              </div>
+            <td className={`${baseCell} border-t border-gray-400 p-[5px]`}>
+              <BillDetailsBlock lines={[
+                { label: "Invoice No:", value: record.invoice_no, strong: true },
+                { label: "Date:", value: formatDate(record.invoice_date), strong: true },
+                { label: "Reference:", value: record.reference_no ?? "" },
+              ]} />
+            </td>
+            <td className={`${baseCell} border-t border-gray-400 border-r-0 p-[5px]`}>
+              <IrnDetailsBlock record={record} />
             </td>
           </tr>
           <tr>
-            <td className={`${baseCell} h-[58px] w-1/2 border-y border-gray-400 px-2.5 py-1 leading-tight`}>
+            <td className={`${baseCell} h-[68px] w-1/2 border-y border-gray-400 px-2.5 py-1 leading-tight`}>
               <PartyAddressBlock address={record.billing_address} label="Buyer (Bill to)" partyName={record.customer_name} />
             </td>
-            <td className={`${baseCell} h-[58px] w-1/2 border-y border-gray-400 border-r-0 px-2.5 py-1 leading-tight`}>
+            <td className={`${baseCell} h-[68px] w-1/2 border-y border-gray-400 border-r-0 px-2.5 py-1 leading-tight`}>
               <PartyAddressBlock address={record.shipping_address ?? record.billing_address} label="Buyer (Ship to)" partyName={record.customer_name} />
             </td>
           </tr>
@@ -106,18 +102,17 @@ export function SalesInvoiceDocument({
       <table className={`${tableClass} border-t-0`} data-print-template={itemLinePlan.requiresTwoPageTemplate ? "two-page-required" : "single-page"}>
         <thead>
           <tr className="bg-gray-50">
-            {printItemColumns(isCgstSgst).map((header) => (
+            {itemColumns.map((header) => (
               <th key={header.label} className={`${itemCell} ${header.widthClass}`}>{header.label}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {itemLinePlan.rows.map((row) => row.kind === "item"
-            ? <SalesPrintItemRow key={`item-${row.index}`} columns={printItemColumns(isCgstSgst)} index={row.index} item={row.item} isCgstSgst={isCgstSgst} />
-            : <BlankSalesPrintItemRow key={`blank-${row.index}`} columns={printItemColumns(isCgstSgst)} />)}
+            ? <SalesPrintItemRow key={`item-${row.index}`} columns={itemColumns} index={row.index} item={row.item} />
+            : <BlankSalesPrintItemRow key={`blank-${row.index}`} columns={itemColumns} />)}
           <tr>
-            <td className={`${totalItemCell} text-left`}>E&amp;OE</td>
-            <td className={`${totalItemCell} text-right font-bold`} colSpan={2}>Total&nbsp;&nbsp;</td>
+            <td className={`${totalItemCell} text-right font-bold`} colSpan={Math.max(1, preQtyColumnCount)}>Total&nbsp;&nbsp;</td>
             <td className={totalItemCell}>{sumQty(record.items)}</td>
             <td className={`${totalItemCell} text-right`}>{money(totals.taxableAmount)}</td>
             {isCgstSgst ? (
@@ -129,7 +124,7 @@ export function SalesInvoiceDocument({
             <td className={`${totalItemCell} border-r-0 text-right`}>{money(totals.grandTotal)}</td>
           </tr>
           <tr>
-            <td className={`${baseCell} h-[82px] border-r-0 p-2 leading-tight`} colSpan={printItemColumns(isCgstSgst).length}>
+            <td className={`${baseCell} h-[82px] border-r-0 p-2 leading-tight`} colSpan={itemColumns.length}>
               <div className="grid grid-cols-[1fr_185px] gap-3">
                 <div>
                   <div className="font-bold">Amount in words</div>
@@ -147,7 +142,7 @@ export function SalesInvoiceDocument({
             </td>
           </tr>
           <tr>
-            <td className={`${baseCell} h-[82px] p-2 leading-tight`} colSpan={Math.max(1, Math.floor(printItemColumns(isCgstSgst).length / 2))}>
+            <td className={`${baseCell} h-[82px] p-2 leading-tight`} colSpan={Math.max(1, Math.floor(itemColumns.length / 2))}>
               {showFooterDetails && companyBank ? (
                 <div>
                   <div className="font-bold">Bank Details</div>
@@ -158,7 +153,7 @@ export function SalesInvoiceDocument({
                 </div>
               ) : null}
             </td>
-            <td className={`${baseCell} border-r-0 p-2 text-right align-bottom`} colSpan={Math.max(1, printItemColumns(isCgstSgst).length - Math.floor(printItemColumns(isCgstSgst).length / 2))}>
+            <td className={`${baseCell} border-r-0 p-2 text-right align-bottom`} colSpan={Math.max(1, itemColumns.length - Math.floor(itemColumns.length / 2))}>
               <div className="mb-10 font-bold">For {companyName}</div>
               <div>Authorised Signatory</div>
             </td>
@@ -169,39 +164,44 @@ export function SalesInvoiceDocument({
   )
 }
 
-function printItemColumns(isCgstSgst: boolean) {
+type PrintItemColumnKey = "cgst" | "colour" | "igst" | "poDc" | "product" | "quantity" | "serial" | "sgst" | "size" | "taxable" | "total"
+
+function printItemColumns(isCgstSgst: boolean, settings: { showColour: boolean; showDc: boolean; showPo: boolean; showSize: boolean }) {
+  const showPoDc = settings.showPo || settings.showDc
   return [
-    { label: "S.No", widthClass: "w-[28px]" },
-    { label: "Product / Description", widthClass: "w-[240px]" },
-    { label: "HSN", widthClass: "w-[58px]" },
-    { label: "Qty", widthClass: "w-[50px]" },
-    { label: "Taxable", widthClass: "w-[72px]" },
-    ...(isCgstSgst ? [{ label: "CGST", widthClass: "w-[62px]" }, { label: "SGST", widthClass: "w-[62px]" }] : [{ label: "IGST", widthClass: "w-[72px]" }]),
-    { label: "Total", widthClass: "w-[82px]" },
-  ]
+    { key: "serial", label: "S.No", widthClass: "w-[28px]" },
+    { key: "product", label: "Product / Description", widthClass: settings.showColour || settings.showSize || showPoDc ? "w-[220px]" : "w-[330px]" },
+    ...(settings.showColour ? [{ key: "colour" as const, label: "Colour", widthClass: "w-[58px]" }] : []),
+    ...(settings.showSize ? [{ key: "size" as const, label: "Size", widthClass: "w-[46px]" }] : []),
+    ...(showPoDc ? [{ key: "poDc" as const, label: [settings.showPo ? "PO" : null, settings.showDc ? "DC" : null].filter(Boolean).join(" / "), widthClass: "w-[64px]" }] : []),
+    { key: "quantity", label: "Qty", widthClass: "w-[50px]" },
+    { key: "taxable", label: "Taxable", widthClass: "w-[72px]" },
+    ...(isCgstSgst ? [{ key: "cgst" as const, label: "CGST", widthClass: "w-[62px]" }, { key: "sgst" as const, label: "SGST", widthClass: "w-[62px]" }] : [{ key: "igst" as const, label: "IGST", widthClass: "w-[72px]" }]),
+    { key: "total", label: "Total", widthClass: "w-[82px]" },
+  ] satisfies Array<{ key: PrintItemColumnKey; label: string; widthClass: string }>
 }
 
-function SalesPrintItemRow({ columns, index, isCgstSgst, item }: { columns: ReturnType<typeof printItemColumns>; index: number; isCgstSgst: boolean; item: SalesEntryItem }) {
+function SalesPrintItemRow({ columns, index, item }: { columns: ReturnType<typeof printItemColumns>; index: number; item: SalesEntryItem }) {
   const taxable = itemTaxable(item)
   const gst = itemTax(item)
   const total = taxable + gst
+  const cells: Record<PrintItemColumnKey, ReactNode> = {
+    cgst: money(gst / 2),
+    colour: item.colour ?? "",
+    igst: money(gst),
+    poDc: [item.po_no, item.dc_no].filter(Boolean).join(" / "),
+    product: <><div className="font-bold">{item.product_name}</div>{item.description ? <div>{item.description}</div> : null}</>,
+    quantity: item.quantity,
+    serial: index + 1,
+    sgst: money(gst / 2),
+    size: item.size ?? "",
+    taxable: money(taxable),
+    total: money(total),
+  }
+  const rightAlignedKeys = new Set<PrintItemColumnKey>(["cgst", "igst", "sgst", "taxable", "total"])
   return (
     <tr>
-      <td className={lineItemCell}>{index + 1}</td>
-      <td className={`${lineItemCell} text-left`}>
-        <div className="font-bold">{item.product_name}</div>
-        {item.description ? <div>{item.description}</div> : null}
-      </td>
-      <td className={lineItemCell}>{item.hsn_code ?? ""}</td>
-      <td className={lineItemCell}>{item.quantity} {item.unit ?? ""}</td>
-      <td className={`${lineItemCell} text-right`}>{money(taxable)}</td>
-      {isCgstSgst ? (
-        <>
-          <td className={`${lineItemCell} text-right`}>{money(gst / 2)}</td>
-          <td className={`${lineItemCell} text-right`}>{money(gst / 2)}</td>
-        </>
-      ) : <td className={`${lineItemCell} text-right`}>{money(gst)}</td>}
-      <td className={`${lineItemCell} border-r-0 text-right`}>{money(total)}</td>
+      {columns.map((column, columnIndex) => <td key={column.key} className={`${lineItemCell} ${column.key === "product" ? "text-left" : ""} ${rightAlignedKeys.has(column.key) ? "text-right" : ""} ${columnIndex === columns.length - 1 ? "border-r-0" : ""}`}>{cells[column.key]}</td>)}
       {columns.length === 0 ? null : null}
     </tr>
   )
@@ -216,17 +216,49 @@ function BillDetailsBlock({ labelWidthClassName = "grid-cols-[82px_1fr]", lines 
 }
 
 function PartyAddressBlock({ address, label, partyName }: { address: string | null | undefined; label: string; partyName: string }) {
-  return <div><div className="font-bold">{label}</div><div className="font-bold">{partyName}</div><div className="whitespace-pre-line">{address || "Address not set"}</div></div>
+  const details = parsePartyAddress(address)
+  return (
+    <div className="leading-tight">
+      <div>{label}</div>
+      <div className="font-bold">M/s. {partyName}</div>
+      <div>{details.addressLine || "Address not set"}</div>
+      {details.locationLine ? <div>{details.locationLine}</div> : null}
+      <div className="grid grid-cols-[62px_1fr] gap-1"><span>GSTIN/UIN</span><span>: {details.gstin}</span></div>
+      <div className="grid grid-cols-[62px_1fr_70px_1fr] gap-1">
+        <span>State Name</span>
+        <span>: {details.stateName}</span>
+        <span>State Code</span>
+        <span>: {details.stateCode}</span>
+      </div>
+    </div>
+  )
 }
 
 function CompanyLogo({ company, companyName }: { company: CompanyRecord | null; companyName: string }) {
   const logo = company?.logos.find((item) => item.isActive && item.logoUrl)?.logoUrl
   if (logo) return <img src={logo} alt={companyName} className="mx-auto max-h-[92px] max-w-[112px] object-contain" />
-  return <div className="mx-auto flex size-[92px] items-center justify-center rounded-full border border-gray-400 text-center text-[10px] font-bold">{companyName.slice(0, 2).toUpperCase()}</div>
+  return <div className="mx-auto flex size-[92px] items-center justify-center rounded-[24px] border border-gray-400 bg-gray-500 text-center text-[26px] font-bold text-white">{companyName.slice(0, 2).toUpperCase()}</div>
 }
 
-function PrintQr({ value }: { value: string }) {
-  return <svg viewBox="0 0 49 49" role="img" aria-label={value} className="size-full"><path d={portalQrPath} fill="currentColor" /></svg>
+function IrnDetailsBlock({ record }: { record: SalesEntry }) {
+  return (
+    <div className="grid gap-1">
+      <div className="grid grid-cols-[34px_1fr] gap-1">
+        <span className="font-bold">IRN :</span>
+        <span className="break-all font-bold leading-tight">{salesDocumentValue(record, "irn") || record.uuid}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-0.5">
+        <InlinePrintField label="Ack No.:" value={salesDocumentValue(record, "ack_no")} />
+        <InlinePrintField label="Ack Date:" value={formatDate(salesDocumentValue(record, "ack_date"))} />
+        <InlinePrintField label="E-Way Bill No.:" value={salesDocumentValue(record, "eway_bill_no")} />
+        <InlinePrintField label="Date:" value={formatDate(salesDocumentValue(record, "eway_bill_date"))} />
+      </div>
+    </div>
+  )
+}
+
+function InlinePrintField({ label, value }: { label: string; value: ReactNode }) {
+  return <div className="grid grid-cols-[86px_1fr] gap-1"><span className="font-bold">{label}</span><span className="font-bold">{value || "-"}</span></div>
 }
 
 function SummaryLine({ label, strong = false, value }: { label: string; strong?: boolean; value: string }) {
@@ -273,6 +305,31 @@ function salesPrintCopyLabel(copy: SalesPrintCopy) {
   if (copy === "duplicate") return "Duplicate"
   if (copy === "triplicate") return "Office Copy"
   return "Original"
+}
+
+function salesDocumentValue(record: SalesEntry, key: string) {
+  const value = (record as unknown as Record<string, unknown>)[key]
+  if (value instanceof Date) return value.toISOString().slice(0, 10)
+  return typeof value === "string" ? value.trim() : value === null || value === undefined ? "" : String(value)
+}
+
+function parsePartyAddress(address: string | null | undefined) {
+  const parts = String(address ?? "").split(",").map((part) => part.trim()).filter(Boolean)
+  const pincode = parts.findLast((part) => /\b\d{6}\b/.test(part))?.match(/\b\d{6}\b/)?.[0] ?? ""
+  const countryIndex = parts.findIndex((part) => part.toLowerCase() === "india")
+  const stateName = countryIndex > 0 ? parts[countryIndex - 1] : parts.length >= 3 ? parts[parts.length - (pincode ? 3 : 2)] ?? "" : ""
+  const addressLine = [parts[0], parts[1]].filter(Boolean).join(", ")
+  const city = parts[2] ?? ""
+  const district = parts[3] && parts[3] !== stateName ? parts[3] : ""
+  const locationLine = [city, district].filter(Boolean).join(", ") + (pincode ? ` - ${pincode}` : "")
+
+  return {
+    addressLine,
+    gstin: "",
+    locationLine: locationLine.trim(),
+    stateCode: "",
+    stateName,
+  }
 }
 
 function printableText(value: unknown) {

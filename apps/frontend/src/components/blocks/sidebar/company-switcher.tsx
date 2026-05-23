@@ -22,6 +22,8 @@ import {
 export function CompanySwitcher({
   companies,
   label = "Companies",
+  displayName,
+  displayPeriod,
   value,
   onValueChange,
 }: {
@@ -32,11 +34,16 @@ export function CompanySwitcher({
     value: string
   }[]
   label?: string
+  displayName?: string
+  displayPeriod?: string
   value?: string
   onValueChange?: (value: string) => void
 }) {
   const { isMobile } = useSidebar()
-  const activeCompany = companies.find((company) => company.value === value) ?? companies[0]
+  const selectedCompany = companies.find((company) => company.value === value) ?? companies[0]
+  const activeCompany = selectedCompany
+    ? { ...selectedCompany, name: displayName ?? selectedCompany.name, period: displayPeriod ?? selectedCompany.period }
+    : null
 
   if (!activeCompany) {
     return null

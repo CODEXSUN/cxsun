@@ -1,8 +1,10 @@
-import { sql, type Kysely } from 'kysely'
+import { type Kysely } from 'kysely'
 import { BadRequestException } from '../../../../../core/exceptions/http.exception.js'
+import { Inject } from '../../../../../core/decorators/inject.js'
 import { Injectable } from '../../../../../core/decorators/injectable.js'
 import type { TenantRuntimeContext } from '../../../../../core/tenant/tenant-context.service.js'
 import { dispatchPublicUuid } from '../../../../../shared/helpers/public-uuid.js'
+import { DocumentNumberRepository } from '../../../../settings/document-settings/infrastructure/document-number.repository.js'
 import type { SalesEntry, SalesEntryItem } from '../../domain/entities/sales-entry.entity.js'
 
 type DynamicDatabase = Record<string, Record<string, unknown>>
@@ -12,7 +14,11 @@ export interface SalesEntryItemInput {
   product_id?: string | null
   product_name?: string
   description?: string | null
+  colour?: string | null
   hsn_code?: string | null
+  po_no?: string | null
+  dc_no?: string | null
+  size?: string | null
   unit?: string | null
   quantity?: number
   rate?: number
@@ -34,9 +40,24 @@ export interface SalesEntryInput {
   place_of_supply?: string | null
   reference_no?: string | null
   due_date?: string | null
+  round_off?: number | null
   paid_amount?: number
   status?: string
   payment_status?: string
+  irn?: string | null
+  ack_no?: string | null
+  ack_date?: string | null
+  signed_qr?: string | null
+  eway_bill_no?: string | null
+  eway_bill_date?: string | null
+  transport_id?: string | null
+  transport_name?: string | null
+  transport_gst?: string | null
+  transport_address?: string | null
+  transport_contact_no?: string | null
+  transport_contact_person?: string | null
+  vehicle_no?: string | null
+  eway_part?: string | null
   notes?: string | null
   terms?: string | null
   is_active?: boolean
@@ -45,6 +66,8 @@ export interface SalesEntryInput {
 
 @Injectable()
 export class SalesEntryRepository {
+  constructor(@Inject(DocumentNumberRepository) private readonly documentNumbers: DocumentNumberRepository) {}
+
   async list(context: TenantRuntimeContext) {
     const rows = await this.database(context)
       .selectFrom('sales_entries')
@@ -158,17 +181,20 @@ export class SalesEntryRepository {
     const discountTotal = sum(items.map((item) => item.discount_amount))
     const taxableTotal = subtotal - discountTotal
     const taxTotal = sum(items.map((item) => item.tax_amount))
-    const roundOff = roundMoney(Number(input.paid_amount ?? 0) ? 0 : Math.round(taxableTotal + taxTotal) - (taxableTotal + taxTotal))
+    const roundOff = input.round_off === null || input.round_off === undefined
+      ? roundMoney(Math.round(taxableTotal + taxTotal) - (taxableTotal + taxTotal))
+      : roundMoney(input.round_off)
     const grandTotal = roundMoney(taxableTotal + taxTotal + roundOff)
     const paidAmount = roundMoney(input.paid_amount ?? 0)
 
     if (!input.customer_name?.trim()) throw new BadRequestException('Customer name is required.')
+    const invoiceNo = await this.resolveInvoiceNo(context, input.invoice_no, companyId, accountingYearId)
 
     return {
       entry: {
         company_id: companyId,
         accounting_year_id: accountingYearId,
-        invoice_no: input.invoice_no?.trim() || await this.nextInvoiceNo(context),
+        invoice_no: invoiceNo,
         invoice_date: input.invoice_date || today(),
         customer_id: input.customer_id ?? null,
         customer_name: input.customer_name.trim(),
@@ -187,6 +213,20 @@ export class SalesEntryRepository {
         balance_amount: roundMoney(grandTotal - paidAmount),
         status: input.status ?? 'draft',
         payment_status: input.payment_status ?? (paidAmount >= grandTotal ? 'paid' : paidAmount > 0 ? 'partial' : 'unpaid'),
+        irn: emptyAsNull(input.irn),
+        ack_no: emptyAsNull(input.ack_no),
+        ack_date: emptyAsNull(input.ack_date),
+        signed_qr: emptyAsNull(input.signed_qr),
+        eway_bill_no: emptyAsNull(input.eway_bill_no),
+        eway_bill_date: emptyAsNull(input.eway_bill_date),
+        transport_id: emptyAsNull(input.transport_id),
+        transport_name: emptyAsNull(input.transport_name),
+        transport_gst: emptyAsNull(input.transport_gst),
+        transport_address: emptyAsNull(input.transport_address),
+        transport_contact_no: emptyAsNull(input.transport_contact_no),
+        transport_contact_person: emptyAsNull(input.transport_contact_person),
+        vehicle_no: emptyAsNull(input.vehicle_no),
+        eway_part: emptyAsNull(input.eway_part),
         notes: emptyAsNull(input.notes),
         terms: emptyAsNull(input.terms),
         is_active: input.is_active ?? true,
@@ -236,6 +276,20 @@ export class SalesEntryRepository {
       balance_amount: numberValue(row.balance_amount),
       status: String(row.status),
       payment_status: String(row.payment_status),
+      irn: stringOrNull(row.irn),
+      ack_no: stringOrNull(row.ack_no),
+      ack_date: row.ack_date as Date | null,
+      signed_qr: stringOrNull(row.signed_qr),
+      eway_bill_no: stringOrNull(row.eway_bill_no),
+      eway_bill_date: row.eway_bill_date as Date | null,
+      transport_id: stringOrNull(row.transport_id),
+      transport_name: stringOrNull(row.transport_name),
+      transport_gst: stringOrNull(row.transport_gst),
+      transport_address: stringOrNull(row.transport_address),
+      transport_contact_no: stringOrNull(row.transport_contact_no),
+      transport_contact_person: stringOrNull(row.transport_contact_person),
+      vehicle_no: stringOrNull(row.vehicle_no),
+      eway_part: stringOrNull(row.eway_part),
       notes: stringOrNull(row.notes),
       terms: stringOrNull(row.terms),
       is_active: Boolean(row.is_active),
@@ -298,13 +352,36 @@ export class SalesEntryRepository {
     return Number(year?.id ?? 0)
   }
 
-  private async nextInvoiceNo(context: TenantRuntimeContext) {
-    const currentYear = new Date().getFullYear()
-    const prefix = `SAL-${currentYear}-`
-    const result = await sql<{ count: number | string | bigint }>`
-      SELECT COUNT(*) AS count FROM sales_entries WHERE tenant_id = ${context.tenant.id}
-    `.execute(this.database(context))
-    return `${prefix}${String(Number(result.rows[0]?.count ?? 0) + 1).padStart(4, '0')}`
+  private async nextInvoiceNo(context: TenantRuntimeContext, companyId: number, accountingYearId: number) {
+    const documentNumber = await this.documentNumbers.consumeNext(context, 'sales', {
+      accountingYearId: String(accountingYearId),
+      companyId: String(companyId),
+    })
+
+    if (!documentNumber) {
+      throw new BadRequestException('Invoice number is required when automatic sales numbering is disabled.')
+    }
+
+    return documentNumber
+  }
+
+  private async resolveInvoiceNo(context: TenantRuntimeContext, invoiceNo: string | undefined, companyId: number, accountingYearId: number) {
+    const trimmedInvoiceNo = invoiceNo?.trim()
+
+    if (!trimmedInvoiceNo) {
+      return this.nextInvoiceNo(context, companyId, accountingYearId)
+    }
+
+    const preview = await this.documentNumbers.previewNext(context, 'sales', {
+      accountingYearId: String(accountingYearId),
+      companyId: String(companyId),
+    })
+
+    if (preview.autoEnabled && trimmedInvoiceNo === preview.preview) {
+      return this.nextInvoiceNo(context, companyId, accountingYearId)
+    }
+
+    return trimmedInvoiceNo
   }
 
   private idColumn(idOrUuid: string) {
@@ -337,7 +414,11 @@ function normalizeItem(input: SalesEntryItemInput): NormalizedSalesItem {
     product_id: emptyAsNull(input.product_id),
     product_name: input.product_name?.trim() || 'Item',
     description: emptyAsNull(input.description),
+    colour: emptyAsNull(input.colour),
     hsn_code: emptyAsNull(input.hsn_code),
+    po_no: emptyAsNull(input.po_no),
+    dc_no: emptyAsNull(input.dc_no),
+    size: emptyAsNull(input.size),
     unit: emptyAsNull(input.unit),
     quantity,
     rate,
@@ -360,7 +441,11 @@ function toItem(row: Record<string, unknown>): SalesEntryItem {
     product_id: stringOrNull(row.product_id),
     product_name: String(row.product_name),
     description: stringOrNull(row.description),
+    colour: stringOrNull(row.colour),
     hsn_code: stringOrNull(row.hsn_code),
+    po_no: stringOrNull(row.po_no),
+    dc_no: stringOrNull(row.dc_no),
+    size: stringOrNull(row.size),
     unit: stringOrNull(row.unit),
     quantity: numberValue(row.quantity),
     rate: numberValue(row.rate),

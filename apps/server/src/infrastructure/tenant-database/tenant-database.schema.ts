@@ -43,6 +43,7 @@ export interface TenantAccountingYearsTable {
   start_date: string
   end_date: string
   books_start: string
+  is_current_year: boolean
   is_active: boolean
   created_at: Generated<Date>
   updated_at: Generated<Date>
@@ -111,6 +112,68 @@ export interface TenantCompanyPhonesTable {
   phone_number: string
   phone_type: string
   is_primary: boolean
+  is_active: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantContactEmailsTable {
+  id: Generated<number>
+  uuid: string
+  contact_id: number
+  email: string
+  email_type: string
+  is_primary: boolean
+  is_active: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantContactPhonesTable {
+  id: Generated<number>
+  uuid: string
+  contact_id: number
+  phone_number: string
+  phone_type: string
+  is_primary: boolean
+  is_active: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantContactSocialLinksTable {
+  id: Generated<number>
+  uuid: string
+  contact_id: number
+  platform: string
+  url: string
+  is_active: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantContactBankAccountsTable {
+  id: Generated<number>
+  uuid: string
+  contact_id: number
+  bank_name: string
+  account_number: string
+  account_holder_name: string
+  ifsc: string
+  branch: string | null
+  is_primary: boolean
+  is_active: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantContactGstDetailsTable {
+  id: Generated<number>
+  uuid: string
+  contact_id: number
+  gstin: string
+  state: string
+  is_default: boolean
   is_active: boolean
   created_at: Generated<Date>
   updated_at: Generated<Date>
@@ -438,6 +501,11 @@ export interface TenantCommonTransportsTable {
   uuid: string
   code: string
   name: string
+  gst: string | null
+  vehicle_no: string | null
+  address: string | null
+  contact_no: string | null
+  contact_person: string | null
   description: string | null
   is_active: boolean
   created_at: Generated<Date>
@@ -541,6 +609,20 @@ export interface TenantSalesEntriesTable {
   balance_amount: number
   status: string
   payment_status: string
+  irn: string | null
+  ack_no: string | null
+  ack_date: Date | null
+  signed_qr: string | null
+  eway_bill_no: string | null
+  eway_bill_date: Date | null
+  transport_id: string | null
+  transport_name: string | null
+  transport_gst: string | null
+  transport_address: string | null
+  transport_contact_no: string | null
+  transport_contact_person: string | null
+  vehicle_no: string | null
+  eway_part: string | null
   notes: string | null
   terms: string | null
   is_active: boolean
@@ -556,7 +638,11 @@ export interface TenantSalesEntryItemsTable {
   product_id: string | null
   product_name: string
   description: string | null
+  colour: string | null
   hsn_code: string | null
+  po_no: string | null
+  dc_no: string | null
+  size: string | null
   unit: string | null
   quantity: number
   rate: number
@@ -606,7 +692,11 @@ export interface TenantDocumentNumberSettingsTable {
   accounting_year_id: number
   entry_kind: string
   prefix: string
+  prefix_enabled: boolean
   separator: string
+  separator_enabled: boolean
+  suffix: string
+  suffix_enabled: boolean
   next_number: number
   padding: number
   auto_enabled: boolean
@@ -619,6 +709,23 @@ export interface TenantMastersContactsTable {
   uuid: string
   code: string
   name: string
+  contact_type_id: string | null
+  ledger_id: string | null
+  ledger_name: string | null
+  legal_name: string | null
+  pan: string | null
+  gstin: string | null
+  msme_type: string | null
+  msme_no: string | null
+  tan: string | null
+  tds_available: boolean | null
+  tcs_available: boolean | null
+  opening_balance: number | null
+  balance_type: string | null
+  credit_limit: number | null
+  website: string | null
+  primary_email: string | null
+  primary_phone: string | null
   description: string | null
   is_active: boolean
   created_at: Generated<Date>
@@ -668,6 +775,11 @@ export interface TenantDatabaseSchema {
   address_book: TenantAddressBookTable
   company_emails: TenantCompanyEmailsTable
   company_phones: TenantCompanyPhonesTable
+  contact_emails: TenantContactEmailsTable
+  contact_phones: TenantContactPhonesTable
+  contact_social_links: TenantContactSocialLinksTable
+  contact_bank_accounts: TenantContactBankAccountsTable
+  contact_gst_details: TenantContactGstDetailsTable
   company_social_links: TenantCompanySocialLinksTable
   company_bank_accounts: TenantCompanyBankAccountsTable
   rbac_roles: TenantRbacRolesTable

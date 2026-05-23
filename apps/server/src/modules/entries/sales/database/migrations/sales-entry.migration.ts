@@ -30,6 +30,20 @@ export async function migrateSalesEntryTables(database: TenantDatabase) {
       balance_amount DOUBLE NOT NULL DEFAULT 0,
       status VARCHAR(32) NOT NULL DEFAULT 'draft',
       payment_status VARCHAR(32) NOT NULL DEFAULT 'unpaid',
+      irn VARCHAR(120) NULL,
+      ack_no VARCHAR(120) NULL,
+      ack_date DATE NULL,
+      signed_qr TEXT NULL,
+      eway_bill_no VARCHAR(120) NULL,
+      eway_bill_date DATE NULL,
+      transport_id VARCHAR(80) NULL,
+      transport_name VARCHAR(191) NULL,
+      transport_gst VARCHAR(40) NULL,
+      transport_address TEXT NULL,
+      transport_contact_no VARCHAR(80) NULL,
+      transport_contact_person VARCHAR(120) NULL,
+      vehicle_no VARCHAR(80) NULL,
+      eway_part VARCHAR(20) NULL,
       notes TEXT NULL,
       terms TEXT NULL,
       is_active TINYINT(1) NOT NULL DEFAULT 1,
@@ -49,7 +63,11 @@ export async function migrateSalesEntryTables(database: TenantDatabase) {
       product_id VARCHAR(80) NULL,
       product_name VARCHAR(191) NOT NULL,
       description TEXT NULL,
+      colour VARCHAR(120) NULL,
       hsn_code VARCHAR(80) NULL,
+      po_no VARCHAR(120) NULL,
+      dc_no VARCHAR(120) NULL,
+      size VARCHAR(120) NULL,
       unit VARCHAR(80) NULL,
       quantity DOUBLE NOT NULL DEFAULT 0,
       rate DOUBLE NOT NULL DEFAULT 0,
@@ -63,6 +81,25 @@ export async function migrateSalesEntryTables(database: TenantDatabase) {
       INDEX idx_sales_entry_items_parent (sales_entry_id, sort_order)
     )
   `).execute(database)
+
+  await addSalesItemColumnIfMissing(database, 'colour', 'VARCHAR(120) NULL')
+  await addSalesItemColumnIfMissing(database, 'po_no', 'VARCHAR(120) NULL')
+  await addSalesItemColumnIfMissing(database, 'dc_no', 'VARCHAR(120) NULL')
+  await addSalesItemColumnIfMissing(database, 'size', 'VARCHAR(120) NULL')
+  await addSalesEntryColumnIfMissing(database, 'irn', 'VARCHAR(120) NULL')
+  await addSalesEntryColumnIfMissing(database, 'ack_no', 'VARCHAR(120) NULL')
+  await addSalesEntryColumnIfMissing(database, 'ack_date', 'DATE NULL')
+  await addSalesEntryColumnIfMissing(database, 'signed_qr', 'TEXT NULL')
+  await addSalesEntryColumnIfMissing(database, 'eway_bill_no', 'VARCHAR(120) NULL')
+  await addSalesEntryColumnIfMissing(database, 'eway_bill_date', 'DATE NULL')
+  await addSalesEntryColumnIfMissing(database, 'transport_id', 'VARCHAR(80) NULL')
+  await addSalesEntryColumnIfMissing(database, 'transport_name', 'VARCHAR(191) NULL')
+  await addSalesEntryColumnIfMissing(database, 'transport_gst', 'VARCHAR(40) NULL')
+  await addSalesEntryColumnIfMissing(database, 'transport_address', 'TEXT NULL')
+  await addSalesEntryColumnIfMissing(database, 'transport_contact_no', 'VARCHAR(80) NULL')
+  await addSalesEntryColumnIfMissing(database, 'transport_contact_person', 'VARCHAR(120) NULL')
+  await addSalesEntryColumnIfMissing(database, 'vehicle_no', 'VARCHAR(80) NULL')
+  await addSalesEntryColumnIfMissing(database, 'eway_part', 'VARCHAR(20) NULL')
 
   await sql.raw(`
     CREATE TABLE IF NOT EXISTS sales_entry_comments (
@@ -89,4 +126,32 @@ export async function migrateSalesEntryTables(database: TenantDatabase) {
       INDEX idx_sales_entry_activities_parent (sales_entry_id, id)
     )
   `).execute(database)
+}
+
+async function addSalesEntryColumnIfMissing(database: TenantDatabase, column: string, definition: string) {
+  const existing = await sql<{ COLUMN_NAME: string }>`
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'sales_entries'
+      AND COLUMN_NAME = ${column}
+  `.execute(database)
+
+  if (existing.rows.length > 0) return
+
+  await sql.raw(`ALTER TABLE sales_entries ADD COLUMN ${column} ${definition}`).execute(database)
+}
+
+async function addSalesItemColumnIfMissing(database: TenantDatabase, column: string, definition: string) {
+  const existing = await sql<{ COLUMN_NAME: string }>`
+    SELECT COLUMN_NAME
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'sales_entry_items'
+      AND COLUMN_NAME = ${column}
+  `.execute(database)
+
+  if (existing.rows.length > 0) return
+
+  await sql.raw(`ALTER TABLE sales_entry_items ADD COLUMN ${column} ${definition}`).execute(database)
 }

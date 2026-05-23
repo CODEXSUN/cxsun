@@ -9,6 +9,105 @@ import type { NormalizedCompanyData } from '../domain/company.aggregate.js'
 
 @Injectable()
 export class CompanyRepository {
+  async defaultContext(context: TenantRuntimeContext) {
+    const row = await context.database
+      .selectFrom('default_companies as defaults')
+      .innerJoin('companies as company', 'company.id', 'defaults.company_id')
+      .innerJoin('accounting_years as year', 'year.id', 'defaults.accounting_year_id')
+      .select([
+        'defaults.id as id',
+        'defaults.company_id as company_id',
+        'defaults.accounting_year_id as accounting_year_id',
+        'company.name as company_name',
+        'company.code as company_code',
+        'year.name as accounting_year_name',
+        'year.start_date as accounting_year_start_date',
+        'year.end_date as accounting_year_end_date',
+      ])
+      .where('defaults.is_active', '=', true)
+      .orderBy('defaults.id', 'asc')
+      .executeTakeFirst()
+
+    if (!row) {
+      return null
+    }
+
+    return {
+      id: Number(row.id),
+      companyId: Number(row.company_id),
+      companyName: String(row.company_name ?? ''),
+      companyCode: String(row.company_code ?? ''),
+      accountingYearId: Number(row.accounting_year_id),
+      accountingYearName: String(row.accounting_year_name ?? ''),
+      accountingYearStartDate: dateOrNull(row.accounting_year_start_date),
+      accountingYearEndDate: dateOrNull(row.accounting_year_end_date),
+    }
+  }
+
+  async setDefaultContext(context: TenantRuntimeContext, input: { companyId: number; accountingYearId: number }) {
+    const [company, year] = await Promise.all([
+      context.database.selectFrom('companies').select(['id', 'industry_id']).where('id', '=', input.companyId).where('deleted_at', 'is', null).executeTakeFirst(),
+      context.database.selectFrom('accounting_years').select('id').where('id', '=', input.accountingYearId).where('deleted_at', 'is', null).executeTakeFirst(),
+    ])
+
+    if (!company || !year) {
+      return null
+    }
+
+    await context.database
+      .updateTable('companies')
+      .set({
+        is_primary: false,
+        updated_at: new Date(),
+      })
+      .where('deleted_at', 'is', null)
+      .execute()
+
+    await context.database
+      .updateTable('companies')
+      .set({
+        is_primary: true,
+        updated_at: new Date(),
+      })
+      .where('id', '=', input.companyId)
+      .execute()
+
+    const existing = await context.database
+      .selectFrom('default_companies')
+      .select('id')
+      .orderBy('id', 'asc')
+      .executeTakeFirst()
+
+    if (existing) {
+      await context.database
+        .updateTable('default_companies')
+        .set({
+          tenant_id: context.tenant.id,
+          industry_id: Number(company.industry_id ?? 0),
+          company_id: input.companyId,
+          accounting_year_id: input.accountingYearId,
+          is_active: true,
+          updated_at: new Date(),
+        })
+        .where('id', '=', existing.id)
+        .execute()
+    } else {
+      await context.database
+        .insertInto('default_companies')
+        .values({
+          tenant_id: context.tenant.id,
+          uuid: nextPublicUuid(),
+          industry_id: Number(company.industry_id ?? 0),
+          company_id: input.companyId,
+          accounting_year_id: input.accountingYearId,
+          is_active: true,
+        })
+        .execute()
+    }
+
+    return this.defaultContext(context)
+  }
+
   async list(context: TenantRuntimeContext): Promise<Company[]> {
     const rows = await context.database
       .selectFrom('companies')
@@ -384,7 +483,12 @@ function dateOrNull(value: unknown) {
   if (!value) return null
   if (value instanceof Date) {
     const time = value.getTime()
-    return Number.isNaN(time) ? null : value.toISOString()
+    if (Number.isNaN(time)) return null
+
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, '0')
+    const day = String(value.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }
   return String(value)
 }

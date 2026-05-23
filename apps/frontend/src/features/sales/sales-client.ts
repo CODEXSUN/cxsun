@@ -2,6 +2,7 @@ import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/aut
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 
 export type SalesCommonLookupKey = "hsnCodes" | "units" | "taxes"
+type SalesLookupModuleKey = "contacts" | "orders" | "products" | SalesCommonLookupKey
 
 export interface SalesLookupOption {
   id: string
@@ -23,7 +24,11 @@ export interface SalesEntryItem {
   product_id?: string | null
   product_name: string
   description?: string | null
+  colour?: string | null
   hsn_code?: string | null
+  po_no?: string | null
+  dc_no?: string | null
+  size?: string | null
   unit?: string | null
   quantity: number
   rate: number
@@ -59,6 +64,20 @@ export interface SalesEntry {
   balance_amount: number
   status: string
   payment_status: string
+  irn: string | null
+  ack_no: string | null
+  ack_date: string | null
+  signed_qr: string | null
+  eway_bill_no: string | null
+  eway_bill_date: string | null
+  transport_id: string | null
+  transport_name: string | null
+  transport_gst: string | null
+  transport_address: string | null
+  transport_contact_no: string | null
+  transport_contact_person: string | null
+  vehicle_no: string | null
+  eway_part: string | null
   notes: string | null
   terms: string | null
   is_active: boolean | number
@@ -80,12 +99,26 @@ export function emptySalesEntry(): SalesEntryInput {
     customer_name: "",
     billing_address: "",
     shipping_address: "",
-    place_of_supply: "",
+    place_of_supply: "cgst-sgst",
     reference_no: "",
     due_date: "",
     paid_amount: 0,
     status: "draft",
     payment_status: "unpaid",
+    irn: "",
+    ack_no: "",
+    ack_date: "",
+    signed_qr: "",
+    eway_bill_no: "",
+    eway_bill_date: "",
+    transport_id: null,
+    transport_name: "",
+    transport_gst: "",
+    transport_address: "",
+    transport_contact_no: "",
+    transport_contact_person: "",
+    vehicle_no: "",
+    eway_part: "part-b",
     notes: "",
     terms: "Goods once sold will not be taken back unless agreed in writing.",
     is_active: true,
@@ -97,8 +130,12 @@ export function emptySalesItem(): SalesEntryItem {
   return {
     product_name: "",
     description: "",
+    colour: "",
     hsn_code: "",
-    unit: "Nos",
+    po_no: "",
+    dc_no: "",
+    size: "",
+    unit: "",
     quantity: 1,
     rate: 0,
     discount_amount: 0,
@@ -123,6 +160,11 @@ export async function listSalesContactLookups(session: AuthSession) {
 export async function listSalesProductLookups(session: AuthSession) {
   const records = await listLookupRecords(session, "/api/v1/products")
   return records.map((record) => recordToSalesLookupOption(record, "products"))
+}
+
+export async function listSalesOrderLookups(session: AuthSession) {
+  const records = await listLookupRecords(session, "/api/v1/orders")
+  return records.map((record) => recordToSalesLookupOption(record, "orders"))
 }
 
 export async function listSalesCommonLookups(session: AuthSession, moduleKey: SalesCommonLookupKey) {
@@ -207,7 +249,7 @@ async function listLookupRecords(session: AuthSession, endpoint: string) {
   return (await response.json()) as MasterDataRecord[]
 }
 
-function recordToSalesLookupOption(record: MasterDataRecord, moduleKey: "contacts" | "products" | SalesCommonLookupKey): SalesLookupOption {
+function recordToSalesLookupOption(record: MasterDataRecord, moduleKey: SalesLookupModuleKey): SalesLookupOption {
   const code = readString(record.code)
   const name = readString(record.name)
   const description = readString(record.description)

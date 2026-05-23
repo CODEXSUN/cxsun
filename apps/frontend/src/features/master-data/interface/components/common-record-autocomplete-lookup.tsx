@@ -17,6 +17,7 @@ export interface CommonRecordAutocompleteLookupProps {
   createLabel?: string
   disabled?: boolean
   label: string
+  labelClassName?: string
   moduleKey: string
   onChange(value: number | null, record: MasterDataRecord | null): void
   onOptionsChange?(records: MasterDataRecord[]): void
@@ -33,6 +34,7 @@ export function CommonRecordAutocompleteLookup({
   createLabel,
   disabled = false,
   label,
+  labelClassName = "",
   moduleKey,
   onChange,
   onOptionsChange,
@@ -145,7 +147,7 @@ export function CommonRecordAutocompleteLookup({
 
   return (
     <div className={`relative z-10 grid w-full gap-3 focus-within:z-[90] ${className}`}>
-      <Label className="text-sm font-medium">{label}</Label>
+      <Label className={`text-sm font-medium ${labelClassName}`}>{label}</Label>
       <Input
         ref={inputRef}
         aria-autocomplete="list"
@@ -209,7 +211,7 @@ export function CommonRecordAutocompleteLookup({
           ref={listRef}
           role="listbox"
           style={listStyle}
-          className="fixed z-[120] overflow-y-auto overscroll-contain rounded-md border border-border bg-card p-1 shadow-2xl ring-1 ring-black/5"
+          className="fixed z-[220] overflow-y-auto overscroll-contain rounded-md border border-border bg-card p-1 shadow-2xl ring-1 ring-black/5"
           onMouseDown={(event) => event.preventDefault()}
         >
           {filteredOptions.map((option, index) => {

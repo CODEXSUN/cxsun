@@ -2,15 +2,38 @@
 
 ## Version State
 
-- **Current version:** `1.0.18`
-- **Release tag:** `v-1.0.18`
-- **Changelog label:** `v 1.0.18`
+- **Current version:** `1.0.20`
+- **Release tag:** `v-1.0.20`
+- **Changelog label:** `v 1.0.20`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
-## v-1.0.18
+## v-1.0.20
+
+### [v 1.0.20] 2026-05-23 8:01 am - sales voucher compliance preparation
+
+- Prepared the current uncommitted sales batch for GST/e-way/e-invoice compliance work.
+- Reserved this batch for sales voucher persistence, print/show layout, round-off handling, and industry-specific PO/DC/colour/size toggles.
+- Kept the pending work in the existing dirty tree so the next edits can continue from the current sales implementation.
+
+## v-1.0.19
+
+### [v 1.0.19] 2026-05-22 5:35 pm - tenant settings and sales voucher refinement
+
+- Wired settings and sales settings into standalone tenant routes, including document number settings with automatic invoice numbering, optional prefix/separator/suffix switches, manual invoice overrides, and compact responsive cards.
+- Added tenant default company context backed only by database records, with editable company/accounting-year lookup selection and primary-company synchronization.
+- Reworked accounting year data so seeded years start on 1 Apr and end on 31 Mar, beginning from FY 2017-18, with current-year tagging and date-safe tenant reads.
+- Cleaned product master list, show, and upsert screens by removing unused group/category/type/brand/colour/size/style surfaces, hiding UUIDs, showing lookup names, adding filters/columns controls, and tightening detail spacing.
+- Standardized active-status controls across product, contact, common, and company forms by removing helper taglines and matching the compact company style.
+- Added standalone module routing rules and feature-owned product/contact/common behavior instead of growing generic master-data pages with module-specific branching.
+- Added default-company navigation under the application menu and kept Accounting Year under Settings instead of the Others group.
+- Enhanced sales customer selection with customer-name-only autocomplete display, an animated inline contact-create popup, duplicate GSTIN validation, address lookups for country/state/district/city/pincode, and front-layer dropdown behavior inside modals.
+- Updated sales order and product autocomplete display to clean name/code values, and reshaped sales line entry by replacing HSN/unit fields with colour, size, PO, DC, and textarea description fields.
+- Added persisted sales item fields for colour, size, PO number, and DC number, plus tenant migration support and matching sales print/preview output.
+- Added reusable pincode autocomplete lookup support and reused common inline-create lookups for sales address and item metadata.
+- Added `db:refresh` tenant convenience wiring for the `aaran` tenant and ran targeted frontend/server typechecks plus the Aaran tenant migration during implementation.
 
 ### [v 1.0.18] 2026-05-16 5:52 pm - flattened common seeders and default records
 
