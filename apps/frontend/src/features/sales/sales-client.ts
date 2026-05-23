@@ -49,6 +49,9 @@ export interface SalesEntry {
   invoice_date: string
   customer_id: string | null
   customer_name: string
+  customer_gstin: string | null
+  customer_state_code: string | null
+  customer_state_name: string | null
   billing_address: string | null
   shipping_address: string | null
   place_of_supply: string | null
@@ -97,6 +100,9 @@ export function emptySalesEntry(): SalesEntryInput {
   return {
     invoice_date: new Date().toISOString().slice(0, 10),
     customer_name: "",
+    customer_gstin: "",
+    customer_state_code: "",
+    customer_state_name: "",
     billing_address: "",
     shipping_address: "",
     place_of_supply: "cgst-sgst",

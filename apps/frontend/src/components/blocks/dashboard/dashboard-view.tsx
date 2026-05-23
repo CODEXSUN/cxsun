@@ -30,6 +30,10 @@ import { pageModuleKey, pageModuleKind } from 'src/features/master-data/applicat
 import { ContactPage } from 'src/features/contact/contact-page'
 import { ProductPage } from 'src/features/product/product-page'
 import { SalesPage } from 'src/features/sales/sales-page'
+import { PurchasePage } from 'src/features/purchase/purchase-page'
+import { ReceiptPage } from 'src/features/receipt/receipt-page'
+import { PaymentPage } from 'src/features/payment/payment-page'
+import { CustomerStatementReportPage, GstStatementReportPage, SupplierStatementReportPage } from 'src/features/report/billing-statement-page'
 import { DocumentSettingsPage, SalesSettingsPage } from 'src/features/settings/settings-page'
 import {
   appModulePages,
@@ -264,6 +268,18 @@ export function DashboardView({
           <SupportPage type="tenant-roles" />
         ) : visiblePage === "app-billing-sales" ? (
           <SalesPage session={session} />
+        ) : visiblePage === "app-billing-purchase" ? (
+          <PurchasePage session={session} />
+        ) : visiblePage === "app-billing-receipts" ? (
+          <ReceiptPage session={session} />
+        ) : visiblePage === "app-billing-payments" ? (
+          <PaymentPage session={session} />
+        ) : visiblePage === "app-billing-customer-statement" ? (
+          <CustomerStatementReportPage session={session} />
+        ) : visiblePage === "app-billing-supplier-statement" ? (
+          <SupplierStatementReportPage session={session} />
+        ) : visiblePage === "app-billing-gst-report" ? (
+          <GstStatementReportPage session={session} />
         ) : visiblePage === "app-billing-settings" ? (
           <SalesSettingsPage session={session} />
         ) : visiblePage === "app-billing-document-settings" ? (

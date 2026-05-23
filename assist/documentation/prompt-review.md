@@ -1545,3 +1545,127 @@ ok we work on sales
 
 create changelog with next number for uncommit and then we start
 ```
+
+## Current Prompt
+
+```
+get gstin and state code from contact , state
+```
+
+## Current Prompt
+
+```
+fix company address and mail id + phone no and gstin no on company header
+```
+
+## Current Prompt
+
+```
+check company is not persisting address and others in same tone of contact 
+
+communication tab email and phone type to enum
+address  and active and check box switches all match to contact
+```
+
+## Current Prompt
+
+```
+remove active on email and phone
+```
+
+## Current Prompt
+
+```
+change industry same tone on select from contact and make tenant and industry in same row
+```
+
+## Current Prompt
+
+```
+swap first company name second legal name third company code and space 
+and then tenant and industry 
+tagline
+```
+
+## Current Prompt
+
+```
+in communicatin slim 
+Company Emails
+Operational and communication email addresses.
+
+helper text remove unwanted and compact 
+```
+
+## Current Prompt
+
+```
+make all in this card in single row for contact and company make remove only icon remove tailing email , phone in primary switch
+```
+
+## Current Prompt
+
+```
+make row vertical center
+```
+
+## Current Prompt
+
+```
+trash icon to center of inputs
+```
+
+## Current Prompt
+
+```
+fix id to name for address in sales show page company header 
+
+make it as 
+company name
+address 1 + address 2 in second line
+city , district , state , country - pincode  at 3rd
+email + phone on 4th
+gstin + msme on 5th little bigger
+```
+
+## Current Prompt
+
+```
+fix buyer and ship to mismatch 
+
+state name is getting address and gstin and state code is missing
+
+1. contact name 
+2. address 1 + address 2
+3. city ,district , pincode
+4. gstin 
+5. state name , state code
+
+all from contact and relavant commons
+```
+
+## Current Prompt
+
+```
+mention district with tailing as -Dist on company header and contacts
+```
+
+## Current Prompt
+
+```
+add little height for item header and change product/description to Particulars add gst percentage as % and hsn 
+
+sl no , particulars , hsn , colour , size , qty, taxable , cgst , sgst  remove total column
+```
+
+## Current Prompt
+
+```
+read assist/ readme and create log
+```
+
+## Current Prompt
+
+```
+read assist/ readme and create log
+```

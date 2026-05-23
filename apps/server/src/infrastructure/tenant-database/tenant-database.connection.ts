@@ -7,6 +7,9 @@ import { getDatabase } from '../database/connection.js'
 import { dispatchPublicUuid } from '../../shared/helpers/public-uuid.js'
 import { migrateCommonModuleTables, seedCommonModuleTables } from '../../modules/common/index.js'
 import { migrateSalesEntryTables } from '../../modules/entries/sales/index.js'
+import { migratePurchaseEntryTables } from '../../modules/entries/purchase/index.js'
+import { migrateReceiptEntryTables } from '../../modules/entries/receipt/index.js'
+import { migratePaymentEntryTables } from '../../modules/entries/payment/index.js'
 import { migrateCompanySettingsTables } from '../../modules/settings/company-settings/index.js'
 import { migrateDocumentSettingsTables } from '../../modules/settings/document-settings/index.js'
 import { migrateContactMasterTable } from '../../modules/master/contact/index.js'
@@ -104,6 +107,9 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await createContactCommunicationTables(database)
   await migrateCommonModuleTables(database)
   await migrateSalesEntryTables(database)
+  await migratePurchaseEntryTables(database)
+  await migrateReceiptEntryTables(database)
+  await migratePaymentEntryTables(database)
   await migrateCompanySettingsTables(database)
   await migrateDocumentSettingsTables(database)
   await migrateContactMasterTable(database)
@@ -708,6 +714,16 @@ const tenantUuidTables = [
   'sales_entry_items',
   'sales_entry_comments',
   'sales_entry_activities',
+  'purchase_entries',
+  'purchase_entry_items',
+  'purchase_entry_comments',
+  'purchase_entry_activities',
+  'receipt_entries',
+  'receipt_entry_comments',
+  'receipt_entry_activities',
+  'payment_entries',
+  'payment_entry_comments',
+  'payment_entry_activities',
   'company_settings',
   'document_number_settings',
   'masters_contacts',

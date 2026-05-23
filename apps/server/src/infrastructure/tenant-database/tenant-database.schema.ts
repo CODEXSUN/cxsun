@@ -594,6 +594,9 @@ export interface TenantSalesEntriesTable {
   invoice_date: string
   customer_id: string | null
   customer_name: string
+  customer_gstin: string | null
+  customer_state_code: string | null
+  customer_state_name: string | null
   billing_address: string | null
   shipping_address: string | null
   place_of_supply: string | null

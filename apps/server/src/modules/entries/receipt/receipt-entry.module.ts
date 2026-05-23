@@ -1,0 +1,25 @@
+import { Module } from '../../../core/decorators/module.js'
+import { TenantContextService } from '../../../core/tenant/tenant-context.service.js'
+import { MasterQueueService } from '../../../infrastructure/queue/master-queue.service.js'
+import { AuthRepository } from '../../auth/infrastructure/auth.repository.js'
+import { TenantRepository } from '../../../core/tenant/infrastructure/tenant.repository.js'
+import { TenantDomainRepository } from '../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
+import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
+import { ReceiptEntryController } from './receipt-entry.controller.js'
+import { ReceiptEntryRepository } from './receipt-entry.repository.js'
+import { ReceiptEntryService } from './receipt-entry.service.js'
+
+@Module({
+  controllers: [ReceiptEntryController],
+  providers: [
+    AuthRepository,
+    TenantRepository,
+    TenantDomainRepository,
+    TenantContextService,
+    MasterQueueService,
+    DocumentNumberRepository,
+    ReceiptEntryRepository,
+    ReceiptEntryService,
+  ],
+})
+export class ReceiptEntryModule {}

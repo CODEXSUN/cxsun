@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from "react"
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type Ref, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { ArrowLeft, Check, CheckCircle2, ChevronLeft, ChevronRight, MessageSquare, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, Send, Settings2, Trash2, X } from "lucide-react"
+import { ArrowLeft, Check, CheckCircle2, ChevronLeft, ChevronRight, Mail, MessageCircle, Paperclip, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, Send, Settings2, Tag, Trash2, UserRound, X } from "lucide-react"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { AnimatedTabs } from "src/components/ui/animated-tabs"
@@ -56,10 +56,11 @@ import {
   type SalesEntryInput,
   type SalesEntryItem,
 } from "./sales-client"
-import { SalesInvoiceDocument, type SalesPrintCopy } from "./sales-print-page"
+import { SalesInvoiceDocument, type SalesPrintCopy, type SalesPrintPartyDetails } from "./sales-print-page"
 
 type SalesView = { mode: "list" } | { mode: "show"; entry: SalesEntry } | { mode: "upsert"; entry: SalesEntry | null }
 type SalesColumnId = "invoice" | "date" | "customer" | "status" | "payment" | "total" | "balance" | "updated"
+type SalesEntryToolId = "email" | "assign" | "attachments" | "tags" | "whatsapp"
 type SalesAddressLabels = {
   addressTypes(value: unknown): string
   cities(value: unknown): string
@@ -67,6 +68,7 @@ type SalesAddressLabels = {
   districts(value: unknown): string
   pincodes(value: unknown): string
   states(value: unknown): string
+  stateCodes(value: unknown): string
 }
 
 const salesPrintCopyOptions: readonly { label: string; value: SalesPrintCopy }[] = [
@@ -292,9 +294,23 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit,
 }) {
   const [comment, setComment] = useState("")
   const [printCopies, setPrintCopies] = useState<readonly SalesPrintCopy[]>(["original"])
+  const [openTool, setOpenTool] = useState<SalesEntryToolId | null>(null)
+  const [emailAddress, setEmailAddress] = useState("")
+  const [whatsappNumber, setWhatsappNumber] = useState("")
+  const [assigneeInput, setAssigneeInput] = useState("")
+  const [tagInput, setTagInput] = useState("")
+  const [assignees, setAssignees] = useState<string[]>([])
+  const [attachments, setAttachments] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>([])
+  const [toolActivities, setToolActivities] = useState<Array<{ id: string; message: string; created_at: string }>>([])
   const [softwareSettings] = useCompanySoftwareSettings(session)
+  const addressLabels = useSalesAddressLabels(session)
   const companyQuery = useQuery({ queryKey: ["sales-print-company", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
+  const contactsQuery = useQuery({ queryKey: ["sales-print-contacts", session.selectedTenant.slug], queryFn: () => listSalesContactLookups(session) })
   const printCompany = (companyQuery.data ?? []).find((company) => company.isPrimary) ?? companyQuery.data?.[0] ?? null
+  const selectedContact = (contactsQuery.data ?? []).find((contact) => contact.id === entry.customer_id) ?? null
+  const billingParty = buildSalesPrintPartyDetails(entry, selectedContact, entry.billing_address, addressLabels)
+  const shippingParty = buildSalesPrintPartyDetails(entry, selectedContact, entry.shipping_address ?? entry.billing_address, addressLabels)
   const selectedPrintCopies = salesPrintCopyOptions.map((option) => option.value).filter((copy) => printCopies.includes(copy))
   const customTerms = softwareSettings.salesPrintingOptions.customTerms
   const printItemSettings = {
@@ -312,73 +328,213 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit,
     })
   }
 
+  function toggleEntryTool(tool: SalesEntryToolId) {
+    setOpenTool((current) => current === tool ? null : tool)
+  }
+
+  function recordToolActivity(message: string) {
+    setToolActivities((current) => [{ id: `${Date.now()}-${current.length}`, message, created_at: new Date().toISOString() }, ...current])
+  }
+
+  function addListValue(value: string, setValue: (value: string) => void, setValues: Dispatch<SetStateAction<string[]>>, activityMessage: (value: string) => string) {
+    const next = value.trim()
+    if (!next) return
+    setValues((current) => {
+      if (current.includes(next)) return current
+      recordToolActivity(activityMessage(next))
+      return [...current, next]
+    })
+    setValue("")
+  }
+
+  function removeListValue(value: string, setValues: Dispatch<SetStateAction<string[]>>) {
+    setValues((current) => current.filter((item) => item !== value))
+  }
+
+  const entryTools: Array<{ icon: typeof Mail; id: SalesEntryToolId; label: string }> = [
+    { icon: Mail, id: "email", label: "Send to Email" },
+    { icon: UserRound, id: "assign", label: "Assign" },
+    { icon: Paperclip, id: "attachments", label: "Attachments" },
+    { icon: Tag, id: "tags", label: "Tags" },
+    { icon: MessageCircle, id: "whatsapp", label: "Send to WhatsApp" },
+  ]
+  const activityItems = [...toolActivities, ...entry.activities]
+
   return (
     <main className="theme-shell mx-auto min-h-screen w-[94%] pb-8 pt-8 text-black sm:w-[92%] lg:w-[90%] print:fixed print:inset-0 print:z-[9999] print:min-h-0 print:w-full print:overflow-visible print:bg-white print:p-0">
-      <div className="mx-auto mb-3 flex w-full flex-wrap items-center justify-between gap-3 print:hidden">
+      <div className="mx-auto mb-3 grid w-full gap-2 print:hidden">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-foreground">{entry.customer_name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{entry.invoice_no}</p>
         </div>
-        <div className="flex flex-wrap justify-end gap-2">
-          <div className="flex min-h-10 flex-wrap items-center gap-1 rounded-xl border border-border bg-card px-2 py-1 text-sm shadow-sm">
-            {salesPrintCopyOptions.map((option) => (
-              <label key={option.value} className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-                <input type="checkbox" className="size-3.5 accent-primary" checked={printCopies.includes(option.value)} onChange={() => togglePrintCopy(option.value)} />
-                {option.label}
-              </label>
-            ))}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={onBack}><ArrowLeft className="size-4" />Back</Button>
+            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled><ChevronLeft className="size-4" />Prev</Button>
+            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled><ChevronRight className="size-4" />Next</Button>
           </div>
-          <Button className="rounded-xl" onClick={() => window.print()} type="button"><Printer className="size-4" />Print</Button>
-          <Button type="button" variant="outline" className="rounded-xl" onClick={onEdit}><Pencil className="size-4" />Edit</Button>
-          <Button type="button" variant="outline" className="rounded-xl" onClick={onBack}><ArrowLeft className="size-4" />Back</Button>
-          <Button type="button" variant="outline" className="rounded-xl" disabled><ChevronLeft className="size-4" />Prev</Button>
-          <Button type="button" variant="outline" className="rounded-xl" disabled><ChevronRight className="size-4" />Next</Button>
-          {isActive(entry) ? (
-            <Button onClick={onDestroy} type="button" variant="destructive" className="rounded-xl"><Trash2 className="size-4" />Suspend</Button>
-          ) : (
-            <Button onClick={onRestore} type="button" variant="outline" className="rounded-xl"><RotateCcw className="size-4" />Restore</Button>
-          )}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-xl border border-border bg-card px-2 py-1 text-sm shadow-sm">
+              {salesPrintCopyOptions.map((option) => (
+                <label key={option.value} className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+                  <input type="checkbox" className="size-3.5 accent-primary" checked={printCopies.includes(option.value)} onChange={() => togglePrintCopy(option.value)} />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+            <Button className="rounded-xl" onClick={() => window.print()} type="button"><Printer className="size-4" />Print</Button>
+            <Button type="button" variant="outline" className="rounded-xl" onClick={onEdit}><Pencil className="size-4" />Edit</Button>
+            {isActive(entry) ? (
+              <Button onClick={onDestroy} type="button" variant="destructive" className="rounded-xl"><Trash2 className="size-4" />Suspend</Button>
+            ) : (
+              <Button onClick={onRestore} type="button" variant="outline" className="rounded-xl"><RotateCcw className="size-4" />Restore</Button>
+            )}
+          </div>
         </div>
       </div>
       <section className="mx-auto w-fit max-w-full overflow-hidden rounded-md border border-border/70 bg-card shadow-sm print:contents">
         <div className="grid gap-4 overflow-x-auto p-3 print:contents sm:p-4">
           {selectedPrintCopies.map((copy, index) => (
             <div key={copy} className={index === selectedPrintCopies.length - 1 ? "print:contents" : "print:break-after-page"}>
-              <SalesInvoiceDocument company={printCompany} copy={copy} customTerms={customTerms} record={entry} {...printItemSettings} />
+              <SalesInvoiceDocument addressLabels={addressLabels} billingParty={billingParty} company={printCompany} copy={copy} customTerms={customTerms} record={entry} shippingParty={shippingParty} {...printItemSettings} />
             </div>
           ))}
         </div>
       </section>
-      <div className="mx-auto mt-4 grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_360px] print:hidden">
-        <div />
-        <div className="space-y-4">
-          <Card className="rounded-md border-border/70">
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><MessageSquare className="size-4" />Comments</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add a comment" className="min-h-24 rounded-md" />
-              <Button disabled={isWorking || !comment.trim()} onClick={() => void onComment(entry, comment).then(() => setComment(""))} type="button" className="rounded-md"><Send className="size-4" />Post</Button>
+      <div className="mx-auto mt-4 grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_280px] print:hidden">
+        <Card className="min-h-[350px] rounded-md border-border/70">
+          <CardHeader><CardTitle className="text-lg">Comments</CardTitle></CardHeader>
+          <CardContent className="space-y-8">
+            <div className="flex items-center gap-3">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">A</div>
+              <Input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Type a reply / comment" className="h-10 rounded-md shadow-sm" />
+              <Button disabled={isWorking || !comment.trim()} onClick={() => void onComment(entry, comment).then(() => setComment(""))} type="button" className="h-10 rounded-md px-4">Add</Button>
+            </div>
+            {entry.comments.length ? (
               <div className="space-y-2">
-                {entry.comments.map((item) => <SideNote key={item.id} title={item.author_email} body={item.body} meta={formatDate(item.created_at)} />)}
+                {entry.comments.map((item) => <SideNote key={item.id} title={item.author_email} body={item.body} meta={formatDateTimeWithZone(item.created_at)} />)}
               </div>
-            </CardContent>
-          </Card>
-          <Card className="rounded-md border-border/70">
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Settings2 className="size-4" />Tools</CardTitle></CardHeader>
-            <CardContent className="grid gap-2">
-              {["Email invoice", "Generate PDF", "Queue reminder"].map((tool) => (
-                <Button key={tool} disabled={isWorking} onClick={() => void onTool(entry, tool)} type="button" variant="outline" className="justify-start rounded-md">{tool}</Button>
-              ))}
-            </CardContent>
-          </Card>
-          <Card className="rounded-md border-border/70">
-            <CardHeader><CardTitle className="text-base">Activities</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
-              {entry.activities.map((item) => <SideNote key={item.id} title={item.message} body={item.actor_email} meta={formatDate(item.created_at)} />)}
-            </CardContent>
-          </Card>
-        </div>
+            ) : null}
+            <div>
+              <h2 className="mb-5 text-lg font-semibold">Activity</h2>
+              <div className="relative space-y-5 before:absolute before:left-[6px] before:top-1 before:h-[calc(100%-0.25rem)] before:border-l-2 before:border-border">
+                {activityItems.map((item) => (
+                  <div key={item.id} className="relative pl-9 text-sm">
+                    <span className="absolute left-0 top-0.5 flex size-3.5 items-center justify-center rounded-full border border-muted-foreground/10 bg-muted-foreground/10 shadow-sm backdrop-blur-[1px]">
+                      <span className="size-1.5 rounded-full bg-muted-foreground" />
+                    </span>
+                    <span>{item.message}</span>
+                    <span className="text-muted-foreground"> · {formatDate(item.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="h-fit rounded-md border-border/70">
+          <CardHeader className="flex flex-row items-center justify-between border-b border-border/70 px-3 py-2">
+            <CardTitle className="flex items-center gap-2 text-sm"><Settings2 className="size-4" />Entry tools</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 [&:last-child]:pb-0">
+            {entryTools.map((tool) => (
+              <div key={tool.id} className="border-b border-border/70 last:border-b-0">
+                <button disabled={isWorking} onClick={() => toggleEntryTool(tool.id)} type="button" className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60">
+                  <tool.icon className="size-4" />
+                  <span className="flex-1">{tool.label}</span>
+                  <Plus className={cn("size-4 transition-transform", openTool === tool.id ? "rotate-45" : "")} />
+                </button>
+                {tool.id === "assign" && assignees.length ? (
+                  <div className="px-3 pb-2"><ToolPills values={assignees} onRemove={(value) => removeListValue(value, setAssignees)} /></div>
+                ) : null}
+                {tool.id === "attachments" && attachments.length ? (
+                  <div className="px-3 pb-2"><ToolPills values={attachments} onRemove={(value) => removeListValue(value, setAttachments)} /></div>
+                ) : null}
+                {tool.id === "tags" && tags.length ? (
+                  <div className="px-3 pb-2"><ToolPills values={tags} onRemove={(value) => removeListValue(value, setTags)} /></div>
+                ) : null}
+                {openTool === tool.id ? (
+                  <div className="px-3 pb-2">
+                    {tool.id === "email" ? (
+                      <div className="flex gap-2">
+                        <Input value={emailAddress} onChange={(event) => setEmailAddress(event.target.value)} placeholder="Email address" className="h-9 rounded-md" />
+                        <Button disabled={isWorking || !emailAddress.trim()} onClick={() => {
+                          const email = emailAddress.trim()
+                          void onTool(entry, `Send to Email: ${email}`).then(() => {
+                            recordToolActivity(`Sent invoice email to ${email}`)
+                            setEmailAddress("")
+                          })
+                        }} type="button" className="size-9 rounded-md p-0"><Send className="size-4" /></Button>
+                      </div>
+                    ) : null}
+                    {tool.id === "assign" ? (
+                      <div className="space-y-2">
+                        <Input value={assigneeInput} onChange={(event) => setAssigneeInput(event.target.value)} onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault()
+                            addListValue(assigneeInput, setAssigneeInput, setAssignees, (value) => `Assigned ${entry.invoice_no} to ${value}`)
+                          }
+                        }} placeholder="User name or email" className="h-9 rounded-md" />
+                      </div>
+                    ) : null}
+                    {tool.id === "attachments" ? (
+                      <div className="space-y-2">
+                        <Input type="file" multiple className="h-9 rounded-md" onChange={(event) => {
+                          const names = Array.from(event.target.files ?? []).map((file) => file.name)
+                          if (names.length) setAttachments((current) => {
+                            const nextNames = names.filter((name) => !current.includes(name))
+                            nextNames.forEach((name) => recordToolActivity(`Attached file ${name}`))
+                            return [...current, ...nextNames]
+                          })
+                          event.currentTarget.value = ""
+                        }} />
+                      </div>
+                    ) : null}
+                    {tool.id === "tags" ? (
+                      <div className="space-y-2">
+                        <Input value={tagInput} onChange={(event) => setTagInput(event.target.value)} onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault()
+                            addListValue(tagInput, setTagInput, setTags, (value) => `Added tag ${value}`)
+                          }
+                        }} placeholder="Tag" className="h-9 rounded-md" />
+                      </div>
+                    ) : null}
+                    {tool.id === "whatsapp" ? (
+                      <div className="flex gap-2">
+                        <Input value={whatsappNumber} onChange={(event) => setWhatsappNumber(event.target.value)} placeholder="WhatsApp number" className="h-9 rounded-md" />
+                        <Button disabled={isWorking || !whatsappNumber.trim()} onClick={() => {
+                          const number = whatsappNumber.trim()
+                          void onTool(entry, `Send to WhatsApp: ${number}`).then(() => {
+                            recordToolActivity(`Sent WhatsApp message to ${number}`)
+                            setWhatsappNumber("")
+                          })
+                        }} type="button" className="size-9 rounded-md p-0"><Send className="size-4" /></Button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </main>
+  )
+}
+
+function ToolPills({ onRemove, values }: { onRemove(value: string): void; values: readonly string[] }) {
+  if (!values.length) return null
+  return (
+    <div className="flex flex-wrap gap-2">
+      {values.map((value) => (
+        <span key={value} className="inline-flex h-7 max-w-full items-center gap-1 rounded-md bg-muted px-2 text-xs font-medium text-foreground">
+          <span className="truncate">{value}</span>
+          <button aria-label={`Remove ${value}`} className="rounded-sm text-muted-foreground hover:text-foreground" onClick={() => onRemove(value)} type="button">
+            <X className="size-3" />
+          </button>
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -645,14 +801,21 @@ function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editIte
             inputLabel={salesLookupInputName}
             optionLabel={salesLookupInputName}
             onCreate={onCreateContact}
-            onPick={(option) => setForm((current) => ({
-              ...current,
-              billing_address: contactLookupAddressText(option, addressLabels) ?? option.billingAddress ?? current.billing_address,
-              customer_id: option.id,
-              customer_name: salesLookupInputName(option),
-              shipping_address: contactLookupAddressText(option, addressLabels) ?? option.shippingAddress ?? option.billingAddress ?? current.shipping_address,
-            }))}
-            onTextChange={(value) => setForm((current) => ({ ...current, customer_id: null, customer_name: value }))}
+            onPick={(option) => {
+              const address = preferredContactAddress(option)
+              const addressLine = address ? addressText(address, addressLabels) : undefined
+              setForm((current) => ({
+                ...current,
+                billing_address: addressLine ?? option.billingAddress ?? current.billing_address,
+                customer_gstin: contactLookupGstin(option),
+                customer_id: option.id,
+                customer_name: salesLookupInputName(option),
+                customer_state_code: address ? addressLabels.stateCodes(address.stateId) : "",
+                customer_state_name: address ? addressLabels.states(address.stateId) : "",
+                shipping_address: addressLine ?? option.shippingAddress ?? option.billingAddress ?? current.shipping_address,
+              }))
+            }}
+            onTextChange={(value) => setForm((current) => ({ ...current, customer_gstin: "", customer_id: null, customer_name: value, customer_state_code: "", customer_state_name: "" }))}
           />
           <MasterAutocompleteLookup
             label="Order no"
@@ -805,17 +968,24 @@ function SalesAddressTab({ addressLabels, contacts, form, onContactsRefresh, ses
   const selectedContact = contacts.find((contact) => contact.id === form.customer_id) ?? null
   const addressOptions = buildContactAddressOptions(selectedContact, addressLabels)
 
-  function pickAddress(kind: "billing" | "shipping", text: string) {
+  function pickAddress(kind: "billing" | "shipping", option: SalesLookupOption) {
+    const text = option.label
+    const address = (option.record as { address?: ContactAddress }).address
     setForm((current) => {
+      const taxFields = address ? {
+        customer_state_code: addressLabels.stateCodes(address.stateId),
+        customer_state_name: addressLabels.states(address.stateId),
+      } : {}
       if (kind === "billing") {
         return {
           ...current,
           billing_address: text,
+          ...taxFields,
           shipping_address: current.shipping_address?.trim() ? current.shipping_address : text,
         }
       }
 
-      return { ...current, shipping_address: text || current.billing_address || "" }
+      return { ...current, ...taxFields, shipping_address: text || current.billing_address || "" }
     })
   }
 
@@ -830,7 +1000,7 @@ function SalesAddressTab({ addressLabels, contacts, form, onContactsRefresh, ses
           selectedId={null}
           selectedLabel={form.billing_address ?? ""}
           onCreate={(query) => setCreateAddress({ initialText: query, kind: "billing" })}
-          onPick={(option) => pickAddress("billing", option.label)}
+          onPick={(option) => pickAddress("billing", option)}
           onTextChange={(value) => setForm((current) => ({ ...current, billing_address: value, shipping_address: current.shipping_address?.trim() ? current.shipping_address : value }))}
         />
         <MasterAutocompleteLookup
@@ -841,7 +1011,7 @@ function SalesAddressTab({ addressLabels, contacts, form, onContactsRefresh, ses
           selectedId={null}
           selectedLabel={form.shipping_address ?? form.billing_address ?? ""}
           onCreate={(query) => setCreateAddress({ initialText: query, kind: "shipping" })}
-          onPick={(option) => pickAddress("shipping", option.label)}
+          onPick={(option) => pickAddress("shipping", option)}
           onTextChange={(value) => setForm((current) => ({ ...current, shipping_address: value }))}
         />
         <Field label="Place of supply" value={form.place_of_supply ?? ""} onChange={(value) => setForm((current) => ({ ...current, place_of_supply: value }))} />
@@ -856,7 +1026,7 @@ function SalesAddressTab({ addressLabels, contacts, form, onContactsRefresh, ses
           session={session}
           onClose={() => setCreateAddress(null)}
           onCreated={(addressText) => {
-            pickAddress(createAddress.kind, addressText)
+            pickAddress(createAddress.kind, { id: addressText, label: addressText, record: { id: 0, uuid: addressText, is_active: true, created_at: null, updated_at: null, deleted_at: null, name: addressText } })
             onContactsRefresh()
             setCreateAddress(null)
           }}
@@ -1320,7 +1490,7 @@ function buildContactAddressOptions(contact: SalesLookupOption | null, labels: S
     options.push({
         id: String(address.id ?? `${contact?.id ?? "contact"}-${index}`),
         label,
-        record: { id: index + 1, uuid: String(address.id ?? index), is_active: true, created_at: null, updated_at: null, deleted_at: null, name: label },
+        record: { id: index + 1, uuid: String(address.id ?? index), is_active: true, created_at: null, updated_at: null, deleted_at: null, name: label, address } as MasterDataRecord & { address: ContactAddress },
     })
   })
 
@@ -1352,9 +1522,13 @@ function contactAddressPreview(contact: { addresses?: Array<{ addressLine1?: str
   return [address.addressLine1, address.addressLine2].filter(Boolean).join(", ") || undefined
 }
 
-function contactLookupAddressText(contact: SalesLookupOption, labels: SalesAddressLabels) {
-  const address = contactAddresses(contact).find((item) => item.isDefault && item.addressLine1.trim()) ?? contactAddresses(contact).find((item) => item.addressLine1.trim()) ?? contactAddresses(contact)[0]
-  return address ? addressText(address, labels) : undefined
+function preferredContactAddress(contact: SalesLookupOption) {
+  return contactAddresses(contact).find((item) => item.isDefault && item.addressLine1.trim()) ?? contactAddresses(contact).find((item) => item.addressLine1.trim()) ?? contactAddresses(contact)[0]
+}
+
+function contactLookupGstin(contact: SalesLookupOption) {
+  const record = contact.record as unknown as Partial<ContactRecord>
+  return String(record.gstin ?? record.gstDetails?.find((item) => item.isDefault)?.gstin ?? record.gstDetails?.[0]?.gstin ?? "").trim().toUpperCase()
 }
 
 function addressText(address: Pick<ContactAddress, "addressLine1" | "addressLine2" | "cityId" | "districtId" | "stateId" | "countryId" | "pincodeId">, labels: SalesAddressLabels) {
@@ -1369,6 +1543,61 @@ function addressText(address: Pick<ContactAddress, "addressLine1" | "addressLine
   ].filter(Boolean).join(", ")
 }
 
+function buildSalesPrintPartyDetails(entry: SalesEntry, contact: SalesLookupOption | null, savedAddress: string | null | undefined, labels: SalesAddressLabels): SalesPrintPartyDetails {
+  const address = contact ? findMatchingContactAddress(contact, savedAddress, labels) : null
+  const fallback = parseSavedSalesAddress(savedAddress)
+  const contactGstin = contact ? contactLookupGstin(contact) : ""
+
+  if (!address) {
+    return {
+      addressLine: fallback.addressLine,
+      gstin: contactGstin || entry.customer_gstin || "",
+      locationLine: fallback.locationLine,
+      stateCode: entry.customer_state_code || "",
+      stateName: entry.customer_state_name || fallback.stateName,
+    }
+  }
+
+  return {
+    addressLine: [address.addressLine1, address.addressLine2].map((value) => String(value ?? "").trim()).filter(Boolean).join(", "),
+    gstin: contactGstin || entry.customer_gstin || "",
+    locationLine: [labels.cities(address.cityId), districtPrintLabel(labels.districts(address.districtId)), labels.pincodes(address.pincodeId)].filter(Boolean).join(", "),
+    stateCode: labels.stateCodes(address.stateId),
+    stateName: labels.states(address.stateId),
+  }
+}
+
+function findMatchingContactAddress(contact: SalesLookupOption, savedAddress: string | null | undefined, labels: SalesAddressLabels) {
+  const addresses = contactAddresses(contact)
+  if (addresses.length === 0) return null
+  const saved = normalizeAddressMatch(savedAddress)
+  return addresses.find((address) => normalizeAddressMatch(addressText(address, labels)) === saved)
+    ?? addresses.find((address) => address.isDefault && address.addressLine1.trim())
+    ?? addresses.find((address) => address.addressLine1.trim())
+    ?? addresses[0]
+}
+
+function parseSavedSalesAddress(address: string | null | undefined) {
+  const parts = String(address ?? "").split(",").map((part) => part.trim()).filter(Boolean)
+  const pincode = parts.findLast((part) => /\b\d{6}\b/.test(part))?.match(/\b\d{6}\b/)?.[0] ?? ""
+  const stateName = parts.length > 2 ? parts[parts.length - (pincode ? 3 : 2)] ?? "" : ""
+  return {
+    addressLine: [parts[0], parts[1]].filter(Boolean).join(", "),
+    locationLine: parts.slice(2).filter((part) => part !== stateName && part.toLowerCase() !== "india").join(", "),
+    stateName,
+  }
+}
+
+function normalizeAddressMatch(value: string | null | undefined) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().toLowerCase()
+}
+
+function districtPrintLabel(value: string) {
+  const label = value.trim()
+  if (!label || label === "-") return ""
+  return /\bdist\.?$/i.test(label) ? label : `${label} -Dist`
+}
+
 function useSalesAddressLabels(session: AuthSession): SalesAddressLabels {
   const modules = ["addressTypes", "countries", "states", "districts", "cities", "pincodes"] as const
   const queries = modules.map((moduleKey) => useQuery({ queryKey: ["sales-address-labels", session.selectedTenant.slug, moduleKey], queryFn: () => listMasterDataRecords(session, moduleKey) }))
@@ -1381,6 +1610,7 @@ function useSalesAddressLabels(session: AuthSession): SalesAddressLabels {
     districts: (value: unknown) => salesLabelFrom(maps.districts, value),
     pincodes: (value: unknown) => salesLabelFrom(maps.pincodes, value),
     states: (value: unknown) => salesLabelFrom(maps.states, value),
+    stateCodes: (value: unknown) => salesCodeFrom(queries[2].data ?? [], value),
   }
 }
 
@@ -1398,6 +1628,13 @@ function buildSalesLabelMap(records: MasterDataRecord[]) {
 function salesLabelFrom(map: ReadonlyMap<string, string>, value: unknown) {
   if (value === null || value === undefined || value === "") return ""
   return map.get(String(value)) ?? String(value)
+}
+
+function salesCodeFrom(records: MasterDataRecord[], value: unknown) {
+  if (value === null || value === undefined || value === "") return ""
+  const key = String(value)
+  const record = records.find((item) => [item.id, item.uuid, item.name, item.code].some((candidate) => candidate !== null && candidate !== undefined && String(candidate) === key))
+  return record ? String(record.code ?? "").trim() : ""
 }
 
 function Field({ centeredLabel = false, compact = false, label, numeric = false, onChange, type = "text", value }: { centeredLabel?: boolean; compact?: boolean; label: string; numeric?: boolean; onChange(value: string): void; type?: string; value: string }) {
@@ -1749,7 +1986,15 @@ function parseMoneyInput(value: string) {
 }
 
 function SideNote({ body, meta, title }: { body: string; meta: string; title: string }) {
-  return <div className="rounded-md border border-border/70 bg-muted/20 p-3"><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-sm text-muted-foreground">{body}</p><p className="mt-2 text-xs text-muted-foreground">{meta}</p></div>
+  return (
+    <div className="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-3 text-sm sm:grid-cols-[minmax(0,1fr)_220px]">
+      <p className="min-w-0 whitespace-pre-wrap break-words text-foreground">{body}</p>
+      <div className="text-left sm:text-right">
+        <p className="font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{meta}</p>
+      </div>
+    </div>
+  )
 }
 
 function StatusBadge({ entry }: { entry: SalesEntry }) {
@@ -1784,6 +2029,18 @@ function isActive(entry: SalesEntry) {
 function formatDate(value?: string | null) {
   if (!value) return "Not set"
   return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
+}
+
+function formatDateTimeWithZone(value?: string | null) {
+  if (!value) return "Not set"
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "2-digit",
+    hour12: true,
+    minute: "2-digit",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value))
 }
 
 function formatMoney(value: number) {

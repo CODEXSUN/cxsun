@@ -2,15 +2,35 @@
 
 ## Version State
 
-- **Current version:** `1.0.20`
-- **Release tag:** `v-1.0.20`
-- **Changelog label:** `v 1.0.20`
+- **Current version:** `1.0.21`
+- **Release tag:** `v-1.0.21`
+- **Changelog label:** `v 1.0.21`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
-## v-1.0.20
+## v-1.0.21
+
+### [v 1.0.21] 2026-05-23 5:28 pm - billing receipt, payment, purchase, and statement reports
+
+- Added standalone purchase, receipt, and payment entry flows with list, show, upsert, print, comments, activity, and entry tools aligned to the sales module tone.
+- Added receipt and payment voucher print layouts with A5 landscape print handling, hidden app chrome/toasts, signature blocks, company names, and Tiruppur jurisdiction footer.
+- Added customer and supplier statement report pages under the Billing report menu.
+- Built customer statements from sales customers only, combining opening balance, sales, and receipts after a party is selected.
+- Built supplier statements from purchase suppliers only, combining opening balance, purchase, and payments after a party is selected.
+- Defaulted statement date filters to the active accounting year start through today, with current financial-year fallback.
+- Matched statement print output to the sales print header style, removed the separate statement title row, added equal bordered party/ledger panels, party GSTIN/address output, removed the redundant party table column, and moved page number to the printed page bottom-right.
+- Verified the latest frontend statement/report changes with `npm -w apps/frontend run typecheck`.
+
+### [v 1.0.20] 2026-05-23 - GST statement report from temp
+
+- Added the Billing GST Report route from the temp report pattern.
+- Built sales and purchase GST side tables with date, voucher, party, taxable value, GST, and total columns.
+- Added GST balance, tax split, and period comparison summary sections.
+- Connected opening GST to company software settings and wired month/date filters from common month records.
+- Added print-ready A4 GST report output with company letterhead and routed `app-billing-gst-report` in the tenant dashboard.
+- Verified the GST report changes with `npm -w apps/frontend run typecheck`.
 
 ### [v 1.0.20] 2026-05-23 8:01 am - sales voucher compliance preparation
 

@@ -15,6 +15,9 @@ export async function migrateSalesEntryTables(database: TenantDatabase) {
       invoice_date DATE NOT NULL,
       customer_id VARCHAR(80) NULL,
       customer_name VARCHAR(191) NOT NULL,
+      customer_gstin VARCHAR(40) NULL,
+      customer_state_code VARCHAR(40) NULL,
+      customer_state_name VARCHAR(120) NULL,
       billing_address TEXT NULL,
       shipping_address TEXT NULL,
       place_of_supply VARCHAR(120) NULL,
@@ -86,6 +89,9 @@ export async function migrateSalesEntryTables(database: TenantDatabase) {
   await addSalesItemColumnIfMissing(database, 'po_no', 'VARCHAR(120) NULL')
   await addSalesItemColumnIfMissing(database, 'dc_no', 'VARCHAR(120) NULL')
   await addSalesItemColumnIfMissing(database, 'size', 'VARCHAR(120) NULL')
+  await addSalesEntryColumnIfMissing(database, 'customer_gstin', 'VARCHAR(40) NULL')
+  await addSalesEntryColumnIfMissing(database, 'customer_state_code', 'VARCHAR(40) NULL')
+  await addSalesEntryColumnIfMissing(database, 'customer_state_name', 'VARCHAR(120) NULL')
   await addSalesEntryColumnIfMissing(database, 'irn', 'VARCHAR(120) NULL')
   await addSalesEntryColumnIfMissing(database, 'ack_no', 'VARCHAR(120) NULL')
   await addSalesEntryColumnIfMissing(database, 'ack_date', 'DATE NULL')

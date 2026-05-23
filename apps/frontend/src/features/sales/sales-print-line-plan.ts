@@ -1,7 +1,7 @@
 import type { SalesEntryItem } from "./sales-client"
 
-export const salesPrintMinimumItemLineBudget = 25
-export const salesPrintMaximumItemLineBudget = 25
+export const salesPrintMinimumItemLineBudget = 12
+export const salesPrintMaximumItemLineBudget = 12
 
 export type SalesPrintLineRow =
   | {
@@ -44,13 +44,18 @@ export function getSalesPrintLinePlan(items: readonly SalesEntryItem[]) {
 }
 
 export function getSalesItemPrintLineCount(item: SalesEntryItem) {
+  void item
+  return 1
+}
+
+export function getSalesItemPrintTextLineCount(item: SalesEntryItem) {
   return Math.max(
     getClampedPrintLineCount(item.product_name, 32),
     getClampedPrintLineCount(item.description ?? "", 30),
   )
 }
 
-export function getClampedPrintLineCount(value: string, charactersPerLine: number, maxLines = 3) {
+export function getClampedPrintLineCount(value: string, charactersPerLine: number, maxLines = 2) {
   const lineCount = value
     .split(/\r?\n/)
     .reduce((sum, line) => sum + Math.max(1, Math.ceil(Array.from(line.trim()).length / charactersPerLine)), 0)

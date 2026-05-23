@@ -40,6 +40,8 @@ import {
   upsertCompany,
   type CompanyAddress,
   type CompanyBankAccount,
+  type CompanyEmail,
+  type CompanyPhone,
   type CompanyRecord,
   type CompanyUpsertInput,
 } from "./company-client"
@@ -52,6 +54,10 @@ type CompanyUpsertState = {
   company: CompanyRecord | null
   returnTo: CompanyUpsertReturnTo
 }
+const companyEmailTypes = ["primary", "work", "billing", "personal", "support", "other"] as const
+const companyPhoneTypes = ["mobile", "work", "billing", "whatsapp", "landline", "other"] as const
+type CompanyEmailType = (typeof companyEmailTypes)[number]
+type CompanyPhoneType = (typeof companyPhoneTypes)[number]
 
 const statusFilters = [
   { id: "all", label: "All companies" },
@@ -452,10 +458,10 @@ function CompanyUpsertPage({
 
     setIsSaving(true)
     try {
-      await onSubmit({
+      await onSubmit(withDerivedCompanyContactFields({
         ...form,
         status: form.isActive ? "active" : "suspend",
-      })
+      }))
     } catch (error) {
       toast.error("Company save failed", {
         description: error instanceof Error ? error.message : "Unable to save company.",
@@ -529,25 +535,13 @@ function buildCompanyUpsertTabs({
       content: (
         <div className="space-y-5">
           <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
-            <TextField label="Company code" value={form.code} inputClassName="font-mono uppercase" onChange={(value) => setFormField(setForm, "code", normalizeCode(value))} />
             <TextField label="Company name" value={form.name} onChange={(value) => setFormField(setForm, "name", value)} />
-            <ReadOnlyField label="Tenant" value={company?.tenantName ?? "Current tenant"} />
             <TextField label="Legal name" value={form.legalName} onChange={(value) => setFormField(setForm, "legalName", value)} />
-            <FieldShell label="Industry">
-              <Select value={form.industryId ? String(form.industryId) : "none"} onValueChange={(value) => setFormField(setForm, "industryId", value === "none" ? null : Number(value))}>
-                <SelectTrigger className="h-11 w-full rounded-xl border-input bg-background px-3">
-                  <SelectValue placeholder="Select industry" />
-                </SelectTrigger>
-                <SelectContent position="popper" align="start" className="rounded-md">
-                  <SelectItem value="none">Not classified</SelectItem>
-                  {industries.map((industry) => (
-                    <SelectItem key={industry.id} value={String(industry.id)}>
-                      {industry.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldShell>
+            <TextField label="Company code" value={form.code} inputClassName="font-mono uppercase" onChange={(value) => setFormField(setForm, "code", normalizeCode(value))} />
+            <div className="hidden md:block" />
+            <div className="md:col-span-2 h-1" />
+            <ReadOnlyField label="Tenant" value={company?.tenantName ?? "Current tenant"} />
+            <IndustrySelectField industries={industries} value={form.industryId} onChange={(industryId) => setFormField(setForm, "industryId", industryId)} />
             <TextField label="Tagline" value={form.tagline} onChange={(value) => setFormField(setForm, "tagline", value)} className="md:col-span-2" />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
@@ -562,24 +556,14 @@ function buildCompanyUpsertTabs({
       label: "Communication",
       content: (
         <div className="space-y-5">
-          <CollectionCard title="Company Emails" description="Operational and communication email addresses." actionLabel="Add" onAdd={() => setFormField(setForm, "emails", [...form.emails, { email: "", emailType: "", isActive: true }])}>
+          <CollectionCard title="Company Emails" actionLabel="Add" onAdd={() => setFormField(setForm, "emails", [...form.emails, { email: "", emailType: "primary", isPrimary: form.emails.length === 0, isActive: true }])}>
             <EditableCollection rows={form.emails} onRemove={(index) => setFormField(setForm, "emails", form.emails.filter((_, itemIndex) => itemIndex !== index))} render={(email, index) => (
-              <>
-                <TextField label="Email" value={email.email} onChange={(value) => setFormField(setForm, "emails", form.emails.map((item, itemIndex) => (itemIndex === index ? { ...item, email: value } : item)))} />
-                <TextField label="Email Type" value={email.emailType} onChange={(value) => setFormField(setForm, "emails", form.emails.map((item, itemIndex) => (itemIndex === index ? { ...item, emailType: value } : item)))} />
-              </>
+              <CompanyEmailRow email={email} index={index} setForm={setForm} form={form} />
             )} />
           </CollectionCard>
-          <CollectionCard title="Company Phones" description="Phone and messaging channels used by the company." actionLabel="Add" onAdd={() => setFormField(setForm, "phones", [...form.phones, { phoneNumber: "", phoneType: "", isPrimary: form.phones.length === 0, isActive: true }])}>
+          <CollectionCard title="Company Phones" actionLabel="Add" onAdd={() => setFormField(setForm, "phones", [...form.phones, { phoneNumber: "", phoneType: "mobile", isPrimary: form.phones.length === 0, isActive: true }])}>
             <EditableCollection rows={form.phones} onRemove={(index) => setFormField(setForm, "phones", form.phones.filter((_, itemIndex) => itemIndex !== index))} render={(phone, index) => (
-              <>
-                <TextField label="Phone Number" value={phone.phoneNumber} onChange={(value) => setFormField(setForm, "phones", form.phones.map((item, itemIndex) => (itemIndex === index ? { ...item, phoneNumber: value } : item)))} />
-                <TextField label="Phone Type" value={phone.phoneType} onChange={(value) => setFormField(setForm, "phones", form.phones.map((item, itemIndex) => (itemIndex === index ? { ...item, phoneType: value } : item)))} />
-                <label className="flex items-center gap-3 pt-7 text-sm font-medium">
-                  <input type="checkbox" checked={phone.isPrimary} onChange={(event) => setFormField(setForm, "phones", form.phones.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index ? event.target.checked : false })))} />
-                  Primary phone
-                </label>
-              </>
+              <CompanyPhoneRow form={form} index={index} phone={phone} setForm={setForm} />
             )} />
           </CollectionCard>
           <CollectionCard title="Social Links" description="Public brand links used in profile and storefront surfaces." actionLabel="Add" onAdd={() => setFormField(setForm, "socialLinks", [...form.socialLinks, { platform: "", url: "", isActive: true }])}>
@@ -687,7 +671,8 @@ function buildCompanyUpsertTabs({
               <DistrictAutocompleteLookup session={session} stateId={address.stateId} value={address.districtId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, districtId: value === null ? null : String(value), cityId: null, pincodeId: null } : item)))} />
               <CityAutocompleteLookup districtId={address.districtId} session={session} value={address.cityId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, cityId: value === null ? null : String(value), pincodeId: null } : item)))} />
               <CommonRecordAutocompleteLookup label="Pincode" moduleKey="pincodes" optionFilter={(record) => matchesReference(record.city_id, address.cityId)} placeholder="Search pincode" session={session} value={address.pincodeId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, pincodeId: value === null ? null : String(value) } : item)))} />
-              <SwitchRow checked={address.isDefault} label="Primary address" description="Used as the main company address." onChange={(checked) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => ({ ...item, isDefault: itemIndex === index ? checked : false })))} />
+              <SwitchField checked={address.isDefault} label="Default address" onChange={(isDefault) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => ({ ...item, isDefault: itemIndex === index ? isDefault : false })))} />
+              <SwitchField checked={address.isActive} label="Active" onChange={(isActive) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, isActive } : item)))} />
             </>
           )} />
         </div>
@@ -749,16 +734,16 @@ function CollectionCard({
 }: {
   actionLabel: string
   children: ReactNode
-  description: string
+  description?: string
   onAdd(): void
   title: string
 }) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm md:p-5">
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <section className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-sm md:p-4">
+      <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <h3 className="text-base font-semibold text-foreground">{title}</h3>
-          <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
         </div>
         <Button type="button" variant="outline" className="h-8 rounded-lg px-3" onClick={onAdd}>
           <Plus className="size-4" />
@@ -788,14 +773,11 @@ function EditableCollection<T>({
   return (
     <div className="space-y-4">
       {rows.map((row, index) => (
-        <div key={index} className="rounded-2xl border border-border/70 bg-background/65 p-4">
-          <div className="mb-4 flex justify-end">
-            <Button type="button" variant="ghost" className="h-8 gap-2 rounded-lg" onClick={() => onRemove(index)}>
+        <div key={index} className="relative rounded-2xl border border-border/70 bg-background/65 p-4 pr-14">
+          <Button type="button" size="icon" variant="outline" className="absolute right-4 top-[54px] size-8 rounded-lg" onClick={() => onRemove(index)} aria-label="Remove row">
               <Trash2 className="size-4" />
-              Remove
-            </Button>
-          </div>
-          <div className={cn("grid gap-x-6 gap-y-5", gridClassName)}>{render(row, index)}</div>
+          </Button>
+          <div className={cn("grid items-end gap-x-6 gap-y-5", gridClassName)}>{render(row, index)}</div>
         </div>
       ))}
     </div>
@@ -822,6 +804,83 @@ function TextField({
       <Input className={cn("h-11 rounded-xl", inputClassName)} type={type} value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
     </FieldShell>
   )
+}
+
+function EnumSelectField<TValue extends string>({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string
+  onChange(value: TValue): void
+  options: readonly TValue[]
+  value: TValue
+}) {
+  return (
+    <FieldShell label={label}>
+      <Select value={value} onValueChange={(nextValue) => onChange(nextValue as TValue)}>
+        <SelectTrigger className="h-11 min-h-11 w-full rounded-xl border-input bg-background px-3 text-left font-normal leading-none">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="start" position="popper" sideOffset={4} className="z-[130] w-[var(--radix-select-trigger-width)] rounded-xl p-1">
+          {options.map((option) => <SelectItem key={option} value={option} className="h-8 rounded-lg px-2 pr-8">{labelizeEnum(option)}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </FieldShell>
+  )
+}
+
+function IndustrySelectField({
+  industries,
+  onChange,
+  value,
+}: {
+  industries: IndustryRecord[]
+  onChange(value: number | null): void
+  value: number | null | undefined
+}) {
+  return (
+    <FieldShell label="Industry">
+      <Select value={value ? String(value) : "none"} onValueChange={(nextValue) => onChange(nextValue === "none" ? null : Number(nextValue))}>
+        <SelectTrigger className="h-11 min-h-11 w-full rounded-xl border-input bg-background px-3 text-left font-normal leading-none">
+          <SelectValue placeholder="Select industry" />
+        </SelectTrigger>
+        <SelectContent align="start" position="popper" sideOffset={4} className="z-[130] w-[var(--radix-select-trigger-width)] rounded-xl p-1">
+          <SelectItem value="none" className="h-8 rounded-lg px-2 pr-8">Not classified</SelectItem>
+          {industries.map((industry) => (
+            <SelectItem key={industry.id} value={String(industry.id)} className="h-8 rounded-lg px-2 pr-8">
+              {industry.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </FieldShell>
+  )
+}
+
+function CompanyEmailRow({ email, form, index, setForm }: { email: CompanyEmail; form: CompanyUpsertInput; index: number; setForm: Dispatch<SetStateAction<CompanyUpsertInput>> }) {
+  return (
+    <>
+      <TextField label="Email" value={email.email} onChange={(value) => setFormField(setForm, "emails", updateCompanyEmail(form.emails, index, { email: value }))} />
+      <EnumSelectField<CompanyEmailType> label="Email type" options={companyEmailTypes} value={companyEmailType(email.emailType)} onChange={(emailType) => setFormField(setForm, "emails", updateCompanyEmail(form.emails, index, { emailType }))} />
+      <SwitchField checked={Boolean(email.isPrimary) || email.emailType === "primary"} label="Primary" onChange={(isPrimary) => setFormField(setForm, "emails", form.emails.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index ? isPrimary : false, emailType: itemIndex === index && isPrimary ? "primary" : item.emailType === "primary" ? "work" : item.emailType })))} />
+    </>
+  )
+}
+
+function CompanyPhoneRow({ form, index, phone, setForm }: { form: CompanyUpsertInput; index: number; phone: CompanyPhone; setForm: Dispatch<SetStateAction<CompanyUpsertInput>> }) {
+  return (
+    <>
+      <TextField label="Phone" value={phone.phoneNumber} onChange={(value) => setFormField(setForm, "phones", updateCompanyPhone(form.phones, index, { phoneNumber: value }))} />
+      <EnumSelectField<CompanyPhoneType> label="Phone type" options={companyPhoneTypes} value={companyPhoneType(phone.phoneType)} onChange={(phoneType) => setFormField(setForm, "phones", updateCompanyPhone(form.phones, index, { phoneType }))} />
+      <SwitchField checked={phone.isPrimary} label="Primary" onChange={(isPrimary) => setFormField(setForm, "phones", form.phones.map((item, itemIndex) => ({ ...item, isPrimary: itemIndex === index ? isPrimary : false })))} />
+    </>
+  )
+}
+
+function SwitchField({ checked, label, onChange }: { checked: boolean; label: string; onChange(value: boolean): void }) {
+  return <div className="grid gap-2"><span aria-hidden className="h-5" /><SwitchRow checked={checked} label={label} onChange={onChange} /></div>
 }
 
 function ReadOnlyField({ label, value }: { label: string; value: ReactNode }) {
@@ -955,6 +1014,40 @@ function setFormField<K extends keyof CompanyUpsertInput>(
   value: CompanyUpsertInput[K],
 ) {
   setForm((current) => ({ ...current, [key]: value }))
+}
+
+function withDerivedCompanyContactFields(input: CompanyUpsertInput): CompanyUpsertInput {
+  const primaryEmail = input.emails.find((email) => email.isActive && (email.isPrimary || email.emailType === "primary")) ?? input.emails.find((email) => email.isActive) ?? input.emails[0]
+  const primaryPhone = input.phones.find((phone) => phone.isActive && phone.isPrimary) ?? input.phones.find((phone) => phone.isActive) ?? input.phones[0]
+  return {
+    ...input,
+    emails: input.emails.map((email) => ({ ...email, emailType: companyEmailType(email.emailType), isActive: email.isActive ?? true })),
+    phones: input.phones.map((phone) => ({ ...phone, phoneType: companyPhoneType(phone.phoneType), isActive: phone.isActive ?? true })),
+    primaryEmail: primaryEmail?.email?.trim() || input.primaryEmail,
+    primaryPhone: primaryPhone?.phoneNumber?.trim() || input.primaryPhone,
+  }
+}
+
+function updateCompanyEmail(emails: CompanyEmail[], index: number, patch: Partial<CompanyEmail>) {
+  return emails.map((email, itemIndex) => (itemIndex === index ? { ...email, ...patch } : email))
+}
+
+function updateCompanyPhone(phones: CompanyPhone[], index: number, patch: Partial<CompanyPhone>) {
+  return phones.map((phone, itemIndex) => (itemIndex === index ? { ...phone, ...patch } : phone))
+}
+
+function companyEmailType(value: string): CompanyEmailType {
+  const normalized = value.trim().toLowerCase()
+  return companyEmailTypes.includes(normalized as CompanyEmailType) ? normalized as CompanyEmailType : "primary"
+}
+
+function companyPhoneType(value: string): CompanyPhoneType {
+  const normalized = value.trim().toLowerCase()
+  return companyPhoneTypes.includes(normalized as CompanyPhoneType) ? normalized as CompanyPhoneType : "mobile"
+}
+
+function labelizeEnum(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function getLogoVariantUrl(logos: readonly CompanyUpsertInput["logos"][number][], logoType: string) {

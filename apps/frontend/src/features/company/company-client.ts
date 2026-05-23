@@ -29,6 +29,7 @@ export interface CompanyEmail {
   id?: number
   email: string
   emailType: string
+  isPrimary?: boolean
   isActive: boolean
 }
 

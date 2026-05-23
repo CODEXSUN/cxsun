@@ -9,6 +9,9 @@ import { OrdersModule } from './master/order/index.js'
 import { ProductsModule } from './master/product/index.js'
 import { SiteModule } from './site/index.js'
 import { SalesEntryModule } from './entries/sales/index.js'
+import { PurchaseEntryModule } from './entries/purchase/index.js'
+import { ReceiptEntryModule } from './entries/receipt/index.js'
+import { PaymentEntryModule } from './entries/payment/index.js'
 import { CompanySettingsModule } from './settings/company-settings/index.js'
 import { DocumentSettingsModule } from './settings/document-settings/index.js'
 import { SystemUpdateModule } from '../core/system/system-update/system-update.module.js'
@@ -36,6 +39,9 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     ProductsModule,
     OrdersModule,
     SalesEntryModule,
+    PurchaseEntryModule,
+    ReceiptEntryModule,
+    PaymentEntryModule,
     CompanySettingsModule,
     DocumentSettingsModule,
     CompanyModule,

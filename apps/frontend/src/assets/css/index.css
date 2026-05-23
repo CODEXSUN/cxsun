@@ -332,3 +332,56 @@ textarea:focus-visible {
 .animate-collapsible-up {
   animation: collapsible-up 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+@media print {
+  @page {
+    size: A5 landscape;
+    margin: 6mm;
+  }
+
+  .toaster,
+  [data-sonner-toaster],
+  [data-radix-portal] [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  body:has(.payment-print-page) *:not(.payment-print-page):not(.payment-print-page *),
+  body:has(.receipt-print-page) *:not(.receipt-print-page):not(.receipt-print-page *) {
+    visibility: hidden !important;
+  }
+
+  .payment-print-page,
+  .receipt-print-page {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 99999 !important;
+    width: 100vw !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+    visibility: visible !important;
+  }
+
+  .payment-print-sheet,
+  .receipt-print-sheet {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 186mm !important;
+    min-height: 136mm !important;
+    max-width: none !important;
+    padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  .money-voucher-table {
+    flex: 1 1 auto !important;
+  }
+
+  .money-voucher-sign-row td {
+    height: auto !important;
+  }
+
+  .money-voucher-jurisdiction {
+    margin-top: auto !important;
+  }
+}

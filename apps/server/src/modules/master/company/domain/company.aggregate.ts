@@ -51,6 +51,8 @@ export class CompanyAggregate {
     const code = normalizeCode(input.code || name)
     const isActive = input.isActive ?? input.status !== 'suspend'
     const status = input.status ?? (isActive ? 'active' : 'suspend')
+    const emails = normalizeEmails(input.emails)
+    const phones = normalizePhones(input.phones)
 
     if (!name) {
       throw new CompanyValidationError('Company name is required.')
@@ -85,8 +87,8 @@ export class CompanyAggregate {
       tcs_rate_percent: nullableNumber(input.tcsRatePercent),
       website: nullable(input.website),
       description: nullable(input.description),
-      primary_email: nullable(input.primaryEmail),
-      primary_phone: nullable(input.primaryPhone),
+      primary_email: nullable(input.primaryEmail) ?? primaryEmail(emails),
+      primary_phone: nullable(input.primaryPhone) ?? primaryPhone(phones),
       is_primary: Boolean(input.isPrimary),
       is_active: isActive && status !== 'suspend',
       status,
@@ -94,8 +96,8 @@ export class CompanyAggregate {
       features: JSON.stringify(input.features ?? ['company.manage']),
       logos: normalizeLogos(input.logos),
       addresses: normalizeAddresses(input.addresses),
-      emails: normalizeEmails(input.emails),
-      phones: normalizePhones(input.phones),
+      emails,
+      phones,
       socialLinks: normalizeSocialLinks(input.socialLinks),
       bankAccounts: normalizeBankAccounts(input.bankAccounts),
     }
@@ -137,7 +139,7 @@ function normalizeLogos(logos: CompanyLogo[] | undefined) {
 function normalizeEmails(emails: CompanyEmail[] | undefined) {
   return (emails ?? []).filter((email) => email.email.trim()).map((email) => ({
     email: email.email.trim(),
-    emailType: email.emailType?.trim() || 'Primary',
+    emailType: normalizeEmailType(email.emailType),
     isActive: email.isActive ?? true,
   }))
 }
@@ -145,10 +147,28 @@ function normalizeEmails(emails: CompanyEmail[] | undefined) {
 function normalizePhones(phones: CompanyPhone[] | undefined) {
   return (phones ?? []).filter((phone) => phone.phoneNumber.trim()).map((phone) => ({
     phoneNumber: phone.phoneNumber.trim(),
-    phoneType: phone.phoneType?.trim() || 'Mobile',
+    phoneType: normalizePhoneType(phone.phoneType),
     isPrimary: Boolean(phone.isPrimary),
     isActive: phone.isActive ?? true,
   }))
+}
+
+function normalizeEmailType(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase() ?? ''
+  return ['primary', 'work', 'billing', 'personal', 'support', 'other'].includes(normalized) ? normalized : 'primary'
+}
+
+function normalizePhoneType(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase() ?? ''
+  return ['mobile', 'work', 'billing', 'whatsapp', 'landline', 'other'].includes(normalized) ? normalized : 'mobile'
+}
+
+function primaryEmail(emails: ReturnType<typeof normalizeEmails>) {
+  return emails.find((email) => email.isActive && email.emailType === 'primary')?.email ?? emails.find((email) => email.isActive)?.email ?? emails[0]?.email ?? null
+}
+
+function primaryPhone(phones: ReturnType<typeof normalizePhones>) {
+  return phones.find((phone) => phone.isActive && phone.isPrimary)?.phoneNumber ?? phones.find((phone) => phone.isActive)?.phoneNumber ?? phones[0]?.phoneNumber ?? null
 }
 
 function normalizeSocialLinks(socialLinks: CompanySocialLink[] | undefined) {

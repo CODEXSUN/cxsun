@@ -35,6 +35,9 @@ export interface SalesEntryInput {
   invoice_date?: string
   customer_id?: string | null
   customer_name?: string
+  customer_gstin?: string | null
+  customer_state_code?: string | null
+  customer_state_name?: string | null
   billing_address?: string | null
   shipping_address?: string | null
   place_of_supply?: string | null
@@ -198,6 +201,9 @@ export class SalesEntryRepository {
         invoice_date: input.invoice_date || today(),
         customer_id: input.customer_id ?? null,
         customer_name: input.customer_name.trim(),
+        customer_gstin: emptyAsNull(input.customer_gstin),
+        customer_state_code: emptyAsNull(input.customer_state_code),
+        customer_state_name: emptyAsNull(input.customer_state_name),
         billing_address: emptyAsNull(input.billing_address),
         shipping_address: emptyAsNull(input.shipping_address),
         place_of_supply: emptyAsNull(input.place_of_supply),
@@ -261,6 +267,9 @@ export class SalesEntryRepository {
       invoice_date: String(row.invoice_date),
       customer_id: stringOrNull(row.customer_id),
       customer_name: String(row.customer_name),
+      customer_gstin: stringOrNull(row.customer_gstin),
+      customer_state_code: stringOrNull(row.customer_state_code),
+      customer_state_name: stringOrNull(row.customer_state_name),
       billing_address: stringOrNull(row.billing_address),
       shipping_address: stringOrNull(row.shipping_address),
       place_of_supply: stringOrNull(row.place_of_supply),

@@ -77,12 +77,6 @@ Build only the Docker image:
 docker build -f .container/Dockerfile -t cxsun:v1 .
 ```
 
-Or build through Compose:
-
-```bash
-docker compose -f .container/docker-compose.yml build
-```
-
 ## 4. Start With Compose
 
 Start the app in the background:
