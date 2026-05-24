@@ -14,6 +14,7 @@ import { ReceiptEntryModule } from './entries/receipt/index.js'
 import { PaymentEntryModule } from './entries/payment/index.js'
 import { PurchaseReceiptModule } from './stock/inward/purchase-receipt/index.js'
 import { DeliveryNoteModule } from './stock/outward/delivery-note/index.js'
+import { StockLedgerModule } from './stock/ledger/index.js'
 import { CompanySettingsModule } from './settings/company-settings/index.js'
 import { DocumentSettingsModule } from './settings/document-settings/index.js'
 import { MediaModule } from './media/index.js'
@@ -45,6 +46,7 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     PurchaseEntryModule,
     PurchaseReceiptModule,
     DeliveryNoteModule,
+    StockLedgerModule,
     ReceiptEntryModule,
     PaymentEntryModule,
     CompanySettingsModule,

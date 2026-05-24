@@ -1673,6 +1673,12 @@ read assist/ readme and create log
 ## Current Prompt
 
 ```
+before code make assist/execution write planning.md and task.md with proper and do one by one
+```
+
+## Current Prompt
+
+```
 read assist/readme and fix this 
 
 fix this

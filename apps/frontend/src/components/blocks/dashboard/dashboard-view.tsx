@@ -82,6 +82,9 @@ const PurchaseReceiptPage = lazy(() =>
 const DeliveryNotePage = lazy(() =>
   import('src/features/stock/outward/delivery-note/delivery-note-page').then((module) => ({ default: module.DeliveryNotePage })),
 )
+const StockLedgerPage = lazy(() =>
+  import('src/features/stock/ledger/stock-ledger-page').then((module) => ({ default: module.StockLedgerPage })),
+)
 const ReceiptPage = lazy(() =>
   import('src/features/receipt/receipt-page').then((module) => ({ default: module.ReceiptPage })),
 )
@@ -342,6 +345,8 @@ export function DashboardView({
             <PurchaseReceiptPage session={session} />
           ) : visiblePage === "app-inventory-delivery-note" ? (
             <DeliveryNotePage session={session} />
+          ) : visiblePage === "app-inventory-stock-ledger" ? (
+            <StockLedgerPage session={session} />
           ) : visiblePage === "app-billing-receipts" ? (
             <ReceiptPage session={session} />
           ) : visiblePage === "app-billing-payments" ? (

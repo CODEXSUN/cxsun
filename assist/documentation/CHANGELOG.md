@@ -2,19 +2,36 @@
 
 ## Version State
 
-- **Current version:** `1.0.25`
-- **Release tag:** `v-1.0.25`
-- **Changelog label:** `v 1.0.25`
+- **Current version:** `1.0.26`
+- **Release tag:** `v-1.0.26`
+- **Changelog label:** `v 1.0.26`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.26
+
+### [v 1.0.26] 2026-05-24 6:00 pm - stock ledger barcode UX and settings polish
+
+- Bumped workspace version to 1.0.26
+- Refined the Stock Ledger generate step so previous generated barcodes render as one normal paginated table with 25-row default pagination, multi-select printing, icon-only row print/drop actions, and no nested scroll cards.
+- Added a top status summary for purchase inward quantity, generated labels, and verified labels above the generated barcode table.
+- Added drop protection and cleaner row actions so posted/confirmed serializations cannot be dropped from the generated label table.
+- Improved Stock Settings with editable serial, batch, and barcode format fields, token helper text, a live preview, and a current week-number helper.
+- Changed the standard serial format from `{serial4}` to `{####}` while preserving backend compatibility for existing `{serial4}` settings.
+- Verified the release with frontend/server typechecks and frontend production builds during the stock ledger polish pass.
 
 ## v-1.0.25
 
 ### [v 1.0.25] 2026-05-24 4:34 pm - stock ledger barcode and serial movement foundation
 
 - Bumped workspace version to 1.0.25
+- Added a modular stock ledger backend under `modules/stock/ledger` with domain entities, events, queue-backed event bus, service, repository, HTTP controller, tenant migrations, and app/provisioning wiring.
+- Added tenant stock tables for stock settings, immutable ledger movements, live balances, purchase receipt serializations, and generated serialization item barcodes.
+- Added APIs for stock settings, purchase receipt intake details, serial/batch/barcode generation, scan verification, posting verified serials into live stock, live balance listing, and barcode availability checks.
+- Added the Inventory Stock Ledger frontend page with purchase receipt selection, product quantity/pending intake view, partial/full/single serial generation, scan verification, barcode label print action, post-to-live-stock confirmation, and live stock balance list.
+- Verified the stock ledger foundation with `npm -w apps/server run typecheck`, `npm -w apps/frontend run typecheck`, and `npm -w apps/frontend run build`.
 ## v-1.0.24
 
 ### [v 1.0.24] 2026-05-24 3:48 pm - voucher work order and product autocomplete cleanup

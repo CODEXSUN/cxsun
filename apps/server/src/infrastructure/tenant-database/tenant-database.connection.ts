@@ -10,6 +10,7 @@ import { migrateSalesEntryTables } from '../../modules/entries/sales/index.js'
 import { migratePurchaseEntryTables } from '../../modules/entries/purchase/index.js'
 import { migratePurchaseReceiptTables } from '../../modules/stock/inward/purchase-receipt/index.js'
 import { migrateDeliveryNoteTables } from '../../modules/stock/outward/delivery-note/index.js'
+import { migrateStockLedgerTables } from '../../modules/stock/ledger/index.js'
 import { migrateReceiptEntryTables } from '../../modules/entries/receipt/index.js'
 import { migratePaymentEntryTables } from '../../modules/entries/payment/index.js'
 import { migrateCompanySettingsTables } from '../../modules/settings/company-settings/index.js'
@@ -113,6 +114,7 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await migratePurchaseEntryTables(database)
   await migratePurchaseReceiptTables(database)
   await migrateDeliveryNoteTables(database)
+  await migrateStockLedgerTables(database)
   await migrateReceiptEntryTables(database)
   await migratePaymentEntryTables(database)
   await migrateCompanySettingsTables(database)
