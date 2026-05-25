@@ -30,6 +30,24 @@ interface TenantUpsertResult {
   error?: string
 }
 
+export interface TenantSetupStatus {
+  ok: boolean
+  tenantId?: number
+  database?: string
+  databaseExists?: boolean
+  hasDefaultCompany?: boolean
+  error?: string
+}
+
+export interface TenantSetupResult {
+  ok: boolean
+  tenantId?: number
+  database?: string
+  company?: { id: number; name: string; code: string }
+  admin?: { id: number; name: string; email: string; role: string; status: string }
+  error?: string
+}
+
 const tenantApiPath = "/api/v1/tenants"
 
 export async function listTenants(session: AuthSession, options?: { signal?: AbortSignal }) {
@@ -113,6 +131,48 @@ export async function restoreTenant(session: AuthSession, tenantId: number) {
   if (!result.ok) {
     throw new Error(result.error ?? "Tenant restore failed.")
   }
+}
+
+export async function getTenantSetupStatus(session: AuthSession, tenantId: number, options?: { signal?: AbortSignal }) {
+  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/setup-status`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+    signal: options?.signal,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Tenant setup status request failed with status ${response.status}.`)
+  }
+
+  const result = (await response.json()) as TenantSetupStatus
+  if (!result.ok) {
+    throw new Error(result.error ?? "Tenant setup status failed.")
+  }
+
+  return result
+}
+
+export async function setupTenantClient(session: AuthSession, tenantId: number) {
+  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/setup-client`, {
+    body: "{}",
+    cache: "no-store",
+    headers: {
+      ...authHeaders(session),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error(`Tenant client setup request failed with status ${response.status}.`)
+  }
+
+  const result = (await response.json()) as TenantSetupResult
+  if (!result.ok) {
+    throw new Error(result.error ?? "Tenant client setup failed.")
+  }
+
+  return result
 }
 
 function toTenantRecord(record: TenantApiRecord): TenantRecord {

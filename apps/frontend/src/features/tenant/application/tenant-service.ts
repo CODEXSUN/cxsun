@@ -8,7 +8,7 @@ import type {
 } from "../domain/tenant"
 import { tenantColumnCatalog } from "../domain/tenant"
 export { listTenants, upsertTenant } from "../infrastructure/tenant-api"
-export { restoreTenant, softDeleteTenant } from "../infrastructure/tenant-api"
+export { getTenantSetupStatus, restoreTenant, setupTenantClient, softDeleteTenant } from "../infrastructure/tenant-api"
 
 export function toTenantForm(tenant: TenantRecord): TenantFormState {
   return {

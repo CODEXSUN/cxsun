@@ -3,6 +3,7 @@ import { createConnection } from 'mysql2/promise'
 import { Kysely, MysqlDialect, sql } from 'kysely'
 import type { TenantDatabaseSchema } from './tenant-database.schema.js'
 import type { Tenant } from '../../core/tenant/domain/tenant.types.js'
+import { hashPassword } from '../auth/password-hash.js'
 import { getDatabase } from '../database/connection.js'
 import { nowIso } from '../database/database-module.js'
 import { dispatchPublicUuid } from '../../shared/helpers/public-uuid.js'
@@ -166,6 +167,55 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await syncTenantCompanyMetrics(tenant)
 }
 
+export async function tenantDatabaseExists(tenant: Tenant): Promise<boolean> {
+  const connection = await createConnection({
+    host: tenant.db_host,
+    port: tenant.db_port,
+    user: tenant.db_user,
+    password: getTenantDatabasePassword(tenant.db_secret_ref),
+    multipleStatements: false,
+    connectTimeout: dbConfig.tenant.connectTimeoutMs,
+  })
+
+  try {
+    const [rows] = await connection.query(
+      'SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ? LIMIT 1',
+      [tenant.db_name],
+    )
+    return Array.isArray(rows) && rows.length > 0
+  } finally {
+    await connection.end()
+  }
+}
+
+export async function setupTenantClientDatabase(tenant: Tenant) {
+  await provisionTenantDatabase(tenant)
+  const database = getTenantDatabase(tenant)
+  const company = await ensureTenantDefaultCompany(database, tenant)
+  const admin = await ensureTenantUser(database, {
+    name: 'Administrator',
+    email: 'admin@admin.com',
+    passwordHash: hashPassword('Admin@123'),
+    role: 'admin',
+    status: 'active',
+  })
+  await syncTenantCompanyMetrics(tenant)
+
+  return {
+    ok: true,
+    tenantId: tenant.id,
+    database: tenant.db_name,
+    company,
+    admin: {
+      id: admin,
+      name: 'Administrator',
+      email: 'admin@admin.com',
+      role: 'admin',
+      status: 'active',
+    },
+  }
+}
+
 function getTenantDatabasePassword(secretRef: string) {
   return dbConfig.tenant.password(secretRef)
 }
@@ -268,6 +318,83 @@ async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
     await ensureRolePolicy(database, roleCode, 'rbac.manage')
   }
 
+}
+
+async function ensureTenantDefaultCompany(database: TenantDatabase, tenant: Tenant) {
+  const existingCompany = await database
+    .selectFrom('companies')
+    .select(['id', 'name', 'code', 'industry_id'])
+    .where('deleted_at', 'is', null)
+    .orderBy('is_primary', 'desc')
+    .orderBy('id', 'asc')
+    .executeTakeFirst()
+  const years = await ensureCurrentAccountingYear(database)
+
+  if (existingCompany) {
+    await ensureDefaultCompany(database, tenant, Number(existingCompany.id), years.currentYearId, Number(existingCompany.industry_id ?? 0))
+    return {
+      id: Number(existingCompany.id),
+      name: existingCompany.name,
+      code: existingCompany.code,
+    }
+  }
+
+  const companyCode = tenant.slug
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64) || `TENANT_${tenant.id}`
+
+  await database
+    .insertInto('companies')
+    .values({
+      uuid: nextPublicUuid(),
+      tenant_id: tenant.id,
+      industry_id: 0,
+      code: companyCode,
+      name: tenant.name,
+      legal_name: tenant.name,
+      tagline: null,
+      short_about: null,
+      gstin_uin: null,
+      pan: null,
+      date_of_incorporation: null,
+      msme_no: null,
+      msme_category: null,
+      tan: null,
+      tds_available: false,
+      tds_section: null,
+      tds_rate_percent: null,
+      tcs_available: false,
+      tcs_section: null,
+      tcs_rate_percent: null,
+      website: null,
+      description: null,
+      primary_email: null,
+      primary_phone: null,
+      is_primary: true,
+      is_active: true,
+      status: 'active',
+      settings: JSON.stringify({ timezone: 'Asia/Calcutta', currency: 'INR' }),
+      features: JSON.stringify(['company.manage']),
+    })
+    .execute()
+
+  const company = await database
+    .selectFrom('companies')
+    .select(['id', 'name', 'code'])
+    .where('code', '=', companyCode)
+    .where('deleted_at', 'is', null)
+    .executeTakeFirstOrThrow()
+
+  await ensureDefaultCompany(database, tenant, Number(company.id), years.currentYearId, 0)
+
+  return {
+    id: Number(company.id),
+    name: company.name,
+    code: company.code,
+  }
 }
 
 async function createTenantUsersTable(database: TenantDatabase) {
@@ -578,6 +705,41 @@ async function seedAccountingYears(database: TenantDatabase) {
     .executeTakeFirst()
 
   return { currentYearId: currentYear?.id ?? 0 }
+}
+
+async function ensureCurrentAccountingYear(database: TenantDatabase) {
+  const seeded = await seedAccountingYears(database)
+  if (seeded.currentYearId) return seeded
+
+  const startYear = currentFinancialYearStart(new Date())
+  const year = financialYearSeed(startYear)
+
+  await database
+    .insertInto('accounting_years')
+    .values({
+      uuid: nextPublicUuid(),
+      name: year.name,
+      start_date: year.startDate,
+      end_date: year.endDate,
+      books_start: year.startDate,
+      is_current_year: true,
+      is_active: true,
+    })
+    .execute()
+
+  const currentYear = await database
+    .selectFrom('accounting_years')
+    .select('id')
+    .where('is_current_year', '=', true)
+    .orderBy('id', 'desc')
+    .executeTakeFirstOrThrow()
+
+  return { currentYearId: Number(currentYear.id) }
+}
+
+function currentFinancialYearStart(date: Date) {
+  const year = date.getFullYear()
+  return date.getMonth() >= 3 ? year : year - 1
 }
 
 function financialYearSeed(startYear: number) {

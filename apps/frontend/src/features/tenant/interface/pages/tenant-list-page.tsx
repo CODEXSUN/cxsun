@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Eye, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Database, Eye, Loader2, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react"
 import { AnimatedTabs } from "src/components/ui/animated-tabs"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "src/components/ui/dropdown-menu"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
-import { Separator } from "src/components/ui/separator"
 import { Switch } from "src/components/ui/switch"
 import {
   MasterListEmptyState,
@@ -22,6 +21,7 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { dashboardApps, type DashboardAppId } from "src/components/blocks/dashboard/dashboard-apps"
 import { cn } from "src/lib/utils"
 import type { AuthSession } from "src/features/auth/auth-client"
 import {
@@ -29,8 +29,10 @@ import {
   compareTenantRecords,
   filterTenants,
   formatTenantDate,
+  getTenantSetupStatus,
   listTenants,
   restoreTenant,
+  setupTenantClient,
   softDeleteTenant,
   toTenantForm,
   toTenantUpsertInput,
@@ -149,6 +151,7 @@ export function TenantListPage({ session }: { session: AuthSession }) {
     return (
       <TenantShowPage
         tenant={selectedTenant}
+        session={session}
         onBack={() => setSelectedTenant(null)}
         onDestroy={() => void destroy(selectedTenant)}
         onEdit={() => setUpsertState({ tenant: selectedTenant, returnTo: "show" })}
@@ -276,17 +279,66 @@ export function TenantListPage({ session }: { session: AuthSession }) {
 
 function TenantShowPage({
   tenant,
+  session,
   onBack,
   onDestroy,
   onEdit,
   onRestore,
 }: {
   tenant: TenantRecord
+  session: AuthSession
   onBack(): void
   onDestroy(): void
   onEdit(): void
   onRestore(): void
 }) {
+  const queryClient = useQueryClient()
+  const [showTab, setShowTab] = useState("details")
+  const [enabledAppDraft, setEnabledAppDraft] = useState<Record<DashboardAppId, boolean>>(() => tenantEnabledAppMap(tenant))
+  const setupStatusQuery = useQuery({
+    queryKey: ["tenant-setup-status", tenant.id],
+    queryFn: ({ signal }) => getTenantSetupStatus(session, tenant.id, { signal }),
+  })
+  const setupMutation = useMutation({ mutationFn: () => setupTenantClient(session, tenant.id) })
+  const appsMutation = useMutation({ mutationFn: (enabledApps: Record<DashboardAppId, boolean>) => upsertTenant(session, toTenantFeatureInput(tenant, enabledApps)) })
+  const setupStatus = setupStatusQuery.data
+  const canSetupClient = setupStatus ? !setupStatus.databaseExists || !setupStatus.hasDefaultCompany : tenant.activeCompanyCount === 0
+
+  useEffect(() => {
+    setEnabledAppDraft(tenantEnabledAppMap(tenant))
+  }, [tenant])
+
+  async function setupClient() {
+    try {
+      const result = await setupMutation.mutateAsync()
+      toast.success("Client setup completed", {
+        description: `${result.database} is ready with ${result.company?.name ?? tenant.name} and ${result.admin?.email ?? "admin@admin.com"}.`,
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tenants"] }),
+        queryClient.invalidateQueries({ queryKey: ["tenant-setup-status", tenant.id] }),
+      ])
+    } catch (error) {
+      toast.error("Client setup failed", {
+        description: error instanceof Error ? error.message : "Unable to setup tenant client database.",
+      })
+    }
+  }
+
+  async function publishApps() {
+    try {
+      const result = await appsMutation.mutateAsync(enabledAppDraft)
+      toast.success("Tenant apps published", {
+        description: `${result.name} app access is ready for next tenant login.`,
+      })
+      await queryClient.invalidateQueries({ queryKey: ["tenants"] })
+    } catch (error) {
+      toast.error("Tenant app publish failed", {
+        description: error instanceof Error ? error.message : "Unable to save tenant app access.",
+      })
+    }
+  }
+
   return (
     <MasterListPageFrame
       title={`${tenant.code} - ${tenant.name}`}
@@ -304,61 +356,113 @@ function TenantShowPage({
         </div>
       }
     >
-      <MasterListShowLayout>
-        <div className="space-y-4">
-          <TenantShowCard title="Tenant profile">
-            <DetailTable
-              rows={[
-                ["Name", tenant.name],
-                ["Code", tenant.code],
-                ["Corporate ID", tenant.corporateId],
-                ["Mobile", tenant.mobile],
-                ["Slug", tenant.slug],
-                ["Status", <StatusBadge key="status" status={tenant.status} />],
-              ]}
-            />
-          </TenantShowCard>
-          <TenantShowCard title="Company metrics">
-            <DetailTable
-              rows={[
-                ["Companies", tenant.companyCount],
-                ["Active companies", tenant.activeCompanyCount],
-                ["Company concepts", tenant.companyConceptCount],
-              ]}
-            />
-          </TenantShowCard>
-          <TenantShowCard title="Payload settings">
-            <DetailTable
-              rows={[
-                ["Settings JSON", <pre key="payload" className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs leading-6">{formatJsonText(tenant.payloadSettings)}</pre>],
-              ]}
-            />
-          </TenantShowCard>
-        </div>
-        <div className="space-y-4">
-          <TenantShowCard title="Database">
-            <DetailTable
-              rows={[
-                ["Type", tenant.dbType],
-                ["Host", tenant.dbHost],
-                ["Port", tenant.dbPort],
-                ["Database", tenant.dbName],
-                ["User", tenant.dbUser],
-                ["Secret", tenant.dbSecretRef],
-              ]}
-            />
-          </TenantShowCard>
-          <TenantShowCard title="Timestamps">
-            <DetailTable
-              rows={[
-                ["Created", formatTenantDate(tenant.createdAt)],
-                ["Updated", formatTenantDate(tenant.updatedAt)],
-                ["Deleted", formatTenantDate(tenant.deletedAt)],
-              ]}
-            />
-          </TenantShowCard>
-        </div>
-      </MasterListShowLayout>
+      <AnimatedTabs
+        value={showTab}
+        onValueChange={setShowTab}
+        tabs={[
+          {
+            value: "details",
+            label: "Details",
+            content: (
+              <MasterListShowLayout>
+                <div className="space-y-4">
+                  <TenantShowCard title="Tenant profile">
+                    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pb-8 pt-0">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">Client database setup</div>
+                        <div className="text-xs text-muted-foreground">
+                          {setupMutation.isPending
+                            ? "Creating tenant database, installing migrations, and seeding first user..."
+                            : setupStatusQuery.isFetching
+                              ? "Checking tenant database..."
+                              : setupStatus?.databaseExists
+                                ? setupStatus.hasDefaultCompany
+                                  ? "Tenant database, default company, and seed data are ready."
+                                  : "Tenant database exists. Default client company is not ready."
+                                : "Tenant database was not found for this tenant."}
+                        </div>
+                      </div>
+                      {canSetupClient ? (
+                        <Button
+                          className="h-9 shrink-0 rounded-md"
+                          disabled={setupMutation.isPending || setupStatusQuery.isFetching}
+                          onClick={() => void setupClient()}
+                          type="button"
+                          variant="outline"
+                        >
+                          {setupMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Database className="size-4" />}
+                          {setupMutation.isPending ? "Setting up..." : "Setup client"}
+                        </Button>
+                      ) : null}
+                    </div>
+                    <DetailTable
+                      rows={[
+                        ["Name", tenant.name],
+                        ["Code", tenant.code],
+                        ["Corporate ID", tenant.corporateId],
+                        ["Mobile", tenant.mobile],
+                        ["Slug", tenant.slug],
+                        ["Status", <StatusBadge key="status" status={tenant.status} />],
+                      ]}
+                    />
+                  </TenantShowCard>
+                  <TenantShowCard title="Company metrics">
+                    <DetailTable
+                      rows={[
+                        ["Companies", tenant.companyCount],
+                        ["Active companies", tenant.activeCompanyCount],
+                        ["Company concepts", tenant.companyConceptCount],
+                      ]}
+                    />
+                  </TenantShowCard>
+                  <TenantShowCard title="Payload settings">
+                    <DetailTable
+                      rows={[
+                        ["Settings JSON", <pre key="payload" className="max-h-80 overflow-auto whitespace-pre-wrap rounded-md bg-muted/40 p-3 text-xs leading-6">{formatJsonText(tenant.payloadSettings)}</pre>],
+                      ]}
+                    />
+                  </TenantShowCard>
+                </div>
+                <div className="space-y-4">
+                  <TenantShowCard title="Database">
+                    <DetailTable
+                      rows={[
+                        ["Type", tenant.dbType],
+                        ["Host", tenant.dbHost],
+                        ["Port", tenant.dbPort],
+                        ["Database", tenant.dbName],
+                        ["User", tenant.dbUser],
+                        ["Secret", tenant.dbSecretRef],
+                      ]}
+                    />
+                  </TenantShowCard>
+                  <TenantShowCard title="Timestamps">
+                    <DetailTable
+                      rows={[
+                        ["Created", formatTenantDate(tenant.createdAt)],
+                        ["Updated", formatTenantDate(tenant.updatedAt)],
+                        ["Deleted", formatTenantDate(tenant.deletedAt)],
+                      ]}
+                    />
+                  </TenantShowCard>
+                </div>
+              </MasterListShowLayout>
+            ),
+          },
+          {
+            value: "apps",
+            label: "Apps",
+            content: (
+              <TenantAppsTab
+                enabledApps={enabledAppDraft}
+                isSaving={appsMutation.isPending}
+                onPublish={publishApps}
+                onToggle={(appId, enabled) => setEnabledAppDraft((current) => ({ ...current, [appId]: enabled, application: true }))}
+              />
+            ),
+          },
+        ]}
+      />
     </MasterListPageFrame>
   )
 }
@@ -419,13 +523,21 @@ function TenantUpsertPage({
     >
       <MasterListUpsertLayout>
         <MasterListUpsertCard>
-          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void submit() }}>
-            <AnimatedTabs value={tab} onValueChange={(value) => setTab(value as TenantTab)} tabs={buildTenantTabs({ form, setForm, tenant })} />
-            <Separator />
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={isSaving} className="rounded-md"><Save className={cn("size-4", isSaving && "animate-spin")} />{isEdit ? "Update tenant" : "Create tenant"}</Button>
-              <Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>
-            </div>
+          <form className="space-y-6" onSubmit={(event) => event.preventDefault()}>
+            <AnimatedTabs
+              value={tab}
+              onValueChange={(value) => setTab(value as TenantTab)}
+              tabs={buildTenantTabs({
+                form,
+                isEdit,
+                isSaving,
+                onBack,
+                onSubmit: submit,
+                setForm,
+                setTab,
+                tenant,
+              })}
+            />
           </form>
         </MasterListUpsertCard>
       </MasterListUpsertLayout>
@@ -433,13 +545,83 @@ function TenantUpsertPage({
   )
 }
 
+function TenantAppsTab({
+  enabledApps,
+  isSaving,
+  onPublish,
+  onToggle,
+}: {
+  enabledApps: Record<DashboardAppId, boolean>
+  isSaving: boolean
+  onPublish(): Promise<void>
+  onToggle(appId: DashboardAppId, enabled: boolean): void
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 bg-card/95 p-4 shadow-sm">
+        <div>
+          <h2 className="text-base font-semibold">Tenant app access</h2>
+          <p className="text-sm text-muted-foreground">Enable or disable product areas for this tenant. Publish once after reviewing the switches.</p>
+        </div>
+        <Button className="h-9 rounded-md" disabled={isSaving} onClick={() => void onPublish()} type="button">
+          <Save className={cn("size-4", isSaving && "animate-spin")} />
+          Publish
+        </Button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {dashboardApps.map((app) => {
+          const AppIcon = app.icon
+          const enabled = enabledApps[app.id]
+          const isCore = app.id === "application"
+
+          return (
+            <div
+              key={app.id}
+              className={cn(
+                "rounded-md border p-4 transition-colors",
+                enabled ? "border-primary/30 bg-primary/5" : "border-border/70 bg-card",
+              )}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", app.accent)}>
+                  <AppIcon className="size-5" />
+                </span>
+                <Switch checked={enabled} disabled={isCore} onCheckedChange={(checked) => onToggle(app.id, checked)} />
+              </div>
+              <div className="mt-4">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-foreground">{app.name}</h3>
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px]", enabled ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                    {enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{app.description}</p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function buildTenantTabs({
   form,
+  isEdit,
+  isSaving,
+  onBack,
+  onSubmit,
   setForm,
+  setTab,
   tenant,
 }: {
   form: TenantFormState
+  isEdit: boolean
+  isSaving: boolean
+  onBack(): void
+  onSubmit(): Promise<void>
   setForm: Dispatch<SetStateAction<TenantFormState>>
+  setTab: Dispatch<SetStateAction<TenantTab>>
   tenant: TenantRecord | null
 }) {
   return [
@@ -449,10 +631,10 @@ function buildTenantTabs({
       content: (
         <div className="space-y-6 rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm md:p-6">
           <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
-            <TextField label="Tenant code" value={form.code || (tenant ? "" : "Auto")} disabled={!tenant} onChange={(value) => setField(setForm, "code", value.replace(/\D/g, ""))} />
+            <TextField label="Tenant name" value={form.name} onChange={(value) => setTenantName(setForm, value, Boolean(tenant))} />
+            <TenantCodeField value={form.code} onChange={(value) => setField(setForm, "code", value.replace(/\D/g, ""))} />
             <TextField label="Corporate ID" value={form.corporateId} inputClassName="font-mono uppercase" onChange={(value) => setField(setForm, "corporateId", corporateId(value))} />
             <TextField label="Mobile" value={form.mobile} inputClassName="font-mono" onChange={(value) => setField(setForm, "mobile", value.replace(/\D/g, ""))} />
-            <TextField label="Tenant name" value={form.name} onChange={(value) => setTenantName(setForm, value, Boolean(tenant))} />
             <TextField label="Slug" value={form.slug} inputClassName="font-mono lowercase" onChange={(value) => setTenantSlug(setForm, value, Boolean(tenant))} />
             <SwitchRow
               checked={form.status === "active"}
@@ -461,6 +643,7 @@ function buildTenantTabs({
               onChange={(checked) => setField(setForm, "status", checked ? "active" : "suspend")}
             />
           </div>
+          <TenantStepActions onBack={onBack} onNext={() => setTab("database")} />
         </div>
       ),
     },
@@ -477,6 +660,7 @@ function buildTenantTabs({
             <TextField label="User" value={form.dbUser} onChange={(value) => setField(setForm, "dbUser", value)} />
             <TextField label="Secret reference" value={form.dbSecretRef} inputClassName="font-mono" onChange={(value) => setField(setForm, "dbSecretRef", value)} />
           </div>
+          <TenantStepActions onBack={onBack} onNext={() => setTab("settings")} />
         </div>
       ),
     },
@@ -484,12 +668,48 @@ function buildTenantTabs({
       value: "settings",
       label: "Settings",
       content: (
-        <div className="rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm md:p-6">
+        <div className="space-y-6 rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm md:p-6">
           <TextField label="Payload settings JSON" value={form.payloadSettings} onChange={(value) => setField(setForm, "payloadSettings", value)} />
+          <TenantStepActions
+            isSaving={isSaving}
+            onBack={onBack}
+            onSubmit={onSubmit}
+            submitLabel={isEdit ? "Update tenant" : "Create tenant"}
+          />
         </div>
       ),
     },
   ] as const
+}
+
+function TenantStepActions({
+  isSaving,
+  onBack,
+  onNext,
+  onSubmit,
+  submitLabel,
+}: {
+  isSaving?: boolean
+  onBack(): void
+  onNext?(): void
+  onSubmit?(): Promise<void>
+  submitLabel?: string
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 border-t border-border/70 pt-5">
+      {onSubmit ? (
+        <Button type="button" disabled={isSaving} className="rounded-md" onClick={() => void onSubmit()}>
+          <Save className={cn("size-4", isSaving && "animate-spin")} />
+          {submitLabel ?? "Create tenant"}
+        </Button>
+      ) : (
+        <Button type="button" className="rounded-md" onClick={onNext}>
+          Next
+        </Button>
+      )}
+      <Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>
+    </div>
+  )
 }
 
 function TenantActions({ tenant, onDestroy, onEdit, onRestore, onView }: {
@@ -588,6 +808,31 @@ function TextField({ disabled, inputClassName, label, onChange, value }: { disab
   return <FieldShell label={label}><Input disabled={disabled} className={cn("h-11 rounded-xl", inputClassName)} value={value ?? ""} onChange={(event) => onChange(event.target.value)} /></FieldShell>
 }
 
+function TenantCodeField({ onChange, value }: { value: string; onChange(value: string): void }) {
+  return (
+    <FieldShell label="Tenant code">
+      <div className="flex gap-2">
+        <Input
+          className="h-11 rounded-xl font-mono"
+          inputMode="numeric"
+          placeholder="Auto"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <Button
+          className="h-11 shrink-0 rounded-xl"
+          disabled={!value}
+          onClick={() => onChange("")}
+          type="button"
+          variant="outline"
+        >
+          Auto
+        </Button>
+      </div>
+    </FieldShell>
+  )
+}
+
 function ReadOnlyField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <FieldShell label={label}>
@@ -646,7 +891,7 @@ function DetailTable({ rows }: { rows: Array<[string, ReactNode]> }) {
 
 function TenantShowCard({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <MasterListShowCard title={title} className="gap-0 py-0 [&>div:first-child]:px-4 [&>div:first-child]:py-3">
+    <MasterListShowCard title={title} className="gap-0 py-0 [&>div:first-child]:px-4 [&>div:first-child]:py-2">
       {children}
     </MasterListShowCard>
   )
@@ -658,12 +903,24 @@ function setField<K extends keyof TenantFormState>(setForm: Dispatch<SetStateAct
 
 function setTenantName(setForm: Dispatch<SetStateAction<TenantFormState>>, value: string, isEdit: boolean) {
   setForm((current) => {
-    if (isEdit || current.slug.trim()) {
+    if (isEdit) {
       return { ...current, name: value }
     }
 
+    const currentNameSlug = slugify(current.name)
+    const currentNameCorporateId = corporateIdFromName(current.name)
     const nextSlug = slugify(value)
-    return { ...current, name: value, corporateId: corporateId(nextSlug), slug: nextSlug, dbName: databaseName(nextSlug) }
+    const nextCorporateId = corporateIdFromName(value)
+    const shouldSyncSlug = !current.slug.trim() || current.slug === currentNameSlug
+    const shouldSyncCorporateId = !current.corporateId.trim() || current.corporateId === currentNameCorporateId
+
+    return {
+      ...current,
+      name: value,
+      corporateId: shouldSyncCorporateId ? nextCorporateId : current.corporateId,
+      slug: shouldSyncSlug ? nextSlug : current.slug,
+      dbName: shouldSyncSlug ? databaseName(nextSlug) : current.dbName,
+    }
   })
 }
 
@@ -682,6 +939,10 @@ function slugify(value: string) {
 
 function corporateId(value: string) {
   return value.toUpperCase().replace(/[^A-Z0-9_]+/g, "_").replace(/^_+|_+$/g, "")
+}
+
+function corporateIdFromName(value: string) {
+  return value.toUpperCase().replace(/[^A-Z0-9]+/g, "")
 }
 
 function databaseName(value: string) {
@@ -704,4 +965,57 @@ function isValidJsonObject(value: string) {
   } catch {
     return false
   }
+}
+
+function tenantEnabledAppMap(tenant: TenantRecord): Record<DashboardAppId, boolean> {
+  const settings = parseTenantPayloadSettings(tenant.payloadSettings)
+  const enabledIds = Array.isArray(settings.apps?.enabled)
+    ? settings.apps.enabled.filter(isDashboardAppId)
+    : dashboardApps.filter((app) => app.status !== "disabled").map((app) => app.id)
+
+  return Object.fromEntries(dashboardApps.map((app) => [app.id, app.id === "application" || enabledIds.includes(app.id)])) as Record<DashboardAppId, boolean>
+}
+
+function toTenantFeatureInput(tenant: TenantRecord, enabledApps: Record<DashboardAppId, boolean>): TenantUpsertInput {
+  const settings = parseTenantPayloadSettings(tenant.payloadSettings)
+  const enabled = dashboardApps
+    .filter((app) => app.id !== "application" && enabledApps[app.id])
+    .map((app) => app.id)
+
+  return {
+    id: tenant.id,
+    code: tenant.code,
+    corporate_id: tenant.corporateId,
+    mobile: tenant.mobile,
+    slug: tenant.slug,
+    name: tenant.name,
+    status: tenant.status,
+    db_type: tenant.dbType,
+    db_host: tenant.dbHost,
+    db_port: tenant.dbPort,
+    db_name: tenant.dbName,
+    db_user: tenant.dbUser,
+    db_secret_ref: tenant.dbSecretRef,
+    payload_settings: JSON.stringify({
+      ...settings,
+      apps: {
+        ...(settings.apps ?? {}),
+        enabled,
+        publishedAt: new Date().toISOString(),
+      },
+    }, null, 2),
+  }
+}
+
+function parseTenantPayloadSettings(value: string): { apps?: { enabled?: unknown[]; publishedAt?: string }; [key: string]: unknown } {
+  try {
+    const parsed = JSON.parse(value || "{}")
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function isDashboardAppId(value: unknown): value is DashboardAppId {
+  return typeof value === "string" && dashboardApps.some((app) => app.id === value)
 }

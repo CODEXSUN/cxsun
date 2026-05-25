@@ -9,6 +9,7 @@ export interface AuthTenant {
   name: string
   status: string
   role: string
+  payload_settings?: string
 }
 
 export interface AuthSession {

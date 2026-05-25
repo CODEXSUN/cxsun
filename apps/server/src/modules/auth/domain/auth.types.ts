@@ -14,6 +14,7 @@ export interface AuthTenantAccess {
   name: string
   status: string
   role: string
+  payload_settings?: string
 }
 
 export type PlatformUserStatus = 'active' | 'inactive' | 'suspend'

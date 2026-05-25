@@ -16,12 +16,15 @@ import { getDefaultCompanyContext } from 'src/features/company/company-client'
 import { pageModuleKey, pageModuleKind } from 'src/features/master-data/application/master-data-service'
 import {
   appModulePages,
+  dashboardApps,
   defaultEnabledApps,
   getDashboardApp,
   isDashboardAppId,
   type DashboardAppId,
 } from './dashboard-apps'
 import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card'
+import { RadioGroup, RadioGroupItem } from 'src/components/ui/radio-group'
+import { Switch } from 'src/components/ui/switch'
 import { Spinner } from 'src/components/ui/spinner'
 import { cn } from 'src/lib/utils'
 
@@ -149,6 +152,8 @@ function dashboardAppFromPage(page: DashboardPage): DashboardAppId | null {
 }
 
 function defaultPageForApp(appId: DashboardAppId): DashboardPage {
+  if (appId === "billing") return "app-billing-sales"
+  if (appId === "inventory") return "app-inventory-purchase"
   if (appId === "taskmanager") return "app-taskmanager-tasks"
   return "overview"
 }
@@ -198,11 +203,27 @@ export function DashboardView({
 }) {
   const authSurface: AuthSurface = mode === "super-admin" ? "super-admin" : mode
   const initialPage = dashboardPageFromPath(basePath)
+  const storedSession = getStoredSession(authSurface)
+  const initialEnabledApps = mode === "tenant" && storedSession ? enabledAppsForSession(storedSession) : readStoredEnabledApps()
+  const initialLandingApp = readStoredLandingApp(initialEnabledApps)
   const [activePage, setActivePage] = useState<DashboardPage>(() => initialPage)
-  const [session, setSession] = useState<AuthSession | null>(() => getStoredSession(authSurface))
+  const [session, setSession] = useState<AuthSession | null>(() => storedSession)
   const [authPage, setAuthPage] = useState<"login" | "forgot-password">("login")
-  const [activeApp, setActiveApp] = useState<DashboardAppId>(() => dashboardAppFromPage(initialPage) ?? readStoredApp())
-  const [enabledApps, setEnabledApps] = useState<Record<DashboardAppId, boolean>>(() => readStoredEnabledApps())
+  const [enabledApps, setEnabledApps] = useState<Record<DashboardAppId, boolean>>(() => initialEnabledApps)
+  const [landingApp, setLandingApp] = useState<DashboardAppId>(() => initialLandingApp)
+  const [activeApp, setActiveApp] = useState<DashboardAppId>(() => dashboardAppFromPage(initialPage) ?? (initialPage === "overview" && mode === "tenant" ? initialLandingApp : readStoredApp()))
+
+  useEffect(() => {
+    if (mode !== "tenant" || !session) return
+    const nextEnabledApps = enabledAppsForSession(session)
+    const nextLandingApp = readStoredLandingApp(nextEnabledApps)
+    setEnabledApps(nextEnabledApps)
+    setLandingApp(nextLandingApp)
+    if (!nextEnabledApps[activeApp]) {
+      setActiveApp(nextLandingApp)
+      pushDashboardPage(basePath, defaultPageForApp(nextLandingApp))
+    }
+  }, [activeApp, basePath, mode, session])
 
   useEffect(() => {
     function syncDashboardPage() {
@@ -280,7 +301,9 @@ export function DashboardView({
     setSession(switchTenant(session, tenantSlug, authSurface))
   }
 
-  const visiblePage = pageAccess[mode].includes(activePage) ? activePage : "overview"
+  const accessiblePage = pageAccess[mode].includes(activePage) ? activePage : "overview"
+  const activePageApp = dashboardAppFromPage(accessiblePage)
+  const visiblePage = activePageApp && !enabledApps[activePageApp] ? "overview" : accessiblePage
   const breadcrumbLabel = getBreadcrumbLabel({ appId: activeApp, mode, page: visiblePage })
   const moduleKey = pageModuleKey(visiblePage)
 
@@ -321,9 +344,22 @@ export function DashboardView({
     setEnabledApps(nextEnabledApps)
     window.localStorage.setItem("cxsun.enabledApps.v2", JSON.stringify(nextEnabledApps))
 
+    if (!enabled && landingApp === appId) {
+      changeLandingApp(fallbackLandingApp(nextEnabledApps))
+    }
+
     if (!enabled && activeApp === appId) {
       changeApp("application")
     }
+  }
+
+  function changeLandingApp(appId: DashboardAppId) {
+    if (!enabledApps[appId]) {
+      return
+    }
+
+    setLandingApp(appId)
+    window.localStorage.setItem("cxsun.landingApp.v1", appId)
   }
 
   return (
@@ -364,6 +400,15 @@ export function DashboardView({
             <CompanyPage session={session} />
           ) : visiblePage === "app-application-default-company" ? (
             <DefaultCompanyPage session={session} />
+          ) : visiblePage === "app-application-landing-desk" ? (
+            <LandingDeskSettingsPage
+              activeApp={activeApp}
+              enabledApps={enabledApps}
+              landingApp={landingApp}
+              onChangeApp={changeApp}
+              onChangeLandingApp={changeLandingApp}
+              onToggleApp={toggleApp}
+            />
           ) : visiblePage === "system-update" ? (
             <SystemUpdateView session={session} />
           ) : visiblePage === "user-manager" ? (
@@ -524,6 +569,112 @@ function AppModuleDesk({ appId, page }: { appId: DashboardAppId; page: Dashboard
   )
 }
 
+function LandingDeskSettingsPage({
+  activeApp,
+  enabledApps,
+  landingApp,
+  onChangeApp,
+  onChangeLandingApp,
+  onToggleApp,
+}: {
+  activeApp: DashboardAppId
+  enabledApps: Record<DashboardAppId, boolean>
+  landingApp: DashboardAppId
+  onChangeApp(appId: DashboardAppId): void
+  onChangeLandingApp(appId: DashboardAppId): void
+  onToggleApp(appId: DashboardAppId, enabled: boolean): void
+}) {
+  const enabledAppOptions = dashboardApps.filter((app) => enabledApps[app.id])
+
+  return (
+    <div className="@container/main flex flex-1 flex-col gap-6 px-4 py-4 md:py-6 lg:px-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Landing Desk</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Choose which enabled app opens first for this tenant workspace.</p>
+      </div>
+
+      <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
+        <CardHeader>
+          <CardTitle>Default landing app</CardTitle>
+          <p className="text-sm text-muted-foreground">Only enabled apps are available as landing choices.</p>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup value={landingApp} onValueChange={(value) => isDashboardAppId(value) && onChangeLandingApp(value)} className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {enabledAppOptions.map((app) => {
+              const AppIcon = app.icon
+              return (
+                <label
+                  key={app.id}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-md border p-4 transition hover:border-primary/40 hover:bg-muted/30",
+                    landingApp === app.id ? "border-primary/50 bg-primary/5" : "border-border/70 bg-background",
+                  )}
+                >
+                  <RadioGroupItem value={app.id} className="mt-1" />
+                  <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", app.accent)}>
+                    <AppIcon className="size-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-semibold text-foreground">{app.name}</span>
+                    <span className="mt-1 block text-sm leading-5 text-muted-foreground">{app.description}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </RadioGroup>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
+        <CardHeader>
+          <CardTitle>Enabled apps</CardTitle>
+          <p className="text-sm text-muted-foreground">Apps enabled here can be selected as the landing desk and opened from the app switcher.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {dashboardApps.map((app) => {
+            const enabled = enabledApps[app.id]
+            const AppIcon = app.icon
+            return (
+              <div
+                key={app.id}
+                className={cn(
+                  "rounded-md border p-4",
+                  app.id === activeApp ? "border-primary/50 bg-primary/5" : "border-border/70 bg-background",
+                )}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <span className={cn("flex size-10 items-center justify-center rounded-md", app.accent)}>
+                    <AppIcon className="size-5" />
+                  </span>
+                  <Switch
+                    checked={enabled}
+                    disabled={app.status === "core"}
+                    onCheckedChange={(checked) => onToggleApp(app.id, checked)}
+                  />
+                </div>
+                <div className="mt-4">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-foreground">{app.name}</h3>
+                    <span className={cn("rounded-full px-2 py-0.5 text-[11px]", enabled ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                      {enabled ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{app.description}</p>
+                  {enabled ? (
+                    <button className="mt-3 text-sm font-medium text-primary hover:underline" type="button" onClick={() => onChangeApp(app.id)}>
+                      Open app
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 function getBreadcrumbLabel({ appId, mode, page }: { appId: DashboardAppId; mode: DashboardMode; page: DashboardPage }) {
   const app = getDashboardApp(appId)
   if (page === "overview") return `${app.name} Desk`
@@ -567,9 +718,9 @@ function appGroupDescription(title: string) {
 }
 
 function readStoredApp(): DashboardAppId {
-  const value = window.localStorage.getItem("cxsun.activeApp") ?? "application"
+  const value = window.localStorage.getItem("cxsun.activeApp") ?? "billing"
   if (value === "cms") return "sites"
-  return isDashboardAppId(value) ? value : "application"
+  return isDashboardAppId(value) ? value : "billing"
 }
 
 function readStoredEnabledApps(): Record<DashboardAppId, boolean> {
@@ -580,4 +731,37 @@ function readStoredEnabledApps(): Record<DashboardAppId, boolean> {
   } catch {
     return defaultEnabledApps
   }
+}
+
+function enabledAppsForSession(session: AuthSession): Record<DashboardAppId, boolean> {
+  const tenantSettings = parseTenantPayloadSettings(session.selectedTenant.payload_settings)
+  const enabledIds = Array.isArray(tenantSettings.apps?.enabled)
+    ? tenantSettings.apps.enabled.filter((value): value is DashboardAppId => typeof value === "string" && isDashboardAppId(value))
+    : null
+
+  if (!enabledIds) {
+    return readStoredEnabledApps()
+  }
+
+  const enabled = Object.fromEntries(dashboardApps.map((app) => [app.id, app.id === "application" || enabledIds.includes(app.id)])) as Record<DashboardAppId, boolean>
+  return { ...enabled, application: true }
+}
+
+function parseTenantPayloadSettings(value?: string): { apps?: { enabled?: unknown[] } } {
+  try {
+    const parsed = value ? JSON.parse(value) : {}
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function readStoredLandingApp(enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
+  const value = window.localStorage.getItem("cxsun.landingApp.v1") ?? "billing"
+  return isDashboardAppId(value) && enabledApps[value] ? value : fallbackLandingApp(enabledApps)
+}
+
+function fallbackLandingApp(enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
+  if (enabledApps.billing) return "billing"
+  return dashboardApps.find((app) => enabledApps[app.id])?.id ?? "application"
 }

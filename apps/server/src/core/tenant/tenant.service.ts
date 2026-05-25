@@ -4,6 +4,7 @@ import { ListTenantsUseCase } from './application/list-tenants.use-case.js'
 import { RestoreTenantUseCase } from './application/restore-tenant.use-case.js'
 import { ResolveTenantContextUseCase } from './application/resolve-tenant-context.use-case.js'
 import { SoftDeleteTenantUseCase } from './application/soft-delete-tenant.use-case.js'
+import { SetupTenantClientUseCase } from './application/setup-tenant-client.use-case.js'
 import { TenantEventBus } from './application/tenant-event-bus.js'
 import { UpsertTenantUseCase } from './application/upsert-tenant.use-case.js'
 import type { TenantUpsertInput } from './domain/tenant.types.js'
@@ -17,6 +18,7 @@ export class TenantService {
     @Inject(RestoreTenantUseCase) private readonly restoreTenant: RestoreTenantUseCase,
     @Inject(ResolveTenantContextUseCase) private readonly resolveTenantContext: ResolveTenantContextUseCase,
     @Inject(SoftDeleteTenantUseCase) private readonly softDeleteTenant: SoftDeleteTenantUseCase,
+    @Inject(SetupTenantClientUseCase) private readonly setupTenantClient: SetupTenantClientUseCase,
     @Inject(UpsertTenantUseCase) private readonly upsertTenant: UpsertTenantUseCase,
     @Inject(TenantEventBus) private readonly tenantEvents: TenantEventBus,
   ) {}
@@ -35,6 +37,14 @@ export class TenantService {
 
   restore(id: number) {
     return this.restoreTenant.execute(id)
+  }
+
+  setupStatus(id: number) {
+    return this.setupTenantClient.status(id)
+  }
+
+  setupClient(id: number) {
+    return this.setupTenantClient.execute(id)
   }
 
   context(tenantCode?: string | string[], host?: string | string[]) {

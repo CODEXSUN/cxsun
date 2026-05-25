@@ -108,6 +108,7 @@ export const dashboardApps: DashboardAppDefinition[] = [
           { title: "Company", page: "company", icon: Building2 },
           { ...item("application", "default-company", "Default Company", Building2) },
           { title: "Roles", page: "tenant-roles", icon: Settings },
+          { ...item("application", "landing-desk", "Landing Desk", Settings) },
         ],
       },
     ],

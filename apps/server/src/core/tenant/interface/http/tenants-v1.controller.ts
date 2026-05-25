@@ -38,6 +38,18 @@ export class TenantsV1Controller {
     return this.tenantService.upsert(body)
   }
 
+  @Get(':id/setup-status')
+  @UseGuards(AuthGuard)
+  async setupStatus(@Param('id') id: string) {
+    return this.tenantService.setupStatus(Number(id))
+  }
+
+  @Post(':id/setup-client')
+  @UseGuards(AuthGuard)
+  async setupClient(@Param('id') id: string) {
+    return this.tenantService.setupClient(Number(id))
+  }
+
   @Delete(':id')
   @UseGuards(AuthGuard)
   async softDelete(@Param('id') id: string) {

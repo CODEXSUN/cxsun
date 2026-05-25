@@ -1,5 +1,6 @@
 import { Injectable } from '../../decorators/injectable.js'
 import { getDatabase } from '../../../infrastructure/database/connection.js'
+import { nowIso } from '../../../infrastructure/database/database-module.js'
 import type { Tenant, TenantUpsertData } from '../domain/tenant.types.js'
 
 const tenantColumns = [
@@ -231,7 +232,7 @@ export class TenantRepository {
         db_user: data.db_user,
         db_secret_ref: data.db_secret_ref,
         payload_settings: data.payload_settings,
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso(),
       })
       .where('id', '=', id)
       .execute()
@@ -255,7 +256,7 @@ export class TenantRepository {
   }
 
   async softDelete(id: number): Promise<boolean> {
-    const deletedAt = new Date().toISOString()
+    const deletedAt = nowIso()
 
     const result = await getDatabase()
       .updateTable('tenants')
@@ -272,7 +273,7 @@ export class TenantRepository {
   }
 
   async restore(id: number): Promise<boolean> {
-    const restoredAt = new Date().toISOString()
+    const restoredAt = nowIso()
 
     const result = await getDatabase()
       .updateTable('tenants')

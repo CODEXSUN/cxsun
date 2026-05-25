@@ -5,6 +5,7 @@ import { TenantDatabaseProvisioner } from '../../infrastructure/tenant-database/
 import { ListTenantsUseCase } from './application/list-tenants.use-case.js'
 import { RestoreTenantUseCase } from './application/restore-tenant.use-case.js'
 import { ResolveTenantContextUseCase } from './application/resolve-tenant-context.use-case.js'
+import { SetupTenantClientUseCase } from './application/setup-tenant-client.use-case.js'
 import { SoftDeleteTenantUseCase } from './application/soft-delete-tenant.use-case.js'
 import { TenantEventBus } from './application/tenant-event-bus.js'
 import { UpsertTenantUseCase } from './application/upsert-tenant.use-case.js'
@@ -20,6 +21,7 @@ import { TenantService } from './tenant.service.js'
     ListTenantsUseCase,
     RestoreTenantUseCase,
     ResolveTenantContextUseCase,
+    SetupTenantClientUseCase,
     SoftDeleteTenantUseCase,
     UpsertTenantUseCase,
     TenantRepository,
