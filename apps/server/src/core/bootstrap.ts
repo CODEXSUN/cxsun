@@ -53,7 +53,8 @@ export class CxApp {
     const container = new Container()
 
     await app.register(cors, {
-      origin: true,
+      origin: resolveCorsOrigin,
+      credentials: true,
       allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'x-tenant-code', 'x-user-email'],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     })
@@ -256,4 +257,62 @@ export class CxApp {
       this.app.log.error({ err: reason }, 'Unhandled rejection')
     })
   }
+}
+
+function resolveCorsOrigin(origin: string | undefined, callback: (error: Error | null, allowed: boolean) => void) {
+  if (!origin) {
+    callback(null, true)
+    return
+  }
+
+  if (isAllowedCorsOrigin(origin)) {
+    callback(null, true)
+    return
+  }
+
+  callback(null, false)
+}
+
+function isAllowedCorsOrigin(origin: string) {
+  const parsed = parseOrigin(origin)
+  if (!parsed) return false
+
+  if (parsed.protocol === 'https:') return true
+
+  if (isLocalhost(parsed.hostname)) return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+
+  return configuredCorsOrigins().has(normalizeOrigin(origin))
+}
+
+function configuredCorsOrigins() {
+  const origins = [
+    settings.urls.frontend,
+    settings.urls.electronDevServer,
+    settings.cors.origins,
+  ]
+    .flatMap((value) => value?.split(',') ?? [])
+    .map((value) => normalizeOrigin(value))
+    .filter(Boolean)
+
+  return new Set(origins)
+}
+
+function normalizeOrigin(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return ''
+
+  const parsed = parseOrigin(trimmed)
+  return parsed ? parsed.origin : ''
+}
+
+function parseOrigin(value: string) {
+  try {
+    return new URL(value)
+  } catch {
+    return null
+  }
+}
+
+function isLocalhost(hostname: string) {
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1'
 }

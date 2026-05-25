@@ -22,7 +22,7 @@ for (const result of provisioning) {
 try {
   await app.start()
 
-  const healthUrl = `http://localhost:${(app as any).port || 6001}/health`
+  const healthUrl = `http://localhost:${(app as any).port || 6005}/health`
   const res = await fetch(healthUrl)
   const body = await res.json()
   console.log(`  ok Health check: ${JSON.stringify(body)}`)

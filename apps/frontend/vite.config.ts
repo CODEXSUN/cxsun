@@ -13,11 +13,11 @@ function apiProxyTarget(env: Record<string, string>) {
   if (env.VITE_API_BASE_URL) return env.VITE_API_BASE_URL
 
   try {
-    if (!existsSync(serverStatePath)) return 'http://localhost:6001'
+    if (!existsSync(serverStatePath)) return 'http://localhost:6005'
     const state = JSON.parse(readFileSync(serverStatePath, 'utf8')) as { apiBaseUrl?: string; port?: number }
-    return state.apiBaseUrl || `http://localhost:${state.port || 6001}`
+    return state.apiBaseUrl || `http://localhost:${state.port || 6005}`
   } catch {
-    return 'http://localhost:6001'
+    return 'http://localhost:6005'
   }
 }
 

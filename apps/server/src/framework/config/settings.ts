@@ -3,7 +3,7 @@ import { envNumber, envOptionalString, envString } from './env.js'
 export const settings = {
   server: {
     host: envString('HOST', '0.0.0.0'),
-    port: envNumber('PORT', 6001),
+    port: envNumber('PORT', 6005),
     logLevel: envString('LOG_LEVEL', 'info'),
     bodyLimitBytes: envNumber('BODY_LIMIT_BYTES', 30 * 1024 * 1024),
   },
@@ -15,6 +15,9 @@ export const settings = {
     electronDevServer: envOptionalString('ELECTRON_DEV_SERVER_URL'),
     vitePort: envNumber('VITE_PORT', 6010),
     backendHealth: envOptionalString('BACKEND_HEALTH_URL'),
+  },
+  cors: {
+    origins: envOptionalString('CORS_ORIGINS'),
   },
   package: {
     version: envString('npm_package_version', '0.0.0'),

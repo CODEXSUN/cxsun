@@ -10,8 +10,12 @@ It clones the repo into `/workspace/cxsun`, creates `.env` from `.env.sample` wh
 
 Default services:
 
-- Backend: `http://localhost:6001`
+- Backend: `http://localhost:6005`
 - Frontend: `http://localhost:6010`
+- MariaDB access from the app: `mariadb:3306`
+- Redis container access from the app: `redis:6379`
+- Redis host access: `localhost:6380`
+- CORS defaults: localhost frontend plus HTTPS origins. Set `FRONTEND_URL` or comma-separated `CORS_ORIGINS` for cloud domains.
 
 Create the shared Docker network once:
 
@@ -21,33 +25,26 @@ docker network create codexion-network
 
 If the network already exists, Docker will report it and you can continue.
 
-## 2. Start Existing Database Services
+## 2. Start Services
 
-The app compose joins the existing `codexion-network`. Database services in `.container/database` already use the same network.
+The app compose joins the existing `codexion-network`.
 
-Start PostgreSQL:
+MariaDB is expected to already exist on the same Docker network with service/container host `mariadb`, port `3306`, and root password `DbPass1@@`.
 
-```bash
-docker compose -f .container/database/postgres.yml up -d
-```
-
-Start Redis:
+Install/start Redis:
 
 ```bash
 docker compose -f .container/database/redis.yml up -d
 ```
 
-Start MariaDB only if you need it:
-
-```bash
-docker compose -f .container/database/mariadb.yml up -d
-```
-
 The app defaults to these container service names:
 
-- PostgreSQL host: `postgres`
-- Redis host: `redis`
 - MariaDB host: `mariadb`
+- Redis host: `redis`
+
+Redis intentionally publishes a host port that does not conflict with typical local installs:
+
+- Redis container port `6379` is published as host port `6380`.
 
 ## 3. Build Image
 
@@ -69,7 +66,8 @@ First startup will:
 
 - Clone `https://github.com/CODEXSUN/cxsun.git` into `/workspace/cxsun`
 - Copy `.env.sample` to `.env` if `.env` does not exist
-- Write the configured ports, database host, and Redis host into `.env`
+- Write the configured ports, MariaDB host, and Redis host into `.env`
+- Start Redis with `.container/database/redis.yml` when using `.container/setup-local.sh`
 - Run `npm ci` or `npm install`
 - Run `npm run build:active`
 - Start backend and frontend preview
@@ -85,7 +83,7 @@ docker compose -f .container/docker-compose.yml ps
 Check backend health:
 
 ```bash
-curl http://localhost:6001/health
+curl http://localhost:6005/health
 ```
 
 Open frontend:
@@ -148,15 +146,15 @@ docker compose -f .container/docker-compose.yml restart cxsun
 
 ## 9. Custom Ports
 
-Run backend on `7001` and frontend on `7010`:
+Run backend on `7005` and frontend on `7010`:
 
 ```bash
-PORT=7001 VITE_PORT=7010 VITE_API_BASE_URL=http://localhost:7001 docker compose -f .container/docker-compose.yml up -d --build
+PORT=7005 VITE_PORT=7010 VITE_API_BASE_URL=http://localhost:7005 docker compose -f .container/docker-compose.yml up -d --build
 ```
 
 Then use:
 
-- Backend: `http://localhost:7001`
+- Backend: `http://localhost:7005`
 - Frontend: `http://localhost:7010`
 
 ## 10. Clean Local Redeploy Script

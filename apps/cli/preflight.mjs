@@ -257,7 +257,7 @@ async function checkServerDatabase(env) {
 }
 
 const env = loadDotEnv()
-const defaults = { server: 6001, frontend: 6010 }
+const defaults = { server: 6005, frontend: 6010 }
 const envKey = APP === 'server' ? 'PORT' : 'VITE_PORT'
 let port = Number(env[envKey]) || defaults[APP]
 

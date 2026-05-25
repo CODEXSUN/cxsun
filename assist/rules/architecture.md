@@ -225,4 +225,4 @@ Root `.env` feeds local development. Never commit real secrets.
 Current default local ports:
 
 - Frontend: `6010`
-- Server: `6001`
+- Server: `6005`

@@ -21,6 +21,6 @@ RUN chmod +x /usr/local/bin/cxsun-entrypoint \
   && mkdir -p /workspace \
   && chmod 777 /workspace
 
-EXPOSE 6001 6010
+EXPOSE 6005 6010
 
 ENTRYPOINT ["/usr/local/bin/cxsun-entrypoint"]

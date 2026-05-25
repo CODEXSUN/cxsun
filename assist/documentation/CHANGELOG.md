@@ -2,13 +2,25 @@
 
 ## Version State
 
-- **Current version:** `1.0.29`
-- **Release tag:** `v-1.0.29`
-- **Changelog label:** `v 1.0.29`
+- **Current version:** `1.0.30`
+- **Release tag:** `v-1.0.30`
+- **Changelog label:** `v 1.0.30`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.30
+
+### [v 1.0.30] 2026-05-25 10:43 am - container ports mariadb redis and https cors
+
+- Bumped workspace version to 1.0.30
+- Moved all active backend defaults from port `6001` to `6005`, including local env, Docker expose/publish settings, server settings, frontend proxy fallback, and assist architecture guidance.
+- Aligned Docker/cloud configuration to use the existing MariaDB service at `mariadb:3306` with `DbPass1@@`, while keeping local `.env` pointed at `localhost:3306` with the local password.
+- Removed the PostgreSQL container setup from the active deployment path and documented the MariaDB/Redis split between local and Docker/cloud environments.
+- Added Redis installation/startup support through `.container/database/redis.yml` and `.container/setup-local.sh`, with container env written by the entrypoint as `redis:6379`.
+- Added configurable HTTPS-aware CORS support using `FRONTEND_URL` and comma-separated `CORS_ORIGINS`, while preserving localhost development origins.
+- Verified the release with Docker compose config checks for the app and Redis plus the standard `npm run check`.
 
 ## v-1.0.29
 

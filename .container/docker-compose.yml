@@ -14,18 +14,20 @@ services:
       GIT_PULL_ON_START: ${GIT_PULL_ON_START:-false}
       APP_DIR: /workspace/cxsun
       HOST: 0.0.0.0
-      PORT: ${PORT:-6001}
+      PORT: ${PORT:-6005}
       VITE_PORT: ${VITE_PORT:-6010}
-      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:6001}
-      DB_HOST: ${DB_HOST:-postgres}
-      DB_PORT: ${DB_PORT:-5432}
-      DB_NAME: ${DB_NAME:-codexsun_db}
-      DB_USER: ${DB_USER:-codexsun}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:6005}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:6010}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:6010,https://localhost:6010}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-cxsun_master}
+      DB_USER: ${DB_USER:-root}
       DB_PASSWORD: ${DB_PASSWORD:-DbPass1@@}
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
     ports:
-      - "${PORT:-6001}:${PORT:-6001}"
+      - "${PORT:-6005}:${PORT:-6005}"
       - "${VITE_PORT:-6010}:${VITE_PORT:-6010}"
     volumes:
       - cxsun-volume:/workspace
