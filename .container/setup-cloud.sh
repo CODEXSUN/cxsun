@@ -4,6 +4,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 REDIS_COMPOSE_FILE="$SCRIPT_DIR/database/redis.yml"
+FRESH_INSTALL=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --fresh)
+      FRESH_INSTALL=true
+      ;;
+    -h|--help)
+      echo "Usage: bash .container/setup-cloud.sh [--fresh]"
+      echo "  --fresh  Remove and recreate the CXSun app container/workspace volume. MariaDB is never touched."
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $arg" >&2
+      echo "Usage: bash .container/setup-cloud.sh [--fresh]" >&2
+      exit 1
+      ;;
+  esac
+done
 
 export GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}"
 export GIT_BRANCH="${GIT_BRANCH:-main}"
@@ -30,6 +49,7 @@ echo "Backend port: $PORT"
 echo "Frontend port: $VITE_PORT"
 echo "MariaDB: $DB_HOST:$DB_PORT/$DB_NAME"
 echo "Redis: $REDIS_HOST:$REDIS_PORT"
+echo "Fresh reinstall: $FRESH_INSTALL"
 
 if ! docker network inspect codexion-network >/dev/null 2>&1; then
   echo "Creating Docker network codexion-network"
@@ -45,6 +65,13 @@ docker stop cxsun >/dev/null 2>&1 || true
 
 echo "Removing existing CXSun container"
 docker rm cxsun >/dev/null 2>&1 || true
+
+if [ "$FRESH_INSTALL" = "true" ]; then
+  echo "Fresh reinstall requested: removing CXSun workspace volumes only"
+  docker volume rm cxsun-volume >/dev/null 2>&1 || true
+  docker volume rm cxsun_cxsun-workspace >/dev/null 2>&1 || true
+  echo "MariaDB is preserved and not touched by this script"
+fi
 
 echo "Building Docker image cxsun:v1"
 docker compose -f "$COMPOSE_FILE" build

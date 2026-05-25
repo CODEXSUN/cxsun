@@ -165,6 +165,12 @@ Run the cloud deploy order for `https://codexsun.com`:
 bash .container/setup-cloud.sh
 ```
 
+Run a fresh app reinstall without touching MariaDB:
+
+```bash
+bash .container/setup-cloud.sh --fresh
+```
+
 The script will:
 
 - Create `codexion-network` when missing
@@ -173,6 +179,8 @@ The script will:
 - Build the `cxsun:v1` image
 - Start the app through `.container/docker-compose.yml`
 - Configure `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS` for `https://codexsun.com`
+- Remove only the CXSun app workspace volume when `--fresh` is passed
+- Never remove or recreate MariaDB
 - Print status and recent logs
 
 ## 11. Clean Local Redeploy Script

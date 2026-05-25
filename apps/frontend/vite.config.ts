@@ -7,6 +7,7 @@ import { resolve } from 'path'
 
 const envDir = resolve(__dirname, '../..')
 const serverStatePath = resolve(envDir, 'build/dev/server.json')
+const defaultAllowedHosts = ['codexsun.com', 'www.codexsun.com']
 
 function apiProxyTarget(env: Record<string, string>) {
   if (process.env.VITE_API_BASE_URL) return process.env.VITE_API_BASE_URL
@@ -19,6 +20,18 @@ function apiProxyTarget(env: Record<string, string>) {
   } catch {
     return 'http://localhost:6005'
   }
+}
+
+function allowedHosts(env: Record<string, string>) {
+  return Array.from(new Set([
+    ...defaultAllowedHosts,
+    ...splitCsv(process.env.VITE_ALLOWED_HOSTS),
+    ...splitCsv(env.VITE_ALLOWED_HOSTS),
+  ]))
+}
+
+function splitCsv(value: string | undefined) {
+  return value?.split(',').map((item) => item.trim()).filter(Boolean) ?? []
 }
 
 export default defineConfig(({ command, mode }) => {
@@ -112,6 +125,7 @@ export default defineConfig(({ command, mode }) => {
     preview: {
       host: '0.0.0.0',
       port: Number(env.VITE_PORT) || 6010,
+      allowedHosts: allowedHosts(env),
     },
   }
 })

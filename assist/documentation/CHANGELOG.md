@@ -2,13 +2,23 @@
 
 ## Version State
 
-- **Current version:** `1.0.31`
-- **Release tag:** `v-1.0.31`
-- **Changelog label:** `v 1.0.31`
+- **Current version:** `1.0.32`
+- **Release tag:** `v-1.0.32`
+- **Changelog label:** `v 1.0.32`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.32
+
+### [v 1.0.32] 2026-05-25 11:05 am - vite preview codexsun allowed hosts
+
+- Bumped workspace version to 1.0.32
+- Added Vite preview `allowedHosts` defaults for `codexsun.com` and `www.codexsun.com` so Nginx HTTPS proxy requests are accepted by the frontend preview server.
+- Added `VITE_ALLOWED_HOSTS` support for future comma-separated preview host additions without code changes.
+- Added a `--fresh` option to `.container/setup-cloud.sh` that cleans and reinstalls only the CXSun app container/workspace volume while preserving MariaDB.
+- Verified the frontend host-header fix with frontend typecheck and production build.
 
 ## v-1.0.31
 
