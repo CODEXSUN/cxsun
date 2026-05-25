@@ -14,7 +14,6 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ### [v 1.0.29] 2026-05-25 10:16 am - auth session and dynamic dev port mapping
 
-- Bumped workspace version to 1.0.29
 - Fixed dynamic dev port mapping so server preflight writes the selected backend port and frontend preflight/Vite proxy use that live API target instead of falling back to `localhost:6001`.
 - Centralized frontend API base URL handling and removed duplicated hardcoded `6001` defaults from tenant, system update, auth, and public site calls.
 - Fixed stale admin-session 403s after restart by making the admin-user seeder idempotent; seeded admin password hashes and `updated_at` no longer rotate unless the account actually changes.
@@ -26,7 +25,6 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ### [v 1.0.28] 2026-05-25 8:48 am - tenant-local auth and fresh migration stability
 
-- Bumped workspace version to 1.0.28
 - Reworked authentication around tenant-local identities: master keeps tenant login identifiers and admin users, while each tenant database owns its users and user-tenant access.
 - Added corporate ID/mobile login resolution with default `CODEXSUN` and `9655227738` tenant identifiers.
 - Split tenant, admin, and super-admin login surfaces so each dashboard uses the correct identity source and route family.
@@ -46,7 +44,6 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ### [v 1.0.27] 2026-05-24 9:35 pm - master database preflight and demo tenant setup
 
-- Bumped workspace version to 1.0.27
 - Added centralized server configuration holders under `framework/config` for sanitized `.env` loading, app settings, and database configuration.
 - Moved server-side database, auth, URL, and runtime settings off scattered `process.env` reads and through shared `settings` / `dbConfig` access.
 - Added server preflight checks for MariaDB connectivity, master database existence, and master table availability before launching dev.
@@ -60,7 +57,6 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ### [v 1.0.26] 2026-05-24 6:00 pm - stock ledger barcode UX and settings polish
 
-- Bumped workspace version to 1.0.26
 - Refined the Stock Ledger generate step so previous generated barcodes render as one normal paginated table with 25-row default pagination, multi-select printing, icon-only row print/drop actions, and no nested scroll cards.
 - Added a top status summary for purchase inward quantity, generated labels, and verified labels above the generated barcode table.
 - Added drop protection and cleaner row actions so posted/confirmed serializations cannot be dropped from the generated label table.
