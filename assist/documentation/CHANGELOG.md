@@ -15,15 +15,14 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 ### [v 1.0.33] 2026-05-25 1:10 pm - tenant app access and landing desk controls
 
 - Bumped workspace version to 1.0.33
-## v-1.0.32
-
-### [v 1.0.32] 2026-05-25 1:08 pm - tenant app access and landing desk controls
-
 - Added an Apps tab to the super-admin tenant show page with per-tenant app access switches and a single Publish action.
 - Persisted tenant app access in tenant `payload_settings.apps.enabled` so each tenant can receive a different enabled app set, such as Billing + Task Manager + Inventory or Billing + Ecommerce.
 - Added tenant dashboard handling for saved app access so disabled apps are hidden/blocked and enabled apps drive the app switcher/sidebar.
 - Added an Application Landing Desk page for tenant users with radio-button landing app selection and enabled-app controls, with Billing as the default tenant landing desk.
 - Added client setup progress feedback and tenant setup policy repair so tenant admin logins can reach company/default-context after setup.
+- Fixed tenant update timestamps to use MariaDB-safe datetime values during super-admin tenant publishes.
+
+## v-1.0.32
 
 ### [v 1.0.32] 2026-05-25 11:05 am - vite preview codexsun allowed hosts
 
