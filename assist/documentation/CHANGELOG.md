@@ -2,13 +2,23 @@
 
 ## Version State
 
-- **Current version:** `1.0.30`
-- **Release tag:** `v-1.0.30`
-- **Changelog label:** `v 1.0.30`
+- **Current version:** `1.0.31`
+- **Release tag:** `v-1.0.31`
+- **Changelog label:** `v 1.0.31`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.31
+
+### [v 1.0.31] 2026-05-25 10:53 am - codexsun cloud setup script
+
+- Bumped workspace version to 1.0.31
+- Added a dedicated `.container/setup-cloud.sh` deploy script with `https://codexsun.com` defaults for `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS`.
+- Restored `.container/setup-local.sh` to localhost defaults so local and cloud deployment paths stay separate.
+- Updated the container README to document the cloud setup command and the local setup command separately.
+- Verified script syntax and Docker compose cloud environment resolution for app, MariaDB, Redis, ports, and HTTPS URL settings.
 
 ## v-1.0.30
 
@@ -20,6 +30,8 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 - Removed the PostgreSQL container setup from the active deployment path and documented the MariaDB/Redis split between local and Docker/cloud environments.
 - Added Redis installation/startup support through `.container/database/redis.yml` and `.container/setup-local.sh`, with container env written by the entrypoint as `redis:6379`.
 - Added configurable HTTPS-aware CORS support using `FRONTEND_URL` and comma-separated `CORS_ORIGINS`, while preserving localhost development origins.
+- Set the cloud/container deployment defaults to `https://codexsun.com` for `VITE_API_BASE_URL`, `FRONTEND_URL`, and CORS origins.
+- Added `.container/setup-cloud.sh` for codexsun cloud deploys and restored `.container/setup-local.sh` to localhost defaults.
 - Verified the release with Docker compose config checks for the app and Redis plus the standard `npm run check`.
 
 ## v-1.0.29

@@ -10,12 +10,13 @@ It clones the repo into `/workspace/cxsun`, creates `.env` from `.env.sample` wh
 
 Default services:
 
-- Backend: `http://localhost:6005`
-- Frontend: `http://localhost:6010`
+- Public URL: `https://codexsun.com`
+- Backend container port: `6005`
+- Frontend container port: `6010`
 - MariaDB access from the app: `mariadb:3306`
 - Redis container access from the app: `redis:6379`
 - Redis host access: `localhost:6380`
-- CORS defaults: localhost frontend plus HTTPS origins. Set `FRONTEND_URL` or comma-separated `CORS_ORIGINS` for cloud domains.
+- CORS defaults: `https://codexsun.com` and `https://www.codexsun.com`.
 
 Create the shared Docker network once:
 
@@ -67,7 +68,7 @@ First startup will:
 - Clone `https://github.com/CODEXSUN/cxsun.git` into `/workspace/cxsun`
 - Copy `.env.sample` to `.env` if `.env` does not exist
 - Write the configured ports, MariaDB host, and Redis host into `.env`
-- Start Redis with `.container/database/redis.yml` when using `.container/setup-local.sh`
+- Start Redis with `.container/database/redis.yml` when using the setup scripts
 - Run `npm ci` or `npm install`
 - Run `npm run build:active`
 - Start backend and frontend preview
@@ -83,13 +84,13 @@ docker compose -f .container/docker-compose.yml ps
 Check backend health:
 
 ```bash
-curl http://localhost:6005/health
+curl https://codexsun.com/health
 ```
 
 Open frontend:
 
 ```bash
-http://localhost:6010
+https://codexsun.com
 ```
 
 ## 6. View Logs
@@ -146,23 +147,40 @@ docker compose -f .container/docker-compose.yml restart cxsun
 
 ## 9. Custom Ports
 
-Run backend on `7005` and frontend on `7010`:
+Run backend on `7005`, frontend on `7010`, and keep the public cloud URL:
 
 ```bash
-PORT=7005 VITE_PORT=7010 VITE_API_BASE_URL=http://localhost:7005 docker compose -f .container/docker-compose.yml up -d --build
+PORT=7005 VITE_PORT=7010 VITE_API_BASE_URL=https://codexsun.com FRONTEND_URL=https://codexsun.com CORS_ORIGINS=https://codexsun.com,https://www.codexsun.com docker compose -f .container/docker-compose.yml up -d --build
 ```
 
 Then use:
 
-- Backend: `http://localhost:7005`
-- Frontend: `http://localhost:7010`
+- Public URL: `https://codexsun.com`
 
-## 10. Clean Local Redeploy Script
+## 10. Cloud Deploy Script
+
+Run the cloud deploy order for `https://codexsun.com`:
+
+```bash
+bash .container/setup-cloud.sh
+```
+
+The script will:
+
+- Create `codexion-network` when missing
+- Start Redis through `.container/database/redis.yml`
+- Use the existing MariaDB service at `mariadb:3306`
+- Build the `cxsun:v1` image
+- Start the app through `.container/docker-compose.yml`
+- Configure `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS` for `https://codexsun.com`
+- Print status and recent logs
+
+## 11. Clean Local Redeploy Script
 
 Run the full local redeploy order:
 
 ```bash
-.container/setup-local.sh
+bash .container/setup-local.sh
 ```
 
 The script will:
@@ -175,7 +193,7 @@ The script will:
 - Start the app through `.container/docker-compose.yml`
 - Print status and recent logs
 
-## 11. Stop Or Remove
+## 12. Stop Or Remove
 
 Stop the container:
 

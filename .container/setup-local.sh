@@ -6,6 +6,8 @@ COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 REDIS_COMPOSE_FILE="$SCRIPT_DIR/database/redis.yml"
 export GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}"
 export VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:${PORT:-6005}}"
+export FRONTEND_URL="${FRONTEND_URL:-http://localhost:${VITE_PORT:-6010}}"
+export CORS_ORIGINS="${CORS_ORIGINS:-http://localhost:${VITE_PORT:-6010},https://localhost:${VITE_PORT:-6010}}"
 
 echo "Using compose file: $COMPOSE_FILE"
 echo "Repository: $GIT_REPO_URL"
@@ -45,5 +47,5 @@ echo "Recent logs"
 docker compose -f "$COMPOSE_FILE" logs --tail=80 cxsun
 
 echo "Deploy complete."
-echo "Backend: http://localhost:${PORT:-6005}"
-echo "Frontend: http://localhost:${VITE_PORT:-6010}"
+echo "Backend: ${VITE_API_BASE_URL}"
+echo "Frontend: ${FRONTEND_URL}"
