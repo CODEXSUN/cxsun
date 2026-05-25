@@ -2,14 +2,19 @@
 
 ## Version State
 
-- **Current version:** `1.0.33`
-- **Release tag:** `v-1.0.33`
-- **Changelog label:** `v 1.0.33`
+- **Current version:** `1.0.34`
+- **Release tag:** `v-1.0.34`
+- **Changelog label:** `v 1.0.34`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.34
+
+### [v 1.0.34] 2026-05-25 8:57 pm - version update
+
+- Bumped workspace version to 1.0.34
 ## v-1.0.33
 
 ### [v 1.0.33] 2026-05-25 1:10 pm - tenant app access and landing desk controls
