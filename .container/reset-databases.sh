@@ -6,6 +6,7 @@ DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-cxsun_master}"
 DB_USER="${DB_USER:-root}"
 DB_PASSWORD="${DB_PASSWORD:-DbPass1@@}"
+DB_CONTAINER="${DB_CONTAINER:-$DB_HOST}"
 MODE="${1:-}"
 
 usage() {
@@ -25,6 +26,7 @@ Environment:
   DB_NAME      Master database name, default cxsun_master
   DB_USER      MariaDB user, default root
   DB_PASSWORD  MariaDB password, default DbPass1@@
+  DB_CONTAINER MariaDB container name for Docker fallback, default DB_HOST
 EOF
 }
 
@@ -43,14 +45,75 @@ case "$MODE" in
 esac
 
 mysql_exec() {
-  mysql \
-    --batch \
-    --skip-column-names \
-    --host="$DB_HOST" \
-    --port="$DB_PORT" \
-    --user="$DB_USER" \
-    --password="$DB_PASSWORD" \
-    "$@"
+  if command -v mysql >/dev/null 2>&1; then
+    mysql \
+      --batch \
+      --skip-column-names \
+      --host="$DB_HOST" \
+      --port="$DB_PORT" \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      "$@"
+    return
+  fi
+
+  if command -v mariadb >/dev/null 2>&1; then
+    mariadb \
+      --batch \
+      --skip-column-names \
+      --host="$DB_HOST" \
+      --port="$DB_PORT" \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      "$@"
+    return
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -Fx "$DB_CONTAINER" >/dev/null 2>&1; then
+    docker exec "$DB_CONTAINER" mariadb \
+      --batch \
+      --skip-column-names \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      "$@"
+    return
+  fi
+
+  echo "No mysql/mariadb client found, and MariaDB container $DB_CONTAINER is not running." >&2
+  exit 1
+}
+
+mysql_ping() {
+  if command -v mysqladmin >/dev/null 2>&1; then
+    mysqladmin ping \
+      --host="$DB_HOST" \
+      --port="$DB_PORT" \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      --silent >/dev/null
+    return
+  fi
+
+  if command -v mariadb-admin >/dev/null 2>&1; then
+    mariadb-admin ping \
+      --host="$DB_HOST" \
+      --port="$DB_PORT" \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      --silent >/dev/null
+    return
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' | grep -Fx "$DB_CONTAINER" >/dev/null 2>&1; then
+    docker exec "$DB_CONTAINER" mariadb-admin ping \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      --silent >/dev/null
+    return
+  fi
+
+  echo "No mysqladmin/mariadb-admin found, and MariaDB container $DB_CONTAINER is not running." >&2
+  exit 1
 }
 
 quote_identifier() {
@@ -73,15 +136,11 @@ confirm() {
 
 echo "MariaDB: $DB_HOST:$DB_PORT"
 echo "Master database: $DB_NAME"
+echo "MariaDB container fallback: $DB_CONTAINER"
 echo "Mode: $MODE"
 
 echo "Checking MariaDB connection"
-mysqladmin ping \
-  --host="$DB_HOST" \
-  --port="$DB_PORT" \
-  --user="$DB_USER" \
-  --password="$DB_PASSWORD" \
-  --silent >/dev/null
+mysql_ping
 echo "MariaDB is reachable"
 
 load_client_databases() {

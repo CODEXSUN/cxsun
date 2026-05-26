@@ -5,3 +5,8 @@ bash .container/setup-cloud.sh
 bash .container/setup-cloud.sh --reinstall
 
 bash .container/setup-cloud.sh --help
+
+
+bash .container/reset-databases.sh --clients
+bash .container/reset-databases.sh --master
+bash .container/reset-databases.sh --all

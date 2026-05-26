@@ -2,13 +2,23 @@
 
 ## Version State
 
-- **Current version:** `1.0.39`
-- **Release tag:** `v-1.0.39`
-- **Changelog label:** `v 1.0.39`
+- **Current version:** `1.0.40`
+- **Release tag:** `v-1.0.40`
+- **Changelog label:** `v 1.0.40`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.40
+
+### [v 1.0.40] 2026-05-26 9:27 am - database reset helper and deploy setup polish
+
+- Bumped workspace version to 1.0.40
+- Added `.container/reset-databases.sh` for intentional master and tenant/client MariaDB resets outside the normal reinstall path.
+- Added separate typed confirmations for client database reset and master database reset so destructive cleanup cannot run accidentally.
+- Made the reset helper work from hosts without local MariaDB client tools by falling back to `docker exec` against the configured MariaDB container.
+- Documented the database reset helper in the container deploy guide.
 
 ## v-1.0.39
 
@@ -26,6 +36,7 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 - Passed `HEALTH_WAIT_SECONDS` through Docker compose and `.env.sample`, and made entrypoint health waits use that configured limit.
 - Updated the container deploy guide to document ordered `db:setup` and Redis readiness behavior.
 - Added `.container/reset-databases.sh` for intentional, separately confirmed master and tenant/client MariaDB resets outside the normal reinstall path.
+- Made the database reset script work on hosts without local MariaDB client tools by falling back to `docker exec` against the configured MariaDB container.
 - Changed cloud entrypoint database bootstrap to run ordered `db:setup` instead of separate migrate and seed steps, so preserved MariaDB installs retire planned-client tenants before tenant provisioning runs.
 - Restricted server startup tenant provisioning to active MariaDB tenants with `deleted_at IS NULL`, preventing suspended planned clients from being prepared during normal boot.
 - Verified the fix with shell syntax checks, server typecheck, server build, and changelog whitespace checks.

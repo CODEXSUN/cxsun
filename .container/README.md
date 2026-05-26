@@ -214,6 +214,7 @@ bash .container/reset-databases.sh --all
 ```
 
 The reset script asks for separate typed confirmations before dropping client databases and before dropping the master database. It never runs as part of normal reinstall.
+When the host does not have `mysql` or `mysqladmin` installed, it falls back to running the MariaDB client inside the `DB_CONTAINER` Docker container, which defaults to `DB_HOST`.
 
 Run install-time safety tests during deploy when needed:
 
