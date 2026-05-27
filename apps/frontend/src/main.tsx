@@ -5,19 +5,19 @@ import './assets/css/index.css'
 import App from './App.tsx'
 import { notifyAuthInvalid } from './features/auth/auth-client.ts'
 
-function isForbiddenError(error: unknown) {
-  return error instanceof Error && /\bstatus 403\b/i.test(error.message)
+function isAuthError(error: unknown) {
+  return error instanceof Error && /\bstatus 401\b/i.test(error.message)
 }
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({
     onError: (error) => {
-      if (isForbiddenError(error)) notifyAuthInvalid()
+      if (isAuthError(error)) notifyAuthInvalid()
     },
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
-      if (isForbiddenError(error)) notifyAuthInvalid()
+      if (isAuthError(error)) notifyAuthInvalid()
     },
   }),
   defaultOptions: {

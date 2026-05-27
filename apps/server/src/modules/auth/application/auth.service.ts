@@ -14,7 +14,7 @@ export class AuthService {
     @Inject(AuthRepository) private readonly auth: AuthRepository,
   ) {}
 
-  async login(input: LoginInput, _headers: TenantRequestHeaders = {}) {
+  async login(input: LoginInput, headers: TenantRequestHeaders = {}) {
     const email = input.email?.trim().toLowerCase()
     const password = input.password ?? ''
     const corporateId = input.corporateId?.trim() ?? ''
@@ -37,7 +37,25 @@ export class AuthService {
       return { ok: false, error: 'Invalid login details.' }
     }
 
+    const domainTenantSlug = await this.resolveLoginDomainTenant(headers)
+    if (domainTenantSlug && domainTenantSlug !== loginTenant.slug) {
+      return { ok: false, error: 'Invalid login details.' }
+    }
+
     return this.loginTenantUser({ email, password, loginTenant })
+  }
+
+  private async resolveLoginDomainTenant(headers: TenantRequestHeaders) {
+    const loginDomain = firstHeader(headers['x-login-domain'])
+      ?? firstHeader(headers['x-forwarded-host'])
+      ?? firstHeader(headers.host)
+
+    if (!loginDomain || isLocalDomain(loginDomain)) {
+      return undefined
+    }
+
+    const tenantSlug = await this.auth.findTenantSlugByDomain(loginDomain)
+    return tenantSlug ?? '__unmapped_domain__'
   }
 
   private async loginTenantUser({
@@ -142,4 +160,13 @@ function platformTenant(role: string): AuthTenantAccess {
 function roleMatchesSurface(role: string, surface: 'admin' | 'super-admin') {
   if (surface === 'super-admin') return role === 'super-admin'
   return ['software-admin', 'support-admin', 'helpdesk-admin'].includes(role)
+}
+
+function firstHeader(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value
+}
+
+function isLocalDomain(value: string) {
+  const domain = value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '')
+  return ['localhost', '127.0.0.1', '::1'].includes(domain) || domain.endsWith('.local')
 }

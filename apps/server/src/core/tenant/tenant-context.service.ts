@@ -33,6 +33,8 @@ const tenantColumns = [
 export interface TenantRequestHeaders {
   'x-tenant-code'?: string | string[]
   'x-user-email'?: string | string[]
+  'x-login-domain'?: string | string[]
+  'x-forwarded-host'?: string | string[]
   authorization?: string | string[]
   host?: string | string[]
 }
@@ -69,6 +71,15 @@ export class TenantContextService {
     }
 
     const isSuperAdminToken = auth?.superAdmin === true || auth?.role === 'super-admin'
+    const requestDomain = loginDomainHeader(headers)
+    const requestDomainTenant = await findTenantByDomain(requestDomain)
+    if (auth.identitySource === 'tenant' && requestDomain && !isLocalDomain(requestDomain) && !requestDomainTenant) {
+      throw new UnauthorizedException('Tenant domain is not mapped.')
+    }
+    if (auth.identitySource === 'tenant' && requestDomainTenant && requestDomainTenant.slug !== tenant.slug) {
+      throw new UnauthorizedException('Tenant session does not match this domain.')
+    }
+
     const database = getTenantDatabase(tenant)
 
     if (tenant.status !== 'active' && !isSuperAdminToken) {
@@ -138,6 +149,13 @@ function firstHeader(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value
 }
 
+function loginDomainHeader(headers: TenantRequestHeaders) {
+  return firstHeader(headers['x-login-domain'])
+    ?? firstHeader(headers['x-forwarded-host'])
+    ?? firstHeader(headers.host)
+    ?? ''
+}
+
 function bearerToken(value?: string) {
   if (!value?.toLowerCase().startsWith('bearer ')) {
     return undefined
@@ -175,6 +193,11 @@ async function findTenantByDomain(value: string): Promise<Tenant | undefined> {
 
 function normalizeDomain(value: string) {
   return value.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/:\d+$/, '')
+}
+
+function isLocalDomain(value: string) {
+  const domain = normalizeDomain(value)
+  return ['localhost', '127.0.0.1', '::1'].includes(domain) || domain.endsWith('.local')
 }
 
 function isTokenFresh(auth: { iat?: number }, updatedAt?: Date | string) {

@@ -2,15 +2,37 @@
 
 ## Version State
 
-- **Current version:** `1.0.42`
-- **Release tag:** `v-1.0.42`
-- **Changelog label:** `v 1.0.42`
+- **Current version:** `1.0.43`
+- **Release tag:** `v-1.0.43`
+- **Changelog label:** `v 1.0.43`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.43
+
+### [v 1.0.43] 2026-05-27 9:48 am - local tenant login domain fix
+
+- Bumped workspace version to 1.0.43
+- Treated `*.local` hostnames as local development domains in tenant login validation, so `aaran.local:6010/login` can authenticate without being blocked by the production tenant-domain guard.
+- Applied the same `.local` development bypass inside tenant request context validation so authenticated tenant API calls from local tenant domains keep working after login.
+- Verified the fix with server typecheck, server build, and a direct tenant login check using `x-login-domain: aaran.local:6010`.
+
 ## v-1.0.42
+
+### [v 1.0.42] 2026-05-26 10:30 pm - tenant dashboard hardening and loading polish
+
+- Replaced dashboard/page loading fallbacks with the shared fixed global logo loader, removing loader text flicker and keeping route loading centered above the layout.
+- Removed tenant-side app enable/disable switches from Landing Desk so tenant users only see enabled/disabled status, while app access remains controlled from Super Admin tenant settings.
+- Hid disabled apps from the tenant app switcher and blocked disabled app routes from opening through direct navigation.
+- Hardened tenant login/domain isolation so a tenant session cannot be used from a different mapped domain, with local development domains still allowed for testing.
+- Added frontend session cleanup when the resolved tenant domain does not match the stored tenant session.
+- Added request input sanitization before API handlers to reject unsafe query/param patterns and strip unsafe request keys/control characters before processing.
+- Reduced first-load flicker by avoiding tenant-domain resolver blocking on login, admin, and dashboard routes.
+- Improved dashboard responsiveness by prefetching the dashboard bundle from login and prefetching common app modules after dashboard load or app switch.
+- Reduced production preflight overhead by only sending `x-login-domain` on authenticated requests when the API is cross-origin; tenant login still sends it for domain validation.
+- Verified frontend and server typecheck/build, local backend health, and login API warm response around `50 ms` after initial cold connection warmup.
 
 ### [v 1.0.42] 2026-05-26 10:25 am - separate redis setup helper and queue readiness
 

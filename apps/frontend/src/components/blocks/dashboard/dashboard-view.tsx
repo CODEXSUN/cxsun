@@ -24,8 +24,7 @@ import {
 } from './dashboard-apps'
 import { Card, CardContent, CardHeader, CardTitle } from 'src/components/ui/card'
 import { RadioGroup, RadioGroupItem } from 'src/components/ui/radio-group'
-import { Switch } from 'src/components/ui/switch'
-import { Spinner } from 'src/components/ui/spinner'
+import { GlobalLoader } from 'src/components/blocks/loading/global-loader'
 import { cn } from 'src/lib/utils'
 
 const LoginForm = lazy(() =>
@@ -200,6 +199,45 @@ function pushDashboardPage(basePath: string, page: DashboardPage) {
   }
 }
 
+function prefetchAppModules(appId: DashboardAppId) {
+  const work = () => {
+    if (appId === "application") {
+      void import('src/features/company/company-page')
+      void import('src/features/company/default-company-page')
+      void import('src/features/user-manager/user-manager-page')
+      return
+    }
+
+    if (appId === "billing") {
+      void import('src/features/sales/sales-page')
+      void import('src/features/purchase/purchase-page')
+      void import('src/features/receipt/receipt-page')
+      void import('src/features/payment/payment-page')
+      void import('src/features/report/billing-statement-page')
+      return
+    }
+
+    if (appId === "inventory") {
+      void import('src/features/stock/inward/purchase-receipt/purchase-receipt-page')
+      void import('src/features/stock/outward/delivery-note/delivery-note-page')
+      void import('src/features/stock/ledger/stock-ledger-page')
+      void import('src/features/product/product-page')
+      return
+    }
+
+    if (appId === "media") {
+      void import('src/features/media/media-page')
+      return
+    }
+
+    if (appId === "taskmanager" || appId === "crm") {
+      void import('src/features/task-manager/task-manager-page')
+    }
+  }
+
+  window.setTimeout(work, 250)
+}
+
 export function DashboardView({
   basePath = "/app",
   loginPath = "/login",
@@ -268,6 +306,11 @@ export function DashboardView({
   })
 
   useEffect(() => {
+    if (needsLogin) return
+    prefetchAppModules(activeApp)
+  }, [activeApp, needsLogin])
+
+  useEffect(() => {
     if (!needsLogin || window.location.pathname === loginPath) {
       return
     }
@@ -276,18 +319,34 @@ export function DashboardView({
     window.dispatchEvent(new Event("popstate"))
   }, [loginPath, needsLogin])
 
+  function authenticate(nextSession: AuthSession) {
+    setSession(nextSession)
+    const nextEnabledApps = mode === "tenant" ? enabledAppsForSession(nextSession) : enabledApps
+    const nextLandingApp = mode === "tenant" ? readStoredLandingApp(nextEnabledApps) : landingApp
+    const nextActiveApp = mode === "tenant" ? nextLandingApp : "application"
+    const nextPage = defaultPageForApp(nextActiveApp)
+
+    setEnabledApps(nextEnabledApps)
+    setLandingApp(nextLandingApp)
+    setActiveApp(nextActiveApp)
+    setActivePage(nextPage)
+    window.localStorage.setItem("cxsun.activeApp", nextActiveApp)
+    window.history.replaceState(null, "", dashboardPath(basePath, nextPage))
+    window.dispatchEvent(new Event("popstate"))
+  }
+
   if (needsLogin) {
     return (
       <div className="grid min-h-screen place-items-center bg-background p-6">
         <div className="w-full max-w-[560px]">
-          <Suspense fallback={<AuthRouteFallback />}>
+          <Suspense fallback={<GlobalLoader fullScreen={false} />}>
             {authPage === "forgot-password" ? (
               <ForgotPasswordForm onBackToLogin={() => setAuthPage("login")} />
             ) : (
               <LoginForm
                 surface={authSurface}
                 subtitle={dashboardTitles[mode]}
-                onAuthenticated={setSession}
+                onAuthenticated={authenticate}
                 onForgotPassword={() => setAuthPage("forgot-password")}
               />
             )}
@@ -338,29 +397,12 @@ export function DashboardView({
       return
     }
 
+    prefetchAppModules(appId)
     setActiveApp(appId)
     window.localStorage.setItem("cxsun.activeApp", appId)
     const nextPage = defaultPageForApp(appId)
     setActivePage(nextPage)
     pushDashboardPage(basePath, nextPage)
-  }
-
-  function toggleApp(appId: DashboardAppId, enabled: boolean) {
-    if (appId === "application") {
-      return
-    }
-
-    const nextEnabledApps = { ...enabledApps, [appId]: enabled }
-    setEnabledApps(nextEnabledApps)
-    window.localStorage.setItem("cxsun.enabledApps.v2", JSON.stringify(nextEnabledApps))
-
-    if (!enabled && landingApp === appId) {
-      changeLandingApp(fallbackLandingApp(nextEnabledApps))
-    }
-
-    if (!enabled && activeApp === appId) {
-      changeApp("application")
-    }
   }
 
   function changeLandingApp(appId: DashboardAppId) {
@@ -395,7 +437,7 @@ export function DashboardView({
           onChangeApp={changeApp}
           onLogout={logout}
         />
-        <Suspense fallback={<DashboardRouteFallback />}>
+        <Suspense fallback={<GlobalLoader />}>
           {visiblePage === "setup" ? (
             <AppSetupPage session={session} />
           ) : visiblePage === "tenant" ? (
@@ -417,7 +459,6 @@ export function DashboardView({
               landingApp={landingApp}
               onChangeApp={changeApp}
               onChangeLandingApp={changeLandingApp}
-              onToggleApp={toggleApp}
             />
           ) : visiblePage === "system-update" ? (
             <SystemUpdateView session={session} />
@@ -479,36 +520,11 @@ export function DashboardView({
               appEnabled={enabledApps}
               mode={mode}
               onChangeApp={changeApp}
-              onToggleApp={toggleApp}
             />
           )}
         </Suspense>
       </SidebarInset>
     </SidebarProvider>
-  )
-}
-
-function AuthRouteFallback() {
-  return (
-    <div className="flex min-h-[360px] items-center justify-center rounded-lg border border-border/70 bg-card/80">
-      <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-        <Spinner className="size-4 text-primary" />
-        Loading account access
-      </div>
-    </div>
-  )
-}
-
-function DashboardRouteFallback() {
-  return (
-    <div className="@container/main flex flex-1 flex-col gap-4 px-4 py-4 md:py-6 lg:px-6">
-      <div className="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-border/80 bg-background/80">
-        <div className="flex items-center gap-3 text-sm font-medium text-muted-foreground">
-          <Spinner className="size-4 text-primary" />
-          Loading dashboard route
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -589,14 +605,12 @@ function LandingDeskSettingsPage({
   landingApp,
   onChangeApp,
   onChangeLandingApp,
-  onToggleApp,
 }: {
   activeApp: DashboardAppId
   enabledApps: Record<DashboardAppId, boolean>
   landingApp: DashboardAppId
   onChangeApp(appId: DashboardAppId): void
   onChangeLandingApp(appId: DashboardAppId): void
-  onToggleApp(appId: DashboardAppId, enabled: boolean): void
 }) {
   const enabledAppOptions = dashboardApps.filter((app) => enabledApps[app.id])
 
@@ -642,7 +656,7 @@ function LandingDeskSettingsPage({
       <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
         <CardHeader>
           <CardTitle>Enabled apps</CardTitle>
-          <p className="text-sm text-muted-foreground">Apps enabled here can be selected as the landing desk and opened from the app switcher.</p>
+          <p className="text-sm text-muted-foreground">App access is controlled by the super admin. Enabled apps can be selected as the landing desk and opened from the app switcher.</p>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {dashboardApps.map((app) => {
@@ -660,19 +674,12 @@ function LandingDeskSettingsPage({
                   <span className={cn("flex size-10 items-center justify-center rounded-md", app.accent)}>
                     <AppIcon className="size-5" />
                   </span>
-                  <Switch
-                    checked={enabled}
-                    disabled={app.status === "core"}
-                    onCheckedChange={(checked) => onToggleApp(app.id, checked)}
-                  />
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px]", enabled ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                    {enabled ? "Enabled" : "Disabled"}
+                  </span>
                 </div>
                 <div className="mt-4">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-foreground">{app.name}</h3>
-                    <span className={cn("rounded-full px-2 py-0.5 text-[11px]", enabled ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
-                      {enabled ? "Enabled" : "Disabled"}
-                    </span>
-                  </div>
+                  <h3 className="font-semibold text-foreground">{app.name}</h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">{app.description}</p>
                   {enabled ? (
                     <button className="mt-3 text-sm font-medium text-primary hover:underline" type="button" onClick={() => onChangeApp(app.id)}>

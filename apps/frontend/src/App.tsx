@@ -22,6 +22,7 @@ import { Toaster } from './components/ui/sonner'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { TooltipProvider } from './components/ui/tooltip'
+import { clearSession, getStoredSession } from './features/auth/auth-client'
 import { APP_NAME } from './lib/branding'
 import { apiBaseUrl } from './lib/api-base-url'
 import { cn } from './lib/utils'
@@ -108,11 +109,11 @@ interface PlatformFeature {
   Icon: typeof LayoutDashboard
 }
 
-const DashboardView = lazy(() =>
+const loadDashboardView = () =>
   import('src/components/blocks/dashboard/dashboard-view').then((module) => ({
     default: module.DashboardView,
-  })),
-)
+  }))
+const DashboardView = lazy(loadDashboardView)
 const LoginForm = lazy(() =>
   import('src/components/blocks/auth/login-form').then((module) => ({
     default: module.LoginForm,
@@ -345,6 +346,14 @@ function App() {
   const [route, setRoute] = useState<AppRoute>(() => parseRoute())
   const [menuOpen, setMenuOpen] = useState(false)
   const [contactStatus, setContactStatus] = useState<string | null>(null)
+  const activePage = route.page
+  const activeView = route.view
+  const isPlatformView = activeView === 'admin-dashboard'
+    || activeView === 'admin-login'
+    || activeView === 'super-admin-dashboard'
+    || activeView === 'super-admin-login'
+  const isPublicSiteView = activeView === 'landing'
+
   const siteQuery = useQuery({
     queryKey: ['site-content'],
     queryFn: fetchSiteContent,
@@ -354,10 +363,12 @@ function App() {
   const tenantSiteQuery = useQuery({
     queryKey: ['tenant-static-site', window.location.host],
     queryFn: fetchTenantStaticSite,
+    enabled: !isPlatformView,
   })
   const healthQuery = useQuery({
     queryKey: ['health'],
     queryFn: fetchHealth,
+    enabled: isPublicSiteView,
     refetchInterval: 60_000,
   })
   const contactMutation = useMutation({
@@ -379,6 +390,22 @@ function App() {
     return () => window.removeEventListener('popstate', syncRouteFromLocation)
   }, [])
 
+  useEffect(() => {
+    if (
+      activeView === 'login' ||
+      activeView === 'admin-login' ||
+      activeView === 'super-admin-login' ||
+      activeView === 'tenant-dashboard' ||
+      activeView === 'admin-dashboard' ||
+      activeView === 'super-admin-dashboard'
+    ) {
+      const timer = window.setTimeout(() => {
+        void loadDashboardView()
+      }, 250)
+      return () => window.clearTimeout(timer)
+    }
+  }, [activeView])
+
   function navigate(nextRoute: AppRoute) {
     setRoute(nextRoute)
     pushRoute(nextRoute)
@@ -388,36 +415,37 @@ function App() {
   const tenantSite = tenantSiteQuery.data ?? null
   const content = tenantSite?.resolved ? tenantSite : siteQuery.data ?? fallbackContent
   const health = healthQuery.data ?? null
-  const activePage = route.page
-  const activeView = route.view
+
+  useEffect(() => {
+    if (!tenantSite?.resolved || !tenantSite.tenant) {
+      return
+    }
+
+    const storedTenantSession = getStoredSession('tenant')
+    if (storedTenantSession && storedTenantSession.selectedTenant.slug !== tenantSite.tenant.slug) {
+      clearSession('tenant')
+      if (activeView === 'tenant-dashboard') {
+        setRoute({ page: 'home', view: 'login' })
+        window.history.replaceState(null, '', '/login')
+      }
+    }
+  }, [activeView, tenantSite])
 
   const pagesBySlug = useMemo(
     () => Object.fromEntries(content.pages.map((page) => [page.slug, page])),
     [content.pages],
   ) as Record<string, SitePage>
 
-  if (tenantSiteQuery.isPending) {
+  if (isPublicSiteView && tenantSiteQuery.isPending && tenantSiteQuery.fetchStatus !== 'idle') {
     return (
       <TooltipProvider>
-        <div className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground">
-          <Card className="w-full max-w-[620px]">
-            <CardHeader>
-              <CardTitle>Resolving tenant domain</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Checking the active tenant mapping for this domain.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <p className="font-mono text-sm">{window.location.host}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <GlobalLoader />
         <Toaster />
       </TooltipProvider>
     )
   }
 
-  if (tenantSiteQuery.isError) {
+  if (isPublicSiteView && tenantSiteQuery.isError) {
     return (
       <TooltipProvider>
         <div className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground">
@@ -443,22 +471,28 @@ function App() {
 
   const page = pagesBySlug[activePage] ?? fallbackContent.pages[0]
 
-  if (tenantSite && !tenantSite.resolved) {
+  if (isPublicSiteView && tenantSite && !tenantSite.resolved) {
     return (
       <TooltipProvider>
         <div className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground">
-          <Card className="w-full max-w-[620px]">
-            <CardHeader>
-              <CardTitle>Tenant domain not configured</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                This installation requires every public domain to map to one active tenant.
+          <Card className="flex w-full max-w-[620px] flex-col items-center text-center">
+            <CardHeader className="flex w-full flex-col items-center text-center">
+              <BrandLogo className="mb-2 size-14" />
+              <CardTitle>Welcome to {APP_NAME}</CardTitle>
+              <p className="max-w-md text-sm text-muted-foreground">
+                Please enter the proper tenant domain name to open your company workspace.
               </p>
             </CardHeader>
-            <CardContent className="grid gap-3">
-              <p className="font-mono text-sm">{window.location.host}</p>
+            <CardContent className="mx-auto grid w-full max-w-md justify-items-center gap-4 text-center">
+              <div className="rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm">
+                {window.location.host}
+              </div>
               <p className="text-sm text-muted-foreground">
-                {tenantSite.error ?? 'No active tenant domain mapping was found.'}
+                This domain is not linked to an active tenant. Check the domain name or continue to the main Codexsun site.
               </p>
+              <Button asChild className="justify-self-center" type="button">
+                <a href="https://codexsun.com">Go to codexsun.com</a>
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -516,7 +550,7 @@ function App() {
 
     return (
       <TooltipProvider>
-        <Suspense fallback={<GlobalLoader label="Loading dashboard" />}>
+        <Suspense fallback={<GlobalLoader />}>
           <DashboardView
             {...dashboardConfig}
             onBackHome={() => navigate({ page: 'home', view: 'landing' })}
@@ -537,7 +571,7 @@ function App() {
       <TooltipProvider>
         <div className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground">
           <div className="w-full max-w-[560px]">
-            <Suspense fallback={<GlobalLoader label="Loading account access" />}>
+            <Suspense fallback={<GlobalLoader />}>
               {activeView === 'forgot-password' ? (
                 <ForgotPasswordForm onBackToLogin={() => navigate({ page: 'home', view: 'login' })} />
               ) : (

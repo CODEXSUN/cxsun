@@ -40,6 +40,7 @@ export function SiteHeader({
   onLogout,
 }: SiteHeaderProps) {
   const selectedApp = dashboardApps.find((app) => app.id === activeApp) ?? dashboardApps[0]
+  const visibleApps = dashboardApps.filter((app) => appEnabled?.[app.id] ?? app.status !== "disabled")
   const SelectedAppIcon = selectedApp.icon
   const notifications = [
     { title: "Billing app is ready", body: "Invoices and payments can be connected next." },
@@ -71,14 +72,12 @@ export function SiteHeader({
                 <DropdownMenuContent align="start" className="w-64 rounded-md p-1 shadow-lg">
                   <DropdownMenuLabel className="text-xs text-muted-foreground">Switch app</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {dashboardApps.map((app) => {
-                    const enabled = appEnabled?.[app.id] ?? app.status !== "disabled"
+                  {visibleApps.map((app) => {
                     const AppIcon = app.icon
                     return (
                       <DropdownMenuItem
                         key={app.id}
-                        className={cn("cursor-pointer gap-3 rounded-sm py-2", !enabled && "opacity-50")}
-                        disabled={!enabled}
+                        className="cursor-pointer gap-3 rounded-sm py-2"
                         onSelect={() => onChangeApp?.(app.id)}
                       >
                         <span className={cn("flex size-8 items-center justify-center rounded-md border transition-colors", app.id === selectedApp.id ? "border-primary/30 bg-primary/10 text-primary" : "border-border/70 bg-background text-muted-foreground")}>
@@ -86,7 +85,7 @@ export function SiteHeader({
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block font-medium">{app.name}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{enabled ? app.description : "Disabled from application desk"}</span>
+                          <span className="block truncate text-xs text-muted-foreground">{app.description}</span>
                         </span>
                         {app.id === selectedApp.id ? <Check className="size-4" /> : null}
                       </DropdownMenuItem>

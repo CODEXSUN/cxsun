@@ -19,3 +19,8 @@ bash .container/setup-redis.sh reinstall
 
 bash .container/setup-redis.sh reinstall
 bash .container/setup-cloud.sh --reinstall
+
+
+TENANT_ADMIN_NAME=ADMIN
+TENANT_ADMIN_EMAIL=admin@tenant.com
+TENANT_ADMIN_PASSWORD=admin@123

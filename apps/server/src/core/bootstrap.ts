@@ -15,6 +15,7 @@ import { FILTERS_KEY } from './decorators/filters.js'
 import type { CanActivate } from './interfaces/guard.interface.js'
 import type { ExceptionFilter } from './interfaces/filter.interface.js'
 import { HttpException } from './exceptions/http.exception.js'
+import { sanitizeRequestParts } from './security/request-sanitizer.js'
 import { settings } from '../framework/config/index.js'
 
 export interface AppOptions {
@@ -55,12 +56,36 @@ export class CxApp {
     await app.register(cors, {
       origin: resolveCorsOrigin,
       credentials: true,
-      allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'x-tenant-code', 'x-user-email'],
+      allowedHeaders: ['Authorization', 'Content-Type', 'Accept', 'x-tenant-code', 'x-user-email', 'x-login-domain'],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     })
 
     app.addHook('onError', async (_req, _reply, error) => {
       app.log.error({ err: error })
+    })
+
+    app.addHook('preValidation', async (request, reply) => {
+      const sanitized = sanitizeRequestParts({
+        body: request.body,
+        params: request.params,
+        query: request.query,
+      })
+
+      if (sanitized.issues.length > 0) {
+        return reply.status(400).send({
+          error: 'Unsafe request input.',
+          statusCode: 400,
+        })
+      }
+
+      const mutableRequest = request as FastifyRequest & {
+        body: unknown
+        params: unknown
+        query: unknown
+      }
+      mutableRequest.body = sanitized.body
+      mutableRequest.params = sanitized.params
+      mutableRequest.query = sanitized.query
     })
 
     const cxApp = new CxApp(app, container, gracePeriodMs, host, port)

@@ -105,6 +105,7 @@ export function CompanyPage({ session }: { session: AuthSession }) {
     queryFn: () => listCompanies(session),
   })
   const industriesQuery = useQuery({
+    enabled: canManagePlatform,
     queryKey: ["industries", "company-options", session.selectedTenant.slug],
     queryFn: () => listIndustries(session),
   })
