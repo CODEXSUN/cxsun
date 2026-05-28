@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 REDIS_COMPOSE_FILE="$SCRIPT_DIR/database/redis.yml"
+MEDIA_SETUP_FILE="$SCRIPT_DIR/setup-media.sh"
 export GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}"
 export VITE_API_BASE_URL="${VITE_API_BASE_URL:-http://localhost:${PORT:-6005}}"
 export VITE_STORAGE_BASE_URL="${VITE_STORAGE_BASE_URL:-$VITE_API_BASE_URL}"
@@ -73,6 +74,18 @@ done
 
 echo "Building Docker image cxsun:v1"
 docker compose -f "$COMPOSE_FILE" build
+
+echo "Checking CXMedia"
+if docker ps --format '{{.Names}}' | grep -Fx cxmedia >/dev/null 2>&1; then
+  echo "CXMedia already running: cxmedia"
+elif docker ps -a --format '{{.Names}}' | grep -Fx cxmedia >/dev/null 2>&1; then
+  echo "Starting existing CXMedia container: cxmedia"
+  docker start cxmedia >/dev/null
+  docker network connect codexion-network cxmedia >/dev/null 2>&1 || true
+else
+  echo "CXMedia is not installed. Running media setup once."
+  bash "$MEDIA_SETUP_FILE"
+fi
 
 echo "Starting CXSun"
 docker compose -f "$COMPOSE_FILE" up -d

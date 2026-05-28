@@ -2,14 +2,22 @@
 
 ## Version State
 
-- **Current version:** `1.0.55`
-- **Release tag:** `v-1.0.55`
-- **Changelog label:** `v 1.0.55`
+- **Current version:** `1.0.56`
+- **Release tag:** `v-1.0.56`
+- **Changelog label:** `v 1.0.56`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.56
+
+### [v 1.0.56] 2026-05-28 7:48 pm - separate cxmedia setup script
+
+- Bumped workspace version to 1.0.56
+- Added `.container/setup-media.sh` as the standalone CXMedia installer/starter with persistent volumes and default admin password handling.
+- Changed cloud and local setup to only check/start CXMedia, running media setup once only when the `cxmedia` container is missing.
+- Changed storage restore and workspace seeding helper containers to use `alpine:3.20` instead of `cxsun:v1`, preventing app entrypoint clone/start behavior during setup copy steps.
 ## v-1.0.55
 
 ### [v 1.0.55] 2026-05-28 7:37 pm - cxmedia default admin password

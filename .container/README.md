@@ -236,6 +236,14 @@ Run cloud deploy with the default external Redis container:
 .container/setup-cloud.sh
 ```
 
+Install or start CXMedia separately:
+
+```bash
+bash .container/setup-media.sh
+```
+
+The cloud/local setup scripts only check CXMedia. If it is already running, they continue. If it exists but is stopped, they start it. If it is missing, they run `.container/setup-media.sh` once.
+
 Manage Redis separately when you want to stop, start, or clean-reinstall only Redis:
 
 ```bash
@@ -300,6 +308,7 @@ The script will:
 - Run tenant safety tests only when `INSTALL_RUN_TESTS=true`
 - Build the `cxsun:v1` image
 - Seed `cxsun-volume` from the already-pulled local repository so the container does not clone from GitHub during startup
+- Check CXMedia and run `.container/setup-media.sh` only when the container is missing
 - Start the app through `.container/docker-compose.yml`
 - Wait for `/health` and verify `codexsun.com` resolves as a tenant
 - Configure `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS` for `https://codexsun.com`
