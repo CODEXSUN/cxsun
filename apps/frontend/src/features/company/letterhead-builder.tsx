@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react"
+import fallbackLogoUrl from "src/assets/logo/logo.svg"
 import type { CompanyRecord } from "src/features/company/company-client"
 import { companyLogoUrl } from "src/features/company/company-logo"
 import { defaultSoftwareSettingsState, type LetterheadSettings } from "src/features/settings/software-settings"
@@ -32,7 +33,18 @@ export function LetterheadBuilder({
   return (
     <div className={`grid grid-cols-[32mm_1fr_32mm] items-center px-2 py-2 text-center ${className}`} style={{ borderColor: style.borderColor, minHeight: `${style.heightMm}mm` }}>
       <div className="flex items-center justify-center">
-        {showLogo ? <img src={logoUrl} alt={companyName} className="object-contain" style={{ maxHeight: `${style.logoHeightMm}mm`, maxWidth: `${style.logoWidthMm}mm` }} /> : null}
+        {showLogo ? (
+          <img
+            src={logoUrl}
+            alt={companyName}
+            className="object-contain"
+            onError={(event) => {
+              const fallbackSrc = new URL(fallbackLogoUrl, window.location.href).href
+              if (event.currentTarget.src !== fallbackSrc) event.currentTarget.src = fallbackSrc
+            }}
+            style={{ maxHeight: `${style.logoHeightMm}mm`, maxWidth: `${style.logoWidthMm}mm` }}
+          />
+        ) : null}
       </div>
       <div className="flex min-w-0 flex-col items-center justify-center">
         <div className="max-w-full whitespace-nowrap font-bold leading-tight" style={companyNameStyle(style)}>{companyName}</div>

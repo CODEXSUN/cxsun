@@ -10,7 +10,7 @@ function defaultApiBaseUrl() {
   }
 
   const { hostname, protocol } = window.location
-  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") {
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname.endsWith(".local")) {
     return `${protocol}//${hostname}:6005`
   }
 

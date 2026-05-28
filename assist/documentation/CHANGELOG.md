@@ -2,14 +2,34 @@
 
 ## Version State
 
-- **Current version:** `1.0.47`
-- **Release tag:** `v-1.0.47`
-- **Changelog label:** `v 1.0.47`
+- **Current version:** `1.0.49`
+- **Release tag:** `v-1.0.49`
+- **Changelog label:** `v 1.0.49`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.49
+
+### [v 1.0.49] 2026-05-28 6:31 pm - cxmedia file browser storage container
+
+- Bumped workspace version to 1.0.49
+- Replaced the temporary storage CDN/browser split with a single standalone `cxmedia` container using `filebrowser/filebrowser` on fixed port `6050`.
+- Renamed persistent media storage to `cxmedia-storage` and File Browser metadata storage to `cxmedia-db`, while keeping the app mounted to the same uploaded media path.
+- Added `VITE_MEDIA_MANAGER_URL` and a Media Manager action that opens CXMedia directly from the application.
+- Added setup migration from the legacy `cxsun-storage` volume into `cxmedia-storage` so existing uploaded files are preserved during the changeover.
+- Updated deploy docs and env defaults for `CXMEDIA_PORT=6050`, `CXMEDIA_STORAGE_VOLUME`, and `CXMEDIA_DB_VOLUME`.
+## v-1.0.48
+
+### [v 1.0.48] 2026-05-28 6:25 pm - external storage cdn and media manager
+
+- Bumped workspace version to 1.0.48
+- Added a persistent `cxsun-storage` Docker volume mounted into the app at `/workspace/cxsun/storage` so uploaded logos and media survive app workspace reinstalls.
+- Added a separate Nginx storage CDN container for serving `/storage/...` assets from the shared storage volume.
+- Added a File Browser container for browser-based upload and media management against the same storage volume, with its own persistent database volume.
+- Added `VITE_STORAGE_BASE_URL` support so frontend logo and invoice media URLs can resolve through the storage CDN instead of the frontend preview origin.
+- Updated cloud setup to preserve existing container storage into the persistent volume before reinstall and document production CDN/media-manager usage.
 ## v-1.0.47
 
 ### [v 1.0.47] 2026-05-28 4:31 pm - sales purchase totals and tenant setup safety

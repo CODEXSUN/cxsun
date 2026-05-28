@@ -29,6 +29,7 @@ export GIT_PULL_ON_START="${GIT_PULL_ON_START:-false}"
 export PORT="${PORT:-6005}"
 export VITE_PORT="${VITE_PORT:-6010}"
 export VITE_API_BASE_URL="${VITE_API_BASE_URL:-https://codexsun.com}"
+export VITE_STORAGE_BASE_URL="${VITE_STORAGE_BASE_URL:-$VITE_API_BASE_URL}"
 export FRONTEND_URL="${FRONTEND_URL:-https://codexsun.com}"
 export CORS_ORIGINS="${CORS_ORIGINS:-https://codexsun.com,https://www.codexsun.com}"
 export DB_HOST="${DB_HOST:-mariadb}"
@@ -54,6 +55,10 @@ export REDIS_TLS="${REDIS_TLS:-false}"
 export REDIS_CONTAINER_NAME="${REDIS_CONTAINER_NAME:-redis}"
 export REDIS_IMAGE="${REDIS_IMAGE:-redis:7.4-alpine}"
 export REDIS_HOST_PORT="${REDIS_HOST_PORT:-6380}"
+export CXMEDIA_STORAGE_VOLUME="${CXMEDIA_STORAGE_VOLUME:-cxmedia-storage}"
+export CXMEDIA_DB_VOLUME="${CXMEDIA_DB_VOLUME:-cxmedia-db}"
+export CXMEDIA_PORT="${CXMEDIA_PORT:-6050}"
+export VITE_MEDIA_MANAGER_URL="${VITE_MEDIA_MANAGER_URL:-http://localhost:${CXMEDIA_PORT}}"
 export INSTALL_RUN_TESTS="${INSTALL_RUN_TESTS:-false}"
 export HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-900}"
 
@@ -62,10 +67,14 @@ echo "Repository: $GIT_REPO_URL"
 echo "Branch: $GIT_BRANCH"
 echo "Public URL: $FRONTEND_URL"
 echo "API URL: $VITE_API_BASE_URL"
+echo "Storage URL: $VITE_STORAGE_BASE_URL"
+echo "Media manager URL: $VITE_MEDIA_MANAGER_URL"
 echo "Backend port: $PORT"
 echo "Frontend port: $VITE_PORT"
+echo "CXMedia port: $CXMEDIA_PORT"
 echo "MariaDB: $DB_HOST:$DB_PORT/$DB_NAME"
 echo "Redis: $REDIS_HOST:$REDIS_PORT"
+echo "Media storage volume: $CXMEDIA_STORAGE_VOLUME"
 echo "Fresh reinstall: $FRESH_INSTALL"
 echo "Install tests: $INSTALL_RUN_TESTS"
 echo "Health wait limit: ${HEALTH_WAIT_SECONDS}s"
@@ -175,6 +184,63 @@ wait_external_redis() {
   done
 }
 
+STORAGE_BACKUP_DIR=""
+
+backup_existing_storage() {
+  if ! docker ps -a --format '{{.Names}}' | grep -Fx cxsun >/dev/null 2>&1; then
+    return
+  fi
+
+  STORAGE_BACKUP_DIR="$(mktemp -d)"
+  echo "Preserving existing uploaded storage before container recreate"
+  if docker cp cxsun:/workspace/cxsun/storage/. "$STORAGE_BACKUP_DIR" >/dev/null 2>&1; then
+    echo "Storage copied to temporary backup."
+  else
+    echo "No existing container storage could be copied; continuing."
+    rm -rf "$STORAGE_BACKUP_DIR"
+    STORAGE_BACKUP_DIR=""
+  fi
+}
+
+restore_storage_volume() {
+  docker volume create "$CXMEDIA_STORAGE_VOLUME" >/dev/null
+
+  if [ -z "$STORAGE_BACKUP_DIR" ] || [ ! -d "$STORAGE_BACKUP_DIR" ]; then
+    migrate_legacy_storage_volume
+    return
+  fi
+
+  echo "Restoring uploaded storage into persistent volume: $CXMEDIA_STORAGE_VOLUME"
+  docker run --rm \
+    -v "$CXMEDIA_STORAGE_VOLUME:/target" \
+    -v "$STORAGE_BACKUP_DIR:/source:ro" \
+    cxsun:v1 \
+    bash -lc "mkdir -p /target && cp -a /source/. /target/ 2>/dev/null || true" >/dev/null
+}
+
+migrate_legacy_storage_volume() {
+  if [ "$CXMEDIA_STORAGE_VOLUME" = "cxsun-storage" ]; then
+    return
+  fi
+
+  if ! docker volume inspect cxsun-storage >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "Migrating legacy cxsun-storage volume into $CXMEDIA_STORAGE_VOLUME"
+  docker run --rm \
+    -v "$CXMEDIA_STORAGE_VOLUME:/target" \
+    -v cxsun-storage:/source:ro \
+    cxsun:v1 \
+    bash -lc "mkdir -p /target && cp -an /source/. /target/ 2>/dev/null || true" >/dev/null
+}
+
+cleanup_storage_backup() {
+  if [ -n "$STORAGE_BACKUP_DIR" ]; then
+    rm -rf "$STORAGE_BACKUP_DIR" >/dev/null 2>&1 || true
+  fi
+}
+
 if [ "$FRESH_INSTALL" = "true" ]; then
   reset_external_redis
 fi
@@ -184,6 +250,7 @@ export REDIS_PORT="6379"
 echo "Using Redis container at $REDIS_HOST:$REDIS_PORT"
 start_external_redis
 wait_external_redis
+backup_existing_storage
 
 echo "Stopping existing CXSun container"
 docker compose -f "$COMPOSE_FILE" down --remove-orphans || true
@@ -205,6 +272,8 @@ if [ "$FRESH_INSTALL" = "true" ]; then
 else
   docker compose -f "$COMPOSE_FILE" build
 fi
+restore_storage_volume
+cleanup_storage_backup
 
 echo "Starting CXSun"
 docker compose -f "$COMPOSE_FILE" up -d --force-recreate
@@ -257,3 +326,5 @@ docker compose -f "$COMPOSE_FILE" logs --tail=80 cxsun
 echo "Cloud deploy complete."
 echo "Backend: $VITE_API_BASE_URL"
 echo "Frontend: $FRONTEND_URL"
+echo "Storage URL: ${VITE_STORAGE_BASE_URL}"
+echo "CXMedia: ${VITE_MEDIA_MANAGER_URL}"

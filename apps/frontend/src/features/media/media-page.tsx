@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Copy, Download, Eye, File, Image, Link2, Search, Share2, Trash2, Upload } from "lucide-react"
+import { Copy, Download, ExternalLink, Eye, File, Image, Link2, Search, Share2, Trash2, Upload } from "lucide-react"
 
 import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "s
 import { Badge } from "src/components/ui/badge"
 import { MasterListPageFrame } from "src/components/blocks/lists/master-list"
 import type { AuthSession } from "src/features/auth/auth-client"
+import { mediaManagerUrl } from "src/lib/media-manager-url"
 import { cn } from "src/lib/utils"
 import {
   deleteMediaAsset,
@@ -76,7 +77,7 @@ export function MediaManagerPage({ session }: { session: AuthSession }) {
 
   return (
     <MasterListPageFrame
-      action={<UploadPanel isUploading={uploadMutation.isPending} onUpload={(file, input) => uploadMutation.mutate({ file, input })} />}
+      action={<UploadPanel isUploading={uploadMutation.isPending} mediaManagerUrl={mediaManagerUrl} onUpload={(file, input) => uploadMutation.mutate({ file, input })} />}
       description="Upload, browse, link, share, and manage tenant media across public and private storage."
       technicalName="page.media.manager"
       title="Media Manager"
@@ -121,7 +122,7 @@ export function MediaManagerPage({ session }: { session: AuthSession }) {
   )
 }
 
-function UploadPanel({ isUploading, onUpload }: { isUploading: boolean; onUpload(file: File, input: { folder: string; visibility: MediaVisibility }): void }) {
+function UploadPanel({ isUploading, mediaManagerUrl, onUpload }: { isUploading: boolean; mediaManagerUrl: string; onUpload(file: File, input: { folder: string; visibility: MediaVisibility }): void }) {
   const [folder, setFolder] = useState("library")
   const [visibility, setVisibility] = useState<MediaVisibility>("private")
   return (
@@ -139,6 +140,10 @@ function UploadPanel({ isUploading, onUpload }: { isUploading: boolean; onUpload
         {isUploading ? "Uploading" : "Upload"}
         <input className="sr-only" multiple type="file" onChange={(event) => Array.from(event.target.files ?? []).forEach((file) => onUpload(file, { folder, visibility }))} />
       </label>
+      <Button className="h-9 rounded-md" variant="outline" onClick={() => window.open(mediaManagerUrl, "_blank", "noopener,noreferrer")} type="button">
+        <ExternalLink className="size-4" />
+        cxmedia
+      </Button>
     </div>
   )
 }

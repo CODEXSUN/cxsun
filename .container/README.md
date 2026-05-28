@@ -13,10 +13,13 @@ Default services:
 - Public URL: `https://codexsun.com`
 - Backend container port: `6005`
 - Frontend container port: `6010`
+- CXMedia File Browser port: `6050`
 - MariaDB access from the app: `mariadb:3306`
 - Redis container access from the app: `redis:6379`
 - Redis host access: `localhost:6380`
 - External Redis is the default cloud mode: Redis runs as a separate container on `codexion-network`.
+- Uploaded files live in a separate Docker volume named `cxmedia-storage`.
+- CXMedia is a standalone `filebrowser/filebrowser` container for upload and media management.
 - CORS defaults: `https://codexsun.com` and `https://www.codexsun.com`.
 
 Create the shared Docker network once:
@@ -43,10 +46,21 @@ The app defaults to these container service names:
 
 - MariaDB host: `mariadb`
 - Redis host: `redis`
+- Media container: `cxmedia`
 
 Redis intentionally publishes a host port that does not conflict with typical local installs:
 
 - Redis container port `6379` is published as host port `6380`.
+
+Storage is intentionally separated from the app workspace:
+
+- Uploaded media path inside app: `/workspace/cxsun/storage`
+- Persistent Docker volume: `cxmedia-storage`
+- Public media URL variable: `VITE_STORAGE_BASE_URL`
+- Media manager URL variable: `VITE_MEDIA_MANAGER_URL`
+- Local media manager: `http://localhost:6050`
+
+File Browser uses its own persistent database volume named `cxmedia-db`. On a new install, open the browser URL and change the default File Browser password before exposing it outside the server.
 
 ## 3. Build Image
 
@@ -69,9 +83,12 @@ First startup will:
 - Clone `https://github.com/CODEXSUN/cxsun.git` into `/workspace/cxsun`
 - Copy `.env.sample` to `.env` if `.env` does not exist
 - Write the configured ports, MariaDB host, and Redis host into `.env`
+- Write `VITE_STORAGE_BASE_URL` into `.env` so logos and invoice media can load from the application storage route
+- Write `VITE_MEDIA_MANAGER_URL` into `.env` so users can open CXMedia from the app
 - Generate `JWT_SECRET` when it is not already present
 - Write optional admin seed variables from the deploy environment when provided
 - Start Redis as a separate container on `codexion-network` when using the setup scripts
+- Start the standalone CXMedia File Browser container on `codexion-network`
 - Wait for Redis to answer `PONG` before starting the app
 - Run `npm ci` or `npm install`
 - Run ordered database setup with master migrate, master seed, and active tenant provisioning
@@ -99,6 +116,12 @@ Open frontend:
 
 ```bash
 https://codexsun.com
+```
+
+Open CXMedia:
+
+```bash
+http://localhost:6050
 ```
 
 ## 6. View Logs
@@ -222,6 +245,20 @@ bash .container/setup-redis.sh reinstall
 
 The Redis helper keeps the same defaults as cloud setup: container name `redis`, container port `6379`, host port `6380`, and Docker network `codexion-network`.
 
+The storage helper is built into the app compose. During update or reinstall, setup copies existing `/workspace/cxsun/storage` files into the separate `cxmedia-storage` volume when possible, then remounts that volume into the rebuilt app and CXMedia. This protects uploaded logos and invoice media from normal app workspace rebuilds.
+
+For production public file serving, keep `VITE_STORAGE_BASE_URL` pointed at the app domain when the backend serves `/storage`:
+
+```bash
+VITE_STORAGE_BASE_URL=https://codexsun.com .container/setup-cloud.sh
+```
+
+For CXMedia access from the application, set the URL users should open:
+
+```bash
+CXMEDIA_PORT=6050 VITE_MEDIA_MANAGER_URL=http://your-server:6050 .container/setup-cloud.sh
+```
+
 Run a fresh app and Redis reinstall without touching MariaDB:
 
 ```bash
@@ -249,6 +286,7 @@ The script will:
 
 - Create `codexion-network` when missing
 - Start Redis as a separate container on `codexion-network`
+- Start CXMedia as a standalone File Browser container on `codexion-network`
 - Reconnect an already-running Redis container to `codexion-network`
 - Wait for Redis to answer `PONG` before starting CXSun
 - Use the existing MariaDB service at `mariadb:3306`
@@ -261,7 +299,11 @@ The script will:
 - Start the app through `.container/docker-compose.yml`
 - Wait for `/health` and verify `codexsun.com` resolves as a tenant
 - Configure `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS` for `https://codexsun.com`
+- Configure `VITE_STORAGE_BASE_URL` for uploaded media, logos, and invoice images
+- Configure `VITE_MEDIA_MANAGER_URL` for the in-app CXMedia link
 - Remove the CXSun app workspace volume, reset Redis cache/container, and rebuild the app image without cache when `--fresh` or `--reinstall` is passed
+- Preserve uploaded media in `cxmedia-storage` during app reinstall
+- Migrate existing `cxsun-storage` media into `cxmedia-storage` when present
 - Never remove or recreate MariaDB
 - Print status and recent logs
 
@@ -304,3 +346,5 @@ docker compose -f .container/docker-compose.yml down -v
 ```
 
 The persistent workspace volume is named `cxsun-volume`.
+The persistent uploaded-media volume is named `cxmedia-storage`.
+The persistent File Browser database volume is named `cxmedia-db`.

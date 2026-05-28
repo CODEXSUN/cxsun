@@ -17,6 +17,8 @@ services:
       PORT: ${PORT:-6005}
       VITE_PORT: ${VITE_PORT:-6010}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://codexsun.com}
+      VITE_STORAGE_BASE_URL: ${VITE_STORAGE_BASE_URL:-https://codexsun.com}
+      VITE_MEDIA_MANAGER_URL: ${VITE_MEDIA_MANAGER_URL:-http://localhost:6050}
       FRONTEND_URL: ${FRONTEND_URL:-https://codexsun.com}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://codexsun.com,https://www.codexsun.com}
       DB_HOST: ${DB_HOST:-mariadb}
@@ -48,12 +50,30 @@ services:
       - "${VITE_PORT:-6010}:${VITE_PORT:-6010}"
     volumes:
       - cxsun-volume:/workspace
+      - cxmedia-storage:/workspace/cxsun/storage
+    networks:
+      - codexion-network
+
+  cxmedia:
+    image: filebrowser/filebrowser:v2.63.5
+    container_name: cxmedia
+    restart: unless-stopped
+    command: ["--address", "0.0.0.0", "--port", "80", "--root", "/srv", "--database", "/database/filebrowser.db"]
+    ports:
+      - "${CXMEDIA_PORT:-6050}:80"
+    volumes:
+      - cxmedia-storage:/srv
+      - cxmedia-db:/database
     networks:
       - codexion-network
 
 volumes:
   cxsun-volume:
     name: cxsun-volume
+  cxmedia-storage:
+    name: ${CXMEDIA_STORAGE_VOLUME:-cxmedia-storage}
+  cxmedia-db:
+    name: ${CXMEDIA_DB_VOLUME:-cxmedia-db}
 
 networks:
   codexion-network:
