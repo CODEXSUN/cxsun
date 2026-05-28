@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { BadRequestException, NotFoundException } from '../../core/exceptions/http.exception.js'
 import { Inject } from '../../core/decorators/inject.js'
@@ -46,32 +46,43 @@ export class MediaService {
     const buffer = Buffer.from(base64, 'base64')
     if (!buffer.length) throw new BadRequestException('File content is empty.')
 
-    const originalName = sanitizeFileName(input.fileName || 'upload.bin')
-    const extension = extensionFor(originalName, input.mimeType)
-    const uuid = dispatchPublicUuid()
-    const visibility: MediaVisibility = input.visibility === 'public' ? 'public' : 'private'
     const folder = normalizeFolder(input.folder ?? 'library')
-    const tenantFolder = context.tenant.slug || String(context.tenant.id)
-    const relativePath = path.join('media', tenantFolder, folder, `${uuid}${extension}`)
-    const diskPath = path.join(storageRoot, visibility, relativePath)
+    const originalName = sanitizeFileName(input.fileName || 'upload.bin')
+    const logoFileName = logoStorageFileName(input.storageFileName)
+    const isLogoUpload = folder === 'logo' || Boolean(logoFileName)
+    if (logoFileName && folder !== 'logo') throw new BadRequestException('Company logos must be uploaded to the logo folder.')
+    if (isLogoUpload && !logoFileName) throw new BadRequestException('Logo uploads must target logo.svg, logo-dark.svg, or favicon.svg.')
+    if (isLogoUpload && !isSvgUpload(input.mimeType, buffer)) throw new BadRequestException('Company logos only support SVG files.')
+
+    const extension = isLogoUpload ? '.svg' : extensionFor(originalName, input.mimeType)
+    const uuid = dispatchPublicUuid()
+    const visibility: MediaVisibility = isLogoUpload ? 'public' : input.visibility === 'public' ? 'public' : 'private'
+    const storageFileName = mediaStorageFileName(input.storageFileName, originalName, uuid, extension)
+    const relativePath = path.join(folder, storageFileName)
+    const normalizedRelativePath = relativePath.replace(/\\/g, '/')
+    const diskPath = tenantStoragePath(context.tenant, visibility, relativePath)
 
     await mkdir(path.dirname(diskPath), { recursive: true })
+    if (isLogoUpload) {
+      await unlink(diskPath).catch(() => undefined)
+      await this.media.retireByStoragePath(context, visibility, normalizedRelativePath)
+    }
     await writeFile(diskPath, buffer)
 
     const asset = await this.media.create(context, {
       uuid,
       tenant_id: context.tenant.id,
       company_id: await defaultCompanyId(context),
-      file_name: originalName,
+      file_name: isLogoUpload ? storageFileName : originalName,
       original_name: originalName,
-      mime_type: input.mimeType || mimeTypeFor(extension),
+      mime_type: isLogoUpload ? 'image/svg+xml' : input.mimeType || mimeTypeFor(extension),
       extension: extension.replace(/^\./, ''),
       size_bytes: buffer.length,
       visibility,
       folder,
       storage_disk: visibility,
-      storage_path: relativePath.replace(/\\/g, '/'),
-      public_url: visibility === 'public' ? `/api/v1/media/${uuid}/content?tenant=${encodeURIComponent(context.tenant.slug)}` : null,
+      storage_path: normalizedRelativePath,
+      public_url: visibility === 'public' ? publicStorageUrl(context.tenant, normalizedRelativePath) : null,
       checksum: createHash('sha256').update(buffer).digest('hex'),
       alt_text: input.altText?.trim() || null,
       caption: input.caption?.trim() || null,
@@ -100,7 +111,7 @@ export class MediaService {
     const context = await this.tenants.resolve(headers)
     const asset = await this.media.destroy(context, idOrUuid)
     if (asset) {
-      await unlink(path.join(storageRoot, asset.storage_disk, asset.storage_path)).catch(() => undefined)
+      await unlink(await resolveAssetDiskPath(context.tenant, asset)).catch(() => undefined)
       await this.queue.enqueue({ type: 'media.asset-deleted', payload: { mediaId: asset.uuid, tenantId: context.tenant.id } })
     }
     return { ok: true }
@@ -132,8 +143,43 @@ export class MediaService {
     const asset = await this.media.find(context, idOrUuid)
     if (!asset) throw new NotFoundException('Media asset not found.')
     if (!canReadAsset(asset, token, !anonymousPublicRead)) throw new NotFoundException('Media asset not found.')
-    const file = await readFile(path.join(storageRoot, asset.storage_disk, asset.storage_path))
+    const file = await readFile(await resolveAssetDiskPath(context.tenant, asset))
     return { asset, file }
+  }
+
+  async publicStorageContent(tenantSlug: string, visibility: string, folder: string, fileName: string) {
+    if (visibility !== 'public') throw new NotFoundException('Media asset not found.')
+    const tenant = await getDatabase().selectFrom('tenants').selectAll().where('slug', '=', tenantSlug.trim()).executeTakeFirst()
+    if (!tenant || tenant.status !== 'active') throw new NotFoundException('Media asset not found.')
+
+    const safeFolder = normalizeFolder(folder)
+    const safeFileName = sanitizeFileName(fileName)
+    if (safeFileName !== fileName || safeFolder !== folder) throw new NotFoundException('Media asset not found.')
+
+    const diskPath = tenantStoragePath(tenant as Tenant, 'public', path.join(safeFolder, safeFileName))
+    const file = await readFile(diskPath).catch(() => {
+      throw new NotFoundException('Media asset not found.')
+    })
+    return { file, mimeType: mimeTypeFor(path.extname(safeFileName).toLowerCase()), fileName: safeFileName }
+  }
+}
+
+function tenantStorageDirectory(tenant: Pick<Tenant, 'id' | 'slug'>, visibility: MediaVisibility) {
+  return path.join(storageRoot, sanitizePathSegment(tenant.slug || String(tenant.id)), visibility)
+}
+
+function tenantStoragePath(tenant: Pick<Tenant, 'id' | 'slug'>, visibility: MediaVisibility, relativePath: string) {
+  return path.join(tenantStorageDirectory(tenant, visibility), relativePath)
+}
+
+async function resolveAssetDiskPath(tenant: Pick<Tenant, 'id' | 'slug'>, asset: Pick<MediaAsset, 'storage_disk' | 'storage_path'>) {
+  const nextPath = tenantStoragePath(tenant, asset.storage_disk, asset.storage_path)
+
+  try {
+    await access(nextPath)
+    return nextPath
+  } catch {
+    return path.join(storageRoot, asset.storage_disk, asset.storage_path)
   }
 }
 
@@ -170,11 +216,46 @@ function sanitizeFileName(value: string) {
   return value.trim().replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, ' ') || 'upload.bin'
 }
 
+function sanitizePathSegment(value: string) {
+  return value.trim().replace(/[^a-zA-Z0-9_-]/g, '-') || 'tenant'
+}
+
+function mediaStorageFileName(storageFileName: string | undefined, originalName: string, uuid: string, extension: string) {
+  const requestedName = logoStorageFileName(storageFileName) ?? sanitizeFileName(storageFileName || '')
+  if (requestedName !== 'upload.bin') return requestedName
+  if (normalizeFolderNameForLogo(originalName)) return originalName
+  return `${uuid}${extension}`
+}
+
+function normalizeFolderNameForLogo(fileName: string) {
+  return Boolean(logoStorageFileName(fileName))
+}
+
+function logoStorageFileName(fileName: string | undefined) {
+  const normalized = sanitizeFileName(fileName || '').toLowerCase()
+  if (normalized === 'logo.svg') return 'logo.svg'
+  if (normalized === 'logo-dark.svg') return 'logo-dark.svg'
+  if (normalized === 'favicon.svg') return 'favicon.svg'
+  return null
+}
+
+function isSvgUpload(mimeType: string | undefined, buffer: Buffer) {
+  if (mimeType === 'image/svg+xml') return true
+  const head = buffer.subarray(0, 512).toString('utf8').trimStart().toLowerCase()
+  return head.startsWith('<svg') || head.startsWith('<?xml') && head.includes('<svg')
+}
+
+function publicStorageUrl(tenant: Pick<Tenant, 'id' | 'slug'>, storagePath: string) {
+  const tenantSlug = encodeURIComponent(sanitizePathSegment(tenant.slug || String(tenant.id)))
+  return `/storage/${tenantSlug}/public/${storagePath.split('/').map(encodeURIComponent).join('/')}`
+}
+
 function extensionFor(fileName: string, mimeType?: string) {
   const fromName = path.extname(fileName).toLowerCase()
   if (fromName) return fromName
   if (mimeType === 'image/jpeg') return '.jpg'
   if (mimeType === 'image/png') return '.png'
+  if (mimeType === 'image/svg+xml') return '.svg'
   if (mimeType === 'image/webp') return '.webp'
   if (mimeType === 'application/pdf') return '.pdf'
   return '.bin'
@@ -183,6 +264,7 @@ function extensionFor(fileName: string, mimeType?: string) {
 function mimeTypeFor(extension: string) {
   if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg'
   if (extension === '.png') return 'image/png'
+  if (extension === '.svg') return 'image/svg+xml'
   if (extension === '.webp') return 'image/webp'
   if (extension === '.pdf') return 'application/pdf'
   return 'application/octet-stream'

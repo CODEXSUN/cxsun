@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { AlertCircle, CheckCircle2, GitBranch, RefreshCw, RotateCcw, Terminal } from "lucide-react"
+import { AlertCircle, CheckCircle2, DownloadCloud, GitBranch, RefreshCw, RotateCcw, Terminal } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "src/components/ui/alert"
 import { Badge } from "src/components/ui/badge"
@@ -9,6 +9,7 @@ import { Progress } from "src/components/ui/progress"
 import { cn } from "src/lib/utils"
 import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import { apiBaseUrl } from "src/lib/api-base-url"
+import { startDatabaseBackup } from "src/features/system/system-manager-client"
 
 interface SystemUpdateStep {
   name: string
@@ -72,6 +73,7 @@ export function SystemUpdateView({ session }: { session: AuthSession }) {
   const [status, setStatus] = useState<SystemUpdateStatus | null>(null)
   const [running, setRunning] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [backupRunning, setBackupRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -122,7 +124,7 @@ export function SystemUpdateView({ session }: { session: AuthSession }) {
 
   async function runUpdate() {
     const confirmed = window.confirm(
-      "System update will take a database backup, reset code to the release target, install dependencies, run migrations, remove old build output, rebuild, restart, and health-check the app. Continue?",
+      "System update will reset code to the release target, install dependencies, run migrations, remove old build output, rebuild, restart, and health-check the app. Run Database backup separately before this if you need a restore point. Continue?",
     )
 
     if (!confirmed) {
@@ -157,6 +159,32 @@ export function SystemUpdateView({ session }: { session: AuthSession }) {
       setError(err instanceof Error ? err.message : "Unable to run system update.")
     } finally {
       setRunning(false)
+    }
+  }
+
+  async function runDatabaseBackup() {
+    const confirmed = window.confirm(
+      "Create a database backup for master and tenant databases now? This runs separately from System Update.",
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    setBackupRunning(true)
+    setError(null)
+
+    try {
+      const payload = await startDatabaseBackup(session)
+      if (!payload.accepted) {
+        setError("Database backup could not start.")
+        return
+      }
+      await loadStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to start database backup.")
+    } finally {
+      setBackupRunning(false)
     }
   }
 
@@ -293,9 +321,13 @@ export function SystemUpdateView({ session }: { session: AuthSession }) {
             <RefreshCw className={cn("size-4", checking && "animate-spin")} />
             {checking ? "Checking" : "Check latest version"}
           </Button>
+          <Button disabled={running || backupRunning} onClick={runDatabaseBackup} type="button" variant="outline">
+            <DownloadCloud className={cn("size-4", backupRunning && "animate-pulse")} />
+            {backupRunning ? "Starting backup" : "Database backup"}
+          </Button>
           <Button disabled={running} onClick={runUpdate} type="button">
             <RefreshCw className={cn("size-4", running && "animate-spin")} />
-            {running ? "Updating" : "Update and restart"}
+            {running ? "Updating" : "System update"}
           </Button>
           <Button disabled={running || !canRollback} onClick={runRollback} type="button" variant="outline">
             <RotateCcw className="size-4" />

@@ -1,7 +1,7 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "sonner"
 import type { AuthSession } from "src/features/auth/auth-client"
-import { listCompanies } from "src/features/company/company-client"
+import { listCompanies, type CompanyRecord } from "src/features/company/company-client"
 import { defaultSoftwareSettingsState, type SoftwareSettingsState } from "./software-settings"
 import {
   loadCompanySoftwareSettings,
@@ -14,6 +14,7 @@ export function useCompanySoftwareSettings(session: AuthSession) {
   const [state, setState] = useState<SoftwareSettingsState>(defaultSoftwareSettingsState)
   const [companyId, setCompanyId] = useState<number | null>(null)
   const [companyName, setCompanyName] = useState("Active company")
+  const [company, setCompany] = useState<CompanyRecord | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
@@ -23,6 +24,7 @@ export function useCompanySoftwareSettings(session: AuthSession) {
         const company = companies.find((item) => item.isPrimary) ?? companies[0] ?? null
         setCompanyId(company?.id ?? null)
         setCompanyName(company?.name ?? "Active company")
+        setCompany(company)
         setState(loadCompanySoftwareSettings(company?.id))
         return loadCompanySoftwareSettingsFromServer(session, company?.id, { signal: controller.signal })
       })
@@ -48,10 +50,9 @@ export function useCompanySoftwareSettings(session: AuthSession) {
     toast.success("Company settings saved", { description: `${companyName} settings are now shared across devices.` })
   }
 
-  return [state, setState as Dispatch<SetStateAction<SoftwareSettingsState>>, { companyId, companyName, isLoaded, saveNow }] as const
+  return [state, setState as Dispatch<SetStateAction<SoftwareSettingsState>>, { company, companyId, companyName, isLoaded, saveNow }] as const
 }
 
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError"
 }
-

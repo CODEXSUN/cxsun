@@ -55,6 +55,32 @@ export class MediaRepository {
     return asset
   }
 
+  async retireByStoragePath(context: TenantRuntimeContext, visibility: string, storagePath: string) {
+    const rows = await this.database(context)
+      .selectFrom('media_assets')
+      .select(['id', 'original_name'])
+      .where('tenant_id', '=', context.tenant.id)
+      .where('storage_disk', '=', visibility)
+      .where('storage_path', '=', storagePath)
+      .where('deleted_at', 'is', null)
+      .execute()
+
+    if (!rows.length) return
+
+    await this.database(context)
+      .updateTable('media_assets')
+      .set({ deleted_at: new Date(), is_active: false, updated_at: new Date() })
+      .where('tenant_id', '=', context.tenant.id)
+      .where('storage_disk', '=', visibility)
+      .where('storage_path', '=', storagePath)
+      .where('deleted_at', 'is', null)
+      .execute()
+
+    for (const row of rows) {
+      await this.addActivity(context, Number(row.id), 'replaced', `Replaced ${String(row.original_name)}`)
+    }
+  }
+
   async update(context: TenantRuntimeContext, idOrUuid: string, input: MediaUpdateInput) {
     const existing = await this.find(context, idOrUuid)
     if (!existing) throw new BadRequestException('Media asset not found.')

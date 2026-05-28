@@ -20,6 +20,7 @@ export interface SoftwareSettingsState {
   dutiesTaxSettings: DutiesTaxSettings
   features: readonly SoftwareToggleSetting[]
   favoriteDashboardApp: FavoriteDashboardApp
+  letterheadSettings: LetterheadSettings
   salesBillingLayout: readonly SoftwareToggleSetting[]
   salesPrintingOptions: SalesPrintingOptions
   salesPrintingSettings: readonly SoftwareToggleSetting[]
@@ -36,10 +37,43 @@ export interface SalesPrintingOptions {
   customTerms: string
 }
 
+export interface LetterheadSettings {
+  addressColor: string
+  addressFontFamily: string
+  addressFontSize: number
+  borderColor: string
+  companyNameColor: string
+  companyNameFontFamily: string
+  companyNameFontSize: number
+  contactColor: string
+  contactFontSize: number
+  heightMm: number
+  logoHeightMm: number
+  logoWidthMm: number
+  taxColor: string
+  taxFontSize: number
+}
+
 export type FavoriteDashboardApp = "application" | "billing"
 
 export const defaultSoftwareSettingsState: SoftwareSettingsState = {
   favoriteDashboardApp: "application",
+  letterheadSettings: {
+    addressColor: "#111111",
+    addressFontFamily: "Times New Roman",
+    addressFontSize: 12,
+    borderColor: "#9ca3af",
+    companyNameColor: "#000000",
+    companyNameFontFamily: "Times New Roman",
+    companyNameFontSize: 32,
+    contactColor: "#111111",
+    contactFontSize: 11,
+    heightMm: 42,
+    logoHeightMm: 24,
+    logoWidthMm: 28,
+    taxColor: "#000000",
+    taxFontSize: 11,
+  },
   dutiesTaxSettings: {
     openingGstAsOnDate: "",
     openingGstCgst: "0",
@@ -87,4 +121,3 @@ export function isSoftwareSettingEnabled(state: SoftwareSettingsState, id: strin
     ...state.customiseGroups.flatMap((group) => group.settings),
   ].find((setting) => setting.id === id)?.enabled ?? false
 }
-

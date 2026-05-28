@@ -109,6 +109,7 @@ export interface DefaultCompanyContext {
   companyId: number
   companyName: string
   companyCode: string
+  logos: CompanyLogo[]
   accountingYearId: number
   accountingYearName: string
   accountingYearStartDate: string | null

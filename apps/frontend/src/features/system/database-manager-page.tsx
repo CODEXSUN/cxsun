@@ -57,7 +57,7 @@ export default function DatabaseManagerPage({ session }: { session: AuthSession 
       <Alert>
         <ShieldCheck className="size-4" />
         <AlertTitle>Update protection</AlertTitle>
-        <AlertDescription>System update and update.sh run a backup before migrations or rebuild steps. Restore is available here for controlled recovery.</AlertDescription>
+        <AlertDescription>Create a database backup before running System Update when you need a restore point. Restore is available here for controlled recovery.</AlertDescription>
       </Alert>
 
       {overviewQuery.isLoading ? (

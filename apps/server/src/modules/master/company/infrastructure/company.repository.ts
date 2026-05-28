@@ -32,11 +32,25 @@ export class CompanyRepository {
       return null
     }
 
+    const logos = await context.database
+      .selectFrom('company_logos')
+      .selectAll()
+      .where('company_id', '=', Number(row.company_id))
+      .where('is_active', '=', true)
+      .execute()
+
     return {
       id: Number(row.id),
       companyId: Number(row.company_id),
       companyName: String(row.company_name ?? ''),
       companyCode: String(row.company_code ?? ''),
+      logos: logos.map((logo) => ({
+        id: logo.id,
+        uuid: logo.uuid,
+        logoUrl: logo.logo_url,
+        logoType: logo.logo_type,
+        isActive: booleanValue(logo.is_active),
+      })),
       accountingYearId: Number(row.accounting_year_id),
       accountingYearName: String(row.accounting_year_name ?? ''),
       accountingYearStartDate: dateOrNull(row.accounting_year_start_date),

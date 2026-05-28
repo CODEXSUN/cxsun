@@ -4,12 +4,12 @@ import { TenantRepository } from '../../core/tenant/infrastructure/tenant.reposi
 import { TenantDomainRepository } from '../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
 import { MasterQueueService } from '../../infrastructure/queue/master-queue.service.js'
 import { AuthRepository } from '../auth/infrastructure/auth.repository.js'
-import { MediaController } from './media.controller.js'
+import { MediaController, PublicStorageController } from './media.controller.js'
 import { MediaRepository } from './media.repository.js'
 import { MediaService } from './media.service.js'
 
 @Module({
-  controllers: [MediaController],
+  controllers: [MediaController, PublicStorageController],
   providers: [
     AuthRepository,
     TenantRepository,

@@ -2,13 +2,25 @@
 
 ## Version State
 
-- **Current version:** `1.0.43`
-- **Release tag:** `v-1.0.43`
-- **Changelog label:** `v 1.0.43`
+- **Current version:** `1.0.44`
+- **Release tag:** `v-1.0.44`
+- **Changelog label:** `v 1.0.44`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.44
+
+### [v 1.0.44] 2026-05-28 10:35 am - tenant media isolation and letterhead designer
+
+- Bumped workspace version to 1.0.44
+- Isolated media storage by tenant with public and private paths under `storage/<tenant>/public` and `storage/<tenant>/private`, while keeping legacy reads available for existing files.
+- Added fixed SVG-only company logo uploads that overwrite stable tenant files at `storage/<tenant>/public/logo/logo.svg`, `logo-dark.svg`, and `favicon.svg` regardless of the uploaded filename.
+- Updated company logo settings and media picker behavior so logo uploads use the fixed tenant logo folder and stable public URLs across the application.
+- Added tenant company logo resolution for app branding, sidebar branding, print headers, and report headers.
+- Added a shared letterhead builder with live print preview and frontend controls for company name, address, contact, tax text, colors, sizes, spacing, and logo dimensions.
+- Wired the shared letterhead into sales, purchase, receipt, payment, stock documents, and billing/GST statements so printed headers use the same tenant-specific design.
 
 ## v-1.0.43
 

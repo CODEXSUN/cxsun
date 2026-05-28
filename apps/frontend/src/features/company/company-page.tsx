@@ -71,15 +71,13 @@ const companyLogoVariants = [
   { type: "logo", label: "Logo" },
   { type: "logo-dark", label: "Logo Dark" },
   { type: "favicon", label: "Favicon" },
-  { type: "letter-head", label: "Letter Head" },
 ] as const
 
-const companyLogoBasePath = "/storage/logo"
+const companyLogoBasePath = "storage/<tenant>/public/logo"
 const defaultCompanyLogoFileNames: Record<(typeof companyLogoVariants)[number]["type"], string> = {
   logo: "logo.svg",
   "logo-dark": "logo-dark.svg",
   favicon: "favicon.svg",
-  "letter-head": "logo.svg",
 }
 
 export function CompanyPage({ session }: { session: AuthSession }) {
@@ -464,6 +462,7 @@ function CompanyUpsertPage({
     try {
       await onSubmit(withDerivedCompanyContactFields({
         ...form,
+        logos: stableCompanyLogoSet(session.selectedTenant.slug),
         status: form.isActive ? "active" : "suspend",
       }))
     } catch (error) {
@@ -475,9 +474,9 @@ function CompanyUpsertPage({
     }
   }
 
-  function selectLogoFromMedia(asset: MediaAsset) {
+  function selectLogoFromMedia(_asset: MediaAsset) {
     if (!logoPickerType) return
-    setFormField(setForm, "logos", updateLogoVariantUrl(form.logos, logoPickerType, mediaLogoUrl(session, asset)))
+    setFormField(setForm, "logos", updateLogoVariantUrl(form.logos, logoPickerType, buildLogoStoragePath(defaultLogoFileName(logoPickerType), session.selectedTenant.slug)))
     setLogoPickerType(null)
   }
 
@@ -522,12 +521,15 @@ function CompanyUpsertPage({
         </MasterListUpsertCard>
       </MasterListUpsertLayout>
       <MediaPickerDialog
-        folder="company/logo"
+        accept="image/svg+xml,.svg"
+        fixedFolder
+        folder="logo"
         onOpenChange={(open) => setLogoPickerType(open ? logoPickerType : null)}
         onSelect={selectLogoFromMedia}
         open={Boolean(logoPickerType)}
         session={session}
         title="Choose company logo"
+        uploadFileName={logoPickerType ? defaultLogoFileName(logoPickerType) : undefined}
         uploadVisibility="public"
       />
     </MasterListPageFrame>
@@ -611,13 +613,13 @@ function buildCompanyUpsertTabs({
               <FieldShell key={variant.type} label={variant.label}>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Input className="h-11 rounded-xl" value={getLogoVariantFileName(form.logos, variant.type)} placeholder={defaultCompanyLogoFileNames[variant.type]} onChange={(event) => setFormField(setForm, "logos", updateLogoVariantFileName(form.logos, variant.type, event.target.value))} />
+                    <Input className="h-11 rounded-xl font-mono text-xs" readOnly value={buildLogoStoragePath(defaultCompanyLogoFileNames[variant.type], session.selectedTenant.slug)} />
                     <Button type="button" variant="outline" className="h-11 rounded-xl px-3" onClick={() => onLogoPick(variant.type)}>
                       <ImagePlus className="size-4" />
                       Upload
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">Stored in `{companyLogoBasePath}` as {getLogoVariantFileName(form.logos, variant.type) || defaultCompanyLogoFileNames[variant.type]}.</p>
+                  <p className="text-xs text-muted-foreground">Stored in `{companyLogoBasePath}` as {defaultCompanyLogoFileNames[variant.type]}.</p>
                 </div>
               </FieldShell>
             ))}
@@ -1071,28 +1073,6 @@ function labelizeEnum(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
-function getLogoVariantUrl(logos: readonly CompanyUpsertInput["logos"][number][], logoType: string) {
-  return logos.find((logo) => normalizeLogoType(logo.logoType) === normalizeLogoType(logoType))?.logoUrl ?? ""
-}
-
-function getLogoVariantFileName(logos: readonly CompanyUpsertInput["logos"][number][], logoType: string) {
-  return trimLogoStoragePath(getLogoVariantUrl(logos, logoType))
-}
-
-function updateLogoVariantFileName(
-  logos: readonly CompanyUpsertInput["logos"][number][],
-  logoType: string,
-  fileName: string,
-) {
-  const normalizedType = normalizeLogoType(logoType)
-  const nextLogo = { logoType, logoUrl: buildLogoStoragePath(fileName || defaultLogoFileName(logoType)), isActive: true }
-  const hasExistingLogo = logos.some((logo) => normalizeLogoType(logo.logoType) === normalizedType)
-
-  if (!hasExistingLogo) return [...logos, nextLogo]
-
-  return logos.map((logo) => (normalizeLogoType(logo.logoType) === normalizedType ? nextLogo : logo))
-}
-
 function updateLogoVariantUrl(
   logos: readonly CompanyUpsertInput["logos"][number][],
   logoType: string,
@@ -1107,12 +1087,16 @@ function updateLogoVariantUrl(
   return logos.map((logo) => (normalizeLogoType(logo.logoType) === normalizedType ? nextLogo : logo))
 }
 
-function mediaLogoUrl(session: AuthSession, asset: MediaAsset) {
-  return asset.public_url || `/api/v1/media/${asset.uuid}/content?tenant=${encodeURIComponent(session.selectedTenant.slug)}`
+function stableCompanyLogoSet(tenantSlug: string) {
+  return companyLogoVariants.map((variant) => ({
+    logoType: variant.type,
+    logoUrl: buildLogoStoragePath(defaultCompanyLogoFileNames[variant.type], tenantSlug),
+    isActive: true,
+  }))
 }
 
-function buildLogoStoragePath(fileName: string) {
-  return `${companyLogoBasePath}/${trimLogoStoragePath(fileName)}`
+function buildLogoStoragePath(fileName: string, tenantSlug: string) {
+  return `/storage/${tenantSlug}/public/logo/${trimLogoStoragePath(fileName)}`
 }
 
 function trimLogoStoragePath(value: string | null | undefined) {
@@ -1120,7 +1104,10 @@ function trimLogoStoragePath(value: string | null | undefined) {
   if (!trimmedValue) return ""
   return trimmedValue
     .replace(/^https?:\/\/[^/]+/i, "")
+    .replace(/^\/?storage\/[^/]+\/public\/logo\//i, "")
     .replace(/^\/?storage\/logo\//i, "")
+    .replace(/^\/?storage\//i, "")
+    .replace(/^\/?logo\//i, "")
     .replace(/^\/+/, "")
 }
 

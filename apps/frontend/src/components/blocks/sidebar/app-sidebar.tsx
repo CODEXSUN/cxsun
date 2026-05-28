@@ -30,6 +30,7 @@ import {
 import { version } from "../../../../package.json"
 import { getDashboardApp, type DashboardAppId, type DashboardAppMenuItem } from "src/components/blocks/dashboard/dashboard-apps"
 import type { DefaultCompanyContext } from "src/features/company/company-client"
+import { companyLogoSet } from "src/features/company/company-logo"
 
 interface SidebarNavItem {
   title: string
@@ -148,6 +149,18 @@ export function AppSidebar({
   onTenantChange?: (tenantSlug: string) => void
 }) {
   const selectedApp = getDashboardApp(activeApp)
+  const defaultCompanyLogo = companyLogoSet(defaultCompanyContext)
+  const TenantLogo = React.useCallback(
+    ({ className }: { className?: string }) => (
+      <BrandLogo
+        className={className}
+        logoDarkUrl={defaultCompanyLogo.logoDarkUrl}
+        logoUrl={defaultCompanyLogo.logoUrl}
+        name={defaultCompanyContext?.companyName}
+      />
+    ),
+    [defaultCompanyContext?.companyName, defaultCompanyLogo.logoDarkUrl, defaultCompanyLogo.logoUrl],
+  )
   const tenantAppNav = selectedApp.menuGroups.map((group, index) => ({
     title: group.title,
     url: "#",
@@ -174,7 +187,7 @@ export function AppSidebar({
         <CompanySwitcher
           companies={tenants.map((tenant) => ({
             name: tenant.name,
-            logo: BrandLogo,
+            logo: dashboardMode === "tenant" ? TenantLogo : BrandLogo,
             period: dashboardMode === "tenant" ? "Tenant DB" : tenant.role,
             value: tenant.slug,
           }))}

@@ -1,6 +1,8 @@
 import { useMemo, type ReactNode } from "react"
 import qrcode from "qrcode-generator"
 import type { CompanyRecord } from "src/features/company/company-client"
+import { LetterheadBuilder } from "src/features/company/letterhead-builder"
+import type { LetterheadSettings } from "src/features/settings/software-settings"
 import { MainPrintTemplate } from "./main-print-template"
 import { getSalesPrintLinePlan } from "./sales-print-line-plan"
 import type { SalesEntry, SalesEntryItem } from "./sales-client"
@@ -10,8 +12,6 @@ const baseCell = "border-r border-gray-400 align-top p-[3px]"
 const itemCell = `${baseCell} h-[26px] border-b-4 border-double border-gray-400 p-0 text-center text-[9px] leading-none`
 const lineItemCell = `${baseCell} h-[28px] text-center text-[9px] leading-[1.08]`
 const totalItemCell = `${baseCell} h-[18px] border-y border-gray-400 text-center text-[9px] leading-none`
-const times = "font-['Times_New_Roman']"
-
 export type SalesPrintCopy = "duplicate" | "original" | "triplicate"
 export interface SalesPrintAddressLabels {
   cities(value: unknown): string
@@ -35,6 +35,7 @@ export function SalesInvoiceDocument({
   copy = "original",
   customTerms,
   documentTitle = "TAX INVOICE",
+  letterheadSettings,
   record,
   showBankAccountNumber = true,
   showColour = false,
@@ -52,6 +53,7 @@ export function SalesInvoiceDocument({
   readonly copy?: SalesPrintCopy
   readonly customTerms?: string | null
   readonly documentTitle?: string
+  readonly letterheadSettings?: Partial<LetterheadSettings>
   readonly record: SalesEntry
   readonly showBankAccountNumber?: boolean
   readonly showColour?: boolean
@@ -70,7 +72,6 @@ export function SalesInvoiceDocument({
   const preQtyColumnCount = itemColumns.findIndex((column) => column.key === "quantity")
   const itemLinePlan = getSalesPrintLinePlan(record.items)
   const companyName = printableText(company?.legalName) || printableText(company?.name) || "CXSun Tenant Company"
-  const companyHeaderLines = company ? companyHeaderDetails(company, addressLabels) : { address: [], contact: "", taxGstin: "", taxMsme: "" }
   const companyBank = company ? primaryBankAccount(company) : null
   const termsLines = salesPrintTerms(customTerms || record.terms)
   const hasIrn = Boolean(salesDocumentValue(record, "irn"))
@@ -87,23 +88,8 @@ export function SalesInvoiceDocument({
       <table className={`${tableClass} border-b-0`}>
         <tbody>
           <tr>
-            <td className={`${baseCell} h-[160px] w-[130px] border-r-0 text-center align-middle`}>
-              {showLogo ? <CompanyLogo company={company ?? null} companyName={companyName} /> : null}
-            </td>
-            <td className={`${baseCell} h-[160px] ${hasEInvoiceQr ? "" : "border-r-0"} text-center align-middle`}>
-              <div className="flex h-[150px] flex-col items-center justify-center">
-                <div className={`${times} max-w-full whitespace-nowrap text-[clamp(25px,4.1vw,34px)] font-bold leading-tight`}>{companyName}</div>
-                <div className={`${times} mx-auto mt-3 max-w-[580px] text-[12px] font-medium leading-[1.45] tracking-wide`}>
-                  {companyHeaderLines.address.map((line) => <div key={line}>{line}</div>)}
-                  {companyHeaderLines.contact ? <div>{companyHeaderLines.contact}</div> : null}
-                  {companyHeaderLines.taxGstin || companyHeaderLines.taxMsme ? (
-                    <div className="text-[11px] font-bold tracking-wide">
-                      {companyHeaderLines.taxGstin ? <span>{companyHeaderLines.taxGstin}</span> : null}
-                      {companyHeaderLines.taxMsme ? <span className="ml-2">{companyHeaderLines.taxMsme}</span> : null}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
+            <td className={`${baseCell} ${hasEInvoiceQr ? "" : "border-r-0"} p-0 align-middle`} colSpan={hasEInvoiceQr ? 2 : 3}>
+              <LetterheadBuilder addressLabels={addressLabels} company={company ?? null} settings={letterheadSettings} showLogo={showLogo} />
             </td>
             {hasEInvoiceQr ? (
               <td className={`${baseCell} w-[160px] border-r-0 align-middle`}>
@@ -337,11 +323,6 @@ function PartyAddressBlock({
   )
 }
 
-function CompanyLogo({ company, companyName }: { company: CompanyRecord | null; companyName: string }) {
-  void company
-  return <img src="/logo.svg" alt={companyName || "CXSUN"} className="mx-auto mt-4 max-h-[104px] max-w-[116px] object-contain" />
-}
-
 function EInvoiceQrData({ value }: { value: string }) {
   const svgMarkup = createQrSvg(value)
   if (!svgMarkup) return null
@@ -501,40 +482,6 @@ function itemTax(item: SalesEntryItem) {
 
 function sumQty(items: readonly SalesEntryItem[]) {
   return items.reduce((sum, item) => sum + Number(item.quantity || 0), 0).toLocaleString("en-IN")
-}
-
-function companyHeaderDetails(company: CompanyRecord, labels?: SalesPrintAddressLabels) {
-  const address = company.addresses.find((item) => item.isActive && item.isDefault) ?? company.addresses.find((item) => item.isActive) ?? company.addresses[0]
-  const addressLines = address ? [
-    [address.addressLine1, address.addressLine2].map(printableText).filter(Boolean).join(", "),
-    [
-      [labelOrRaw(labels?.cities, address.cityId), districtLabel(labelOrRaw(labels?.districts, address.districtId)), labelOrRaw(labels?.states, address.stateId), labelOrRaw(labels?.countries, address.countryId)].filter(Boolean).join(", "),
-      labelOrRaw(labels?.pincodes, address.pincodeId),
-    ].filter(Boolean).join(" - "),
-  ].filter(Boolean) : []
-
-  const email = printableText(company.primaryEmail) || printableText(company.emails.find((item) => item.isActive)?.email)
-  const phone = printableText(company.primaryPhone) || printableText(company.phones.find((item) => item.isActive && item.isPrimary)?.phoneNumber) || printableText(company.phones.find((item) => item.isActive)?.phoneNumber)
-  const gstin = printableText(company.gstinUin)
-  const msme = [printableText(company.msmeCategory), printableText(company.msmeNo)].filter(Boolean).join(" / ")
-
-  return {
-    address: addressLines,
-    contact: [email ? `Email: ${email}` : "", phone ? `Phone: ${phone}` : ""].filter(Boolean).join("    "),
-    taxGstin: gstin ? `GSTIN/UIN: ${gstin}` : "",
-    taxMsme: msme ? `MSME: ${msme}` : "",
-  }
-}
-
-function labelOrRaw(resolver: ((value: unknown) => string) | undefined, value: unknown) {
-  const resolved = resolver?.(value)
-  return printableText(resolved) || printableText(value)
-}
-
-function districtLabel(value: string) {
-  const label = printableText(value)
-  if (!label || label === "-") return ""
-  return /\bdist\.?$/i.test(label) ? label : `${label} -Dist`
 }
 
 function primaryBankAccount(company: CompanyRecord) {

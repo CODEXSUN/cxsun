@@ -23,11 +23,13 @@ import {
 import { cn } from "src/lib/utils"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { listCompanies, type CompanyBankAccount, type CompanyRecord } from "src/features/company/company-client"
+import { LetterheadBuilder } from "src/features/company/letterhead-builder"
 import { emptyContact, upsertContact, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { WorkOrderAutocomplete } from "src/features/master-data/interface/components/work-order-autocomplete"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
 import { nextDocumentNumberSetting } from "src/features/settings/document-settings-client"
+import { useCompanySoftwareSettings } from "src/features/settings/use-company-software-settings"
 import { filterStockContactLookupOptions, stockContactTypeId } from "src/features/stock/contact-role-filter"
 import {
   addReceiptComment,
@@ -269,6 +271,7 @@ function ReceiptShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdi
   const [toolActivities, setToolActivities] = useState<Array<{ id: string; message: string; created_at: string }>>([])
   const companyQuery = useQuery({ queryKey: ["receipt-print-company", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
   const company = (companyQuery.data ?? []).find((item) => item.isPrimary) ?? companyQuery.data?.[0] ?? null
+  const [softwareSettings] = useCompanySoftwareSettings(session)
   const entryTools: Array<{ icon: typeof Mail; id: ReceiptToolId; label: string }> = [
     { icon: Mail, id: "email", label: "Send to Email" },
     { icon: UserRound, id: "assign", label: "Assign" },
@@ -316,7 +319,7 @@ function ReceiptShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdi
       </div>
       <section className="mx-auto w-fit max-w-full overflow-hidden rounded-md border border-border/70 bg-card shadow-sm print:contents">
         <div className="overflow-x-auto p-3 print:contents sm:p-4">
-          <ReceiptPrintDocument company={company} record={entry} />
+          <ReceiptPrintDocument company={company} letterheadSettings={softwareSettings.letterheadSettings} record={entry} />
         </div>
       </section>
       <div className="mx-auto mt-4 grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_280px] print:hidden">
@@ -510,7 +513,7 @@ function ReceiptAllocationsTab({ form, setForm }: { form: ReceiptEntryInput; set
   )
 }
 
-function ReceiptPrintDocument({ company, record }: { company: CompanyRecord | null; record: ReceiptEntry }) {
+function ReceiptPrintDocument({ company, letterheadSettings, record }: { company: CompanyRecord | null; letterheadSettings?: Parameters<typeof LetterheadBuilder>[0]["settings"]; record: ReceiptEntry }) {
   const companyName = company?.legalName?.trim() || company?.name || ""
   return (
     <section className="mx-auto w-[210mm] max-w-full bg-white p-4 font-[Verdana,Arial,sans-serif] text-[10px] text-black print:w-[198mm] print:p-0 receipt-print-sheet">
@@ -519,13 +522,8 @@ function ReceiptPrintDocument({ company, record }: { company: CompanyRecord | nu
         <span className="text-[12px] font-bold">RECEIPT VOUCHER</span>
         <span className="text-right">Original Copy</span>
       </div>
-      <div className="grid min-h-[110px] grid-cols-[130px_1fr] border border-gray-400 border-b-0">
-        <div className="flex items-center justify-center border-r border-gray-400 text-4xl font-bold">{(companyName || "C").slice(0, 2).toUpperCase()}</div>
-        <div className="flex flex-col items-center justify-center px-4 text-center">
-          <div className="font-['Times_New_Roman'] text-[30px] font-bold leading-tight">{companyName}</div>
-          {company?.gstinUin ? <div>GSTIN: {company.gstinUin}</div> : null}
-          {company?.primaryEmail ? <div>Email: {company.primaryEmail}</div> : null}
-        </div>
+      <div className="border border-gray-400 border-b-0">
+        <LetterheadBuilder company={company} settings={letterheadSettings} />
       </div>
       <div className="grid grid-cols-2 border border-gray-400 border-b-0">
         <div className="space-y-1 border-r border-gray-400 p-2">

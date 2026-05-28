@@ -11,7 +11,7 @@ const BACKUP_ROOT = resolve(ROOT, 'storage', 'backups', 'database')
 const command = process.argv[2] ?? 'backup'
 const target = process.argv[3] ?? 'latest'
 
-const env = { ...readEnvFile(ENV_PATH), ...process.env }
+const env = { ...readEnvFile(ENV_PATH), ...nonEmptyEnv(process.env) }
 
 if (command === 'backup') {
   await backup()
@@ -323,10 +323,9 @@ function findTool(candidates) {
 
 function findExistingTool(candidates) {
   for (const tool of candidates) {
-    const check = spawnSync(process.platform === 'win32' ? 'where.exe' : 'command', process.platform === 'win32' ? [tool] : ['-v', tool], {
-      stdio: 'ignore',
-      shell: process.platform !== 'win32',
-    })
+    const check = process.platform === 'win32'
+      ? spawnSync('where.exe', [tool], { stdio: 'ignore' })
+      : spawnSync('sh', ['-c', `command -v ${shellQuote(tool)}`], { stdio: 'ignore' })
 
     if (check.status === 0) {
       return tool
@@ -341,10 +340,7 @@ function installMariaDbClientIfPossible() {
     return
   }
 
-  const apt = spawnSync('command', ['-v', 'apt-get'], {
-    stdio: 'ignore',
-    shell: true,
-  })
+  const apt = spawnSync('sh', ['-c', 'command -v apt-get'], { stdio: 'ignore' })
   if (apt.status !== 0) {
     return
   }
@@ -395,7 +391,15 @@ function numberEnv(key, fallback) {
 }
 
 function secret(key) {
-  return stringEnv(key || 'DB_PASSWORD')
+  const value = stringEnv(key || 'DB_PASSWORD')
+  if (value) return value
+  return key && key !== 'DB_PASSWORD' ? stringEnv('DB_PASSWORD') : ''
+}
+
+function nonEmptyEnv(source) {
+  return Object.fromEntries(
+    Object.entries(source).filter(([, value]) => String(value ?? '').trim() !== ''),
+  )
 }
 
 function timestampId() {
@@ -408,6 +412,10 @@ function safeFileName(value) {
 
 function escapeIdentifier(value) {
   return String(value).replaceAll('`', '``')
+}
+
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`
 }
 
 function message(error) {

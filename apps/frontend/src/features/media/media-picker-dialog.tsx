@@ -14,21 +14,25 @@ import { fileToBase64, listMediaAssets, mediaContentBlobUrl, uploadMediaAsset, t
 
 export function MediaPickerDialog({
   accept = "image/*",
+  fixedFolder = false,
   folder = "library",
   onOpenChange,
   onSelect,
   open,
   session,
   title = "Select media",
+  uploadFileName,
   uploadVisibility = "public",
 }: {
   accept?: string
+  fixedFolder?: boolean
   folder?: string
   onOpenChange(open: boolean): void
   onSelect(asset: MediaAsset): void
   open: boolean
   session: AuthSession
   title?: string
+  uploadFileName?: string
   uploadVisibility?: MediaVisibility
 }) {
   const queryClient = useQueryClient()
@@ -52,6 +56,7 @@ export function MediaPickerDialog({
         fileName: file.name,
         folder: activeFolder || folder,
         mimeType: file.type || "application/octet-stream",
+        storageFileName: uploadFileName,
         visibility: uploadVisibility,
       })
     },
@@ -79,7 +84,7 @@ export function MediaPickerDialog({
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input className="h-10 rounded-md pl-9" placeholder="Search media" value={search} onChange={(event) => setSearch(event.target.value)} />
             </div>
-            <Input className="h-10 rounded-md" placeholder="Folder" value={activeFolder} onChange={(event) => setActiveFolder(event.target.value)} />
+            <Input className="h-10 rounded-md" placeholder="Folder" readOnly={fixedFolder} value={activeFolder} onChange={(event) => setActiveFolder(event.target.value)} />
             <Select value={visibility} onValueChange={(value) => setVisibility(value as "all" | MediaVisibility)}>
               <SelectTrigger className="h-10 rounded-md"><SelectValue /></SelectTrigger>
               <SelectContent>

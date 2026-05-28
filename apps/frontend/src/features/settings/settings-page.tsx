@@ -7,6 +7,7 @@ import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/components/ui/card"
 import { Switch } from "src/components/ui/switch"
 import { MasterListPageFrame } from "src/components/blocks/lists/master-list"
+import { LetterheadBuilder } from "src/features/company/letterhead-builder"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { cn } from "src/lib/utils"
 import {
@@ -22,6 +23,7 @@ import { type SoftwareToggleSetting } from "./software-settings"
 import {
   updateCustomiseSetting,
   updateFeatureSetting,
+  updateLetterheadSetting,
   updateSalesBillingLayoutSetting,
   updateSalesPrintingOption,
   updateSalesPrintingSetting,
@@ -68,6 +70,7 @@ export function SalesSettingsPage({ session }: { session: AuthSession }) {
                   <span className="text-sm font-medium text-foreground">Custom terms</span>
                   <textarea className="min-h-24 resize-y rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40" value={state.salesPrintingOptions.customTerms} onChange={(event) => setState((current) => updateSalesPrintingOption(current, event.target.value))} />
                 </label>
+                <LetterheadDesigner company={context.company} state={state} setState={setState} />
               </SettingsCard>
             ),
           },
@@ -100,6 +103,44 @@ export function SalesSettingsPage({ session }: { session: AuthSession }) {
         ]}
       />
     </MasterListPageFrame>
+  )
+}
+
+function LetterheadDesigner({ company, setState, state }: { company: ReturnType<typeof useCompanySoftwareSettings>[2]["company"]; setState: ReturnType<typeof useCompanySoftwareSettings>[1]; state: ReturnType<typeof useCompanySoftwareSettings>[0] }) {
+  const value = state.letterheadSettings
+  return (
+    <div className="grid gap-3 rounded-md border border-border/70 bg-background px-4 py-3">
+      <div className="overflow-hidden rounded-md border bg-white text-black shadow-sm" style={{ borderColor: value.borderColor }}>
+        <LetterheadBuilder company={company} settings={value} />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-foreground">Letterhead Designer</p>
+        <p className="text-xs text-muted-foreground">Used by sales, purchase, receipt, payment, stock documents, and statements.</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <DesignerField label="Company font" value={value.companyNameFontFamily} onChange={(next) => setState((current) => updateLetterheadSetting(current, "companyNameFontFamily", next))} />
+        <DesignerField label="Address font" value={value.addressFontFamily} onChange={(next) => setState((current) => updateLetterheadSetting(current, "addressFontFamily", next))} />
+        <DesignerField label="Company size" type="number" value={String(value.companyNameFontSize)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "companyNameFontSize", Number(next || 0)))} />
+        <DesignerField label="Address size" type="number" value={String(value.addressFontSize)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "addressFontSize", Number(next || 0)))} />
+        <DesignerField label="Contact size" type="number" value={String(value.contactFontSize)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "contactFontSize", Number(next || 0)))} />
+        <DesignerField label="Tax size" type="number" value={String(value.taxFontSize)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "taxFontSize", Number(next || 0)))} />
+        <DesignerField label="Header height mm" type="number" value={String(value.heightMm)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "heightMm", Number(next || 0)))} />
+        <DesignerField label="Logo height mm" type="number" value={String(value.logoHeightMm)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "logoHeightMm", Number(next || 0)))} />
+        <DesignerField label="Logo width mm" type="number" value={String(value.logoWidthMm)} onChange={(next) => setState((current) => updateLetterheadSetting(current, "logoWidthMm", Number(next || 0)))} />
+        <DesignerField label="Company color" type="color" value={value.companyNameColor} onChange={(next) => setState((current) => updateLetterheadSetting(current, "companyNameColor", next))} />
+        <DesignerField label="Address color" type="color" value={value.addressColor} onChange={(next) => setState((current) => updateLetterheadSetting(current, "addressColor", next))} />
+        <DesignerField label="Border color" type="color" value={value.borderColor} onChange={(next) => setState((current) => updateLetterheadSetting(current, "borderColor", next))} />
+      </div>
+    </div>
+  )
+}
+
+function DesignerField({ label, onChange, type = "text", value }: { label: string; onChange(value: string): void; type?: "color" | "number" | "text"; value: string }) {
+  return (
+    <label className="grid gap-1.5 text-sm">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <input className="h-9 rounded-md border border-input bg-background px-2 text-sm outline-none focus:border-foreground/40" type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
   )
 }
 

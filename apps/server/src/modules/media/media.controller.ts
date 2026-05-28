@@ -55,3 +55,18 @@ export class MediaController {
     return this.media.link(headers, idOrUuid, body ?? {})
   }
 }
+
+@Controller('storage')
+export class PublicStorageController {
+  constructor(@Inject(MediaService) private readonly media: MediaService) {}
+
+  @Get(':tenant/:visibility/:folder/:fileName')
+  async content(@Param('tenant') tenant: string, @Param('visibility') visibility: string, @Param('folder') folder: string, @Param('fileName') fileName: string, @Res() reply: FastifyReply) {
+    const result = await this.media.publicStorageContent(tenant, visibility, folder, fileName)
+    return reply
+      .header('Content-Type', result.mimeType)
+      .header('Content-Length', result.file.length)
+      .header('Content-Disposition', `inline; filename="${result.fileName.replace(/"/g, '')}"`)
+      .send(result.file)
+  }
+}

@@ -6,22 +6,25 @@ import { cn } from 'src/lib/utils'
 
 interface BrandLogoProps {
   className?: string
+  logoDarkUrl?: string
+  logoUrl?: string
+  name?: string
 }
 
-export function BrandLogo({ className }: BrandLogoProps) {
+export function BrandLogo({ className, logoDarkUrl: tenantLogoDarkUrl, logoUrl: tenantLogoUrl, name = APP_NAME }: BrandLogoProps) {
   return (
     <span className={cn('relative inline-flex shrink-0', className)}>
       <img
-        alt={APP_NAME}
+        alt={name}
         className="size-full object-contain dark:hidden"
         draggable={false}
-        src={logoUrl}
+        src={tenantLogoUrl || logoUrl}
       />
       <img
-        alt={APP_NAME}
+        alt={name}
         className="hidden size-full object-contain dark:block"
         draggable={false}
-        src={logoDarkUrl}
+        src={tenantLogoDarkUrl || tenantLogoUrl || logoDarkUrl}
       />
     </span>
   )

@@ -11,6 +11,7 @@ import { MasterListPageFrame } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { getDefaultCompanyContext, listCompanies, type CompanyRecord } from "src/features/company/company-client"
+import { LetterheadBuilder } from "src/features/company/letterhead-builder"
 import { listContacts, type ContactRecord } from "src/features/contact/contact-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
@@ -18,7 +19,7 @@ import { listPaymentEntries, type PaymentEntry } from "src/features/payment/paym
 import { listPurchaseEntries, type PurchaseEntry } from "src/features/purchase/purchase-client"
 import { listReceiptEntries, type ReceiptEntry } from "src/features/receipt/receipt-client"
 import { listSalesEntries, type SalesEntry } from "src/features/sales/sales-client"
-import { defaultSoftwareSettingsState, type DutiesTaxSettings } from "src/features/settings/software-settings"
+import { defaultSoftwareSettingsState, type DutiesTaxSettings, type SoftwareSettingsState } from "src/features/settings/software-settings"
 import { loadCompanySoftwareSettingsFromServer } from "src/features/settings/software-settings-service"
 
 type StatementKind = "customer" | "supplier"
@@ -104,6 +105,7 @@ export function GstStatementReportPage({ session }: { session: AuthSession }) {
   }))
   const [monthOptions, setMonthOptions] = useState<readonly ReportMonthOption[]>([defaultMonth])
   const [dutiesTaxSettings, setDutiesTaxSettings] = useState<DutiesTaxSettings>(defaultSoftwareSettingsState.dutiesTaxSettings)
+  const [softwareSettings, setSoftwareSettings] = useState<SoftwareSettingsState>(defaultSoftwareSettingsState)
 
   const companiesQuery = useQuery({ queryKey: ["gst-report-companies", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
   const salesQuery = useQuery({ queryKey: ["gst-report-sales", session.selectedTenant.slug], queryFn: () => listSalesEntries(session) })
@@ -127,7 +129,10 @@ export function GstStatementReportPage({ session }: { session: AuthSession }) {
     const controller = new AbortController()
     void loadCompanySoftwareSettingsFromServer(session, company.id, { signal: controller.signal })
       .then((settings) => {
-        if (!controller.signal.aborted) setDutiesTaxSettings(settings.dutiesTaxSettings)
+        if (!controller.signal.aborted) {
+          setDutiesTaxSettings(settings.dutiesTaxSettings)
+          setSoftwareSettings(settings)
+        }
       })
       .catch(() => undefined)
     return () => controller.abort()
@@ -155,7 +160,7 @@ export function GstStatementReportPage({ session }: { session: AuthSession }) {
     >
       <GstReportPrintStyle />
       <GstReportFilters filters={filters} monthOptions={monthOptions} onChange={setFilters} />
-      <GstReportPrintSheet company={company} title="GST Statement">
+      <GstReportPrintSheet company={company} letterheadSettings={softwareSettings.letterheadSettings} title="GST Statement">
         <div className="grid gap-5">
           <GstReportCard>
             <div className="grid gap-4 xl:grid-cols-2">
@@ -201,6 +206,7 @@ function BillingStatementReportPage({ kind, session }: { kind: StatementKind; se
   const paymentsQuery = useQuery({ queryKey: ["statement-payments", session.selectedTenant.slug], queryFn: () => listPaymentEntries(session) })
 
   const company = useMemo(() => pickCompany(companiesQuery.data ?? []), [companiesQuery.data])
+  const [softwareSettings, setSoftwareSettings] = useState<SoftwareSettingsState>(defaultSoftwareSettingsState)
   const parties = useMemo(
     () => (kind === "customer" ? salesParties(salesQuery.data ?? []) : supplierParties(purchaseQuery.data ?? [])),
     [kind, purchaseQuery.data, salesQuery.data],
@@ -215,6 +221,17 @@ function BillingStatementReportPage({ kind, session }: { kind: StatementKind; se
   const isLoading = companiesQuery.isLoading || contactsQuery.isLoading || salesQuery.isLoading || receiptsQuery.isLoading || purchaseQuery.isLoading || paymentsQuery.isLoading
   const selectedParty = parties.find((party) => party.key === filters.partyKey) ?? null
   const selectedContact = selectedParty ? findContactForParty(contactsQuery.data ?? [], selectedParty) : null
+
+  useEffect(() => {
+    if (!company) return
+    const controller = new AbortController()
+    void loadCompanySoftwareSettingsFromServer(session, company.id, { signal: controller.signal })
+      .then((settings) => {
+        if (!controller.signal.aborted) setSoftwareSettings(settings)
+      })
+      .catch(() => undefined)
+    return () => controller.abort()
+  }, [company, session])
 
   useEffect(() => {
     const startDate = defaultContextQuery.data?.accountingYearStartDate?.slice(0, 10)
@@ -245,6 +262,7 @@ function BillingStatementReportPage({ kind, session }: { kind: StatementKind; se
         company={company}
         filters={filters}
         hasSelectedParty={Boolean(filters.partyKey)}
+        letterheadSettings={softwareSettings.letterheadSettings}
         partyLabel={partyLabel}
         selectedParty={selectedParty}
         selectedPartyAddressLines={selectedPartyAddressLines(selectedParty, selectedContact)}
@@ -396,6 +414,7 @@ function StatementPrintSheet({
   company,
   filters,
   hasSelectedParty,
+  letterheadSettings,
   partyLabel,
   selectedParty,
   selectedPartyAddressLines,
@@ -404,6 +423,7 @@ function StatementPrintSheet({
   company: CompanyRecord | null
   filters: StatementFilters
   hasSelectedParty: boolean
+  letterheadSettings?: Partial<SoftwareSettingsState["letterheadSettings"]>
   partyLabel: string
   selectedParty: StatementParty | null
   selectedPartyAddressLines: readonly string[]
@@ -411,7 +431,7 @@ function StatementPrintSheet({
   return (
     <section className="statement-print-sheet rounded-md border border-border/70 bg-card p-4 shadow-sm print:fixed print:inset-0 print:z-[9999] print:m-0 print:block print:overflow-visible print:border-0 print:bg-white print:p-0 print:text-black print:shadow-none">
       <div className="print:mx-auto print:w-[198mm]">
-        <StatementLetterhead company={company} />
+        <StatementLetterhead company={company} letterheadSettings={letterheadSettings} />
         <div className="mb-0 rounded-md border border-border/70 text-sm print:rounded-none print:border-gray-400 print:text-[10px]">
           {hasSelectedParty ? (
             <div className="grid min-h-[24mm] grid-cols-1 leading-tight sm:grid-cols-2 print:grid-cols-2">
@@ -445,27 +465,10 @@ function StatementPrintSheet({
   )
 }
 
-function StatementLetterhead({ company }: { company: CompanyRecord | null }) {
-  const companyName = company?.legalName?.trim() || company?.name?.trim() || "Company"
-  const address = companyAddress(company)
-  const contact = [company?.primaryEmail ? `Email: ${company.primaryEmail}` : "", company?.primaryPhone ? `Phone: ${company.primaryPhone}` : ""].filter(Boolean).join("  ")
-
+function StatementLetterhead({ company, letterheadSettings }: { company: CompanyRecord | null; letterheadSettings?: Partial<SoftwareSettingsState["letterheadSettings"]> }) {
   return (
     <header className="hidden border border-border/70 text-center font-['Times_New_Roman'] print:block print:border-gray-400">
-      <div className="grid min-h-[34mm] grid-cols-[32mm_1fr_32mm] items-center px-3 py-2 print:min-h-[30mm]">
-        <div className="flex items-center justify-center">
-          <img src="/logo.svg" alt={companyName} className="max-h-[24mm] max-w-[28mm] object-contain" />
-        </div>
-        <div className="flex min-w-0 flex-col items-center justify-center space-y-1">
-          <div className="max-w-full whitespace-nowrap text-[clamp(22px,3.5vw,30px)] font-bold leading-tight print:text-[22px]">{companyName}</div>
-          <div className="max-w-[150mm] font-medium leading-[1.25] tracking-wide print:text-[10px]">
-            {address ? <div>{address}</div> : null}
-            {contact ? <div>{contact}</div> : null}
-            {company?.gstinUin ? <div className="font-bold">GSTIN: {company.gstinUin}</div> : null}
-          </div>
-        </div>
-        <div />
-      </div>
+      <LetterheadBuilder company={company} settings={letterheadSettings} />
     </header>
   )
 }
@@ -618,16 +621,18 @@ function GstReportFilters({
 function GstReportPrintSheet({
   children,
   company,
+  letterheadSettings,
   title,
 }: {
   children: ReactNode
   company: CompanyRecord | null
+  letterheadSettings?: Partial<SoftwareSettingsState["letterheadSettings"]>
   title: string
 }) {
   return (
     <section className="gst-report-print-sheet rounded-md border border-border/70 bg-card p-4 shadow-sm print:fixed print:inset-0 print:z-[9999] print:mx-auto print:block print:min-h-0 print:w-full print:overflow-visible print:border-0 print:bg-white print:p-0 print:text-black print:shadow-none">
       <div className="hidden print:mx-auto print:block print:w-[198mm] print:max-w-none">
-        <GstReportLetterhead company={company} title={title} />
+        <GstReportLetterhead company={company} letterheadSettings={letterheadSettings} title={title} />
         {children}
       </div>
       <div className="print:hidden">{children}</div>
@@ -635,27 +640,10 @@ function GstReportPrintSheet({
   )
 }
 
-function GstReportLetterhead({ company, title }: { company: CompanyRecord | null; title: string }) {
-  const companyName = company?.legalName?.trim() || company?.name?.trim() || "Company"
-  const addressLines = company ? companyAddressLines(company) : []
-  const contactLine = company ? companyContactLine(company) : ""
-
+function GstReportLetterhead({ company, letterheadSettings, title }: { company: CompanyRecord | null; letterheadSettings?: Partial<SoftwareSettingsState["letterheadSettings"]>; title: string }) {
   return (
     <header className="mb-3 border border-border/70 text-center font-[Verdana,Arial,sans-serif] text-[10px]">
-      <div className="grid min-h-[25mm] grid-cols-[28mm_1fr_28mm] items-center border-b border-border/70 px-3 py-2">
-        <div className="justify-self-start">
-          <img src="/logo.svg" alt={companyName} className="max-h-[20mm] max-w-[24mm] object-contain" />
-        </div>
-        <div className="space-y-0.5">
-          <div className="text-[18px] font-bold leading-tight">{companyName}</div>
-          {addressLines.map((line) => (
-            <div key={line}>{line}</div>
-          ))}
-          {contactLine ? <div>{contactLine}</div> : null}
-          {company?.gstinUin ? <div>GSTIN: {company.gstinUin}</div> : null}
-        </div>
-        <div />
-      </div>
+      <LetterheadBuilder company={company} settings={letterheadSettings} />
       <div className="py-1.5 text-[12px] font-bold uppercase">{title}</div>
     </header>
   )
@@ -1017,23 +1005,6 @@ function findContactForParty(contacts: readonly ContactRecord[], party: Statemen
 
 function pickCompany(companies: readonly CompanyRecord[]) {
   return companies.find((company) => company.isPrimary && company.isActive) ?? companies.find((company) => company.isActive) ?? companies[0] ?? null
-}
-
-function companyAddress(company: CompanyRecord | null) {
-  if (!company) return ""
-  const address = company.addresses.find((item) => item.isDefault && item.isActive) ?? company.addresses.find((item) => item.isActive) ?? company.addresses[0]
-  return [address?.addressLine1, address?.addressLine2].filter(Boolean).join(", ")
-}
-
-function companyAddressLines(company: CompanyRecord) {
-  const address = company.addresses.find((item) => item.isDefault && item.isActive) ?? company.addresses.find((item) => item.isActive) ?? company.addresses[0]
-  return [address?.addressLine1, address?.addressLine2].map((line) => line?.trim() ?? "").filter(Boolean)
-}
-
-function companyContactLine(company: CompanyRecord) {
-  const phone = company.primaryPhone?.trim() || company.phones.find((item) => item.isPrimary && item.isActive)?.phoneNumber?.trim() || company.phones.find((item) => item.isActive)?.phoneNumber?.trim() || ""
-  const email = company.primaryEmail?.trim() || company.emails.find((item) => item.isActive)?.email?.trim() || ""
-  return [phone ? `Mobile: ${phone}` : "", email ? `Email: ${email}` : ""].filter(Boolean).join(" | ")
 }
 
 function inDateRange(value: string, fromDate: string, toDate: string) {

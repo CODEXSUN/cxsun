@@ -44,6 +44,7 @@ export interface MediaAssetLink {
 
 export interface MediaUploadInput {
   fileName?: string
+  storageFileName?: string
   mimeType?: string
   base64?: string
   visibility?: MediaVisibility

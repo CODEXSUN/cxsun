@@ -54,6 +54,10 @@ export function updateSalesPrintingOption(state: SoftwareSettingsState, value: s
   return { ...state, salesPrintingOptions: { ...state.salesPrintingOptions, customTerms: value } }
 }
 
+export function updateLetterheadSetting<K extends keyof SoftwareSettingsState["letterheadSettings"]>(state: SoftwareSettingsState, key: K, value: SoftwareSettingsState["letterheadSettings"][K]): SoftwareSettingsState {
+  return { ...state, letterheadSettings: { ...state.letterheadSettings, [key]: value } }
+}
+
 export function updateCustomiseSetting(state: SoftwareSettingsState, settingId: string, enabled: boolean): SoftwareSettingsState {
   return {
     ...state,
@@ -74,6 +78,7 @@ function mergeSoftwareSettings(defaults: SoftwareSettingsState, storedState: Par
   return {
     favoriteDashboardApp: normalizeFavoriteDashboardApp(storedState.favoriteDashboardApp),
     dutiesTaxSettings: { ...defaults.dutiesTaxSettings, ...(storedState.dutiesTaxSettings ?? {}) },
+    letterheadSettings: { ...defaults.letterheadSettings, ...(storedState.letterheadSettings ?? {}) },
     salesPrintingOptions: { ...defaults.salesPrintingOptions, ...(storedState.salesPrintingOptions ?? {}) },
     salesBillingLayout: defaults.salesBillingLayout.map((setting) => ({ ...setting, enabled: storedLayout.get(setting.id) ?? setting.enabled })),
     salesPrintingSettings: defaults.salesPrintingSettings.map((setting) => ({ ...setting, enabled: storedPrinting.get(setting.id) ?? setting.enabled })),
@@ -92,4 +97,3 @@ function companySoftwareSettingsStorageKey(companyId: string | number) {
 function normalizeFavoriteDashboardApp(value: unknown): FavoriteDashboardApp {
   return value === "billing" ? "billing" : "application"
 }
-

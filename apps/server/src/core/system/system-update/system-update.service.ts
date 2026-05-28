@@ -241,28 +241,13 @@ export class SystemUpdateService {
       backendHealth: false,
       frontendHealth: false,
       steps,
-      recoveryAction: 'Rollback will be available after the database backup step completes.',
+      recoveryAction: 'Run a database backup separately before system update if rollback data protection is needed.',
     }
     persistUpdateResult(this.lastResult)
     appendUpdateLog(logPath, `System update started at ${startedAt}`)
     appendUpdateLog(logPath, `Previous commit: ${previousCommit || 'unknown'}`)
 
     try {
-      const backupStep = await this.runRequiredStep(repositoryRoot, this.lastResult, steps, 'Backup master and tenant databases', npmCommand(), [
-        'run',
-        'db:backup',
-      ])
-      const backup = parseBackupDetails(backupStep.output)
-      backupId = backup.backupId
-      backupPath = backup.backupPath
-      this.lastResult = {
-        ...this.lastResult,
-        backupId,
-        backupPath,
-        recoveryAction: recoveryAction({ ...this.lastResult, backupId, previousCommit }),
-      }
-      persistUpdateResult(this.lastResult)
-
       await this.runRequiredStep(repositoryRoot, this.lastResult, steps, 'Fetch remote release metadata', 'git', [
         'fetch',
         upstream ? upstream.split('/')[0] : '--all',
@@ -713,18 +698,9 @@ function trimOutput(output: string) {
   return output.trim().slice(-12_000)
 }
 
-function parseBackupDetails(output: string) {
-  const completed = output.match(/Database backup completed:\s*(.+)$/m)
-  const creating = output.match(/Creating database backup:\s*(.+)$/m)
-  const backupPath = (completed?.[1] ?? creating?.[1])?.trim()
-  const backupId = backupPath ? backupPath.replaceAll('\\', '/').split('/').filter(Boolean).at(-1) : undefined
-
-  return { backupId, backupPath }
-}
-
 function recoveryAction(input: Pick<Partial<SystemUpdateResult>, 'backupId' | 'previousCommit'>) {
   if (!input.backupId || !input.previousCommit) {
-    return 'Recovery needs a completed database backup and previous Git commit. Check the update log before continuing.'
+    return 'Database backup is separate from System Update. Restore from the latest manual backup if needed, then reset Git to the previous known-good commit.'
   }
 
   return `Use Rollback from this page, or run: npm run db:restore -- ${input.backupId} && git reset --hard ${input.previousCommit} && npm ci && npm run build:active && npm run restart:active`

@@ -397,7 +397,7 @@ function PurchaseShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEd
         <div className="grid gap-4 overflow-x-auto p-3 print:contents sm:p-4">
           {selectedPrintCopies.map((copy, index) => (
             <div key={copy} className={index === selectedPrintCopies.length - 1 ? "print:contents" : "print:break-after-page"}>
-              <PurchaseEntryDocument addressLabels={addressLabels} billingParty={billingParty} company={printCompany} copy={copy} customTerms={customTerms} record={entry} shippingParty={shippingParty} {...printItemSettings} />
+              <PurchaseEntryDocument addressLabels={addressLabels} billingParty={billingParty} company={printCompany} copy={copy} customTerms={customTerms} letterheadSettings={softwareSettings.letterheadSettings} record={entry} shippingParty={shippingParty} {...printItemSettings} />
             </div>
           ))}
         </div>
