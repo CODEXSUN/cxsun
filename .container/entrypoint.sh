@@ -34,6 +34,7 @@ REDIS_SERVICE_TLS="${REDIS_TLS:-false}"
 QUEUE_RUNTIME_ENABLED="${QUEUE_ENABLED:-true}"
 DATABASE_BACKUP_INTERVAL="${DATABASE_BACKUP_INTERVAL_HOURS:-6}"
 INSTALL_RUN_TESTS="${INSTALL_RUN_TESTS:-false}"
+SKIP_MARIADB_WAIT="${SKIP_MARIADB_WAIT:-true}"
 HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-900}"
 
 log_step() {
@@ -152,6 +153,7 @@ set_env_value "REDIS_TLS" "$REDIS_SERVICE_TLS"
 set_env_value "QUEUE_ENABLED" "$QUEUE_RUNTIME_ENABLED"
 set_env_value "DATABASE_BACKUP_INTERVAL_HOURS" "$DATABASE_BACKUP_INTERVAL"
 set_env_value "INSTALL_RUN_TESTS" "$INSTALL_RUN_TESTS"
+set_env_value "SKIP_MARIADB_WAIT" "$SKIP_MARIADB_WAIT"
 set_env_value "HEALTH_WAIT_SECONDS" "$HEALTH_WAIT_SECONDS"
 
 export PORT="$SERVER_PORT"
@@ -186,32 +188,38 @@ export REDIS_TLS="$REDIS_SERVICE_TLS"
 export QUEUE_ENABLED="$QUEUE_RUNTIME_ENABLED"
 export DATABASE_BACKUP_INTERVAL_HOURS="$DATABASE_BACKUP_INTERVAL"
 export INSTALL_RUN_TESTS="$INSTALL_RUN_TESTS"
+export SKIP_MARIADB_WAIT="$SKIP_MARIADB_WAIT"
 export HEALTH_WAIT_SECONDS="$HEALTH_WAIT_SECONDS"
 
 echo "Configured ports: backend=$SERVER_PORT frontend=$FRONTEND_PORT api=$API_BASE_URL storage=$STORAGE_BASE_URL media=$MEDIA_MANAGER_URL"
 echo "Configured services: db=$DB_HOST:$DB_PORT redis=$REDIS_HOST:$REDIS_PORT"
 echo "Install tests: $INSTALL_RUN_TESTS"
+echo "MariaDB wait skipped: $SKIP_MARIADB_WAIT"
 echo "Health wait limit: ${HEALTH_WAIT_SECONDS}s"
 
-log_step "Waiting for MariaDB at $DB_HOST:$DB_PORT"
-for attempt in $(seq 1 60); do
-  if mysqladmin ping \
-    --host="$DB_HOST" \
-    --port="$DB_PORT" \
-    --user="$DB_USER" \
-    --password="$DB_PASSWORD" \
-    --silent >/dev/null 2>&1; then
-    echo "MariaDB is reachable"
-    break
-  fi
+if [ "$SKIP_MARIADB_WAIT" = "true" ]; then
+  log_step "Skipping MariaDB preflight wait"
+else
+  log_step "Waiting for MariaDB at $DB_HOST:$DB_PORT"
+  for attempt in $(seq 1 60); do
+    if mysqladmin ping \
+      --host="$DB_HOST" \
+      --port="$DB_PORT" \
+      --user="$DB_USER" \
+      --password="$DB_PASSWORD" \
+      --silent >/dev/null 2>&1; then
+      echo "MariaDB is reachable"
+      break
+    fi
 
-  if [ "$attempt" -eq 60 ]; then
-    echo "MariaDB was not reachable after waiting." >&2
-    exit 1
-  fi
+    if [ "$attempt" -eq 60 ]; then
+      echo "MariaDB was not reachable after waiting. Continuing to database setup for the real connection check." >&2
+      break
+    fi
 
-  sleep 2
-done
+    sleep 2
+  done
+fi
 
 if [ "$QUEUE_RUNTIME_ENABLED" != "false" ]; then
   log_step "Waiting for Redis at $REDIS_HOST:$REDIS_PORT"

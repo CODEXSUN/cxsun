@@ -88,7 +88,8 @@ First startup will:
 - Generate `JWT_SECRET` when it is not already present
 - Write optional admin seed variables from the deploy environment when provided
 - Start Redis as a separate container on `codexion-network` when using the setup scripts
-- Start the standalone CXMedia File Browser container on `codexion-network`
+- Install CXMedia only when missing, or start the existing CXMedia File Browser container when it is stopped
+- Skip the old MariaDB preflight wait by default; database setup performs the real connection check
 - Wait for Redis to answer `PONG` before starting the app
 - Run `npm ci` or `npm install`
 - Run ordered database setup with master migrate, master seed, and active tenant provisioning
@@ -286,8 +287,9 @@ The script will:
 
 - Create `codexion-network` when missing
 - Start Redis as a separate container on `codexion-network`
-- Start CXMedia as a standalone File Browser container on `codexion-network`
+- Install CXMedia only when missing, or start the existing CXMedia File Browser container when it is stopped
 - Reconnect an already-running Redis container to `codexion-network`
+- Reconnect an already-running MariaDB container named by `DB_HOST` to `codexion-network` when present
 - Wait for Redis to answer `PONG` before starting CXSun
 - Use the existing MariaDB service at `mariadb:3306`
 - Generate and persist `JWT_SECRET` when missing
@@ -301,9 +303,11 @@ The script will:
 - Configure `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS` for `https://codexsun.com`
 - Configure `VITE_STORAGE_BASE_URL` for uploaded media, logos, and invoice images
 - Configure `VITE_MEDIA_MANAGER_URL` for the in-app CXMedia link
-- Remove the CXSun app workspace volume, reset Redis cache/container, and rebuild the app image without cache when `--fresh` or `--reinstall` is passed
+- Set `SKIP_MARIADB_WAIT=true` by default so a failed `mysqladmin ping` does not stop install before migrations run
+- Remove the CXSun app workspace volume, reset Redis cache/container, and rebuild only the app image without cache when `--fresh` or `--reinstall` is passed
 - Preserve uploaded media in `cxmedia-storage` during app reinstall
 - Migrate existing `cxsun-storage` media into `cxmedia-storage` when present
+- Keep an already installed `cxmedia` container in place across repeated app reinstalls
 - Never remove or recreate MariaDB
 - Print status and recent logs
 

@@ -16,6 +16,7 @@ export REDIS_PORT="${REDIS_PORT:-6379}"
 export REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 export REDIS_DB="${REDIS_DB:-0}"
 export REDIS_TLS="${REDIS_TLS:-false}"
+export SKIP_MARIADB_WAIT="${SKIP_MARIADB_WAIT:-true}"
 export HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-900}"
 
 echo "Using compose file: $COMPOSE_FILE"

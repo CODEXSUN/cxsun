@@ -2,14 +2,32 @@
 
 ## Version State
 
-- **Current version:** `1.0.49`
-- **Release tag:** `v-1.0.49`
-- **Changelog label:** `v 1.0.49`
+- **Current version:** `1.0.51`
+- **Release tag:** `v-1.0.51`
+- **Changelog label:** `v 1.0.51`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.51
+
+### [v 1.0.51] 2026-05-28 6:42 pm - skip mariadb preflight during install
+
+- Bumped workspace version to 1.0.51
+- Skipped the MariaDB `mysqladmin ping` preflight by default during container startup so install no longer fails before the real database setup step.
+- Added `SKIP_MARIADB_WAIT` to deploy env handling for compose, entrypoint, local setup, and env samples.
+- Updated cloud setup to connect an existing MariaDB container named by `DB_HOST` to `codexion-network` when present.
+- Kept database setup/migrations as the authoritative database connection check.
+## v-1.0.50
+
+### [v 1.0.50] 2026-05-28 6:39 pm - one time cxmedia install on reinstall
+
+- Bumped workspace version to 1.0.50
+- Changed cloud reinstall so `--reinstall` stops, removes, rebuilds, and recreates only the `cxsun` app service instead of recreating every compose service.
+- Added one-time CXMedia handling: start an existing `cxmedia` container when found, install it only when missing, and reconnect it to `codexion-network` as needed.
+- Preserved the existing `cxmedia-storage` and `cxmedia-db` volumes across repeated app reinstalls.
+- Removed legacy temporary media containers during setup when present.
 ## v-1.0.49
 
 ### [v 1.0.49] 2026-05-28 6:31 pm - cxmedia file browser storage container

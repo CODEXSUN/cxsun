@@ -60,6 +60,7 @@ export CXMEDIA_DB_VOLUME="${CXMEDIA_DB_VOLUME:-cxmedia-db}"
 export CXMEDIA_PORT="${CXMEDIA_PORT:-6050}"
 export VITE_MEDIA_MANAGER_URL="${VITE_MEDIA_MANAGER_URL:-http://localhost:${CXMEDIA_PORT}}"
 export INSTALL_RUN_TESTS="${INSTALL_RUN_TESTS:-false}"
+export SKIP_MARIADB_WAIT="${SKIP_MARIADB_WAIT:-true}"
 export HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-900}"
 
 echo "Using compose file: $COMPOSE_FILE"
@@ -77,6 +78,7 @@ echo "Redis: $REDIS_HOST:$REDIS_PORT"
 echo "Media storage volume: $CXMEDIA_STORAGE_VOLUME"
 echo "Fresh reinstall: $FRESH_INSTALL"
 echo "Install tests: $INSTALL_RUN_TESTS"
+echo "MariaDB preflight wait skipped: $SKIP_MARIADB_WAIT"
 echo "Health wait limit: ${HEALTH_WAIT_SECONDS}s"
 
 generate_secret() {
@@ -115,6 +117,11 @@ fi
 if ! docker network inspect codexion-network >/dev/null 2>&1; then
   echo "Creating Docker network codexion-network"
   docker network create codexion-network
+fi
+
+if docker ps -a --format '{{.Names}}' | grep -Fx "$DB_HOST" >/dev/null 2>&1; then
+  echo "Connecting MariaDB container $DB_HOST to codexion-network when needed"
+  docker network connect codexion-network "$DB_HOST" >/dev/null 2>&1 || true
 fi
 
 reset_external_redis() {
@@ -182,6 +189,33 @@ wait_external_redis() {
 
     sleep 1
   done
+}
+
+cleanup_legacy_media_containers() {
+  docker rm -f cxsun-storage-cdn >/dev/null 2>&1 || true
+  docker rm -f cxsun-storage-browser >/dev/null 2>&1 || true
+}
+
+ensure_cxmedia() {
+  docker volume create "$CXMEDIA_STORAGE_VOLUME" >/dev/null
+  docker volume create "$CXMEDIA_DB_VOLUME" >/dev/null
+  cleanup_legacy_media_containers
+
+  if docker ps --format '{{.Names}}' | grep -Fx cxmedia >/dev/null 2>&1; then
+    echo "CXMedia already running: cxmedia"
+    docker network connect codexion-network cxmedia >/dev/null 2>&1 || true
+    return
+  fi
+
+  if docker ps -a --format '{{.Names}}' | grep -Fx cxmedia >/dev/null 2>&1; then
+    echo "Starting existing CXMedia container: cxmedia"
+    docker start cxmedia >/dev/null
+    docker network connect codexion-network cxmedia >/dev/null 2>&1 || true
+    return
+  fi
+
+  echo "Installing CXMedia container: cxmedia"
+  docker compose -f "$COMPOSE_FILE" up -d --no-deps cxmedia
 }
 
 STORAGE_BACKUP_DIR=""
@@ -253,7 +287,8 @@ wait_external_redis
 backup_existing_storage
 
 echo "Stopping existing CXSun container"
-docker compose -f "$COMPOSE_FILE" down --remove-orphans || true
+docker compose -f "$COMPOSE_FILE" stop cxsun >/dev/null 2>&1 || true
+docker compose -f "$COMPOSE_FILE" rm -f cxsun >/dev/null 2>&1 || true
 docker stop cxsun >/dev/null 2>&1 || true
 
 echo "Removing existing CXSun container"
@@ -268,15 +303,16 @@ fi
 
 echo "Building Docker image cxsun:v1"
 if [ "$FRESH_INSTALL" = "true" ]; then
-  docker compose -f "$COMPOSE_FILE" build --no-cache
+  docker compose -f "$COMPOSE_FILE" build --no-cache cxsun
 else
-  docker compose -f "$COMPOSE_FILE" build
+  docker compose -f "$COMPOSE_FILE" build cxsun
 fi
 restore_storage_volume
 cleanup_storage_backup
+ensure_cxmedia
 
 echo "Starting CXSun"
-docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps cxsun
 
 echo "Waiting for backend health"
 LOG_FOLLOW_PID=""
