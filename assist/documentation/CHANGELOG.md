@@ -2,14 +2,31 @@
 
 ## Version State
 
-- **Current version:** `1.0.56`
-- **Release tag:** `v-1.0.56`
-- **Changelog label:** `v 1.0.56`
+- **Current version:** `1.0.58`
+- **Release tag:** `v-1.0.58`
+- **Changelog label:** `v 1.0.58`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.58
+
+### [v 1.0.58] 2026-05-29 8:23 am - clean cxmedia reinstall mode
+
+- Bumped workspace version to 1.0.58
+- Reworked `.container/setup-media.sh` with explicit normal setup, clean reinstall, and optional uploaded-media wipe modes.
+- Added crash-proof handling so setup attempts to leave or restart CXMedia if a password/database maintenance step fails.
+- Clean reinstall now stops/removes the `cxmedia` container and recreates the File Browser DB volume while preserving `cxmedia-storage` by default.
+- Added `--wipe-media` as an explicit opt-in when uploaded media should also be removed.
+## v-1.0.57
+
+### [v 1.0.57] 2026-05-29 8:16 am - reliable cxmedia password reset
+
+- Bumped workspace version to 1.0.57
+- Changed `.container/setup-media.sh` to stop CXMedia before editing the File Browser database, avoiding failed password updates while the DB is open.
+- Updated the media setup password step to run the official File Browser CLI against the mounted `cxmedia-db` volume and add the admin user if it is missing.
+- Restarted CXMedia after the password reset so `admin` / `Admin@12345` is reliably available.
 ## v-1.0.56
 
 ### [v 1.0.56] 2026-05-28 7:48 pm - separate cxmedia setup script

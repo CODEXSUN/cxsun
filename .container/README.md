@@ -242,6 +242,18 @@ Install or start CXMedia separately:
 bash .container/setup-media.sh
 ```
 
+Clean reinstall CXMedia while preserving uploaded media:
+
+```bash
+bash .container/setup-media.sh --reinstall
+```
+
+Clean reinstall CXMedia and intentionally remove uploaded media:
+
+```bash
+bash .container/setup-media.sh --reinstall --wipe-media
+```
+
 The cloud/local setup scripts only check CXMedia. If it is already running, they continue. If it exists but is stopped, they start it. If it is missing, they run `.container/setup-media.sh` once.
 
 Manage Redis separately when you want to stop, start, or clean-reinstall only Redis:
