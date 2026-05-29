@@ -2,14 +2,28 @@
 
 ## Version State
 
-- **Current version:** `1.0.66`
-- **Release tag:** `v-1.0.66`
-- **Changelog label:** `v 1.0.66`
+- **Current version:** `1.0.68`
+- **Release tag:** `v-1.0.68`
+- **Changelog label:** `v 1.0.68`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.68
+
+### [v 1.0.68] 2026-05-29 10:12 am - local setup starts mariadb
+
+- Bumped workspace version to 1.0.68
+- Starts the bundled MariaDB compose service from `setup-local.sh`, waits for `mariadb-admin ping`, and passes local DB defaults into CXSun before app startup.
+- Fixed local Docker setup leaving `cxsun` in a restart loop at `db:setup` when no external MariaDB container was already running.
+## v-1.0.67
+
+### [v 1.0.67] 2026-05-29 10:05 am - cxmedia root volume permissions
+
+- Bumped workspace version to 1.0.67
+- Runs the CXMedia File Browser container as root inside Docker so it can access the shared `cxmedia-storage` volume written by the app container.
+- Initializes `/srv` and `/database` with writable mount points and pins the File Browser database config to root `/srv` with admin scope `/`, fixing `403 Forbidden` after login.
 ## v-1.0.66
 
 ### [v 1.0.66] 2026-05-29 9:58 am - cxmedia admin root scope
