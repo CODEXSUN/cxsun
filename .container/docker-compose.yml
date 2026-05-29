@@ -12,6 +12,7 @@ services:
       GIT_REPO_URL: ${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}
       GIT_BRANCH: ${GIT_BRANCH:-main}
       GIT_PULL_ON_START: ${GIT_PULL_ON_START:-false}
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-http-header-size=65536}
       APP_DIR: /workspace/cxsun
       HOST: 0.0.0.0
       PORT: ${PORT:-6005}

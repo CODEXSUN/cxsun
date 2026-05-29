@@ -67,6 +67,8 @@ export class PublicStorageController {
       .header('Content-Type', result.mimeType)
       .header('Content-Length', result.file.length)
       .header('Content-Disposition', `inline; filename="${result.fileName.replace(/"/g, '')}"`)
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .header('Cross-Origin-Resource-Policy', 'cross-origin')
       .send(result.file)
   }
 }

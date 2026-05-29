@@ -120,6 +120,50 @@ Open frontend:
 https://codexsun.com
 ```
 
+## Nginx Header and Storage Proxy
+
+When the public domain is served through Nginx, keep larger request-header buffers enabled. Browsers send cookies on same-origin image requests such as `/storage/<tenant>/public/logo/logo.svg`, and old/large site cookies can otherwise produce `431 Request Header Fields Too Large` before CXSun receives the request.
+
+Recommended server/location settings:
+
+```nginx
+server {
+  large_client_header_buffers 8 32k;
+  client_header_buffer_size 16k;
+
+  location /storage/ {
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Cookie "";
+    proxy_pass http://127.0.0.1:6005;
+  }
+
+  location /api/ {
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://127.0.0.1:6005;
+  }
+
+  location / {
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://127.0.0.1:6010;
+  }
+}
+```
+
+Reload Nginx after editing:
+
+```bash
+nginx -t && systemctl reload nginx
+```
+
 Open CXMedia:
 
 ```bash

@@ -2,14 +2,22 @@
 
 ## Version State
 
-- **Current version:** `1.0.68`
-- **Release tag:** `v-1.0.68`
-- **Changelog label:** `v 1.0.68`
+- **Current version:** `1.0.69`
+- **Release tag:** `v-1.0.69`
+- **Changelog label:** `v 1.0.69`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.69
+
+### [v 1.0.69] 2026-05-29 10:40 am - storage logo proxy errors
+
+- Bumped workspace version to 1.0.69
+- Awaited async controller handlers during request dispatch so missing media/static logo files return the intended HTTP error instead of surfacing as backend `500` or proxy `502` responses.
+- Added public cache/resource headers to `/storage` responses and raised the Docker app `NODE_OPTIONS` HTTP header limit to tolerate larger request headers.
+- Documented the Nginx `/storage/` proxy block with larger header buffers and cookie stripping to prevent same-origin logo image requests from failing with `431 Request Header Fields Too Large`.
 ## v-1.0.68
 
 ### [v 1.0.68] 2026-05-29 10:12 am - local setup starts mariadb

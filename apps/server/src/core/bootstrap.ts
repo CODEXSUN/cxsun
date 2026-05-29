@@ -171,7 +171,7 @@ export class CxApp {
               request,
               reply,
             )
-            return instance[route.handlerName](...args)
+            return await instance[route.handlerName](...args)
           } catch (err: unknown) {
             const allFilters = [...controllerFilters, ...handlerFilters]
             for (const Filter of allFilters) {

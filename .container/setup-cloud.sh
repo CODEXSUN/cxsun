@@ -28,6 +28,7 @@ done
 export GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}"
 export GIT_BRANCH="${GIT_BRANCH:-main}"
 export GIT_PULL_ON_START="${GIT_PULL_ON_START:-false}"
+export NODE_OPTIONS="${NODE_OPTIONS:---max-http-header-size=65536}"
 export PORT="${PORT:-6005}"
 export VITE_PORT="${VITE_PORT:-6010}"
 export VITE_API_BASE_URL="${VITE_API_BASE_URL:-https://codexsun.com}"
