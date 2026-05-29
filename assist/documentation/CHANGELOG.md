@@ -2,14 +2,21 @@
 
 ## Version State
 
-- **Current version:** `1.0.59`
-- **Release tag:** `v-1.0.59`
-- **Changelog label:** `v 1.0.59`
+- **Current version:** `1.0.60`
+- **Release tag:** `v-1.0.60`
+- **Changelog label:** `v 1.0.60`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.60
+
+### [v 1.0.60] 2026-05-29 8:36 am - initialize cxmedia database before user setup
+
+- Bumped workspace version to 1.0.60
+- Added an explicit File Browser `config init` step before creating/updating the CXMedia admin user after a clean DB volume reinstall.
+- Fixed clean CXMedia reinstall failing when `/database/filebrowser.db` did not exist yet.
 ## v-1.0.59
 
 ### [v 1.0.59] 2026-05-29 8:26 am - fix cxmedia create command
