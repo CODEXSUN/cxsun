@@ -149,11 +149,12 @@ export function AppSidebar({
   onTenantChange?: (tenantSlug: string) => void
 }) {
   const selectedApp = getDashboardApp(activeApp)
-  const defaultCompanyLogo = companyLogoSet(defaultCompanyContext)
+  const defaultCompanyLogo = companyLogoSet(defaultCompanyContext, { fallback: false })
   const TenantLogo = React.useCallback(
     ({ className }: { className?: string }) => (
       <BrandLogo
         className={className}
+        fallback={false}
         logoDarkUrl={defaultCompanyLogo.logoDarkUrl}
         logoUrl={defaultCompanyLogo.logoUrl}
         name={defaultCompanyContext?.companyName}

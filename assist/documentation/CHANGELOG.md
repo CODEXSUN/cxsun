@@ -2,14 +2,22 @@
 
 ## Version State
 
-- **Current version:** `1.0.61`
-- **Release tag:** `v-1.0.61`
-- **Changelog label:** `v 1.0.61`
+- **Current version:** `1.0.62`
+- **Release tag:** `v-1.0.62`
+- **Changelog label:** `v 1.0.62`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.62
+
+### [v 1.0.62] 2026-05-29 9:20 am - cxmedia permissions and tenant logo fallback
+
+- Bumped workspace version to 1.0.62
+- Updated CXMedia admin setup to set `/srv` scope and full create/delete/download/modify/rename/share permissions, fixing File Browser access-denied after login.
+- Added tenant-only logo rendering for the Application sidebar so missing or temporarily unavailable tenant logos no longer swap to the default fallback icon.
+- Updated the shared letterhead logo rendering to skip fallback logos and show only the tenant/company logo when available.
 ## v-1.0.61
 
 ### [v 1.0.61] 2026-05-29 8:46 am - cxmedia password length fix

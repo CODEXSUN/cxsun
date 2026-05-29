@@ -104,11 +104,30 @@ docker run --rm \
 docker run --rm \
   -v "$CXMEDIA_DB_VOLUME:/database" \
   filebrowser/filebrowser:v2.63.5 \
-  users update admin --password "$CXMEDIA_ADMIN_PASSWORD" --database /database/filebrowser.db >/dev/null 2>&1 \
+  users update admin \
+    --password "$CXMEDIA_ADMIN_PASSWORD" \
+    --scope /srv \
+    --perm.admin \
+    --perm.create \
+    --perm.delete \
+    --perm.download \
+    --perm.modify \
+    --perm.rename \
+    --perm.share \
+    --database /database/filebrowser.db >/dev/null 2>&1 \
   || docker run --rm \
     -v "$CXMEDIA_DB_VOLUME:/database" \
     filebrowser/filebrowser:v2.63.5 \
-    users add admin "$CXMEDIA_ADMIN_PASSWORD" --perm.admin --database /database/filebrowser.db >/dev/null
+    users add admin "$CXMEDIA_ADMIN_PASSWORD" \
+      --scope /srv \
+      --perm.admin \
+      --perm.create \
+      --perm.delete \
+      --perm.download \
+      --perm.modify \
+      --perm.rename \
+      --perm.share \
+      --database /database/filebrowser.db >/dev/null
 
 echo "Starting CXMedia"
 docker start cxmedia >/dev/null

@@ -1,5 +1,4 @@
 import type { CSSProperties } from "react"
-import fallbackLogoUrl from "src/assets/logo/logo.svg"
 import type { CompanyRecord } from "src/features/company/company-client"
 import { companyLogoUrl } from "src/features/company/company-logo"
 import { defaultSoftwareSettingsState, type LetterheadSettings } from "src/features/settings/software-settings"
@@ -28,19 +27,18 @@ export function LetterheadBuilder({
   const style = normalizeLetterheadSettings(settings)
   const companyName = printableText(company?.legalName) || printableText(company?.name) || "Company"
   const lines = company ? companyLetterheadLines(company, addressLabels) : { address: [], contact: "", taxGstin: "", taxMsme: "" }
-  const logoUrl = companyLogoUrl(company, "logo")
+  const logoUrl = companyLogoUrl(company, "logo", { fallback: false })
 
   return (
     <div className={`grid grid-cols-[32mm_1fr_32mm] items-center px-2 py-2 text-center ${className}`} style={{ borderColor: style.borderColor, minHeight: `${style.heightMm}mm` }}>
       <div className="flex items-center justify-center">
-        {showLogo ? (
+        {showLogo && logoUrl ? (
           <img
             src={logoUrl}
             alt={companyName}
             className="object-contain"
             onError={(event) => {
-              const fallbackSrc = new URL(fallbackLogoUrl, window.location.href).href
-              if (event.currentTarget.src !== fallbackSrc) event.currentTarget.src = fallbackSrc
+              event.currentTarget.removeAttribute("src")
             }}
             style={{ maxHeight: `${style.logoHeightMm}mm`, maxWidth: `${style.logoWidthMm}mm` }}
           />

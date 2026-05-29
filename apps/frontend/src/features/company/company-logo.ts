@@ -6,20 +6,25 @@ import type { CompanyLogo, CompanyRecord } from "./company-client"
 
 export type CompanyLogoType = "logo" | "logo-dark" | "favicon" | "letter-head"
 
-export function companyLogoUrl(company: Pick<CompanyRecord, "logos"> | { logos?: CompanyLogo[] } | null | undefined, logoType: CompanyLogoType = "logo") {
+interface CompanyLogoOptions {
+  fallback?: boolean
+}
+
+export function companyLogoUrl(company: Pick<CompanyRecord, "logos"> | { logos?: CompanyLogo[] } | null | undefined, logoType: CompanyLogoType = "logo", options: CompanyLogoOptions = {}) {
+  const useFallback = options.fallback ?? true
   const logos = company?.logos ?? []
   const normalizedType = normalizeLogoType(logoType)
   const logo = logos.find((item) => item.isActive && normalizeLogoType(item.logoType) === normalizedType)
     ?? logos.find((item) => item.isActive && normalizeLogoType(item.logoType) === "logo")
 
-  return normalizeLogoUrl(logo) || fallbackLogo(logoType)
+  return normalizeLogoUrl(logo) || (useFallback ? fallbackLogo(logoType) : "")
 }
 
-export function companyLogoSet(company: Pick<CompanyRecord, "logos"> | { logos?: CompanyLogo[] } | null | undefined) {
+export function companyLogoSet(company: Pick<CompanyRecord, "logos"> | { logos?: CompanyLogo[] } | null | undefined, options: CompanyLogoOptions = {}) {
   return {
-    faviconUrl: companyLogoUrl(company, "favicon"),
-    logoDarkUrl: companyLogoUrl(company, "logo-dark"),
-    logoUrl: companyLogoUrl(company, "logo"),
+    faviconUrl: companyLogoUrl(company, "favicon", options),
+    logoDarkUrl: companyLogoUrl(company, "logo-dark", options),
+    logoUrl: companyLogoUrl(company, "logo", options),
   }
 }
 
