@@ -2,14 +2,21 @@
 
 ## Version State
 
-- **Current version:** `1.0.60`
-- **Release tag:** `v-1.0.60`
-- **Changelog label:** `v 1.0.60`
+- **Current version:** `1.0.61`
+- **Release tag:** `v-1.0.61`
+- **Changelog label:** `v 1.0.61`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.61
+
+### [v 1.0.61] 2026-05-29 8:46 am - cxmedia password length fix
+
+- Bumped workspace version to 1.0.61
+- Changed the default CXMedia admin password to `Sundarcomputers@123` so it satisfies File Browser's minimum password length rule.
+- Updated compose, setup scripts, env sample, and install docs to use the new CXMedia password default.
 ## v-1.0.60
 
 ### [v 1.0.60] 2026-05-29 8:36 am - initialize cxmedia database before user setup

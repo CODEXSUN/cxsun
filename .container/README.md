@@ -59,7 +59,7 @@ Storage is intentionally separated from the app workspace:
 - Public media URL variable: `VITE_STORAGE_BASE_URL`
 - Media manager URL variable: `VITE_MEDIA_MANAGER_URL`
 - Local media manager: `http://localhost:6050`
-- Default media manager login: `admin` / `Admin@12345`
+- Default media manager login: `admin` / `Sundarcomputers@123`
 
 File Browser uses its own persistent database volume named `cxmedia-db`. Override `CXMEDIA_ADMIN_PASSWORD` before setup when a different default admin password is needed.
 
@@ -326,7 +326,7 @@ The script will:
 - Configure `VITE_API_BASE_URL`, `FRONTEND_URL`, and `CORS_ORIGINS` for `https://codexsun.com`
 - Configure `VITE_STORAGE_BASE_URL` for uploaded media, logos, and invoice images
 - Configure `VITE_MEDIA_MANAGER_URL` for the in-app CXMedia link
-- Set or refresh the CXMedia `admin` password from `CXMEDIA_ADMIN_PASSWORD`, defaulting to `Admin@12345`
+- Set or refresh the CXMedia `admin` password from `CXMEDIA_ADMIN_PASSWORD`, defaulting to `Sundarcomputers@123`
 - Set `SKIP_MARIADB_WAIT=true` by default so a failed `mysqladmin ping` does not stop install before migrations run
 - Remove the CXSun app workspace volume, reset Redis cache/container, and rebuild only the app image without cache when `--fresh` or `--reinstall` is passed
 - Preserve uploaded media in `cxmedia-storage` during app reinstall
