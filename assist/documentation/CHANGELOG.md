@@ -2,14 +2,21 @@
 
 ## Version State
 
-- **Current version:** `1.0.63`
-- **Release tag:** `v-1.0.63`
-- **Changelog label:** `v 1.0.63`
+- **Current version:** `1.0.64`
+- **Release tag:** `v-1.0.64`
+- **Changelog label:** `v 1.0.64`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.64
+
+### [v 1.0.64] 2026-05-29 9:50 am - ensure cxmedia scope directory
+
+- Bumped workspace version to 1.0.64
+- Updated CXMedia user setup to run File Browser CLI through a shell that creates `/srv` before user add/update.
+- Passed `CXMEDIA_ADMIN_PASSWORD` into the one-off CLI container so admin password reset uses the configured value.
 ## v-1.0.63
 
 ### [v 1.0.63] 2026-05-29 9:46 am - mount media volume during cxmedia user setup
