@@ -39,6 +39,10 @@ function splitCsv(value: string | undefined) {
   return value?.split(',').map((item) => item.trim()).filter(Boolean) ?? []
 }
 
+function developerMode(env: Record<string, string>) {
+  return process.env.DEVELOPER_MODE ?? env.DEVELOPER_MODE ?? 'false'
+}
+
 export default defineConfig(({ command, mode }) => {
   if (command === 'build') {
     process.env.NODE_ENV = 'production'
@@ -49,6 +53,9 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     envDir,
+    define: {
+      'import.meta.env.DEVELOPER_MODE': JSON.stringify(developerMode(env)),
+    },
     plugins: [
       tailwindcss(),
       react(),

@@ -12,6 +12,14 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.69
 
+### [v 1.0.69] 2026-05-30 9:20 am - dynamic site slider sections
+
+- Added tenant-scoped Site slider tables, repository, service, controller, events, and queue publish flow for dynamic public site sections.
+- Wired public Home to render the full-screen slider from backend tenant data with a static fallback.
+- Added the Sites > Sliders dashboard page with list, show/preview, and upsert flows.
+- Extended tenant domain resolution with tenant database fields so public Site content can load per-tenant dynamic data.
+- Kept developer section badges controlled by `DEVELOPER_MODE` and visible on Site sections in developer mode.
+
 ### [v 1.0.69] 2026-05-29 10:40 am - storage logo proxy errors
 
 - Bumped workspace version to 1.0.69

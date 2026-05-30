@@ -19,6 +19,7 @@ import { migrateCompanySettingsTables } from '../../modules/settings/company-set
 import { migrateDocumentSettingsTables } from '../../modules/settings/document-settings/index.js'
 import { migrateMediaTables } from '../../modules/media/index.js'
 import { migrateTaskManagerTables } from '../../modules/task-manager/index.js'
+import { migrateSiteSliderTables } from '../../modules/site/slider/database/site-slider.migration.js'
 import { migrateContactMasterTable } from '../../modules/master/contact/index.js'
 import { migrateProductMasterTable } from '../../modules/master/product/index.js'
 import { migrateOrderMasterTable } from '../../modules/master/order/index.js'
@@ -124,6 +125,7 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await migrateDocumentSettingsTables(database)
   await migrateMediaTables(database as never)
   await migrateTaskManagerTables(database as never)
+  await migrateSiteSliderTables(database as never)
   await migrateContactMasterTable(database)
   await migrateProductMasterTable(database)
   await migrateOrderMasterTable(database)

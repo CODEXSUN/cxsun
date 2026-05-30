@@ -3,6 +3,7 @@ import { initializeDatabase, getDatabase, closeDatabase } from '../../../infrast
 import { DomainResolutionEngine } from '../../../core/tenant-domain/application/domain-resolution.engine.js'
 import { TenantDomainRepository } from '../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
 import { SiteService } from '../site.service.js'
+import { SiteSliderRepository } from '../slider/infrastructure/site-slider.repository.js'
 
 const marker = `tenant-isolation-${Date.now()}`
 
@@ -10,7 +11,7 @@ await initializeDatabase()
 
 try {
   const database = getDatabase()
-  const site = new SiteService(new DomainResolutionEngine(new TenantDomainRepository()))
+  const site = new SiteService(new DomainResolutionEngine(new TenantDomainRepository()), new SiteSliderRepository())
 
   const codexsun = await site.createMessage({
     domain: 'codexsun.local',

@@ -1,3 +1,5 @@
+import type { Tenant, TenantStatus } from '../../tenant/domain/tenant.types.js'
+
 export type TenantDomainStatus = 'active' | 'not_active' | 'suspend'
 
 export interface TenantDomain {
@@ -26,12 +28,8 @@ export interface TenantDomainResolution {
     status: TenantDomainStatus
     settings?: Record<string, unknown>
   }
-  tenant?: {
-    id: number
-    code: number
-    slug: string
-    name: string
-    status: string
+  tenant?: Tenant & {
+    status: TenantStatus
     database: string
     settings: Record<string, unknown>
     industryKey?: string | null

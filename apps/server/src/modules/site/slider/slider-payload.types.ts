@@ -1,0 +1,37 @@
+export type SlideDirection = 'left' | 'right' | 'fade'
+export type VariantType = 'classic' | 'luxury' | 'industrial' | 'saas' | 'cinematic'
+export type BackgroundMode = 'normal' | 'parallax' | '3d' | 'cinematic'
+export type Intensity = 'low' | 'medium' | 'high'
+export type HighlightVariant = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'glass'
+export type CTAColor = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'dark' | 'light'
+
+export type SlideMedia =
+  | { type: 'image'; src: string }
+  | { type: 'video'; mp4: string; poster?: string }
+  | { type: 'youtube'; videoId: string }
+
+export interface SliderItem {
+  id: number
+  title: string
+  tagline: string
+  action: { text: string; href: string }
+  media: SlideMedia
+  highlights?: Array<{ text: string; variant?: HighlightVariant }>
+  btn_cta?: string
+  duration?: number
+  direction?: SlideDirection
+  variant?: VariantType
+  intensity?: Intensity
+  ctaColor?: CTAColor
+  backgroundMode?: BackgroundMode
+  showOverlay?: boolean
+  overlayColor?: string
+}
+
+export interface SliderOptions {
+  parallax?: boolean
+  defaultVariant?: VariantType
+  defaultIntensity?: Intensity
+  defaultDirection?: SlideDirection
+  defaultBackgroundMode?: BackgroundMode
+}

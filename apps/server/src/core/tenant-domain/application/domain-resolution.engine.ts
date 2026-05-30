@@ -1,5 +1,6 @@
 import { Inject } from '../../decorators/inject.js'
 import { Injectable } from '../../decorators/injectable.js'
+import type { TenantStatus } from '../../tenant/domain/tenant.types.js'
 import type { TenantDomainResolution } from '../domain/tenant-domain.types.js'
 import { TenantDomainRepository } from '../infrastructure/tenant-domain.repository.js'
 
@@ -58,9 +59,24 @@ export class DomainResolutionEngine {
       tenant: {
         id: record.tenant_id,
         code: record.tenant_code,
+        corporate_id: record.corporate_id,
+        mobile: record.mobile,
         slug: record.tenant_slug,
         name: record.tenant_name,
-        status: record.tenant_status,
+        status: record.tenant_status as TenantStatus,
+        db_type: record.db_type as 'mariadb',
+        db_host: record.db_host,
+        db_port: record.db_port,
+        db_name: record.db_name,
+        db_user: record.db_user,
+        db_secret_ref: record.db_secret_ref,
+        company_count: record.company_count,
+        active_company_count: record.active_company_count,
+        company_concept_count: record.company_concept_count,
+        payload_settings: record.payload_settings,
+        created_at: record.tenant_created_at,
+        updated_at: record.tenant_updated_at,
+        deleted_at: record.tenant_deleted_at,
         database: record.db_name,
         settings: tenantSettings,
         industryKey: industry.key,

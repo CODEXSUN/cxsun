@@ -1,6 +1,6 @@
 ```
 server {
-server_name cotton.codexsun.com sukraa.codexsun.com;
+server_name thetirupurtextiles.com www.thetirupurtextiles.com shop.thetirupurtextiles.com;
 
     location /api/ {
         proxy_pass http://127.0.0.1:6005;
@@ -35,22 +35,27 @@ server_name cotton.codexsun.com sukraa.codexsun.com;
 }
 
 server {
-if ($host = www.codexsun.com) {
-return 301 https://$host$request_uri;
-}
-
-    if ($host = codexsun.com) {
+    if ($host = www.thetirupurtextiles.com) {
         return 301 https://$host$request_uri;
     }
 
+    if ($host = thetirupurtextiles.com) {
+        return 301 https://$host$request_uri;
+    }
+    
+    if ($host = shop.thetirupurtextiles.com) {
+      return 301 https://$host$request_uri;
+    }
+
     listen 80;
-    server_name codexsun.com www.codexsun.com;
+    server_name thetirupurtextiles.com www.thetirupurtextiles.com shop.thetirupurtextiles.com;
     return 404; # managed by Certbot
 }
 ```
-
 
 ```
 sudo nginx -t
 sudo systemctl reload nginx
 ```
+
+sudo certbot --nginx -d sukraa.codexsun.com

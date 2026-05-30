@@ -44,7 +44,7 @@ export function SiteHeader({
   const SelectedAppIcon = selectedApp.icon
   const notifications = [
     { title: "Billing app is ready", body: "Invoices and payments can be connected next." },
-    { title: "CMS is disabled", body: "Activate it from the application desk when needed." },
+    { title: "Site app is ready", body: "Activate site tools from the application desk when needed." },
     { title: "Tenant boundary active", body: "Menus are scoped to the selected app and tenant." },
   ]
 

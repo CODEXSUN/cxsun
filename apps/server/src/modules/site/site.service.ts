@@ -3,6 +3,7 @@ import { Inject } from '../../core/decorators/inject.js'
 import { DomainResolutionEngine } from '../../core/tenant-domain/application/domain-resolution.engine.js'
 import { getDatabase } from '../../infrastructure/database/connection.js'
 import { buildTenantStaticContent } from './tenant-static-content.js'
+import { SiteSliderRepository } from './slider/infrastructure/site-slider.repository.js'
 
 export interface SiteMessageInput {
   name: string
@@ -15,6 +16,7 @@ export interface SiteMessageInput {
 export class SiteService {
   constructor(
     @Inject(DomainResolutionEngine) private readonly domainResolution: DomainResolutionEngine,
+    @Inject(SiteSliderRepository) private readonly sliders: SiteSliderRepository,
   ) {}
 
   async getLandingContent() {
@@ -60,6 +62,7 @@ export class SiteService {
     }
 
     const enabledApps = resolution.tenant.apps.enabled
+    const sliders = await this.sliders.listPublished(resolution.tenant)
     const content = buildTenantStaticContent({
       tenantName: resolution.tenant.name,
       industryKey: resolution.tenant.industryKey,
@@ -87,6 +90,7 @@ export class SiteService {
       },
       domain: resolution.domain,
       apps: resolution.tenant.apps,
+      sliders,
       pages: content.pages,
       services: content.services,
       posts: content.posts,

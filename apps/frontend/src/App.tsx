@@ -1,23 +1,13 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import type { FormEvent } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import {
-  ArrowRight,
-  Database,
-  LayoutDashboard,
-  Mail,
-  Menu,
-  Server,
-  ShieldCheck,
-  X,
-} from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import './assets/css/app.css'
 
 import { version } from '../package.json'
 import { BrandLogo } from 'src/components/blocks/branding/brand-logo'
 import { GlobalLoader } from 'src/components/blocks/loading/global-loader'
 import { ThemeProvider } from 'src/components/blocks/theme/theme-provider'
-import { ThemeToggle } from 'src/components/blocks/theme/theme-toggle'
+import { PublicSitePage } from 'src/features/site/public-site-page'
+import type { HealthStatus, SiteContent, TenantStaticSiteContent } from 'src/features/site/domain/site-content'
 import { Toaster } from './components/ui/sonner'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
@@ -25,7 +15,6 @@ import { TooltipProvider } from './components/ui/tooltip'
 import { clearSession, getStoredSession } from './features/auth/auth-client'
 import { APP_NAME } from './lib/branding'
 import { apiBaseUrl } from './lib/api-base-url'
-import { cn } from './lib/utils'
 
 type View =
   | 'landing'
@@ -37,76 +26,9 @@ type View =
   | 'super-admin-login'
   | 'forgot-password'
 
-interface SitePage {
-  slug: string
-  nav_label: string
-  title: string
-  eyebrow: string
-  summary: string
-  body: string
-}
-
-interface SiteService {
-  id: number
-  title: string
-  description: string
-}
-
-interface SitePost {
-  id: number
-  title: string
-  excerpt: string
-  published_at: string
-}
-
-interface SiteContent {
-  pages: SitePage[]
-  services: SiteService[]
-  posts: SitePost[]
-}
-
-interface TenantStaticSiteContent extends SiteContent {
-  ok: boolean
-  mode: 'tenant'
-  resolved: boolean
-  error?: string
-  tenant: {
-    id: number
-    code: number
-    slug: string
-    name: string
-    status: string
-    industryKey?: string | null
-    industryName?: string | null
-    features: string[]
-  } | null
-  domain: {
-    id: number
-    domain: string
-    label: string
-    isPrimary: boolean
-    status: string
-  } | null
-  apps: {
-    enabled: string[]
-    landing: string
-  } | null
-}
-
-interface HealthStatus {
-  status: 'ok'
-  version: string
-}
-
 type AppRoute = {
   page: string
   view: View
-}
-
-interface PlatformFeature {
-  label: string
-  detail: string
-  Icon: typeof LayoutDashboard
 }
 
 const loadDashboardView = () =>
@@ -124,29 +46,6 @@ const ForgotPasswordForm = lazy(() =>
     default: module.ForgotPasswordForm,
   })),
 )
-const platformFeatures: PlatformFeature[] = [
-  {
-    label: 'Frontend',
-    detail: 'React + Tailwind + shadcn-style components',
-    Icon: LayoutDashboard,
-  },
-  {
-    label: 'Backend',
-    detail: 'Fastify module API served from apps/server',
-    Icon: Server,
-  },
-  {
-    label: 'Storage',
-    detail: 'Kysely connected to local SQLite storage',
-    Icon: Database,
-  },
-  {
-    label: 'Tenant-ready',
-    detail: 'Boundaries prepared for modular platform growth',
-    Icon: ShieldCheck,
-  },
-]
-
 const fallbackContent: SiteContent = {
   pages: [
     {
@@ -326,26 +225,9 @@ async function fetchHealth() {
   return (await response.json()) as HealthStatus
 }
 
-async function sendContactMessage(payload: { name: string; email: string; message: string }) {
-  const response = await fetch(`${apiBaseUrl}/api/site/contact`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-
-  const result = (await response.json()) as { ok: boolean; error?: string }
-
-  if (!response.ok || !result.ok) {
-    throw new Error(result.error ?? `Contact failed with status ${response.status}.`)
-  }
-
-  return result
-}
-
 function App() {
   const [route, setRoute] = useState<AppRoute>(() => parseRoute())
   const [menuOpen, setMenuOpen] = useState(false)
-  const [contactStatus, setContactStatus] = useState<string | null>(null)
   const activePage = route.page
   const activeView = route.view
   const isPlatformView = activeView === 'admin-dashboard'
@@ -370,15 +252,6 @@ function App() {
     queryFn: fetchHealth,
     enabled: isPublicSiteView,
     refetchInterval: 60_000,
-  })
-  const contactMutation = useMutation({
-    mutationFn: sendContactMessage,
-    onSuccess: () => {
-      setContactStatus(`Message saved to the local ${APP_NAME} database.`)
-    },
-    onError: (error) => {
-      setContactStatus(error instanceof Error ? error.message : 'Unable to save the message.')
-    },
   })
 
   useEffect(() => {
@@ -431,11 +304,6 @@ function App() {
     }
   }, [activeView, tenantSite])
 
-  const pagesBySlug = useMemo(
-    () => Object.fromEntries(content.pages.map((page) => [page.slug, page])),
-    [content.pages],
-  ) as Record<string, SitePage>
-
   if (isPublicSiteView && tenantSiteQuery.isPending && tenantSiteQuery.fetchStatus !== 'idle') {
     return (
       <TooltipProvider>
@@ -469,8 +337,6 @@ function App() {
     )
   }
 
-  const page = pagesBySlug[activePage] ?? fallbackContent.pages[0]
-
   if (isPublicSiteView && tenantSite && !tenantSite.resolved) {
     return (
       <TooltipProvider>
@@ -500,41 +366,6 @@ function App() {
       </TooltipProvider>
     )
   }
-
-  async function submitContact(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = event.currentTarget
-    const formData = new FormData(form)
-
-    const payload = {
-      name: String(formData.get('name') ?? ''),
-      email: String(formData.get('email') ?? ''),
-      message: String(formData.get('message') ?? ''),
-      domain: window.location.host,
-    }
-
-    contactMutation.mutate(payload, {
-      onSuccess: () => {
-        form.reset()
-      },
-    })
-  }
-
-  const nav = content.pages.map((item) => (
-    <button
-      className={cn(
-        'rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground',
-        activePage === item.slug && 'bg-muted text-foreground',
-      )}
-      key={item.slug}
-      onClick={() => {
-        navigate({ page: item.slug, view: 'landing' })
-      }}
-      type="button"
-    >
-      {item.nav_label}
-    </button>
-  ))
 
   if (
     activeView === 'tenant-dashboard' ||
@@ -614,249 +445,21 @@ function App() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b bg-card/92 backdrop-blur">
-        <div className="cx-container flex h-16 items-center justify-between gap-4">
-          <button
-            className="flex items-center gap-3 text-left"
-            onClick={() => navigate({ page: 'home', view: 'landing' })}
-            type="button"
-          >
-            <BrandLogo className="size-9" />
-            <span>
-              <strong className="block leading-tight">{tenantSite?.tenant?.name ?? APP_NAME}</strong>
-              <small className="text-muted-foreground">v{version}</small>
-            </span>
-          </button>
-
-          <nav className="hidden items-center gap-1 md:flex" aria-label="Top menu">
-            {nav}
-            <button
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => navigate({ page: 'home', view: 'tenant-dashboard' })}
-              type="button"
-            >
-              Dashboard
-            </button>
-            <button
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => navigate({ page: 'home', view: 'login' })}
-              type="button"
-            >
-              Login
-            </button>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-semibold text-muted-foreground sm:flex">
-              <span
-                className={cn(
-                  'h-2 w-2 rounded-full bg-destructive',
-                  health?.status === 'ok' && 'bg-secondary',
-                )}
-              />
-              API {health?.status ?? 'offline'}
-            </div>
-            {tenantSite?.resolved && tenantSite.apps ? (
-              <div className="hidden rounded-lg border bg-background px-3 py-2 text-xs font-semibold text-muted-foreground lg:block">
-                {tenantSite.apps.landing} app
-              </div>
-            ) : null}
-            <ThemeToggle />
-            <Button
-              className="md:hidden"
-              onClick={() => setMenuOpen((open) => !open)}
-              size="icon"
-              type="button"
-              variant="outline"
-            >
-              {menuOpen ? <X size={18} /> : <Menu size={18} />}
-            </Button>
-          </div>
-        </div>
-
-        {menuOpen ? (
-          <nav className="cx-container grid gap-2 border-t py-3 md:hidden">
-            {nav}
-            <button
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => navigate({ page: 'home', view: 'tenant-dashboard' })}
-              type="button"
-            >
-              Dashboard
-            </button>
-            <button
-              className="rounded-lg px-3 py-2 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              onClick={() => navigate({ page: 'home', view: 'login' })}
-              type="button"
-            >
-              Login
-            </button>
-          </nav>
-        ) : null}
-      </header>
-
-      <main>
-        <section className="cx-container grid gap-8 py-16 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-20">
-          <div>
-            <span className="text-sm font-bold uppercase tracking-wide text-primary">
-              {page.eyebrow}
-            </span>
-            {tenantSite?.resolved ? (
-              <p className="mt-3 text-sm font-semibold text-muted-foreground">
-                {tenantSite.domain?.domain} resolved to tenant {tenantSite.tenant?.slug}
-                {tenantSite.tenant?.industryName ? ` / ${tenantSite.tenant.industryName}` : ''}
-              </p>
-            ) : null}
-            <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-              {page.title}
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
-              {page.summary}
-            </p>
-            <p className="mt-4 max-w-2xl leading-7">{page.body}</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button onClick={() => navigate({ page: appLandingPage(tenantSite?.apps?.landing), view: 'landing' })} type="button">
-                {tenantSite?.resolved && tenantSite.apps ? `Open ${tenantSite.apps.landing}` : 'Explore services'}
-                <ArrowRight size={17} />
-              </Button>
-              <Button
-                onClick={() => navigate({ page: 'contact', view: 'landing' })}
-                type="button"
-                variant="outline"
-              >
-                Contact us
-              </Button>
-            </div>
-          </div>
-
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b">
-              <CardTitle>Live platform wire</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Frontend, backend, and SQLite are connected through the site API.
-              </p>
-            </CardHeader>
-            <CardContent className="grid gap-4 pt-5">
-              {platformFeatures.map(({ label, detail, Icon }) => (
-                <div className="flex gap-3 rounded-lg border bg-background p-4" key={label}>
-                  <Icon className="mt-1 text-primary" size={20} />
-                  <div>
-                    <strong>{label}</strong>
-                    <p className="text-sm text-muted-foreground">{detail}</p>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="border-y bg-card py-14">
-          <div className="cx-container grid gap-4 md:grid-cols-3">
-            {content.services.map((service) => (
-              <Card key={service.id}>
-                <CardHeader>
-                  <CardTitle>{service.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{service.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-
-        <section className="cx-container grid gap-6 py-14 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Send a simple message into the local SQLite database.
-              </p>
-            </CardHeader>
-            <CardContent>
-              <form className="grid gap-3" onSubmit={submitContact}>
-                <input
-                  className="h-11 rounded-lg border bg-background px-3"
-                  name="name"
-                  placeholder="Name"
-                  required
-                />
-                <input
-                  className="h-11 rounded-lg border bg-background px-3"
-                  name="email"
-                  placeholder="Email"
-                  required
-                  type="email"
-                />
-                <textarea
-                  className="min-h-28 rounded-lg border bg-background p-3"
-                  name="message"
-                  placeholder="Message"
-                  required
-                />
-                <Button type="submit">
-                  <Mail size={17} />
-                  Send message
-                </Button>
-                {contactStatus ? (
-                  <p className="text-sm text-muted-foreground">{contactStatus}</p>
-                ) : null}
-              </form>
-            </CardContent>
-          </Card>
-
-          <div className="grid gap-4">
-            <h2 className="text-2xl font-bold">Blog</h2>
-            {content.posts.map((post) => (
-              <Card key={post.id}>
-                <CardHeader>
-                  <span className="text-xs font-bold uppercase text-primary">
-                    {post.published_at}
-                  </span>
-                  <CardTitle>{post.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{post.excerpt}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </section>
-      </main>
-
-      <footer className="border-t bg-card py-8">
-        <div className="cx-container flex flex-col justify-between gap-4 text-sm text-muted-foreground md:flex-row md:items-center">
-          <p>© 2026 {APP_NAME}. ERP + ecommerce platform foundation.</p>
-          <nav className="flex flex-wrap gap-3">
-            {content.pages
-              .filter((item) => item.slug !== 'home')
-              .map((item) => (
-                <button
-                  className="font-semibold hover:text-foreground"
-                  key={item.slug}
-                  onClick={() => navigate({ page: item.slug, view: 'landing' })}
-                  type="button"
-                >
-                  {item.nav_label}
-                </button>
-              ))}
-          </nav>
-        </div>
-      </footer>
-    </div>
+      <PublicSitePage
+        activePage={activePage}
+        content={content}
+        health={health}
+        menuOpen={menuOpen}
+        tenantSite={tenantSite}
+        version={version}
+        onNavigate={(nextPage) => navigate({ page: nextPage, view: 'landing' })}
+        onOpenDashboard={() => navigate({ page: 'home', view: 'tenant-dashboard' })}
+        onOpenLogin={() => navigate({ page: 'home', view: 'login' })}
+        onToggleMenu={() => setMenuOpen((open) => !open)}
+      />
       <Toaster />
     </TooltipProvider>
   )
-}
-
-function appLandingPage(app?: string) {
-  const pageByApp: Record<string, string> = {
-    ecommerce: 'shop',
-    'sports-club': 'club',
-  }
-
-  return app ? pageByApp[app] ?? app : 'services'
 }
 
 export default function AppRoot() {

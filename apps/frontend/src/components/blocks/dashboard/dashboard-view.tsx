@@ -114,6 +114,9 @@ const MediaManagerPage = lazy(() =>
 const TaskManagerPage = lazy(() =>
   import('src/features/task-manager/task-manager-page').then((module) => ({ default: module.TaskManagerPage })),
 )
+const SiteSliderPage = lazy(() =>
+  import('src/features/site/slider/site-slider-page').then((module) => ({ default: module.SiteSliderPage })),
+)
 const SalesSettingsPage = lazy(() =>
   import('src/features/settings/settings-page').then((module) => ({ default: module.SalesSettingsPage })),
 )
@@ -162,6 +165,7 @@ function defaultPageForApp(appId: DashboardAppId): DashboardPage {
   if (appId === "billing") return "app-billing-sales"
   if (appId === "inventory") return "app-inventory-purchase"
   if (appId === "taskmanager") return "app-taskmanager-tasks"
+  if (appId === "sites") return "app-sites-sliders"
   return "overview"
 }
 
@@ -232,6 +236,11 @@ function prefetchAppModules(appId: DashboardAppId) {
 
     if (appId === "taskmanager" || appId === "crm") {
       void import('src/features/task-manager/task-manager-page')
+      return
+    }
+
+    if (appId === "sites") {
+      void import('src/features/site/slider/site-slider-page')
     }
   }
 
@@ -498,6 +507,8 @@ export function DashboardView({
             <GstStatementReportPage session={session} />
           ) : visiblePage === "app-media-library" || visiblePage === "app-media-links" || visiblePage === "app-media-sharing" ? (
             <MediaManagerPage session={session} />
+          ) : visiblePage === "app-sites-sliders" ? (
+            <SiteSliderPage session={session} />
           ) : visiblePage === "app-crm-tasks" || visiblePage === "app-taskmanager-tasks" || visiblePage === "app-taskmanager-gst-verification" || visiblePage === "app-taskmanager-auditor-follow-up" ? (
             <TaskManagerPage session={session} />
           ) : visiblePage === "app-billing-settings" ? (
@@ -742,7 +753,7 @@ function appGroupDescription(title: string) {
 
 function readStoredApp(): DashboardAppId {
   const value = window.localStorage.getItem("cxsun.activeApp") ?? "billing"
-  if (value === "cms") return "sites"
+  if (value === "site") return "sites"
   return isDashboardAppId(value) ? value : "billing"
 }
 
