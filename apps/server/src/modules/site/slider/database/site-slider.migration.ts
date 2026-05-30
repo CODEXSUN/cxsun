@@ -12,6 +12,7 @@ export async function migrateSiteSliderTables(database: Kysely<DynamicDatabase>)
       slug VARCHAR(120) NOT NULL,
       placement VARCHAR(120) NOT NULL DEFAULT 'home-slider',
       status VARCHAR(32) NOT NULL DEFAULT 'draft',
+      is_primary TINYINT(1) NOT NULL DEFAULT 0,
       sort_order INT NOT NULL DEFAULT 1,
       options_json JSON NOT NULL,
       slides_json JSON NOT NULL,
@@ -23,6 +24,11 @@ export async function migrateSiteSliderTables(database: Kysely<DynamicDatabase>)
       UNIQUE KEY uq_site_sliders_slug (tenant_id, slug),
       INDEX idx_site_sliders_placement (tenant_id, placement, status, sort_order)
     )
+  `).execute(database)
+
+  await sql.raw(`
+    ALTER TABLE site_sliders
+      ADD COLUMN IF NOT EXISTS is_primary TINYINT(1) NOT NULL DEFAULT 0 AFTER status
   `).execute(database)
 
   await sql.raw(`

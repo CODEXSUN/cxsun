@@ -17,6 +17,10 @@ export interface SliderItem {
   action: { text: string; href: string }
   media: SlideMedia
   highlights?: Array<{ text: string; variant?: HighlightVariant }>
+  titleStyle?: SliderTextStyle
+  taglineStyle?: SliderTextStyle
+  badgeStyle?: SliderBadgeStyle
+  buttonStyle?: SliderButtonStyle
   btn_cta?: string
   duration?: number
   direction?: SlideDirection
@@ -34,4 +38,24 @@ export interface SliderOptions {
   defaultIntensity?: Intensity
   defaultDirection?: SlideDirection
   defaultBackgroundMode?: BackgroundMode
+}
+
+export interface SliderTextStyle {
+  color?: string
+  fontSize?: string
+  fontFamily?: string
+  fontWeight?: string
+}
+
+export interface SliderBadgeStyle extends SliderTextStyle {
+  backgroundColor?: string
+  borderColor?: string
+}
+
+export interface SliderButtonStyle extends SliderTextStyle {
+  backgroundColor?: string
+  borderColor?: string
+  borderRadius?: string
+  iconSize?: string
+  size?: 'sm' | 'md' | 'lg'
 }

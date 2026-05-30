@@ -31,6 +31,7 @@ export class SiteSliderRepository {
       .where('placement', '=', placement)
       .where('status', '=', 'published')
       .where('deleted_at', 'is', null)
+      .orderBy('is_primary', 'desc')
       .orderBy('sort_order', 'asc')
       .orderBy('id', 'asc')
       .execute()
@@ -58,6 +59,7 @@ export class SiteSliderRepository {
       slug,
       placement: input.placement?.trim() || 'home-slider',
       status,
+      is_primary: booleanValue(input.is_primary ?? input.isPrimary),
       sort_order: numberValue(input.sort_order, 1),
       options_json: JSON.stringify(input.options ?? {}),
       slides_json: JSON.stringify(Array.isArray(input.slides) ? input.slides : []),
@@ -69,6 +71,7 @@ export class SiteSliderRepository {
       const existing = await this.find(context, input.uuid)
       if (!existing) throw new NotFoundException('Site slider was not found.')
       await this.database(context).updateTable('site_sliders').set(row).where('id', '=', existing.id).execute()
+      if (row.is_primary) await this.clearOtherPrimary(context, existing.id, row.placement)
       await this.activity(context, existing.id, 'updated', `Slider updated: ${name}`, input)
       return this.find(context, existing.id)
     }
@@ -82,6 +85,7 @@ export class SiteSliderRepository {
       })
       .executeTakeFirst()
     const sliderId = Number(result.insertId)
+    if (row.is_primary) await this.clearOtherPrimary(context, sliderId, row.placement)
     await this.activity(context, sliderId, 'created', `Slider created: ${name}`, input)
     return this.find(context, sliderId)
   }
@@ -115,6 +119,17 @@ export class SiteSliderRepository {
   private database(context: TenantRuntimeContext) {
     return context.database as unknown as Kysely<DynamicDatabase>
   }
+
+  private async clearOtherPrimary(context: TenantRuntimeContext, sliderId: number, placement: string) {
+    await this.database(context)
+      .updateTable('site_sliders')
+      .set({ is_primary: 0, updated_at: new Date(), updated_by: context.user.email })
+      .where('tenant_id', '=', context.tenant.id)
+      .where('placement', '=', placement)
+      .where('id', '!=', sliderId)
+      .where('deleted_at', 'is', null)
+      .execute()
+  }
 }
 
 function toSlider(row: Record<string, unknown>): SiteSlider {
@@ -126,6 +141,7 @@ function toSlider(row: Record<string, unknown>): SiteSlider {
     slug: String(row.slug),
     placement: String(row.placement),
     status: statusValue(row.status),
+    is_primary: booleanValue(row.is_primary),
     sort_order: numberValue(row.sort_order, 1),
     options: jsonValue(row.options_json, {}),
     slides: jsonValue(row.slides_json, []),
@@ -168,4 +184,8 @@ function stringOrNull(value: unknown) {
 function numberValue(value: unknown, fallback = 0) {
   const number = Number(value ?? fallback)
   return Number.isFinite(number) ? number : fallback
+}
+
+function booleanValue(value: unknown) {
+  return value === true || value === 1 || value === '1' || value === 'true'
 }

@@ -11,6 +11,7 @@ export interface SiteSlider {
   slug: string
   placement: string
   status: SiteSliderStatus
+  is_primary: boolean
   sort_order: number
   options: SliderOptions
   slides: SliderItem[]
@@ -29,6 +30,7 @@ export function emptySiteSlider(): SiteSliderInput {
     slug: "",
     placement: "home-slider",
     status: "draft",
+    is_primary: false,
     sort_order: 1,
     options: {
       parallax: true,
@@ -45,6 +47,10 @@ export function emptySiteSlider(): SiteSliderInput {
         action: { text: "Learn more", href: "/" },
         media: { type: "image", src: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=80" },
         highlights: [{ text: "Site", variant: "glass" }],
+        titleStyle: { color: "#ffffff", fontSize: "", fontFamily: "", fontWeight: "700" },
+        taglineStyle: { color: "#e5e7eb", fontSize: "", fontFamily: "", fontWeight: "400" },
+        badgeStyle: { color: "#ffffff", backgroundColor: "rgba(255,255,255,0.14)", borderColor: "rgba(255,255,255,0.24)", fontSize: "", fontFamily: "", fontWeight: "600" },
+        buttonStyle: { color: "#111827", backgroundColor: "#ffffff", borderColor: "#ffffff", borderRadius: "0.5rem", fontSize: "", fontFamily: "", fontWeight: "700", iconSize: "1.25rem", size: "md" },
         ctaColor: "light",
         duration: 6000,
         direction: "fade",

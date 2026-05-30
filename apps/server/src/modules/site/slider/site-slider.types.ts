@@ -10,6 +10,7 @@ export interface SiteSlider {
   slug: string
   placement: string
   status: SiteSliderStatus
+  is_primary: boolean
   sort_order: number
   options: SliderOptions
   slides: SliderItem[]
@@ -26,6 +27,8 @@ export interface SiteSliderInput {
   slug?: string
   placement?: string
   status?: SiteSliderStatus
+  is_primary?: boolean
+  isPrimary?: boolean
   sort_order?: number
   options?: SliderOptions
   slides?: SliderItem[]

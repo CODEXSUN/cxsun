@@ -21,6 +21,26 @@ export type SlideHighlight = {
   variant?: HighlightVariant;
 };
 
+export type SliderTextStyle = {
+  color?: string;
+  fontSize?: string;
+  fontFamily?: string;
+  fontWeight?: string;
+};
+
+export type SliderBadgeStyle = SliderTextStyle & {
+  backgroundColor?: string;
+  borderColor?: string;
+};
+
+export type SliderButtonStyle = SliderTextStyle & {
+  backgroundColor?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  iconSize?: string;
+  size?: "sm" | "md" | "lg";
+};
+
 export type SliderItem = {
   id: number;
   title: string;
@@ -28,6 +48,10 @@ export type SliderItem = {
   action: SlideAction;
   media: SlideMedia;
   highlights?: SlideHighlight[];
+  titleStyle?: SliderTextStyle;
+  taglineStyle?: SliderTextStyle;
+  badgeStyle?: SliderBadgeStyle;
+  buttonStyle?: SliderButtonStyle;
   btn_cta?: string;
   duration?: number;
   direction?: SlideDirection;
@@ -48,6 +72,7 @@ export type SliderOptions = {
 };
 
 export type SliderPayload = {
+  className?: string;
   slides: SliderItem[];
   options?: SliderOptions;
 };

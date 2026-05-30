@@ -59,6 +59,7 @@ export interface TenantStaticSiteContent extends SiteContent {
     slug: string
     placement: string
     status: string
+    is_primary: boolean
     sort_order: number
   }>
 }

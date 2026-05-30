@@ -28,7 +28,7 @@ function getOverlayClass(showOverlay: boolean | undefined, overlayColor: string 
   return `bg-[${overlayColor}]`;
 }
 
-export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
+export function FullScreenSlider({ className, slides, options }: FullScreenSliderProps) {
   const sliderOptions: Required<SliderOptions> = {
     ...DEFAULT_SLIDER_OPTIONS,
     ...options,
@@ -247,13 +247,49 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
     slide.media.type === "youtube"
       ? `https://www.youtube-nocookie.com/embed/${slide.media.videoId}?autoplay=1&mute=1&loop=1&playlist=${slide.media.videoId}&controls=0&rel=0&modestbranding=1`
       : null;
+  const buttonSizeClass = slide.buttonStyle?.size === "sm"
+    ? "px-4 py-2 text-sm"
+    : slide.buttonStyle?.size === "lg"
+      ? "px-7 py-4 text-lg"
+      : "px-5 py-3 text-base md:px-6";
+  const buttonStyle = {
+    backgroundColor: slide.buttonStyle?.backgroundColor,
+    borderColor: slide.buttonStyle?.borderColor,
+    borderRadius: slide.buttonStyle?.borderRadius,
+    color: slide.buttonStyle?.color,
+    fontFamily: slide.buttonStyle?.fontFamily,
+    fontSize: slide.buttonStyle?.fontSize,
+    fontWeight: slide.buttonStyle?.fontWeight,
+  };
+  const titleStyle = {
+    color: slide.titleStyle?.color,
+    fontFamily: slide.titleStyle?.fontFamily,
+    fontSize: slide.titleStyle?.fontSize,
+    fontWeight: slide.titleStyle?.fontWeight,
+  };
+  const taglineStyle = {
+    color: slide.taglineStyle?.color,
+    fontFamily: slide.taglineStyle?.fontFamily,
+    fontSize: slide.taglineStyle?.fontSize,
+    fontWeight: slide.taglineStyle?.fontWeight,
+  };
+  const badgeStyle = {
+    backgroundColor: slide.badgeStyle?.backgroundColor,
+    borderColor: slide.badgeStyle?.borderColor,
+    color: slide.badgeStyle?.color,
+    fontFamily: slide.badgeStyle?.fontFamily,
+    fontSize: slide.badgeStyle?.fontSize,
+    fontWeight: slide.badgeStyle?.fontWeight,
+  };
+
+  const heightClass = className ?? "h-[min(640px,calc(100svh-4rem))] min-h-[420px]";
 
   if (slides.length === 0) {
-    return <div className="flex h-screen items-center justify-center bg-slate-950 text-white">No slides available</div>;
+    return <div className={`flex ${heightClass} items-center justify-center bg-slate-950 text-white`}>No slides available</div>;
   }
 
   return (
-    <div className="relative h-screen overflow-hidden" onMouseMove={handleMouseMove}>
+    <div className={`relative ${heightClass} overflow-hidden`} onMouseMove={handleMouseMove}>
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={current}
@@ -296,12 +332,13 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
           </motion.div>
 
           <div className="relative z-10 flex h-full items-center">
-            <div className="mx-auto w-full max-w-7xl px-6">
+            <div className="mx-auto w-full max-w-7xl px-6 pb-16 pt-8 md:pb-20">
               <motion.h1
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
-                className="mb-6 text-4xl font-bold text-white md:text-6xl lg:text-7xl"
+                className="mb-4 max-w-5xl text-3xl font-bold leading-tight text-white md:text-5xl lg:text-6xl"
+                style={titleStyle}
               >
                 {slide.title}
               </motion.h1>
@@ -310,7 +347,8 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="mb-8 max-w-3xl text-xl text-gray-200 md:text-2xl"
+                className="mb-5 max-w-3xl text-base leading-7 text-gray-200 md:text-xl"
+                style={taglineStyle}
               >
                 {slide.tagline}
               </motion.p>
@@ -320,12 +358,13 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="mb-10 flex flex-wrap gap-3"
+                  className="mb-6 flex flex-wrap gap-3"
                 >
                   {slide.highlights.map((highlight, index) => (
                     <span
                       key={`highlight-${index}`}
-                      className={`rounded-full px-4 py-2 text-sm font-semibold ${getHighlightClasses(highlight.variant)}`}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold ${getHighlightClasses(highlight.variant)}`}
+                      style={badgeStyle}
                     >
                       {highlight.text}
                     </span>
@@ -341,9 +380,10 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
                 >
                   <a
                     href={slide.action.href}
-                    className={`group relative inline-flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-95 ${
+                    className={`group relative inline-flex items-center gap-3 border font-semibold shadow-lg transition-all hover:-translate-y-1 hover:shadow-2xl active:scale-95 ${buttonSizeClass} ${
                       slide.btn_cta ? slide.btn_cta : getCTAColorClasses(slide.ctaColor ?? "primary")
                     }`}
+                    style={buttonStyle}
                   >
                     <span className="relative z-10">{slide.action.text}</span>
                     <motion.span
@@ -352,7 +392,7 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
                       transition={{ type: "spring", stiffness: 500 }}
                       className="flex items-center"
                     >
-                      <Play className="h-5 w-5" />
+                      <Play style={{ height: slide.buttonStyle?.iconSize, width: slide.buttonStyle?.iconSize }} className="h-5 w-5" />
                     </motion.span>
                     <span className="absolute inset-0 rounded-lg bg-white opacity-0 transition group-hover:opacity-15" />
                   </a>
@@ -365,21 +405,21 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
 
       <button
         onClick={prev}
-        className="absolute left-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition hover:bg-black/60 md:left-8"
+        className="absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white backdrop-blur-sm transition hover:bg-black/60 md:left-6 md:p-3"
         aria-label="Previous slide"
       >
-        <ChevronLeft size={32} />
+        <ChevronLeft className="size-6 md:size-8" />
       </button>
 
       <button
         onClick={next}
-        className="absolute right-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/30 p-3 text-white backdrop-blur-sm transition hover:bg-black/60 md:right-8"
+        className="absolute right-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white backdrop-blur-sm transition hover:bg-black/60 md:right-6 md:p-3"
         aria-label="Next slide"
       >
-        <ChevronRight size={32} />
+        <ChevronRight className="size-6 md:size-8" />
       </button>
 
-      <div className="absolute bottom-12 left-1/2 z-30 flex -translate-x-1/2 gap-3">
+      <div className="absolute bottom-6 left-1/2 z-30 flex -translate-x-1/2 gap-3">
         {slides.map((_, index) => (
           <button
             key={`dot-${index}`}
@@ -392,9 +432,9 @@ export function FullScreenSlider({ slides, options }: FullScreenSliderProps) {
         ))}
       </div>
 
-      <div className="absolute bottom-20 left-1/2 z-30 -translate-x-1/2">
-        <div className="relative h-14 w-14">
-          <svg width="56" height="56" className="-rotate-90">
+      <div className="absolute bottom-12 left-1/2 z-30 -translate-x-1/2 md:bottom-14">
+        <div className="relative h-12 w-12 md:h-14 md:w-14">
+          <svg width="56" height="56" className="-rotate-90 scale-[.85] md:scale-100">
             <circle cx="28" cy="28" r="26" stroke="rgba(255,255,255,0.25)" strokeWidth="3" fill="none" />
             <motion.circle
               cx="28"

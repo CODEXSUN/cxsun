@@ -12,6 +12,12 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.69
 
+### [v 1.0.69] 2026-05-30 9:47 am - designer site slider editor
+
+- Added a primary slider flag for tenant Site sliders and made public Home prefer the primary published home slider.
+- Replaced raw slider JSON editing with a designer form for root slider details, slide list management, background image, title, tagline, badges, button content, style colours, font sizes, fonts, icon size, motion, duration, and overlay settings.
+- Extended slider payload styles so title, tagline, badge, and button design options render on the public slider.
+
 ### [v 1.0.69] 2026-05-30 9:20 am - dynamic site slider sections
 
 - Added tenant-scoped Site slider tables, repository, service, controller, events, and queue publish flow for dynamic public site sections.
