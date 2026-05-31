@@ -405,7 +405,7 @@ export function FullScreenSlider({ className, slides, options }: FullScreenSlide
 
       <button
         onClick={prev}
-        className="absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white backdrop-blur-sm transition hover:bg-black/60 md:left-6 md:p-3"
+        className="absolute left-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/5 p-2 text-white/30 opacity-25 backdrop-blur-sm transition duration-200 hover:bg-black/55 hover:text-white hover:opacity-100 focus-visible:bg-black/55 focus-visible:text-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 md:left-6 md:p-3"
         aria-label="Previous slide"
       >
         <ChevronLeft className="size-6 md:size-8" />
@@ -413,7 +413,7 @@ export function FullScreenSlider({ className, slides, options }: FullScreenSlide
 
       <button
         onClick={next}
-        className="absolute right-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/30 p-2 text-white backdrop-blur-sm transition hover:bg-black/60 md:right-6 md:p-3"
+        className="absolute right-3 top-1/2 z-30 -translate-y-1/2 rounded-full bg-black/5 p-2 text-white/30 opacity-25 backdrop-blur-sm transition duration-200 hover:bg-black/55 hover:text-white hover:opacity-100 focus-visible:bg-black/55 focus-visible:text-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 md:right-6 md:p-3"
         aria-label="Next slide"
       >
         <ChevronRight className="size-6 md:size-8" />

@@ -211,7 +211,7 @@ function SiteSliderUpsertPage({ isSaving, onBack, onSubmit, slider }: { isSaving
             <Field label="Placement" value={draft.placement ?? "home-slider"} onChange={(placement) => setRoot({ placement })} />
             <SelectField label="Status" value={draft.status ?? "draft"} options={statusOptions} onChange={(status) => setRoot({ status: status as SiteSliderStatus })} />
           </div>
-          <div className="grid gap-4 md:grid-cols-[150px_180px_repeat(4,1fr)]">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[150px_180px_repeat(4,minmax(150px,1fr))]">
             <Field label="Sort order" type="number" value={String(draft.sort_order ?? 1)} onChange={(sortOrder) => setRoot({ sort_order: Number(sortOrder || 1) })} />
             <SwitchRow checked={Boolean(draft.is_primary)} label="Primary slider" onChange={(is_primary) => setRoot({ is_primary })} />
             <SelectField label="Parallax" value={draft.options?.parallax === false ? "no" : "yes"} options={yesNoOptions} onChange={(value) => setRoot({ options: { ...draft.options, parallax: value === "yes" } })} />
@@ -270,27 +270,27 @@ function SiteSliderUpsertPage({ isSaving, onBack, onSubmit, slider }: { isSaving
             </div>
 
             <SectionTitle>Text Style</SectionTitle>
-            <div className="grid gap-4 md:grid-cols-4">
-              <Field label="Title colour" value={activeSlide.titleStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "titleStyle", { color })} placeholder="#ffffff" />
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <ColorField label="Title colour" value={activeSlide.titleStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "titleStyle", { color })} placeholder="#ffffff" />
               <Field label="Title size" value={activeSlide.titleStyle?.fontSize ?? ""} onChange={(fontSize) => setSlideStyle(activeSlideIndex, "titleStyle", { fontSize })} placeholder="4rem" />
               <Field label="Title font" value={activeSlide.titleStyle?.fontFamily ?? ""} onChange={(fontFamily) => setSlideStyle(activeSlideIndex, "titleStyle", { fontFamily })} placeholder="Inter" />
               <Field label="Title weight" value={activeSlide.titleStyle?.fontWeight ?? ""} onChange={(fontWeight) => setSlideStyle(activeSlideIndex, "titleStyle", { fontWeight })} placeholder="700" />
-              <Field label="Tagline colour" value={activeSlide.taglineStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "taglineStyle", { color })} placeholder="#e5e7eb" />
+              <ColorField label="Tagline colour" value={activeSlide.taglineStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "taglineStyle", { color })} placeholder="#e5e7eb" />
               <Field label="Tagline size" value={activeSlide.taglineStyle?.fontSize ?? ""} onChange={(fontSize) => setSlideStyle(activeSlideIndex, "taglineStyle", { fontSize })} placeholder="1.25rem" />
               <Field label="Tagline font" value={activeSlide.taglineStyle?.fontFamily ?? ""} onChange={(fontFamily) => setSlideStyle(activeSlideIndex, "taglineStyle", { fontFamily })} placeholder="Inter" />
               <Field label="Tagline weight" value={activeSlide.taglineStyle?.fontWeight ?? ""} onChange={(fontWeight) => setSlideStyle(activeSlideIndex, "taglineStyle", { fontWeight })} placeholder="400" />
             </div>
 
             <SectionTitle>Badge And Button Style</SectionTitle>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <SimpleSelect label="Badge type" value={activeSlide.highlights?.[0]?.variant ?? "glass"} options={badgeVariantOptions} onChange={(variant) => setSlide(activeSlideIndex, { highlights: (activeSlide.highlights ?? []).map((item) => ({ ...item, variant })) })} />
-              <Field label="Badge text colour" value={activeSlide.badgeStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "badgeStyle", { color })} />
-              <Field label="Badge background" value={activeSlide.badgeStyle?.backgroundColor ?? ""} onChange={(backgroundColor) => setSlideStyle(activeSlideIndex, "badgeStyle", { backgroundColor })} />
-              <Field label="Badge border" value={activeSlide.badgeStyle?.borderColor ?? ""} onChange={(borderColor) => setSlideStyle(activeSlideIndex, "badgeStyle", { borderColor })} />
+              <ColorField label="Badge text colour" value={activeSlide.badgeStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "badgeStyle", { color })} />
+              <ColorField label="Badge background" value={activeSlide.badgeStyle?.backgroundColor ?? ""} onChange={(backgroundColor) => setSlideStyle(activeSlideIndex, "badgeStyle", { backgroundColor })} />
+              <ColorField label="Badge border" value={activeSlide.badgeStyle?.borderColor ?? ""} onChange={(borderColor) => setSlideStyle(activeSlideIndex, "badgeStyle", { borderColor })} />
               <SimpleSelect label="Button size" value={activeSlide.buttonStyle?.size ?? "md"} options={buttonSizeOptions} onChange={(size) => setSlideStyle(activeSlideIndex, "buttonStyle", { size })} />
-              <Field label="Button text colour" value={activeSlide.buttonStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "buttonStyle", { color })} />
-              <Field label="Button background" value={activeSlide.buttonStyle?.backgroundColor ?? ""} onChange={(backgroundColor) => setSlideStyle(activeSlideIndex, "buttonStyle", { backgroundColor })} />
-              <Field label="Button border" value={activeSlide.buttonStyle?.borderColor ?? ""} onChange={(borderColor) => setSlideStyle(activeSlideIndex, "buttonStyle", { borderColor })} />
+              <ColorField label="Button text colour" value={activeSlide.buttonStyle?.color ?? ""} onChange={(color) => setSlideStyle(activeSlideIndex, "buttonStyle", { color })} />
+              <ColorField label="Button background" value={activeSlide.buttonStyle?.backgroundColor ?? ""} onChange={(backgroundColor) => setSlideStyle(activeSlideIndex, "buttonStyle", { backgroundColor })} />
+              <ColorField label="Button border" value={activeSlide.buttonStyle?.borderColor ?? ""} onChange={(borderColor) => setSlideStyle(activeSlideIndex, "buttonStyle", { borderColor })} />
               <Field label="Button radius" value={activeSlide.buttonStyle?.borderRadius ?? ""} onChange={(borderRadius) => setSlideStyle(activeSlideIndex, "buttonStyle", { borderRadius })} placeholder="0.5rem" />
               <Field label="Button font size" value={activeSlide.buttonStyle?.fontSize ?? ""} onChange={(fontSize) => setSlideStyle(activeSlideIndex, "buttonStyle", { fontSize })} />
               <Field label="Button font" value={activeSlide.buttonStyle?.fontFamily ?? ""} onChange={(fontFamily) => setSlideStyle(activeSlideIndex, "buttonStyle", { fontFamily })} />
@@ -298,7 +298,7 @@ function SiteSliderUpsertPage({ isSaving, onBack, onSubmit, slider }: { isSaving
             </div>
 
             <SectionTitle>Motion And Overlay</SectionTitle>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <SimpleSelect label="Direction" value={activeSlide.direction ?? "fade"} options={directionOptions} onChange={(direction) => setSlide(activeSlideIndex, { direction })} />
               <SimpleSelect label="Background mode" value={activeSlide.backgroundMode ?? "cinematic"} options={backgroundModeOptions} onChange={(backgroundMode) => setSlide(activeSlideIndex, { backgroundMode })} />
               <SimpleSelect label="Intensity" value={activeSlide.intensity ?? "medium"} options={intensityOptions} onChange={(intensity) => setSlide(activeSlideIndex, { intensity })} />
@@ -355,13 +355,46 @@ function Field({ label, onChange, placeholder, type = "text", value }: { label: 
   return <div className="grid gap-2"><Label>{label}</Label><Input className="h-11 rounded-md" placeholder={placeholder} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></div>
 }
 
-function SelectField({ label, onChange, options, value }: { label: string; onChange(value: string): void; options: Array<{ value: string; label: string }>; value: string }) {
+function ColorField({ label, onChange, placeholder = "#ffffff", value }: { label: string; onChange(value: string): void; placeholder?: string; value: string }) {
+  const pickerValue = colorInputValue(value, placeholder)
+
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
+      <div className="grid grid-cols-[44px_1fr] gap-2">
+        <Input
+          aria-label={`${label} picker`}
+          className="h-11 rounded-md p-1"
+          type="color"
+          value={pickerValue}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <Input
+          className="h-11 rounded-md font-mono text-xs"
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function SelectField({ label, onChange, options, value }: { label: string; onChange(value: string): void; options: Array<{ value: string; label: string }>; value: string }) {
+  return (
+    <div className="grid min-w-0 gap-2">
+      <Label>{label}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-11 min-h-11 rounded-md"><SelectValue /></SelectTrigger>
-        <SelectContent>{options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+        <SelectTrigger className="h-11 min-h-11 w-full min-w-[9rem] rounded-md bg-background px-3">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent
+          align="start"
+          className="z-[120] w-[var(--radix-select-trigger-width)] min-w-[9rem] rounded-md border border-border bg-popover shadow-xl"
+          position="popper"
+        >
+          {options.map((option) => <SelectItem className="min-h-9 px-3 pr-9" key={option.value} value={option.value}>{option.label}</SelectItem>)}
+        </SelectContent>
       </Select>
     </div>
   )
@@ -385,4 +418,14 @@ function SwitchRow({ checked, label, onChange }: { checked: boolean; label: stri
 
 function slugValue(value: string) {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120)
+}
+
+function colorInputValue(value: string, fallback: string) {
+  const trimmed = value.trim()
+  if (/^#[0-9a-f]{6}$/i.test(trimmed)) return trimmed
+  if (/^#[0-9a-f]{3}$/i.test(trimmed)) {
+    const [, r, g, b] = trimmed
+    return `#${r}${r}${g}${g}${b}${b}`
+  }
+  return /^#[0-9a-f]{6}$/i.test(fallback) ? fallback : "#ffffff"
 }

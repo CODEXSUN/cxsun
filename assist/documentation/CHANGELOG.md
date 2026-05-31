@@ -12,6 +12,34 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.69
 
+### [v 1.0.69] 2026-05-30 5:55 pm - home story carousel
+
+- Converted the Home story banner into an auto-advancing right-to-left carousel with three Codexsun story slides.
+- Added outside left and right chevron controls plus slide dot navigation for manual story browsing.
+
+### [v 1.0.69] 2026-05-30 5:49 pm - codexsun visual identity pass
+
+- Replaced the copied contour-style public Home backgrounds with Codexsun-specific angular grid, sun-highlight, sky, teal, amber, and emerald visual treatments.
+- Updated section icons and CTA colours so the brand intro, featured workspace, values, and footer feel distinct from the sample reference.
+
+### [v 1.0.69] 2026-05-30 5:47 pm - public home page brand polish
+
+- Rebuilt the Codexsun public Home flow into spacious marketing sections for brand intro, featured apps, product benefits, story, values, and final call to action.
+- Refined public header and footer copy so the site reads as a customer-facing brand page instead of exposing internal runtime/status details.
+- Added horizontal overflow clipping around reveal animations and verified the public page sections render at `codexsun.local`.
+
+### [v 1.0.69] 2026-05-30 5:13 pm - slider editor polish
+
+- Added colour picker controls beside exact CSS value inputs in the Site slider designer.
+- Fixed Site slider editor select widths and dropdown layering so option menus do not visually merge with nearby fields.
+- Made public slider chevrons mostly transparent by default and fully visible on hover or keyboard focus.
+
+### [v 1.0.69] 2026-05-30 4:57 pm - codexsun home slider seed
+
+- Seeded Codexsun with a published primary `home-slider-1` Site slider containing three Codexsun-focused slides.
+- Removed the old frontend slider fallback and replaced the no-slider state with a static conscious workspace hero.
+- Verified `codexsun.local` renders the database-backed `home-slider` section.
+
 ### [v 1.0.69] 2026-05-30 9:47 am - designer site slider editor
 
 - Added a primary slider flag for tenant Site sliders and made public Home prefer the primary published home slider.

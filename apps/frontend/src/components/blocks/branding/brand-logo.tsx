@@ -10,18 +10,21 @@ interface BrandLogoProps {
   logoDarkUrl?: string
   logoUrl?: string
   name?: string
+  variant?: 'auto' | 'dark' | 'light'
 }
 
-export function BrandLogo({ className, fallback = true, logoDarkUrl: tenantLogoDarkUrl, logoUrl: tenantLogoUrl, name = APP_NAME }: BrandLogoProps) {
+export function BrandLogo({ className, fallback = true, logoDarkUrl: tenantLogoDarkUrl, logoUrl: tenantLogoUrl, name = APP_NAME, variant = 'auto' }: BrandLogoProps) {
   const lightSrc = tenantLogoUrl || (fallback ? logoUrl : "")
   const darkSrc = tenantLogoDarkUrl || tenantLogoUrl || (fallback ? logoDarkUrl : "")
+  const lightClassName = variant === 'light' ? 'block' : variant === 'dark' ? 'hidden' : 'dark:hidden'
+  const darkClassName = variant === 'dark' ? 'block' : variant === 'light' ? 'hidden' : 'hidden dark:block'
 
   return (
     <span className={cn('relative inline-flex shrink-0', className)}>
       {lightSrc ? (
         <img
           alt={name}
-          className="size-full object-contain dark:hidden"
+          className={cn('size-full object-contain', lightClassName)}
           draggable={false}
           onError={(event) => {
             if (fallback && event.currentTarget.src !== logoUrl) {
@@ -36,7 +39,7 @@ export function BrandLogo({ className, fallback = true, logoDarkUrl: tenantLogoD
       {darkSrc ? (
         <img
           alt={name}
-          className="hidden size-full object-contain dark:block"
+          className={cn('size-full object-contain', darkClassName)}
           draggable={false}
           onError={(event) => {
             if (fallback && event.currentTarget.src !== logoDarkUrl) {

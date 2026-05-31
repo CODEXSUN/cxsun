@@ -19,7 +19,7 @@ import { migrateCompanySettingsTables } from '../../modules/settings/company-set
 import { migrateDocumentSettingsTables } from '../../modules/settings/document-settings/index.js'
 import { migrateMediaTables } from '../../modules/media/index.js'
 import { migrateTaskManagerTables } from '../../modules/task-manager/index.js'
-import { migrateSiteSliderTables } from '../../modules/site/slider/database/site-slider.migration.js'
+import { migrateSiteSliderTables, seedDefaultSiteSliders } from '../../modules/site/slider/database/site-slider.migration.js'
 import { migrateContactMasterTable } from '../../modules/master/contact/index.js'
 import { migrateProductMasterTable } from '../../modules/master/product/index.js'
 import { migrateOrderMasterTable } from '../../modules/master/order/index.js'
@@ -296,6 +296,7 @@ function readTenantCompanies(tenant: Tenant) {
 
 async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
   await seedCommonModuleTables(database)
+  await seedDefaultSiteSliders(database as never, tenant)
   await seedScopedCompanies(database, tenant)
   const years = await seedAccountingYears(database)
   const existingDefault = await database

@@ -285,9 +285,17 @@ function App() {
     setMenuOpen(false)
   }
 
+  function logoutTenant() {
+    clearSession('tenant')
+    setRoute({ page: 'home', view: 'landing' })
+    window.history.replaceState(null, '', '/')
+    setMenuOpen(false)
+  }
+
   const tenantSite = tenantSiteQuery.data ?? null
   const content = tenantSite?.resolved ? tenantSite : siteQuery.data ?? fallbackContent
   const health = healthQuery.data ?? null
+  const isTenantAuthenticated = Boolean(getStoredSession('tenant'))
 
   useEffect(() => {
     if (!tenantSite?.resolved || !tenantSite.tenant) {
@@ -449,12 +457,14 @@ function App() {
         activePage={activePage}
         content={content}
         health={health}
+        isAuthenticated={isTenantAuthenticated}
         menuOpen={menuOpen}
         tenantSite={tenantSite}
         version={version}
         onNavigate={(nextPage) => navigate({ page: nextPage, view: 'landing' })}
         onOpenDashboard={() => navigate({ page: 'home', view: 'tenant-dashboard' })}
         onOpenLogin={() => navigate({ page: 'home', view: 'login' })}
+        onLogout={logoutTenant}
         onToggleMenu={() => setMenuOpen((open) => !open)}
       />
       <Toaster />
