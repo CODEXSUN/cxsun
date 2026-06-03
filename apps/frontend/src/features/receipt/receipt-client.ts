@@ -45,6 +45,7 @@ export interface ReceiptEntry {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  document_number_warning?: string
   allocations: ReceiptAllocation[]
   comments: Array<{ id: number; author_email: string; body: string; created_at: string }>
   activities: Array<{ id: number; activity_type: string; actor_email: string; message: string; payload: string; created_at: string }>
@@ -117,9 +118,9 @@ export async function upsertReceiptEntry(session: AuthSession, input: ReceiptEnt
     method: "POST",
   })
   if (!response.ok) throw new Error(`Receipt save failed with status ${response.status}.`)
-  const result = (await response.json()) as { ok: boolean; entry?: ReceiptEntry; error?: string }
+  const result = (await response.json()) as { ok: boolean; entry?: ReceiptEntry; error?: string; warning?: string }
   if (!result.ok || !result.entry) throw new Error(result.error ?? "Receipt save failed.")
-  return result.entry
+  return { ...result.entry, document_number_warning: result.warning }
 }
 
 export async function destroyReceiptEntry(session: AuthSession, entry: ReceiptEntry) {

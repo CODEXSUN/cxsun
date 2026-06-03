@@ -113,7 +113,7 @@ export class PurchaseEntryRepository {
   async update(context: TenantRuntimeContext, idOrUuid: string, input: PurchaseEntryInput) {
     const existing = await this.find(context, idOrUuid)
     if (!existing) return null
-    const normalized = await this.normalize(context, input)
+    const normalized = await this.normalize(context, input, existing.id)
 
     await this.database(context)
       .updateTable('purchase_entries')
@@ -178,7 +178,7 @@ export class PurchaseEntryRepository {
     return this.find(context, String(existing.id))
   }
 
-  private async normalize(context: TenantRuntimeContext, input: PurchaseEntryInput) {
+  private async normalize(context: TenantRuntimeContext, input: PurchaseEntryInput, existingId?: number) {
     const companyId = input.company_id ?? await this.defaultCompanyId(context)
     const accountingYearId = input.accounting_year_id ?? await this.defaultAccountingYearId(context)
     const isCgstSgst = (input.place_of_supply ?? 'cgst-sgst') !== 'igst'
@@ -194,7 +194,7 @@ export class PurchaseEntryRepository {
     const paidAmount = roundMoney(input.paid_amount ?? 0)
 
     if (!input.supplier_name?.trim()) throw new BadRequestException('Supplier name is required.')
-    const entryNo = await this.resolveEntryNo(context, input.entry_no, companyId, accountingYearId)
+    const entryNo = await this.resolveEntryNo(context, input.entry_no, companyId, accountingYearId, existingId)
 
     return {
       entry: {
@@ -369,19 +369,25 @@ export class PurchaseEntryRepository {
   }
 
   private async nextEntryNo(context: TenantRuntimeContext, companyId: number, accountingYearId: number) {
-    const documentNumber = await this.documentNumbers.consumeNext(context, 'purchase', {
-      accountingYearId: String(accountingYearId),
-      companyId: String(companyId),
-    })
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const documentNumber = await this.documentNumbers.consumeNext(context, 'purchase', {
+        accountingYearId: String(accountingYearId),
+        companyId: String(companyId),
+      })
 
-    if (!documentNumber) {
-      throw new BadRequestException('Entry number is required when automatic purchase numbering is disabled.')
+      if (!documentNumber) {
+        throw new BadRequestException('Entry number is required when automatic purchase numbering is disabled.')
+      }
+
+      if (!await this.entryNoExists(context, documentNumber, companyId, accountingYearId)) {
+        return documentNumber
+      }
     }
 
-    return documentNumber
+    throw new BadRequestException('Unable to find an available purchase entry number. Please check document number settings.')
   }
 
-  private async resolveEntryNo(context: TenantRuntimeContext, entryNo: string | undefined, companyId: number, accountingYearId: number) {
+  private async resolveEntryNo(context: TenantRuntimeContext, entryNo: string | undefined, companyId: number, accountingYearId: number, existingId?: number) {
     const trimmedEntryNo = entryNo?.trim()
 
     if (!trimmedEntryNo) {
@@ -397,7 +403,32 @@ export class PurchaseEntryRepository {
       return this.nextEntryNo(context, companyId, accountingYearId)
     }
 
+    if (await this.entryNoExists(context, trimmedEntryNo, companyId, accountingYearId, existingId)) {
+      if (!preview.autoEnabled) {
+        throw new BadRequestException(`Entry number ${trimmedEntryNo} already exists.`)
+      }
+      return this.nextEntryNo(context, companyId, accountingYearId)
+    }
+
+    await this.documentNumbers.advancePast(context, 'purchase', {
+      accountingYearId: String(accountingYearId),
+      companyId: String(companyId),
+    }, trimmedEntryNo)
+
     return trimmedEntryNo
+  }
+
+  private async entryNoExists(context: TenantRuntimeContext, entryNo: string, companyId: number, accountingYearId: number, existingId?: number) {
+    let query = this.database(context)
+      .selectFrom('purchase_entries')
+      .select('id')
+      .where('tenant_id', '=', context.tenant.id)
+      .where('company_id', '=', companyId)
+      .where('accounting_year_id', '=', accountingYearId)
+      .where('entry_no', '=', entryNo)
+
+    if (existingId) query = query.where('id', '!=', existingId)
+    return Boolean(await query.executeTakeFirst())
   }
 
   private idColumn(idOrUuid: string) {

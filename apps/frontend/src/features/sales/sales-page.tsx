@@ -60,7 +60,7 @@ import {
 import { SalesInvoiceDocument, type SalesPrintCopy, type SalesPrintPartyDetails } from "./sales-print-page"
 
 type SalesView = { mode: "list" } | { mode: "show"; entry: SalesEntry } | { mode: "upsert"; entry: SalesEntry | null }
-type SalesColumnId = "invoice" | "date" | "customer" | "status" | "payment" | "total" | "balance" | "updated"
+type SalesColumnId = "invoice" | "date" | "customer" | "status" | "payment" | "totalQty" | "taxableTotal" | "gstTotal" | "grandTotal" | "balance" | "updated"
 type SalesEntryToolId = "email" | "assign" | "attachments" | "tags" | "whatsapp"
 type SalesAddressLabels = {
   addressTypes(value: unknown): string
@@ -88,18 +88,24 @@ const defaultSalesColumnVisibility: Record<SalesColumnId, boolean> = {
   customer: true,
   date: true,
   invoice: true,
-  payment: true,
+  payment: false,
   status: true,
-  total: true,
+  totalQty: true,
+  taxableTotal: true,
+  gstTotal: true,
+  grandTotal: true,
   updated: false,
 }
 const salesColumnCatalog: Array<{ id: SalesColumnId; label: string }> = [
   { id: "invoice", label: "Invoice" },
   { id: "date", label: "Date" },
   { id: "customer", label: "Customer" },
+  { id: "totalQty", label: "Total Qty" },
+  { id: "taxableTotal", label: "Total Taxable" },
+  { id: "gstTotal", label: "Total GST" },
+  { id: "grandTotal", label: "Grand Total" },
   { id: "status", label: "Status" },
   { id: "payment", label: "Payment" },
-  { id: "total", label: "Total" },
   { id: "balance", label: "Balance" },
   { id: "updated", label: "Updated" },
 ]
@@ -134,7 +140,9 @@ export function SalesPage({ session }: { session: AuthSession }) {
 
   async function save(input: SalesEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(input)
-    toast.success(input.uuid ? "Sales entry updated" : "Sales entry created", { description: entry.invoice_no })
+    toast.success(input.uuid ? "Sales entry updated" : "Sales entry created", { description: entry.document_number_warning ?? entry.invoice_no })
+    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "sales"] })
+    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
     await refresh()
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
@@ -150,6 +158,16 @@ export function SalesPage({ session }: { session: AuthSession }) {
     await restoreMutation.mutateAsync(entry)
     toast.success("Sales entry restored", { description: entry.invoice_no })
     await refresh()
+  }
+
+  function printEntry(entry: SalesEntry) {
+    setView({ mode: "show", entry })
+    window.setTimeout(() => window.print(), 300)
+  }
+
+  function openNewEntry() {
+    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "sales"] })
+    setView({ mode: "upsert", entry: null })
   }
 
   if (view.mode === "upsert") {
@@ -190,7 +208,7 @@ export function SalesPage({ session }: { session: AuthSession }) {
       action={
         <div className="flex items-center gap-2">
           <Button disabled={entriesQuery.isFetching} onClick={() => void entriesQuery.refetch()} type="button" variant="outline" className="h-9 rounded-md"><RefreshCw className={cn("size-4", entriesQuery.isFetching && "animate-spin")} />Refresh</Button>
-          <Button onClick={() => setView({ mode: "upsert", entry: null })} type="button" className="h-9 rounded-md"><Plus className="size-4" />New</Button>
+          <Button onClick={openNewEntry} type="button" className="h-9 rounded-md"><Plus className="size-4" />New</Button>
         </div>
       }
     >
@@ -218,15 +236,19 @@ export function SalesPage({ session }: { session: AuthSession }) {
       />
       <MasterListTableCard>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] border-collapse text-sm">
+          <table className="w-full min-w-[1120px] border-collapse text-sm">
             <thead className="bg-muted/50">
               <tr>
-                {visibleColumns.invoice ? <ListHeader>Invoice</ListHeader> : null}
+                {visibleColumns.invoice ? <ListHeader>Invoice no</ListHeader> : null}
                 {visibleColumns.date ? <ListHeader>Date</ListHeader> : null}
                 {visibleColumns.customer ? <ListHeader>Customer</ListHeader> : null}
-                {visibleColumns.status ? <ListHeader>Status</ListHeader> : null}
-                {visibleColumns.payment ? <ListHeader>Payment</ListHeader> : null}
-                {visibleColumns.total ? <ListHeader className="text-right">Total</ListHeader> : null}
+                {visibleColumns.totalQty ? <ListHeader className="text-center">Total Qty</ListHeader> : null}
+                {visibleColumns.taxableTotal ? <ListHeader className="text-right">Total Taxable</ListHeader> : null}
+                {visibleColumns.gstTotal ? <ListHeader className="text-right">Total GST</ListHeader> : null}
+                {visibleColumns.grandTotal ? <ListHeader className="text-right">Grand Total</ListHeader> : null}
+                {visibleColumns.status ? <ListHeader className="text-center">Status</ListHeader> : null}
+                {visibleColumns.payment ? <ListHeader className="text-center">Payment</ListHeader> : null}
+                <ListHeader className="text-center">Print</ListHeader>
                 {visibleColumns.balance ? <ListHeader className="text-right">Balance</ListHeader> : null}
                 {visibleColumns.updated ? <ListHeader>Updated</ListHeader> : null}
                 <ListHeader className="text-right">Action</ListHeader>
@@ -237,13 +259,20 @@ export function SalesPage({ session }: { session: AuthSession }) {
                 <tr key={entry.uuid} className={cn("border-b border-border/70", !isActive(entry) && "bg-muted/20 text-muted-foreground")}>
                   {visibleColumns.invoice ? <td className="px-4 py-2">
                     <button className="font-semibold hover:underline" onClick={() => setView({ mode: "show", entry })} type="button">{entry.invoice_no}</button>
-                    <div className="font-mono text-xs text-muted-foreground">{entry.uuid}</div>
                   </td> : null}
                   {visibleColumns.date ? <td className="px-4 py-2">{formatDate(entry.invoice_date)}</td> : null}
                   {visibleColumns.customer ? <td className="px-4 py-2">{entry.customer_name}</td> : null}
-                  {visibleColumns.status ? <td className="px-4 py-2"><StatusBadge entry={entry} /></td> : null}
-                  {visibleColumns.payment ? <td className="px-4 py-2 text-muted-foreground">{entry.payment_status}</td> : null}
-                  {visibleColumns.total ? <td className="px-4 py-2 text-right font-semibold">{formatMoney(entry.grand_total)}</td> : null}
+                  {visibleColumns.totalQty ? <td className="px-4 py-2 text-center">{formatQuantity(totalSalesQuantity(entry))}</td> : null}
+                  {visibleColumns.taxableTotal ? <td className="px-4 py-2 text-right">{formatMoney(entry.taxable_total)}</td> : null}
+                  {visibleColumns.gstTotal ? <td className="px-4 py-2 text-right">{formatMoney(entry.tax_total)}</td> : null}
+                  {visibleColumns.grandTotal ? <td className="px-4 py-2 text-right font-semibold">{formatMoney(entry.grand_total)}</td> : null}
+                  {visibleColumns.status ? <td className="px-4 py-2 text-center"><StatusBadge entry={entry} /></td> : null}
+                  {visibleColumns.payment ? <td className="px-4 py-2 text-center text-muted-foreground">{entry.payment_status}</td> : null}
+                  <td className="px-4 py-1.5 text-center">
+                    <Button aria-label={`Print ${entry.invoice_no}`} className="size-8 rounded-md p-0" onClick={() => printEntry(entry)} title={`Print ${entry.invoice_no}`} type="button" variant="outline">
+                      <Printer className="size-4" />
+                    </Button>
+                  </td>
                   {visibleColumns.balance ? <td className="px-4 py-2 text-right">{formatMoney(entry.balance_amount)}</td> : null}
                   {visibleColumns.updated ? <td className="px-4 py-2 text-muted-foreground">{formatDate(entry.updated_at)}</td> : null}
                   <td className="px-4 py-1.5 text-right">
@@ -559,6 +588,7 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
     enabled: !entry,
     queryKey: ["document-number-next-preview", session.selectedTenant.slug, "sales"],
     queryFn: () => nextDocumentNumberSetting(session, "sales"),
+    refetchOnMount: "always",
   })
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const customerContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "customer"), [contactsQuery.data, contactTypesQuery.data])
@@ -2103,6 +2133,10 @@ function isActive(entry: SalesEntry) {
   return entry.is_active === true || entry.is_active === 1
 }
 
+function totalSalesQuantity(entry: SalesEntry) {
+  return entry.items.reduce((total, item) => total + Number(item.quantity || 0), 0)
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "Not set"
   return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
@@ -2122,4 +2156,8 @@ function formatDateTimeWithZone(value?: string | null) {
 
 function formatMoney(value: number) {
   return new Intl.NumberFormat(undefined, { currency: "INR", maximumFractionDigits: 2, style: "currency" }).format(Number(value ?? 0))
+}
+
+function formatQuantity(value: number) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(Number(value ?? 0))
 }

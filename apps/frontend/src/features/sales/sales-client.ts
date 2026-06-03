@@ -87,6 +87,7 @@ export interface SalesEntry {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  document_number_warning?: string
   items: SalesEntryItem[]
   comments: Array<{ id: number; author_email: string; body: string; created_at: string }>
   activities: Array<{ id: number; activity_type: string; actor_email: string; message: string; payload: string; created_at: string }>
@@ -195,9 +196,9 @@ export async function upsertSalesEntry(session: AuthSession, input: SalesEntryIn
     method: "POST",
   })
   if (!response.ok) throw new Error(`Sales save failed with status ${response.status}.`)
-  const result = (await response.json()) as { ok: boolean; entry?: SalesEntry; error?: string }
+  const result = (await response.json()) as { ok: boolean; entry?: SalesEntry; error?: string; warning?: string }
   if (!result.ok || !result.entry) throw new Error(result.error ?? "Sales save failed.")
-  return result.entry
+  return { ...result.entry, document_number_warning: result.warning }
 }
 
 export async function destroySalesEntry(session: AuthSession, entry: SalesEntry) {

@@ -23,7 +23,13 @@ export class ReceiptEntryService {
   }
 
   async upsert(headers: TenantRequestHeaders, input: ReceiptEntryInput) {
-    return { ok: true, entry: await this.receipts.upsert(await this.tenants.resolve(headers, 'company.manage'), input) }
+    const requestedReceiptNo = String(input.receipt_no ?? '').trim()
+    const isUpdate = Boolean(input.id || input.uuid)
+    const entry = await this.receipts.upsert(await this.tenants.resolve(headers, 'company.manage'), input)
+    const warning = !isUpdate && requestedReceiptNo && requestedReceiptNo !== entry.receipt_no
+      ? `Receipt number ${requestedReceiptNo} was already used, so ${entry.receipt_no} was saved instead.`
+      : undefined
+    return { ok: true, entry, warning }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {

@@ -2,15 +2,30 @@
 
 ## Version State
 
-- **Current version:** `1.0.69`
-- **Release tag:** `v-1.0.69`
-- **Changelog label:** `v 1.0.69`
+- **Current version:** `1.0.70`
+- **Release tag:** `v-1.0.70`
+- **Changelog label:** `v 1.0.70`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.70
+
+### [v 1.0.70] 2026-06-03 7:01 pm - document number auto-advance fix
+
+- Bumped workspace version to 1.0.70
+- Released the document-number auto-advance fix for sales, purchase, receipt, and payment vouchers.
+- Kept the `codexsun` e2e verification note from the completed fix batch.
+
 ## v-1.0.69
+
+### [v 1.0.69] 2026-06-03 - document number auto-advance fix
+
+- Fixed sales, purchase, receipt, and payment document numbering so New forms fetch the next automatic number after saves instead of reusing stale previews.
+- Aligned document-number context resolution with the entry save flow by using the tenant primary company and active accounting year.
+- Added backend reconciliation against existing vouchers so document settings advance past already-used numbers, including manual overrides and concurrent saves.
+- Verified the `codexsun` tenant flow with `admin@tenant.com`: existing sales through `SAL-0005` now produce `SAL-0006` on New Sales.
 
 ### [v 1.0.69] 2026-06-03 10:08 am - mail workspace list polish
 

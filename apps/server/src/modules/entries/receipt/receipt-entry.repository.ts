@@ -58,7 +58,7 @@ export class ReceiptEntryRepository {
   async update(context: TenantRuntimeContext, idOrUuid: string, input: ReceiptEntryInput) {
     const existing = await this.find(context, idOrUuid)
     if (!existing) throw new BadRequestException('Receipt not found.')
-    const normalized = await this.normalize(context, { ...input, receipt_no: input.receipt_no || existing.receipt_no })
+    const normalized = await this.normalize(context, { ...input, receipt_no: input.receipt_no || existing.receipt_no }, existing.id)
     await this.database(context)
       .updateTable('receipt_entries')
       .set(normalized.entry)
@@ -112,11 +112,11 @@ export class ReceiptEntryRepository {
     return this.find(context, String(existing.id))
   }
 
-  private async normalize(context: TenantRuntimeContext, input: ReceiptEntryInput) {
+  private async normalize(context: TenantRuntimeContext, input: ReceiptEntryInput, existingId?: number) {
     const companyId = input.company_id ?? await this.defaultCompanyId(context)
     const accountingYearId = input.accounting_year_id ?? await this.defaultAccountingYearId(context)
     if (!input.party_name?.trim()) throw new BadRequestException('Customer name is required.')
-    const receiptNo = await this.resolveReceiptNo(context, input.receipt_no, companyId, accountingYearId)
+    const receiptNo = await this.resolveReceiptNo(context, input.receipt_no, companyId, accountingYearId, existingId)
     const amount = roundMoney(input.amount ?? 0)
     const tdsAmount = roundMoney(input.tds_amount ?? 0)
     const discountAmount = roundMoney(input.discount_amount ?? 0)
@@ -240,17 +240,40 @@ export class ReceiptEntryRepository {
     return Number(year?.id ?? 0)
   }
 
-  private async resolveReceiptNo(context: TenantRuntimeContext, receiptNo: string | undefined, companyId: number, accountingYearId: number) {
+  private async resolveReceiptNo(context: TenantRuntimeContext, receiptNo: string | undefined, companyId: number, accountingYearId: number, existingId?: number) {
     const trimmedReceiptNo = receiptNo?.trim()
     if (!trimmedReceiptNo) return this.nextReceiptNo(context, companyId, accountingYearId)
     const preview = await this.documentNumbers.previewNext(context, 'receipt', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
-    return preview.autoEnabled && trimmedReceiptNo === preview.preview ? this.nextReceiptNo(context, companyId, accountingYearId) : trimmedReceiptNo
+    if (preview.autoEnabled && trimmedReceiptNo === preview.preview) return this.nextReceiptNo(context, companyId, accountingYearId)
+    if (await this.receiptNoExists(context, trimmedReceiptNo, companyId, accountingYearId, existingId)) {
+      if (!preview.autoEnabled) throw new BadRequestException(`Receipt number ${trimmedReceiptNo} already exists.`)
+      return this.nextReceiptNo(context, companyId, accountingYearId)
+    }
+    await this.documentNumbers.advancePast(context, 'receipt', { accountingYearId: String(accountingYearId), companyId: String(companyId) }, trimmedReceiptNo)
+    return trimmedReceiptNo
   }
 
   private async nextReceiptNo(context: TenantRuntimeContext, companyId: number, accountingYearId: number) {
-    const documentNumber = await this.documentNumbers.consumeNext(context, 'receipt', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
-    if (!documentNumber) throw new BadRequestException('Receipt number is required when automatic receipt numbering is disabled.')
-    return documentNumber
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const documentNumber = await this.documentNumbers.consumeNext(context, 'receipt', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
+      if (!documentNumber) throw new BadRequestException('Receipt number is required when automatic receipt numbering is disabled.')
+      if (!await this.receiptNoExists(context, documentNumber, companyId, accountingYearId)) return documentNumber
+    }
+
+    throw new BadRequestException('Unable to find an available receipt number. Please check document number settings.')
+  }
+
+  private async receiptNoExists(context: TenantRuntimeContext, receiptNo: string, companyId: number, accountingYearId: number, existingId?: number) {
+    let query = this.database(context)
+      .selectFrom('receipt_entries')
+      .select('id')
+      .where('tenant_id', '=', context.tenant.id)
+      .where('company_id', '=', companyId)
+      .where('accounting_year_id', '=', accountingYearId)
+      .where('receipt_no', '=', receiptNo)
+
+    if (existingId) query = query.where('id', '!=', existingId)
+    return Boolean(await query.executeTakeFirst())
   }
 
   private idColumn(idOrUuid: string) {

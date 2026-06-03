@@ -23,7 +23,13 @@ export class PaymentEntryService {
   }
 
   async upsert(headers: TenantRequestHeaders, input: PaymentEntryInput) {
-    return { ok: true, entry: await this.payments.upsert(await this.tenants.resolve(headers, 'company.manage'), input) }
+    const requestedPaymentNo = String(input.payment_no ?? '').trim()
+    const isUpdate = Boolean(input.id || input.uuid)
+    const entry = await this.payments.upsert(await this.tenants.resolve(headers, 'company.manage'), input)
+    const warning = !isUpdate && requestedPaymentNo && requestedPaymentNo !== entry.payment_no
+      ? `Payment number ${requestedPaymentNo} was already used, so ${entry.payment_no} was saved instead.`
+      : undefined
+    return { ok: true, entry, warning }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {

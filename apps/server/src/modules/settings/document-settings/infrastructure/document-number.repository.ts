@@ -1,9 +1,12 @@
+import { type Kysely } from 'kysely'
 import { Inject } from '../../../../core/decorators/inject.js'
 import { Injectable } from '../../../../core/decorators/injectable.js'
 import { BadRequestException } from '../../../../core/exceptions/http.exception.js'
 import { TenantContextService, type TenantRequestHeaders, type TenantRuntimeContext } from '../../../../core/tenant/tenant-context.service.js'
 import { dispatchPublicUuid } from '../../../../shared/helpers/public-uuid.js'
 import { documentEntryKinds, type DocumentEntryKind, type DocumentNumberContext, type DocumentNumberSettingInput, type DocumentNumberSettingRecord } from '../domain/document-number-record.js'
+
+type DynamicDatabase = Record<string, Record<string, unknown>>
 
 @Injectable()
 export class DocumentNumberRepository {
@@ -12,7 +15,7 @@ export class DocumentNumberRepository {
   async list(headers: TenantRequestHeaders, contextInput: DocumentNumberContext) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const resolved = await resolveDocumentContext(context, contextInput)
-    const records = await Promise.all(documentEntryKinds.map((kind) => this.getOrCreateSetting(context, kind, resolved)))
+    const records = await Promise.all(documentEntryKinds.map((kind) => this.getSyncedSetting(context, kind, resolved)))
     return records
   }
 
@@ -27,7 +30,7 @@ export class DocumentNumberRepository {
 
   async nextPreview(headers: TenantRequestHeaders, kind: string, contextInput: DocumentNumberContext) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
-    return this.getOrCreateSetting(context, normalizeKind(kind), await resolveDocumentContext(context, contextInput))
+    return this.getSyncedSetting(context, normalizeKind(kind), await resolveDocumentContext(context, contextInput))
   }
 
   private async updateOne(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>, input: DocumentNumberSettingInput) {
@@ -102,26 +105,126 @@ export class DocumentNumberRepository {
 
   async consumeNext(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext) {
     const docContext = await resolveDocumentContext(context, contextInput)
-    const current = await this.getOrCreateSetting(context, kind, docContext)
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const current = await this.getOrCreateSetting(context, kind, docContext)
 
-    if (!current.autoEnabled) {
-      return ''
+      if (!current.autoEnabled) {
+        return ''
+      }
+
+      const result = await context.database
+        .updateTable('document_number_settings')
+        .set({
+          next_number: current.nextNumber + 1,
+          updated_at: new Date(),
+        })
+        .where('id', '=', Number(current.id))
+        .where('next_number', '=', current.nextNumber)
+        .executeTakeFirst()
+
+      if (Number(result.numUpdatedRows ?? 0) > 0) {
+        return current.preview
+      }
     }
+
+    throw new BadRequestException('Document number could not be reserved. Please try saving again.')
+  }
+
+  async previewNext(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext) {
+    return this.getSyncedSetting(context, kind, await resolveDocumentContext(context, contextInput))
+  }
+
+  async advancePast(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext, documentNumber: string) {
+    const docContext = await resolveDocumentContext(context, contextInput)
+    const current = await this.getOrCreateSetting(context, kind, docContext)
+    const usedNumber = parseUsedDocumentNumber(documentNumber, current)
+    if (!Number.isInteger(usedNumber) || usedNumber < current.nextNumber) return current
 
     await context.database
       .updateTable('document_number_settings')
       .set({
-        next_number: current.nextNumber + 1,
+        next_number: usedNumber + 1,
         updated_at: new Date(),
       })
       .where('id', '=', Number(current.id))
+      .where('next_number', '<=', usedNumber)
       .execute()
 
-    return current.preview
+    return this.getSyncedSetting(context, kind, docContext)
   }
 
-  async previewNext(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext) {
-    return this.getOrCreateSetting(context, kind, await resolveDocumentContext(context, contextInput))
+  private async getSyncedSetting(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>) {
+    const current = await this.getOrCreateSetting(context, kind, docContext)
+    const maxUsedNumber = await this.maxUsedDocumentSerial(context, kind, docContext, current)
+    if (maxUsedNumber < current.nextNumber) return current
+
+    await context.database
+      .updateTable('document_number_settings')
+      .set({
+        next_number: maxUsedNumber + 1,
+        updated_at: new Date(),
+      })
+      .where('id', '=', Number(current.id))
+      .where('next_number', '<=', maxUsedNumber)
+      .execute()
+
+    return this.getOrCreateSetting(context, kind, docContext)
+  }
+
+  private async maxUsedDocumentSerial(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>, setting: DocumentNumberSettingRecord) {
+    const numbers = await this.usedDocumentNumbers(context, kind, docContext)
+    return numbers.reduce((max: number, documentNumber: string) => Math.max(max, parseUsedDocumentNumber(documentNumber, setting)), 0)
+  }
+
+  private async usedDocumentNumbers(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>) {
+    const companyId = Number(docContext.companyId)
+    const accountingYearId = Number(docContext.accountingYearId)
+
+    if (kind === 'sales') {
+      const rows = await this.database(context)
+        .selectFrom('sales_entries')
+        .select('invoice_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.invoice_no ?? ''))
+    }
+
+    if (kind === 'purchase') {
+      const rows = await this.database(context)
+        .selectFrom('purchase_entries')
+        .select('entry_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.entry_no ?? ''))
+    }
+
+    if (kind === 'receipt') {
+      const rows = await this.database(context)
+        .selectFrom('receipt_entries')
+        .select('receipt_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.receipt_no ?? ''))
+    }
+
+    if (kind === 'payment') {
+      const rows = await this.database(context)
+        .selectFrom('payment_entries')
+        .select('payment_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.payment_no ?? ''))
+    }
+
+    return []
+  }
+
+  private database(context: TenantRuntimeContext) {
+    return context.database as unknown as Kysely<DynamicDatabase>
   }
 }
 
@@ -130,6 +233,24 @@ async function resolveDocumentContext(context: TenantRuntimeContext, input: Docu
   const accountingYearId = Number(input.accountingYearId)
   if (Number.isInteger(companyId) && companyId > 0 && Number.isInteger(accountingYearId) && accountingYearId > 0) {
     return { companyId: String(companyId), accountingYearId: String(accountingYearId) }
+  }
+
+  const primaryCompany = await context.database
+    .selectFrom('companies')
+    .select('id')
+    .where('tenant_id', '=', context.tenant.id)
+    .where('is_primary', '=', true)
+    .executeTakeFirst()
+  const activeYear = await context.database
+    .selectFrom('accounting_years')
+    .select('id')
+    .where('deleted_at', 'is', null)
+    .where('is_active', '=', true)
+    .orderBy('start_date', 'desc')
+    .executeTakeFirst()
+
+  if (primaryCompany && activeYear) {
+    return { companyId: String(primaryCompany.id), accountingYearId: String(activeYear.id) }
   }
 
   const defaultRow = await context.database
@@ -234,4 +355,27 @@ function booleanValue(value: unknown) {
 
 function kindOrder(kind: DocumentEntryKind) {
   return documentEntryKinds.indexOf(kind)
+}
+
+function parseUsedDocumentNumber(documentNumber: string, setting: DocumentNumberSettingRecord) {
+  const trimmed = documentNumber.trim()
+  if (!trimmed) return 0
+
+  if (setting.separatorEnabled && setting.separator) {
+    const parts = trimmed.split(setting.separator)
+    const expectedPrefix = setting.prefixEnabled ? setting.prefix.trim() : ''
+    const expectedSuffix = setting.suffixEnabled ? setting.suffix.trim() : ''
+    if (expectedPrefix && parts[0] === expectedPrefix) parts.shift()
+    if (expectedSuffix && parts[parts.length - 1] === expectedSuffix) parts.pop()
+    const serial = parts.find((part) => /^\d+$/.test(part.trim()))
+    return serial ? Number(serial) : 0
+  }
+
+  let value = trimmed
+  const prefix = setting.prefixEnabled ? setting.prefix.trim() : ''
+  const suffix = setting.suffixEnabled ? setting.suffix.trim() : ''
+  if (prefix && value.startsWith(prefix)) value = value.slice(prefix.length)
+  if (suffix && value.endsWith(suffix)) value = value.slice(0, -suffix.length)
+  const match = value.match(/\d+/)
+  return match ? Number(match[0]) : 0
 }

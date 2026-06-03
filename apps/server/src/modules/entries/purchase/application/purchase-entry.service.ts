@@ -29,13 +29,18 @@ export class PurchaseEntryService {
 
   async upsert(headers: TenantRequestHeaders, input: PurchaseEntryInput) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
+    const requestedEntryNo = String(input.entry_no ?? '').trim()
+    const isUpdate = Boolean(input.id || input.uuid)
     const entry = input.id || input.uuid
       ? await this.purchaseEntries.update(context, String(input.uuid ?? input.id), input)
       : await this.purchaseEntries.insert(context, input)
     if (!entry) throw new NotFoundException('Purchase entry was not found.')
     const aggregate = PurchaseEntryAggregate.fromEntry(entry, context.tenant.id, context.user.email)
     await this.events.publish(input.id || input.uuid ? aggregate.updatedEvent() : aggregate.createdEvent())
-    return { ok: true, entry }
+    const warning = !isUpdate && requestedEntryNo && requestedEntryNo !== entry.entry_no
+      ? `Entry number ${requestedEntryNo} was already used, so ${entry.entry_no} was saved instead.`
+      : undefined
+    return { ok: true, entry, warning }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {

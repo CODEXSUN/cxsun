@@ -89,6 +89,7 @@ export interface PurchaseEntry {
   created_at: string
   updated_at: string
   deleted_at: string | null
+  document_number_warning?: string
   items: PurchaseEntryItem[]
   comments: Array<{ id: number; author_email: string; body: string; created_at: string }>
   activities: Array<{ id: number; activity_type: string; actor_email: string; message: string; payload: string; created_at: string }>
@@ -199,9 +200,9 @@ export async function upsertPurchaseEntry(session: AuthSession, input: PurchaseE
     method: "POST",
   })
   if (!response.ok) throw new Error(`Purchase save failed with status ${response.status}.`)
-  const result = (await response.json()) as { ok: boolean; entry?: PurchaseEntry; error?: string }
+  const result = (await response.json()) as { ok: boolean; entry?: PurchaseEntry; error?: string; warning?: string }
   if (!result.ok || !result.entry) throw new Error(result.error ?? "Purchase save failed.")
-  return result.entry
+  return { ...result.entry, document_number_warning: result.warning }
 }
 
 export async function destroyPurchaseEntry(session: AuthSession, entry: PurchaseEntry) {

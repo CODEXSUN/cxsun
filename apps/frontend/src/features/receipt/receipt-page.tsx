@@ -119,7 +119,9 @@ export function ReceiptPage({ session }: { session: AuthSession }) {
 
   async function save(input: ReceiptEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(prepareReceiptInput(input))
-    toast.success(input.uuid ? "Receipt updated" : "Receipt created", { description: entry.receipt_no })
+    toast.success(input.uuid ? "Receipt updated" : "Receipt created", { description: entry.document_number_warning ?? entry.receipt_no })
+    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"] })
+    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
     await refresh()
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
@@ -135,6 +137,11 @@ export function ReceiptPage({ session }: { session: AuthSession }) {
     await restoreMutation.mutateAsync(entry)
     toast.success("Receipt restored", { description: entry.receipt_no })
     await refresh()
+  }
+
+  function openNewEntry() {
+    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"] })
+    setView({ mode: "upsert", entry: null })
   }
 
   if (view.mode === "upsert") {
@@ -172,7 +179,7 @@ export function ReceiptPage({ session }: { session: AuthSession }) {
       title="Receipt"
       description="Track customer receipts and sales allocations."
       technicalName="page.entries.receipt.list"
-      action={<Button onClick={() => setView({ mode: "upsert", entry: null })} type="button" className="h-9 rounded-xl"><Plus className="size-4" />New Receipt</Button>}
+      action={<Button onClick={openNewEntry} type="button" className="h-9 rounded-xl"><Plus className="size-4" />New Receipt</Button>}
     >
       <MasterListToolbarCard
         columns={receiptColumnCatalog.map((column) => ({ id: column.id, label: column.label, checked: visibleColumns[column.id], disabled: column.id === "receipt", onCheckedChange: (checked) => setVisibleColumns((current) => ({ ...current, [column.id]: checked })) }))}
@@ -391,7 +398,7 @@ function ReceiptUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
   const contactsQuery = useQuery({ queryKey: ["receipt-contact-lookups", session.selectedTenant.slug], queryFn: () => listReceiptContactLookups(session) })
   const contactTypesQuery = useQuery({ queryKey: ["receipt-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
   const companyQuery = useQuery({ queryKey: ["receipt-company-bank", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
-  const nextReceiptQuery = useQuery({ enabled: !entry, queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"], queryFn: () => nextDocumentNumberSetting(session, "receipt") })
+  const nextReceiptQuery = useQuery({ enabled: !entry, queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"], queryFn: () => nextDocumentNumberSetting(session, "receipt"), refetchOnMount: "always" })
   const bankAccounts = ((companyQuery.data ?? []).find((company) => company.isPrimary) ?? companyQuery.data?.[0])?.bankAccounts ?? []
   const customerContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "customer"), [contactsQuery.data, contactTypesQuery.data])
 

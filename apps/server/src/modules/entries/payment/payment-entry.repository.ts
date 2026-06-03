@@ -58,7 +58,7 @@ export class PaymentEntryRepository {
   async update(context: TenantRuntimeContext, idOrUuid: string, input: PaymentEntryInput) {
     const existing = await this.find(context, idOrUuid)
     if (!existing) throw new BadRequestException('Payment not found.')
-    const normalized = await this.normalize(context, { ...input, payment_no: input.payment_no || existing.payment_no })
+    const normalized = await this.normalize(context, { ...input, payment_no: input.payment_no || existing.payment_no }, existing.id)
     await this.database(context)
       .updateTable('payment_entries')
       .set(normalized.entry)
@@ -112,11 +112,11 @@ export class PaymentEntryRepository {
     return this.find(context, String(existing.id))
   }
 
-  private async normalize(context: TenantRuntimeContext, input: PaymentEntryInput) {
+  private async normalize(context: TenantRuntimeContext, input: PaymentEntryInput, existingId?: number) {
     const companyId = input.company_id ?? await this.defaultCompanyId(context)
     const accountingYearId = input.accounting_year_id ?? await this.defaultAccountingYearId(context)
     if (!input.party_name?.trim()) throw new BadRequestException('Supplier name is required.')
-    const paymentNo = await this.resolvePaymentNo(context, input.payment_no, companyId, accountingYearId)
+    const paymentNo = await this.resolvePaymentNo(context, input.payment_no, companyId, accountingYearId, existingId)
     const amount = roundMoney(input.amount ?? 0)
     const tdsAmount = roundMoney(input.tds_amount ?? 0)
     const discountAmount = roundMoney(input.discount_amount ?? 0)
@@ -240,17 +240,40 @@ export class PaymentEntryRepository {
     return Number(year?.id ?? 0)
   }
 
-  private async resolvePaymentNo(context: TenantRuntimeContext, paymentNo: string | undefined, companyId: number, accountingYearId: number) {
+  private async resolvePaymentNo(context: TenantRuntimeContext, paymentNo: string | undefined, companyId: number, accountingYearId: number, existingId?: number) {
     const trimmedPaymentNo = paymentNo?.trim()
     if (!trimmedPaymentNo) return this.nextPaymentNo(context, companyId, accountingYearId)
     const preview = await this.documentNumbers.previewNext(context, 'payment', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
-    return preview.autoEnabled && trimmedPaymentNo === preview.preview ? this.nextPaymentNo(context, companyId, accountingYearId) : trimmedPaymentNo
+    if (preview.autoEnabled && trimmedPaymentNo === preview.preview) return this.nextPaymentNo(context, companyId, accountingYearId)
+    if (await this.paymentNoExists(context, trimmedPaymentNo, companyId, accountingYearId, existingId)) {
+      if (!preview.autoEnabled) throw new BadRequestException(`Payment number ${trimmedPaymentNo} already exists.`)
+      return this.nextPaymentNo(context, companyId, accountingYearId)
+    }
+    await this.documentNumbers.advancePast(context, 'payment', { accountingYearId: String(accountingYearId), companyId: String(companyId) }, trimmedPaymentNo)
+    return trimmedPaymentNo
   }
 
   private async nextPaymentNo(context: TenantRuntimeContext, companyId: number, accountingYearId: number) {
-    const documentNumber = await this.documentNumbers.consumeNext(context, 'payment', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
-    if (!documentNumber) throw new BadRequestException('Payment number is required when automatic payment numbering is disabled.')
-    return documentNumber
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const documentNumber = await this.documentNumbers.consumeNext(context, 'payment', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
+      if (!documentNumber) throw new BadRequestException('Payment number is required when automatic payment numbering is disabled.')
+      if (!await this.paymentNoExists(context, documentNumber, companyId, accountingYearId)) return documentNumber
+    }
+
+    throw new BadRequestException('Unable to find an available payment number. Please check document number settings.')
+  }
+
+  private async paymentNoExists(context: TenantRuntimeContext, paymentNo: string, companyId: number, accountingYearId: number, existingId?: number) {
+    let query = this.database(context)
+      .selectFrom('payment_entries')
+      .select('id')
+      .where('tenant_id', '=', context.tenant.id)
+      .where('company_id', '=', companyId)
+      .where('accounting_year_id', '=', accountingYearId)
+      .where('payment_no', '=', paymentNo)
+
+    if (existingId) query = query.where('id', '!=', existingId)
+    return Boolean(await query.executeTakeFirst())
   }
 
   private idColumn(idOrUuid: string) {

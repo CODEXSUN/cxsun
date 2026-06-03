@@ -119,7 +119,9 @@ export function PaymentPage({ session }: { session: AuthSession }) {
 
   async function save(input: PaymentEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(preparePaymentInput(input))
-    toast.success(input.uuid ? "Payment updated" : "Payment created", { description: entry.payment_no })
+    toast.success(input.uuid ? "Payment updated" : "Payment created", { description: entry.document_number_warning ?? entry.payment_no })
+    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"] })
+    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
     await refresh()
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
@@ -135,6 +137,11 @@ export function PaymentPage({ session }: { session: AuthSession }) {
     await restoreMutation.mutateAsync(entry)
     toast.success("Payment restored", { description: entry.payment_no })
     await refresh()
+  }
+
+  function openNewEntry() {
+    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"] })
+    setView({ mode: "upsert", entry: null })
   }
 
   if (view.mode === "upsert") {
@@ -172,7 +179,7 @@ export function PaymentPage({ session }: { session: AuthSession }) {
       title="Payment"
       description="Track supplier payments and purchase allocations."
       technicalName="page.entries.payment.list"
-      action={<Button onClick={() => setView({ mode: "upsert", entry: null })} type="button" className="h-9 rounded-xl"><Plus className="size-4" />New Payment</Button>}
+      action={<Button onClick={openNewEntry} type="button" className="h-9 rounded-xl"><Plus className="size-4" />New Payment</Button>}
     >
       <MasterListToolbarCard
         columns={paymentColumnCatalog.map((column) => ({ id: column.id, label: column.label, checked: visibleColumns[column.id], disabled: column.id === "payment", onCheckedChange: (checked) => setVisibleColumns((current) => ({ ...current, [column.id]: checked })) }))}
@@ -391,7 +398,7 @@ function PaymentUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
   const contactsQuery = useQuery({ queryKey: ["payment-contact-lookups", session.selectedTenant.slug], queryFn: () => listPaymentContactLookups(session) })
   const contactTypesQuery = useQuery({ queryKey: ["payment-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
   const companyQuery = useQuery({ queryKey: ["payment-company-bank", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
-  const nextPaymentQuery = useQuery({ enabled: !entry, queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"], queryFn: () => nextDocumentNumberSetting(session, "payment") })
+  const nextPaymentQuery = useQuery({ enabled: !entry, queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"], queryFn: () => nextDocumentNumberSetting(session, "payment"), refetchOnMount: "always" })
   const bankAccounts = ((companyQuery.data ?? []).find((company) => company.isPrimary) ?? companyQuery.data?.[0])?.bankAccounts ?? []
   const supplierContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "supplier"), [contactsQuery.data, contactTypesQuery.data])
 
