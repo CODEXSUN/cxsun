@@ -134,6 +134,7 @@ export function AppSidebar({
   dashboardMode = "tenant",
   activeApp = "application",
   defaultCompanyContext,
+  onLogout,
   onTenantChange,
   ...props
 }: React.ComponentProps<typeof Sidebar> & {
@@ -146,6 +147,7 @@ export function AppSidebar({
   dashboardMode?: DashboardMode
   activeApp?: DashboardAppId
   defaultCompanyContext?: DefaultCompanyContext | null
+  onLogout?: () => void
   onTenantChange?: (tenantSlug: string) => void
 }) {
   const selectedApp = getDashboardApp(activeApp)
@@ -208,7 +210,7 @@ export function AppSidebar({
           <div className="px-1 pb-1 text-[11px] leading-none text-muted-foreground group-data-[collapsible=icon]:hidden">
             v {version}
           </div>
-          <NavUser user={user} />
+          <NavUser user={user} onLogout={onLogout} />
         </SidebarFooter>
       ) : null}
       <SidebarRail />

@@ -346,12 +346,14 @@ textarea:focus-visible {
   }
 
   body:has(.payment-print-page) *:not(.payment-print-page):not(.payment-print-page *),
-  body:has(.receipt-print-page) *:not(.receipt-print-page):not(.receipt-print-page *) {
+  body:has(.receipt-print-page) *:not(.receipt-print-page):not(.receipt-print-page *),
+  body:has(.account-print-page) *:not(.account-print-page):not(.account-print-page *) {
     visibility: hidden !important;
   }
 
   .payment-print-page,
-  .receipt-print-page {
+  .receipt-print-page,
+  .account-print-page {
     position: fixed !important;
     inset: 0 !important;
     z-index: 99999 !important;
@@ -368,6 +370,16 @@ textarea:focus-visible {
     flex-direction: column !important;
     width: 186mm !important;
     min-height: 136mm !important;
+    max-width: none !important;
+    padding: 0 !important;
+    visibility: visible !important;
+  }
+
+  .account-print-sheet {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 186mm !important;
+    min-height: 132mm !important;
     max-width: none !important;
     padding: 0 !important;
     visibility: visible !important;

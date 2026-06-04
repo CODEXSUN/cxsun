@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import './assets/css/app.css'
 
 import { version } from '../package.json'
@@ -12,7 +12,7 @@ import { Toaster } from './components/ui/sonner'
 import { Button } from './components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { TooltipProvider } from './components/ui/tooltip'
-import { clearSession, getStoredSession } from './features/auth/auth-client'
+import { clearAuthCache, getStoredSession, type AuthSession } from './features/auth/auth-client'
 import { APP_NAME } from './lib/branding'
 import { apiBaseUrl } from './lib/api-base-url'
 
@@ -226,8 +226,10 @@ async function fetchHealth() {
 }
 
 function App() {
+  const queryClient = useQueryClient()
   const [route, setRoute] = useState<AppRoute>(() => parseRoute())
   const [menuOpen, setMenuOpen] = useState(false)
+  const [tenantSession, setTenantSession] = useState<AuthSession | null>(() => getStoredSession('tenant'))
   const activePage = route.page
   const activeView = route.view
   const isPlatformView = activeView === 'admin-dashboard'
@@ -264,6 +266,19 @@ function App() {
   }, [])
 
   useEffect(() => {
+    function syncTenantSession() {
+      setTenantSession(getStoredSession('tenant'))
+    }
+
+    window.addEventListener('storage', syncTenantSession)
+    window.addEventListener('cxsun:auth-invalid', syncTenantSession)
+    return () => {
+      window.removeEventListener('storage', syncTenantSession)
+      window.removeEventListener('cxsun:auth-invalid', syncTenantSession)
+    }
+  }, [])
+
+  useEffect(() => {
     if (
       activeView === 'login' ||
       activeView === 'admin-login' ||
@@ -286,7 +301,9 @@ function App() {
   }
 
   function logoutTenant() {
-    clearSession('tenant')
+    clearAuthCache('tenant')
+    queryClient.clear()
+    setTenantSession(null)
     setRoute({ page: 'home', view: 'landing' })
     window.history.replaceState(null, '', '/')
     setMenuOpen(false)
@@ -295,22 +312,23 @@ function App() {
   const tenantSite = tenantSiteQuery.data ?? null
   const content = tenantSite?.resolved ? tenantSite : siteQuery.data ?? fallbackContent
   const health = healthQuery.data ?? null
-  const isTenantAuthenticated = Boolean(getStoredSession('tenant'))
+  const isTenantAuthenticated = Boolean(tenantSession)
 
   useEffect(() => {
     if (!tenantSite?.resolved || !tenantSite.tenant) {
       return
     }
 
-    const storedTenantSession = getStoredSession('tenant')
-    if (storedTenantSession && storedTenantSession.selectedTenant.slug !== tenantSite.tenant.slug) {
-      clearSession('tenant')
+    if (tenantSession && tenantSession.selectedTenant.slug !== tenantSite.tenant.slug) {
+      clearAuthCache('tenant')
+      queryClient.clear()
+      setTenantSession(null)
       if (activeView === 'tenant-dashboard') {
         setRoute({ page: 'home', view: 'login' })
         window.history.replaceState(null, '', '/login')
       }
     }
-  }, [activeView, tenantSite])
+  }, [activeView, queryClient, tenantSession, tenantSite])
 
   if (isPublicSiteView && tenantSiteQuery.isPending && tenantSiteQuery.fetchStatus !== 'idle') {
     return (
@@ -429,7 +447,10 @@ function App() {
                         ? 'Admin helpdesk access'
                         : 'Client login'
                   }
-                  onAuthenticated={() =>
+                  onAuthenticated={(session) => {
+                    if (activeView === 'login') {
+                      setTenantSession(session)
+                    }
                     navigate({
                       page: 'home',
                       view:
@@ -439,7 +460,7 @@ function App() {
                             ? 'admin-dashboard'
                             : 'tenant-dashboard',
                     })
-                  }
+                  }}
                   onForgotPassword={() => navigate({ page: 'home', view: 'forgot-password' })}
                 />
               )}

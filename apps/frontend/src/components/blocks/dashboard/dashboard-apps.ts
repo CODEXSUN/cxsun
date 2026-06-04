@@ -50,7 +50,7 @@ import {
 
 import type { DashboardPage } from "src/components/blocks/sidebar/app-sidebar"
 
-export type DashboardAppId = "application" | "billing" | "media" | "mail" | "taskmanager" | "ecommerce" | "crm" | "inventory" | "sites"
+export type DashboardAppId = "application" | "accounts" | "billing" | "media" | "mail" | "taskmanager" | "ecommerce" | "crm" | "inventory" | "sites"
 
 export interface DashboardAppMenuItem {
   title: string
@@ -129,6 +129,7 @@ export const dashboardApps: DashboardAppDefinition[] = [
     icon: ReceiptText,
     menuGroups: [
       { title: "Entries", icon: FileText, items: [item("billing", "sales", "Sales", FileText), item("billing", "purchase", "Purchase", ReceiptText), item("billing", "receipts", "Receipts", ReceiptText), item("billing", "payments", "Payments", CreditCard)] },
+      { title: "Accounts", icon: Landmark, items: [item("billing", "cash-book", "Cash Book", Banknote), item("billing", "bank-book", "Bank Book", Landmark)] },
       { title: "Report", icon: BarChart3, items: [item("billing", "customer-statement", "Customer Statement", BarChart3), item("billing", "supplier-statement", "Supplier Statement", BarChart3), item("billing", "gst-report", "GST Report", BarChart3)] },
       { title: "Master", icon: PackageSearch, items: [item("billing", "contact", "Contact", UsersRound), item("billing", "product", "Product", PackageSearch), item("billing", "order", "Work Order", ShoppingBag)] },
       {
@@ -156,6 +157,26 @@ export const dashboardApps: DashboardAppDefinition[] = [
     menuGroups: [
       { title: "Library", icon: Image, items: [item("media", "library", "Media Library", Image)] },
       { title: "Management", icon: Settings, items: [item("media", "links", "Links", Link2), item("media", "sharing", "Sharing", Globe2)] },
+    ],
+  }),
+  withMenu({
+    id: "accounts",
+    name: "Accounts",
+    shortName: "Accounts",
+    description: "Cash book, bank book, assets, and ledger movement for tenant accounting.",
+    status: "active",
+    accent: "bg-lime-700 text-white",
+    icon: Landmark,
+    menuGroups: [
+      {
+        title: "Assets",
+        icon: Landmark,
+        items: [
+          { ...item("accounts", "cash", "Cash", Banknote), items: [item("accounts", "cash-book", "Cash Book", Banknote)] },
+          { ...item("accounts", "bank", "Bank", Landmark), items: [item("accounts", "bank-book", "Bank Book", Landmark)] },
+          { ...item("accounts", "fixed-assets", "Fixed Assets", Building2) },
+        ],
+      },
     ],
   }),
   withMenu({

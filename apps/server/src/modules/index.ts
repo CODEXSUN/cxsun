@@ -11,11 +11,13 @@ import { SalesEntryModule } from './entries/sales/index.js'
 import { PurchaseEntryModule } from './entries/purchase/index.js'
 import { ReceiptEntryModule } from './entries/receipt/index.js'
 import { PaymentEntryModule } from './entries/payment/index.js'
+import { AccountsModule } from './accounts/index.js'
 import { PurchaseReceiptModule } from './stock/inward/purchase-receipt/index.js'
 import { DeliveryNoteModule } from './stock/outward/delivery-note/index.js'
 import { StockLedgerModule } from './stock/ledger/index.js'
 import { CompanySettingsModule } from './settings/company-settings/index.js'
 import { DocumentSettingsModule } from './settings/document-settings/index.js'
+import { GstComplianceModule } from './compliance/gst-compliance/index.js'
 import { MediaModule } from './media/index.js'
 import { MailModule } from './mail/index.js'
 import { TaskManagerModule } from './task-manager/index.js'
@@ -56,8 +58,10 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     StockLedgerModule,
     ReceiptEntryModule,
     PaymentEntryModule,
+    AccountsModule,
     CompanySettingsModule,
     DocumentSettingsModule,
+    GstComplianceModule,
     MediaModule,
     MailModule,
     TaskManagerModule,

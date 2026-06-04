@@ -147,7 +147,7 @@ function DesignerField({ label, onChange, type = "text", value }: { label: strin
 export function DocumentSettingsPage({ session }: { session: AuthSession }) {
   return (
     <DocumentNumberSettingsPage
-      description="Configure automatic document numbers for sales, purchase, payment, and receipt vouchers."
+      description="Configure automatic document numbers for billing vouchers, cash book, and bank book."
       kinds={documentNumberKindOrder}
       session={session}
       technicalName="page.settings.document-settings"

@@ -18,6 +18,7 @@ export class CompanyRepository {
         'defaults.id as id',
         'defaults.company_id as company_id',
         'defaults.accounting_year_id as accounting_year_id',
+        'defaults.landing_app as landing_app',
         'company.name as company_name',
         'company.code as company_code',
         'year.name as accounting_year_name',
@@ -55,10 +56,11 @@ export class CompanyRepository {
       accountingYearName: String(row.accounting_year_name ?? ''),
       accountingYearStartDate: dateOrNull(row.accounting_year_start_date),
       accountingYearEndDate: dateOrNull(row.accounting_year_end_date),
+      landingApp: String(row.landing_app ?? 'application'),
     }
   }
 
-  async setDefaultContext(context: TenantRuntimeContext, input: { companyId: number; accountingYearId: number }) {
+  async setDefaultContext(context: TenantRuntimeContext, input: { companyId: number; accountingYearId: number; landingApp?: string }) {
     const [company, year] = await Promise.all([
       context.database.selectFrom('companies').select(['id', 'industry_id']).where('id', '=', input.companyId).where('deleted_at', 'is', null).executeTakeFirst(),
       context.database.selectFrom('accounting_years').select('id').where('id', '=', input.accountingYearId).where('deleted_at', 'is', null).executeTakeFirst(),
@@ -88,9 +90,10 @@ export class CompanyRepository {
 
     const existing = await context.database
       .selectFrom('default_companies')
-      .select('id')
+      .select(['id', 'landing_app'])
       .orderBy('id', 'asc')
       .executeTakeFirst()
+    const nextLandingApp = normalizeLandingApp(input.landingApp, existing?.landing_app)
 
     if (existing) {
       await context.database
@@ -100,6 +103,7 @@ export class CompanyRepository {
           industry_id: Number(company.industry_id ?? 0),
           company_id: input.companyId,
           accounting_year_id: input.accountingYearId,
+          landing_app: nextLandingApp,
           is_active: true,
           updated_at: new Date(),
         })
@@ -114,6 +118,7 @@ export class CompanyRepository {
           industry_id: Number(company.industry_id ?? 0),
           company_id: input.companyId,
           accounting_year_id: input.accountingYearId,
+          landing_app: nextLandingApp,
           is_active: true,
         })
         .execute()
@@ -522,4 +527,9 @@ function affectedRows(result: unknown) {
 
 function nextPublicUuid() {
   return dispatchPublicUuid()
+}
+
+function normalizeLandingApp(value: unknown, fallback = 'application') {
+  const text = String(value ?? '').trim()
+  return text || fallback
 }

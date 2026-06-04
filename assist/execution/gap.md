@@ -1,340 +1,288 @@
-# CXSun Gap Plan
+# Billing Gap Analysis
 
-Updated: 2026-05-25
+Updated: 2026-06-04
 
-This document replaces the old gap notes with a fresh staged plan for scaling CXSun as a multi-domain, multi-tenant business platform. The current application can continue as one product, but it must be hardened around tenant isolation, vertical feature packs, background work, database safety, and operational update workflows before many different customer industries run on the same installation.
+## Scope Reviewed
 
-## 1. Current Position
+This scan focused on the current billing and billing-adjacent code paths:
 
-1.1. The application already has a useful base for one platform serving many tenants:
+- Frontend billing entries: sales, purchase, receipt, payment, cash book, bank book.
+- Inventory-linked billing flows: purchase receipt, delivery note, stock ledger and barcode verification.
+- Reports: customer statement, supplier statement, GST statement.
+- Settings: company software settings, document numbering, sales layout/print options.
+- Backend tenant modules: entries/sales, entries/purchase, entries/receipt, entries/payment, accounts, stock, settings.
 
-- Master MariaDB stores tenants, tenant domains, platform users, industries, policy metadata, queue jobs, and operational state.
-- Tenant MariaDB databases hold tenant-owned companies, common masters, sales, purchase, stock, settings, and entry data.
-- Frontend surfaces are separated into public, tenant app, admin desk, and super-admin dashboard.
-- Super-admin now has system update, queue manager, and database manager direction.
-- Deployment is moving toward Docker with external Redis and MariaDB preserved across app reinstall.
+## Current Strengths
 
-1.2. The product direction is feasible as one platform if each tenant gets:
+1. Core entry surfaces exist end to end.
 
-- domain-bound access,
-- tenant database isolation,
-- industry/vertical feature packs,
-- tenant-specific settings,
-- queue-backed heavy jobs,
-- backup and restore safety,
-- strict role and permission enforcement.
+- Sales and purchase have list, show, print preview, upsert, comments, tools, activities, document numbers, GST fields, transport fields, e-invoice/e-way fields, round-off, balances, and item tables.
+- Receipts and payments have list, show, print, upsert, allocations, comments, tools, activities, and document numbers.
+- Cash book and bank book now have voucher list, show, print, comments, tools, activities, ledger selection, and document numbers.
+- Purchase receipt, delivery note, and stock ledger are present under the inventory/stock area.
 
-1.3. Splitting into separate apps is not needed immediately. Split later only if one vertical becomes large enough to need its own release cycle, database model, or team ownership.
+2. Tenant isolation shape is present.
 
-## 2. Main Gaps
+- Billing modules run under tenant database context.
+- Tables include tenant/company/accounting-year context on main entries.
+- Dashboard routes lazy-load billing modules.
 
-2.1. Tenant isolation is the highest product risk.
+3. Numbering foundation is in place.
 
-- Tenant resolution must be bound to host, session, selected tenant, and user access.
-- Tenant-facing routes must not allow arbitrary tenant switching by headers.
-- Super-admin cross-tenant access must be explicit, audited, and separate from tenant user behavior.
-- Isolation tests are still required for login, domain resolution, tenant context, and every tenant-owned API family.
+- Document number settings cover `sales`, `purchase`, `purchaseReceipt`, `deliveryNote`, `payment`, `receipt`, `cashBook`, and `bankBook`.
+- Most entry repositories consume document numbers and handle duplicate/manual-number conflicts.
 
-2.2. Role and permission depth is incomplete.
+4. Print work is active and practical.
 
-- Super-admin, admin desk, and tenant user permissions need server-side role checks, not only menu hiding.
-- Tenant-local RBAC needs a complete UI and policy assignment workflow.
-- Industry feature toggles need to control routes, forms, fields, reports, and API actions.
-- Every sensitive system endpoint needs clear permission rules.
+- Sales/purchase/delivery/purchase-receipt have dedicated print templates.
+- Account vouchers now have tighter show/print formatting.
+- Company letterhead settings feed into billing documents.
 
-2.3. Queue execution is only partly ready.
+5. Reports have useful first versions.
 
-- Hybrid MariaDB plus BullMQ queue direction is correct for scale.
-- Current mail, report, system-update, tenant-maintenance, and event lanes need real processors, not placeholder completion.
-- Workers should move into a separate process/container before production load.
-- Queue jobs need idempotency keys, retry policy, dead-letter handling, job locking, and audit trails.
+- Customer statement combines sales and receipts.
+- Supplier statement combines purchases and payments.
+- GST statement combines sales and purchases with opening GST settings.
 
-2.4. Database safety needs production-grade workflow.
+## Main Gaps
 
-- Backup exists in direction, but restore must be rehearsed and tested.
-- Backups need retention policy, checksum verification, compression, encryption, and off-server storage.
-- Restore must support dry-run validation before touching a live database.
-- Tenant-level restore should be possible without restoring the whole platform.
+### 1. GST and Compliance Are Still Preview-Level
 
-2.5. Update engine needs safer release discipline.
+Current state:
 
-- System update must remain asynchronous so the UI never waits behind a long build.
-- Update must always take database backup first.
-- Update must run migrations in controlled order and stop on unsafe migration errors.
-- Rollback strategy is not complete unless both code version and database state can be recovered.
-- A failed update should leave a clear status page with last command, logs, backup ID, and recovery action.
+- Sales and purchase forms store IRN, Ack no, Ack date, Signed QR, E-way bill no/date, transport data, and vehicle data.
+- Generate buttons create random/local preview numbers and show messages that live gateway wiring will be added later.
+- GST report calculates from local item tax fields.
 
-2.6. Multi-domain and multi-vertical product structure is not formal enough.
+Gaps to fill:
 
-- Ecommerce, billing, auditor office, sports club, accounts, offset billing, and garment manufacturing cannot all be built as one flat module list.
-- Each vertical needs an industry pack with enabled modules, terminology, document flows, number series, tax rules, reports, and dashboards.
-- Shared primitives must stay common: contacts, products, accounts, documents, stock, payments, reports, notifications, files, and audit logs.
-- Vertical-specific behavior should be configuration plus extension modules, not hard forks.
+- Add real e-invoice gateway integration with request/response persistence.
+- Add real e-way bill gateway integration with part A / part B behavior.
+- Store gateway status, request payload, response payload, error code/message, generated/cancelled timestamps, and retry state.
+- Add cancel e-invoice and cancel e-way flows.
+- Add validation before generation: GSTIN, state code, HSN, taxable values, invoice date, distance/vehicle/transport fields.
+- Add QR generation from signed QR payload, not static text.
+- Add audit log for every compliance action.
 
-2.7. Accounting and finance layer is the biggest missing foundation.
+Priority: High.
 
-- Accounts, ledger, vouchers, journal, tax posting, receivables, payables, bank/cash, and financial reports are needed before serious billing, auditor, and manufacturing customers.
-- Existing sales, purchase, receipt, stock, and document settings need posting rules into accounts.
-- Every tenant needs accounting year controls, period locks, opening balances, and audit-safe corrections.
+### 2. Accounting Posting Is Not Complete
 
-2.8. Reporting and document generation need queue-backed infrastructure.
+Current state:
 
-- Reports must not block API requests.
-- Large reports, PDFs, invoices, backups, imports, exports, and email sends should run through queues.
-- Report definitions need tenant and industry awareness.
-- Generated files need storage lifecycle and permission checks.
+- Cash and bank books have ledgers and voucher balances.
+- Sales, purchase, receipt, and payment keep their own totals and payment statuses.
+- Receipt/payment allocations are stored as manual rows.
 
-2.9. Observability is thin for scale.
+Gaps to fill:
 
-- Need structured logs for API, queues, updates, backups, migrations, and tenant resolution.
-- Need health checks for MariaDB, Redis, workers, disk space, backup age, and migration status.
-- Need admin-visible incident logs and failed job drill-down.
+- Create a real posting engine that converts sales, purchase, receipt, payment, cash voucher, and bank voucher into ledger movements.
+- Add chart of accounts, ledger groups, tax ledgers, customer/supplier ledgers, and posting rules.
+- Keep receivable/payable balances derived from postings, not manually typed allocation balances.
+- Add journal/contra/debit note/credit note support or a clear plan for them.
+- Add period locks so posted entries cannot be silently changed after filing/audit.
+- Add reversal/correction flow instead of direct mutation for posted documents.
 
-2.10. Testing coverage is not enough for a platform with many tenants.
+Priority: High.
 
-- Need automated tests for tenant isolation, RBAC, migrations, queue retry, backup/restore, and update failure paths.
-- Need smoke tests after deployment and after update.sh.
-- Need seed fixtures for multiple industries and multiple tenant domains.
+### 3. Receipt and Payment Allocations Are Manual
 
-## 3. Blockers
+Current state:
 
-3.1. Critical blockers before scaling to real multi-domain customer use:
+- Receipt/payment allocation tabs accept document number, date, previous balance, allocated amount, and balance after allocation.
+- The code calculates entry allocated/unallocated totals from typed allocation rows.
+- There is no strong linkage from an allocation row to a sales/purchase entry id.
 
-1. Tenant isolation must be enforced and tested.
-2. Server-side permissions must protect platform, admin, and tenant APIs.
-3. Backup and restore must be proven on real MariaDB data.
-4. Update workflow must not leave the app half-updated.
-5. Queue workers must process real jobs reliably.
+Gaps to fill:
 
-3.2. Product blockers before adding many industries:
+- Add searchable open-invoice/open-bill picker for allocations.
+- Persist linked document ids/uuids, not only document numbers.
+- Auto-fill document date, document total, previous balance, and remaining balance.
+- Prevent over-allocation unless explicitly allowed.
+- Recalculate sales/purchase payment status from linked allocations.
+- Handle allocation edits, deletes, and reversals safely.
 
-1. No complete accounts engine.
-2. No formal industry pack system.
-3. No document workflow engine for invoices, bills, receipts, delivery notes, club billing, audit files, and manufacturing documents.
-4. No mature reporting engine.
-5. No import/export engine for customer onboarding.
+Priority: High.
 
-3.3. Operational blockers before production confidence:
+### 4. Stock Outward Is Not Fully Connected To Billing
 
-1. Worker process is not separated from the API process.
-2. Backup retention, verification, encryption, and off-server copy are missing.
-3. Restore UX is risky without dry-run validation.
-4. Redis and queue health need deployment-level checks.
-5. Logs are not centralized enough for support.
+Current state:
 
-## 4. Immediate Focus
+- Purchase receipt and stock ledger support intake, barcode/serial generation, verification, posting, and live balances.
+- Delivery note exists as an outward document.
+- Stock ledger has availability APIs and outward event names.
 
-### Stage 1 - Stabilize Platform Safety
+Gaps to fill:
 
-1.1. Lock tenant resolution.
+- Wire sales submit to stock availability checks when products are stock-managed.
+- Wire delivery note submit/post to reserve or consume stock.
+- Add barcode/serial scan input to sales and delivery note where required.
+- Prevent selling/delivering unknown, already consumed, wrong warehouse, or insufficient stock.
+- Add outward movement posting and live balance reduction for sales/delivery note.
+- Define return/reversal behavior for cancelled sales and delivery notes.
 
-- Bind tenant context to domain plus authenticated user access.
-- Allow tenant override only in super-admin/admin surfaces with explicit permission.
-- Add isolation tests for cross-domain login and cross-tenant API access.
+Priority: High for stock-enabled clients.
 
-1.2. Finish permission enforcement.
+### 5. Document Number Sync Is Incomplete For Inventory Documents
 
-- Add role/permission guards to all system, platform, admin, and tenant APIs.
-- Ensure menu visibility and backend access use the same permission source.
-- Add audit events for super-admin actions.
+Current state:
 
-1.3. Harden update engine.
+- Document number kinds include purchase receipt and delivery note.
+- Purchase receipt and delivery note repositories consume `purchaseReceipt` and `deliveryNote`.
+- Document number repository sync scans used numbers for sales, purchase, receipt, payment, cash book, and bank book.
 
-- Make system update fully backgrounded with persistent status.
-- Always create database backup before pull/build/restart.
-- Show backup ID, migration result, build result, restart result, and last failure.
-- Keep `update.sh` as terminal fallback for broken frontend/API update situations.
+Gap to fill:
 
-1.4. Prove backup and restore.
+- Add `purchaseReceipt` and `deliveryNote` to `usedDocumentNumbers()` so document settings preview/sync can advance past existing inventory documents.
 
-- Test master plus tenant database backup.
-- Test tenant-only restore in a separate database first.
-- Add checksum and restore dry-run before live restore.
-- Add backup retention settings.
+Priority: Medium.
 
-1.5. Finish queue manager baseline.
+### 6. Reports Are Client-Side Aggregations
 
-- Replace placeholder queue processors with real mail, report, backup, update, and event processors.
-- Add retry, cancel, requeue, dead-letter, and job detail views.
-- Add queue health status for Redis, BullMQ workers, and MariaDB queue table.
+Current state:
 
-### Stage 2 - Production Operations
+- Statements and GST reports load full lists of sales/purchase/receipt/payment records into the frontend and aggregate there.
+- Report filters are useful but limited.
 
-2.1. Split workers from API runtime.
+Gaps to fill:
 
-- Run API, frontend/static server, queue worker, Redis, and MariaDB as separate services.
-- Keep Redis external by default.
-- Add worker restart policy and health checks.
+- Move large report aggregation to backend endpoints.
+- Add pagination/export for large statements.
+- Add PDF generation or print-render service for consistent output.
+- Add aging buckets, outstanding-only filters, invoice-level allocation detail, and opening balance audit.
+- Add GST filing reports beyond simple statement: GSTR-1 summary, purchase ITC view, HSN summary, B2B/B2C split, nil/exempt if needed.
+- Queue heavy report generation and store generated files.
 
-2.2. Add observability.
+Priority: Medium.
 
-- Structured API logs.
-- Queue/job logs.
-- Update and migration logs.
-- Backup age and restore verification status.
-- Disk, memory, database, and Redis health cards in super-admin.
+### 7. Validation Needs More Domain Rules
 
-2.3. Add release safety.
+Current state:
 
-- Version every release.
-- Track current code version, database schema version, and migration history.
-- Add preflight checks before update: disk space, DB connectivity, Redis connectivity, dirty worktree, backup tool availability, npm availability.
-- Add post-update smoke tests.
+- Basic required fields exist: customer/supplier name, item defaults, amounts.
+- Forms allow direct entry of many compliance/accounting values.
 
-2.4. Add migration discipline.
+Gaps to fill:
 
-- Master migrations and tenant migrations should be listed, ordered, idempotent, and reversible where possible.
-- Show pending/applied/failed migrations in Database Manager.
-- Block update if required migrations are unsafe without backup.
+- Validate GSTIN format and state-code match.
+- Validate invoice dates against accounting year and period locks.
+- Validate negative/zero quantities and rates by document type.
+- Validate HSN and GST percentage consistency from product/tax masters.
+- Validate round-off bounds.
+- Validate vehicle number and transport GST when e-way is enabled.
+- Validate party type: customer for sales/receipts, supplier for purchase/payments.
 
-## 5. Product Build Phases
+Priority: Medium.
 
-### Phase 1 - Core SaaS Foundation
+### 8. Workflow Statuses Need Clear Semantics
 
-1. Tenant isolation and permission system.
-2. Tenant-local role and policy UI.
-3. Company context and default company switching.
-4. Document settings and number series by tenant/company/year.
-5. Audit log for sensitive business and system actions.
-6. Import/export base engine.
+Current state:
 
-### Phase 2 - Accounts Foundation
+- Entries use statuses such as draft, posted, cancelled, paid/partial/unpaid.
+- Statuses are mostly stored fields and UI labels.
 
-1. Chart of accounts.
-2. Ledger groups and ledgers.
-3. Opening balances.
-4. Journal, contra, payment, receipt, debit note, and credit note vouchers.
-5. Tax ledgers and posting rules.
-6. Trial balance, ledger book, day book, profit and loss, and balance sheet.
-7. Period lock and accounting year close.
+Gaps to fill:
 
-### Phase 3 - Billing and Trading Pack
+- Define status transitions per document type.
+- Enforce transitions server-side.
+- Add permissions for posting, cancelling, restoring, and editing posted entries.
+- Ensure print/compliance generation only happens from allowed statuses.
+- Add activity/audit events for every status transition.
 
-1. Sales invoice and purchase bill.
-2. Sales order, delivery note, purchase order, and goods receipt.
-3. Customer and supplier balances.
-4. GST/tax reports.
-5. PDF templates and email/WhatsApp dispatch through queue.
-6. Recurring billing where needed.
+Priority: Medium.
 
-### Phase 4 - Ecommerce Pack
+### 9. Billing Settings Are Sales-Heavy
 
-1. Public catalog by tenant domain.
-2. Product detail, cart, checkout, customer account, and order tracking.
-3. Payment gateway integration.
-4. Inventory reservation and fulfillment.
-5. Storefront theme/settings.
-6. Channel order import/export.
+Current state:
 
-### Phase 5 - Auditor Office Pack
+- Software settings include sales layout toggles for PO, DC, colour, size, e-invoice, e-way, print logo/account/QR.
+- Purchase and inventory reuse some sales setting ids.
 
-1. Client file management.
-2. Compliance/task calendar.
-3. Document request and upload workflow.
-4. Staff assignment and review notes.
-5. Billing against client services.
-6. Compliance reports and reminders.
+Gaps to fill:
 
-### Phase 6 - Sports Club Pack
+- Split settings into shared billing layout, sales settings, purchase settings, inventory settings, and print template settings.
+- Add industry presets for offset, garment, fabric trader, UPVC, ecommerce, and service billing.
+- Make setting ids neutral where shared; avoid purchase code depending on `sales-use-*`.
+- Add tenant/company/accounting-year scope decisions for each setting.
 
-1. Member master.
-2. Subscription plans and renewal billing.
-3. Attendance/session tracking.
-4. Coach/staff assignment.
-5. Facility booking.
-6. Member communication and dues reports.
+Priority: Medium.
 
-### Phase 7 - Garment Manufacturing Pack
+### 10. Mail/WhatsApp/Tools Are Activity Stubs
 
-1. Style, colour, size, fabric, trims, and BOM.
-2. Cutting, stitching, finishing, checking, and packing stages.
-3. Job work and production orders.
-4. WIP stock and process loss.
-5. Size-wise order planning.
-6. Manufacturing cost reports.
+Current state:
 
-### Phase 8 - Offset Printing/Billing Pack
+- Show pages have tool panels for email, WhatsApp, assign, attachments, tags.
+- Tool actions generally record activity; actual sending/attachment storage is not complete in these billing pages.
+- A mail module exists separately.
 
-1. Paper, plate, ink, lamination, binding, and finishing masters.
-2. Quotation and estimate engine.
-3. Job card.
-4. Production stages and wastage.
-5. Customer proof approval.
-6. Job profitability report.
+Gaps to fill:
 
-## 6. Architecture Direction
+- Connect billing documents to mail compose/send with generated PDF attachment.
+- Persist uploaded attachments against document records.
+- Add WhatsApp dispatch workflow or clearly mark it as activity-only until integrated.
+- Queue sends and show delivery history.
+- Add permissions and audit for sending documents.
 
-6.1. Keep one platform for now.
+Priority: Medium.
 
-- One codebase is best until the shared foundations are mature.
-- Use feature packs to enable different industries per tenant.
-- Keep tenant data isolated even when modules are shared.
-- Keep super-admin operations separate from tenant business workflow.
+### 11. Data Model Needs Stronger Constraints
 
-6.2. Split later only when a module becomes independently large.
+Current state:
 
-- Ecommerce storefront could become a separate public app later.
-- Queue workers should become separate services earlier than frontend/backend splitting.
-- Mobile/desktop apps can stay reserved until the web workflows are stable.
+- Main entry tables have unique document numbers in several modules.
+- Child rows often have nullable uuid or no foreign-key constraints.
+- Tenant/company/year context exists on main rows, but not consistently on child rows.
 
-6.3. Build a feature pack system.
+Gaps to fill:
 
-- Each tenant has industry pack assignments.
-- Each pack declares modules, routes, policies, document types, settings, reports, and terminology.
-- Packs can share common modules but own vertical-specific workflows.
+- Make child row `uuid` consistently non-null where public references are possible.
+- Add foreign keys or enforced repository checks for parent-child relationships.
+- Add tenant/company/year indexes for reporting queries.
+- Add consistency checks for item totals versus entry totals.
+- Add migration/version tracking so schema changes are auditable.
 
-6.4. Keep shared primitives clean.
+Priority: Medium.
 
-- Contacts, products, stock, accounts, documents, payments, files, comments, tasks, reports, notifications, and audit logs should be reusable.
-- Avoid copying a full module for each industry unless the behavior is truly different.
+### 12. UX Needs A Few Billing-Specific Completion Passes
 
-## 7. Later Focus
+Current state:
 
-7.1. Scale and hosting.
+- Sales/purchase item entry is feature-rich but large.
+- Cash/bank voucher print is being actively refined.
+- Receipt/payment allocations are simple grid rows.
 
-- Per-tenant database backup scheduling.
-- Optional per-tenant database server placement for high-value customers.
-- Read replicas for reporting if needed.
-- Object storage for files and backups.
-- CDN for storefront assets.
+Gaps to fill:
 
-7.2. Developer and release workflow.
+- Add open-document allocation picker in receipts/payments.
+- Add better error messages from backend validation.
+- Add save/post/cancel flows instead of one generic save.
+- Add print copy selection for account vouchers if required.
+- Add keyboard-first item entry improvements for repeated billing.
+- Add responsive QA for all print templates at A4/A5 and browser print.
 
-- CI checks for typecheck, build, lint, migrations, and tests.
-- Release notes generated from versioned changes.
-- Staging environment with production-like MariaDB and Redis.
-- One-click smoke test after deployment.
+Priority: Medium.
 
-7.3. Customer onboarding.
+## Suggested Work Order
 
-- Tenant setup wizard.
-- Industry pack selector.
-- Data import templates.
-- Opening balance import.
-- Domain verification.
-- Default roles, reports, and document templates per industry.
+1. Fix document-number sync for `purchaseReceipt` and `deliveryNote`.
+2. Add receipt/payment allocation picker and linked document ids.
+3. Define and enforce billing status transitions.
+4. Add accounting posting foundation for sales, purchase, receipts, payments, cash and bank vouchers.
+5. Wire stock outward checks/posting for delivery note and sales.
+6. Split sales-heavy settings into shared billing/sales/purchase/inventory settings.
+7. Replace e-invoice/e-way preview generation with gateway-ready service boundaries and persisted request/response logs.
+8. Move reports to backend aggregation endpoints and add export/queued PDF path.
+9. Connect billing documents to mail queue with PDF attachment.
+10. Add validation and period-lock rules before production use.
 
-7.4. Support and admin desk.
+## Immediate Quick Wins
 
-- Ticketing.
-- Bug reports.
-- Client notes.
-- Update history.
-- Failed job triage.
-- Tenant health timeline.
+- Add missing used-number scans for purchase receipt and delivery note in `DocumentNumberRepository`.
+- Add a backend validation layer for GSTIN, state code, accounting year date range, and item totals.
+- Add linked ids to receipt/payment allocations while keeping document number text for display.
+- Add status transition helpers and disable edit for posted/cancelled entries until correction flow exists.
+- Add a small backend report endpoint for customer/supplier outstanding so frontend no longer depends on full-list loading.
 
-## 8. Recommended Next Work Order
+## Decision
 
-1. Finish tenant isolation and permission enforcement.
-2. Prove database backup/restore with dry-run and retention.
-3. Complete queue workers for backup, reports, mail, and update.
-4. Move workers into a separate process/container.
-5. Add migration manager visibility and update preflight checks.
-6. Build accounts foundation.
-7. Build industry pack system.
-8. Build billing/trading pack first because it feeds many customer types.
-9. Add ecommerce, auditor office, sports club, garment, and offset packs in that order based on active customer demand.
-
-## 9. Decision
-
-CXSun should remain one multi-tenant platform now. The near-term problem is not that the product has too many business types; the problem is that the shared foundation must become strict, observable, and recoverable. Once tenant isolation, accounts, queues, backups, updates, and feature packs are strong, the same platform can serve ecommerce, billing, auditor office, sports club, garment manufacturing, and offset billing without splitting too early.
+Billing is not just a screen gap now; the screens are mostly present. The important next work is to make the current billing data behave like an accounting and compliance system: linked allocations, ledger postings, enforced statuses, stock movement, gateway-safe compliance, and backend reports. The UI can continue to be refined, but the biggest product risk is the missing posting/allocation/compliance foundation beneath the visible forms.

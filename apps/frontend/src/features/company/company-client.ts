@@ -1,4 +1,6 @@
 import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
+import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
 
 export type CompanyStatus = "active" | "not_active" | "suspend"
 
@@ -15,10 +17,15 @@ export interface CompanyAddress {
   addressLine1: string
   addressLine2: string | null
   cityId: string | null
+  cityName?: string | null
   districtId: string | null
+  districtName?: string | null
   stateId: string | null
+  stateName?: string | null
   countryId: string | null
+  countryName?: string | null
   pincodeId: string | null
+  pincodeName?: string | null
   latitude: number | null
   longitude: number | null
   isDefault: boolean
@@ -114,6 +121,7 @@ export interface DefaultCompanyContext {
   accountingYearName: string
   accountingYearStartDate: string | null
   accountingYearEndDate: string | null
+  landingApp: string
 }
 
 export type CompanyUpsertInput = Omit<
@@ -131,7 +139,7 @@ export async function listCompanies(session: AuthSession) {
     throw new Error(`Company list failed with status ${response.status}.`)
   }
 
-  return (await response.json()) as CompanyRecord[]
+  return enrichCompanyAddressLabels(session, (await response.json()) as CompanyRecord[])
 }
 
 export async function getDefaultCompanyContext(session: AuthSession) {
@@ -147,7 +155,7 @@ export async function getDefaultCompanyContext(session: AuthSession) {
   return (await response.json()) as DefaultCompanyContext | null
 }
 
-export async function updateDefaultCompanyContext(session: AuthSession, input: { companyId: number; accountingYearId: number }) {
+export async function updateDefaultCompanyContext(session: AuthSession, input: { companyId: number; accountingYearId: number; landingApp?: string }) {
   const response = await fetch(`${apiBaseUrl}/api/v1/companies/default-context`, {
     body: JSON.stringify(input),
     cache: "no-store",
@@ -181,7 +189,7 @@ export async function getCompany(session: AuthSession, id: number) {
     throw new Error(`Company get failed with status ${response.status}.`)
   }
 
-  return (await response.json()) as CompanyRecord
+  return (await enrichCompanyAddressLabels(session, [(await response.json()) as CompanyRecord]))[0]
 }
 
 export async function upsertCompany(session: AuthSession, input: CompanyUpsertInput) {
@@ -205,7 +213,7 @@ export async function upsertCompany(session: AuthSession, input: CompanyUpsertIn
     throw new Error(result.error ?? "Company save failed.")
   }
 
-  return result.company
+  return (await enrichCompanyAddressLabels(session, [result.company]))[0]
 }
 
 export async function destroyCompany(session: AuthSession, id: number) {
@@ -307,10 +315,70 @@ export function toCompanyInput(company: CompanyRecord): CompanyUpsertInput {
     settings: company.settings,
     features: company.features,
     logos: company.logos,
-    addresses: company.addresses,
+    addresses: company.addresses.map(({ cityName, countryName, districtName, pincodeName, stateName, ...address }) => address),
     emails: company.emails,
     phones: company.phones,
     socialLinks: company.socialLinks,
     bankAccounts: company.bankAccounts,
   }
+}
+
+async function enrichCompanyAddressLabels(session: AuthSession, companies: CompanyRecord[]) {
+  if (!companies.some((company) => company.addresses.length > 0)) return companies
+
+  try {
+    const labels = await loadAddressLabels(session)
+    return companies.map((company) => ({
+      ...company,
+      addresses: company.addresses.map((address) => ({
+        ...address,
+        cityName: labelFrom(labels.cities, address.cityId),
+        countryName: labelFrom(labels.countries, address.countryId),
+        districtName: labelFrom(labels.districts, address.districtId),
+        pincodeName: labelFrom(labels.pincodes, address.pincodeId),
+        stateName: labelFrom(labels.states, address.stateId),
+      })),
+    }))
+  } catch {
+    return companies
+  }
+}
+
+async function loadAddressLabels(session: AuthSession) {
+  const [cities, countries, districts, pincodes, states] = await Promise.all([
+    listMasterDataRecords(session, "cities"),
+    listMasterDataRecords(session, "countries"),
+    listMasterDataRecords(session, "districts"),
+    listMasterDataRecords(session, "pincodes"),
+    listMasterDataRecords(session, "states"),
+  ])
+
+  return {
+    cities: buildLabelMap(cities),
+    countries: buildLabelMap(countries),
+    districts: buildLabelMap(districts),
+    pincodes: buildLabelMap(pincodes),
+    states: buildLabelMap(states),
+  }
+}
+
+function buildLabelMap(records: MasterDataRecord[]) {
+  const map = new Map<string, string>()
+  for (const record of records) {
+    const label = commonRecordLabel(record)
+    for (const key of [record.id, record.uuid, record.name, record.code]) {
+      if (key !== null && key !== undefined && key !== "") map.set(String(key), label)
+    }
+  }
+  return map
+}
+
+function labelFrom(map: ReadonlyMap<string, string>, value: unknown) {
+  if (value === null || value === undefined || value === "") return null
+  return map.get(String(value)) ?? null
+}
+
+function commonRecordLabel(record: MasterDataRecord) {
+  if (record.rate_percent !== null && record.rate_percent !== undefined) return `${record.rate_percent}%`
+  return String(record.name ?? record.code ?? record.description ?? record.id)
 }

@@ -2,12 +2,13 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { createPortal } from "react-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Building2, CalendarDays, Check, Pencil, RefreshCw, Save, X, type LucideIcon } from "lucide-react"
+import { Building2, CalendarDays, Check, LayoutDashboard, Pencil, RefreshCw, Save, X, type LucideIcon } from "lucide-react"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
+import { dashboardApps, isDashboardAppId } from "src/components/blocks/dashboard/dashboard-apps"
 import type { AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
@@ -25,6 +26,7 @@ export function DefaultCompanyPage({ session }: { session: AuthSession }) {
   const [isEditing, setIsEditing] = useState(false)
   const [companyId, setCompanyId] = useState("")
   const [accountingYearId, setAccountingYearId] = useState("")
+  const [landingApp, setLandingApp] = useState("")
   const contextQuery = useQuery({
     queryKey: ["default-company-context", session.selectedTenant.slug],
     queryFn: () => getDefaultCompanyContext(session),
@@ -38,7 +40,7 @@ export function DefaultCompanyPage({ session }: { session: AuthSession }) {
     queryFn: () => listMasterDataRecords(session, "accountingYear"),
   })
   const saveMutation = useMutation({
-    mutationFn: () => updateDefaultCompanyContext(session, { companyId: Number(companyId), accountingYearId: Number(accountingYearId) }),
+    mutationFn: () => updateDefaultCompanyContext(session, { companyId: Number(companyId), accountingYearId: Number(accountingYearId), landingApp }),
     onSuccess: async () => {
       toast.success("Default company updated")
       setIsEditing(false)
@@ -48,24 +50,28 @@ export function DefaultCompanyPage({ session }: { session: AuthSession }) {
   const context = contextQuery.data ?? null
   const companyOptions = useMemo(() => buildCompanyOptions(companiesQuery.data ?? []), [companiesQuery.data])
   const accountingYearOptions = useMemo(() => buildAccountingYearOptions(yearsQuery.data ?? []), [yearsQuery.data])
+  const landingAppOptions = useMemo(() => buildLandingAppOptions(), [])
   const isLoading = contextQuery.isFetching || companiesQuery.isFetching || yearsQuery.isFetching
-  const canSave = Boolean(companyId && accountingYearId && !saveMutation.isPending)
+  const canSave = Boolean(companyId && accountingYearId && landingApp && !saveMutation.isPending)
 
   useEffect(() => {
     if (!context || isEditing) return
     setCompanyId(String(context.companyId))
     setAccountingYearId(String(context.accountingYearId))
+    setLandingApp(normalizeLandingApp(context.landingApp))
   }, [context, isEditing])
 
   function beginEdit() {
     setCompanyId(context ? String(context.companyId) : "")
     setAccountingYearId(context ? String(context.accountingYearId) : "")
+    setLandingApp(normalizeLandingApp(context?.landingApp))
     setIsEditing(true)
   }
 
   function cancelEdit() {
     setCompanyId(context ? String(context.companyId) : "")
     setAccountingYearId(context ? String(context.accountingYearId) : "")
+    setLandingApp(normalizeLandingApp(context?.landingApp))
     setIsEditing(false)
   }
 
@@ -114,7 +120,7 @@ export function DefaultCompanyPage({ session }: { session: AuthSession }) {
         <CardContent className="grid gap-0 p-0">
           {context ? (
             isEditing ? (
-              <div className="grid gap-5 p-5 md:grid-cols-2">
+              <div className="grid gap-5 p-5 md:grid-cols-3">
                 <DefaultLookupField icon={Building2} label="Company">
                   <NoCreateAutocomplete
                     disabled={companiesQuery.isFetching || saveMutation.isPending}
@@ -133,11 +139,21 @@ export function DefaultCompanyPage({ session }: { session: AuthSession }) {
                     onChange={setAccountingYearId}
                   />
                 </DefaultLookupField>
+                <DefaultLookupField icon={LayoutDashboard} label="Landing Desk">
+                  <NoCreateAutocomplete
+                    disabled={saveMutation.isPending}
+                    options={landingAppOptions}
+                    placeholder="Search landing app"
+                    value={landingApp}
+                    onChange={(value) => setLandingApp(normalizeLandingApp(value))}
+                  />
+                </DefaultLookupField>
               </div>
             ) : (
               <>
                 <DefaultRow icon={Building2} label="Company" value={context.companyName} support={context.companyCode} />
                 <DefaultRow icon={CalendarDays} label="Accounting Year" value={context.accountingYearName} support={formatPeriod(context.accountingYearStartDate, context.accountingYearEndDate)} />
+                <DefaultRow icon={LayoutDashboard} label="Landing Desk" value={landingAppLabel(context.landingApp)} support="Opens first when the tenant dashboard loads" />
                 <div className="flex items-center justify-between border-t border-border/70 px-5 py-3">
                   <span className="text-xs font-semibold uppercase text-muted-foreground">Source</span>
                   <Badge variant="outline" className="rounded-md border-emerald-200 bg-emerald-50 text-emerald-700">
@@ -365,6 +381,24 @@ function buildAccountingYearOptions(years: MasterDataRecord[]): LookupOption[] {
       meta: `${formatPeriod(String(year.start_date ?? ""), String(year.end_date ?? "")) ?? ""}${year.is_current_year ? " · current" : ""}`,
     }))
     .sort((first, second) => first.label.localeCompare(second.label))
+}
+
+function buildLandingAppOptions(): LookupOption[] {
+  return dashboardApps.map((app) => ({
+    id: app.id,
+    label: app.name,
+    meta: app.description,
+  }))
+}
+
+function normalizeLandingApp(value: unknown) {
+  const text = String(value ?? "").trim()
+  return isDashboardAppId(text) ? text : "application"
+}
+
+function landingAppLabel(value: unknown) {
+  const appId = normalizeLandingApp(value)
+  return dashboardApps.find((app) => app.id === appId)?.name ?? "Application"
 }
 
 function formatPeriod(startDate: string | null, endDate: string | null) {

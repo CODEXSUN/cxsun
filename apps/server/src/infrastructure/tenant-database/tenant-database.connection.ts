@@ -15,8 +15,10 @@ import { migrateDeliveryNoteTables } from '../../modules/stock/outward/delivery-
 import { migrateStockLedgerTables } from '../../modules/stock/ledger/index.js'
 import { migrateReceiptEntryTables } from '../../modules/entries/receipt/index.js'
 import { migratePaymentEntryTables } from '../../modules/entries/payment/index.js'
+import { migrateAccountsTables } from '../../modules/accounts/index.js'
 import { migrateCompanySettingsTables } from '../../modules/settings/company-settings/index.js'
 import { migrateDocumentSettingsTables } from '../../modules/settings/document-settings/index.js'
+import { migrateGstComplianceTables } from '../../modules/compliance/gst-compliance/index.js'
 import { migrateMediaTables } from '../../modules/media/index.js'
 import { migrateMailTables } from '../../modules/mail/index.js'
 import { migrateTaskManagerTables } from '../../modules/task-manager/index.js'
@@ -122,8 +124,10 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await migrateStockLedgerTables(database)
   await migrateReceiptEntryTables(database)
   await migratePaymentEntryTables(database)
+  await migrateAccountsTables(database as never)
   await migrateCompanySettingsTables(database)
   await migrateDocumentSettingsTables(database)
+  await migrateGstComplianceTables(database)
   await migrateMediaTables(database as never)
   await migrateMailTables(database)
   await migrateTaskManagerTables(database as never)
@@ -624,10 +628,13 @@ async function createCompanyChildTables(database: TenantDatabase) {
     .addColumn('industry_id', 'integer', (col) => col.notNull())
     .addColumn('company_id', 'integer', (col) => col.notNull())
     .addColumn('accounting_year_id', 'integer', (col) => col.notNull())
+    .addColumn('landing_app', 'varchar(80)', (col) => col.notNull().defaultTo('application'))
     .addColumn('is_active', 'boolean', (col) => col.notNull().defaultTo(true))
     .addColumn('created_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .addColumn('updated_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .execute()
+
+  await sql.raw(`ALTER TABLE default_companies ADD COLUMN IF NOT EXISTS landing_app VARCHAR(80) NOT NULL DEFAULT 'application'`).execute(database)
 
   await database.schema
     .createTable('company_logos')
@@ -907,9 +914,20 @@ async function ensureDefaultCompany(
       industry_id: industryId,
       company_id: companyId,
       accounting_year_id: accountingYearId,
+      landing_app: readTenantLandingApp(tenant),
       is_active: true,
     })
     .execute()
+}
+
+function readTenantLandingApp(tenant: Tenant) {
+  try {
+    const settings = JSON.parse(String(tenant.payload_settings ?? '{}')) as { apps?: { landing?: unknown } }
+    const landing = settings.apps?.landing
+    return typeof landing === 'string' && landing.trim() ? landing.trim() : 'application'
+  } catch {
+    return 'application'
+  }
 }
 
 async function retireLegacyRoles(database: TenantDatabase) {

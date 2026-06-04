@@ -50,10 +50,17 @@ export function clearSession(surface: AuthSurface = "tenant") {
   localStorage.removeItem(sessionKey(surface))
 }
 
+export function clearAuthCache(surface: AuthSurface = "tenant") {
+  clearSession(surface)
+  localStorage.removeItem("cxsun.activeApp")
+  localStorage.removeItem("cxsun.enabledApps.v2")
+  localStorage.removeItem("cxsun.landingApp.v1")
+}
+
 export function clearAllSessions() {
-  clearSession("tenant")
-  clearSession("admin")
-  clearSession("super-admin")
+  clearAuthCache("tenant")
+  clearAuthCache("admin")
+  clearAuthCache("super-admin")
 }
 
 export function notifyAuthInvalid() {

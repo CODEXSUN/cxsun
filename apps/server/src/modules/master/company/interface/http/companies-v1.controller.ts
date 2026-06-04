@@ -22,7 +22,7 @@ export class CompaniesV1Controller {
   }
 
   @Post('default-context')
-  async setDefaultContext(@Headers() headers: TenantRequestHeaders, @Body() body: { companyId: number; accountingYearId: number }) {
+  async setDefaultContext(@Headers() headers: TenantRequestHeaders, @Body() body: { companyId: number; accountingYearId: number; landingApp?: string }) {
     return this.companyService.setDefaultContext(headers, body)
   }
 

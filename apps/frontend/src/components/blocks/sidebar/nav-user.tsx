@@ -28,8 +28,10 @@ import {
 } from "src/components/ui/sidebar"
 
 export function NavUser({
+  onLogout,
   user,
 }: {
+  onLogout?: () => void
   user: {
     name: string
     email: string
@@ -102,7 +104,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="m-0" />
             <DropdownMenuGroup className="p-1">
-              <DropdownMenuItem className="h-9 cursor-pointer gap-2">
+              <DropdownMenuItem className="h-9 cursor-pointer gap-2" onClick={onLogout}>
                 <LogOut className="size-4" />
                 Log out
               </DropdownMenuItem>

@@ -2,14 +2,19 @@
 
 ## Version State
 
-- **Current version:** `1.0.71`
-- **Release tag:** `v-1.0.71`
-- **Changelog label:** `v 1.0.71`
+- **Current version:** `1.0.72`
+- **Release tag:** `v-1.0.72`
+- **Changelog label:** `v 1.0.72`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.72
+
+### [v 1.0.72] 2026-06-04 9:47 am - created account module
+
+- Bumped workspace version to 1.0.72
 ## v-1.0.71
 
 ### [v 1.0.71] 2026-06-03 7:23 pm - Added the cloud update fix

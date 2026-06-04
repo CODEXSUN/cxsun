@@ -220,6 +220,26 @@ export class DocumentNumberRepository {
       return rows.map((row: Record<string, unknown>) => String(row.payment_no ?? ''))
     }
 
+    if (kind === 'cashBook') {
+      const rows = await this.database(context)
+        .selectFrom('cash_books')
+        .select('voucher_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.voucher_no ?? ''))
+    }
+
+    if (kind === 'bankBook') {
+      const rows = await this.database(context)
+        .selectFrom('bank_books')
+        .select('voucher_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.voucher_no ?? ''))
+    }
+
     return []
   }
 
@@ -233,6 +253,17 @@ async function resolveDocumentContext(context: TenantRuntimeContext, input: Docu
   const accountingYearId = Number(input.accountingYearId)
   if (Number.isInteger(companyId) && companyId > 0 && Number.isInteger(accountingYearId) && accountingYearId > 0) {
     return { companyId: String(companyId), accountingYearId: String(accountingYearId) }
+  }
+
+  const defaultRow = await context.database
+    .selectFrom('default_companies')
+    .select(['company_id', 'accounting_year_id'])
+    .where('is_active', '=', true)
+    .orderBy('id', 'asc')
+    .executeTakeFirst()
+
+  if (defaultRow) {
+    return { companyId: String(defaultRow.company_id), accountingYearId: String(defaultRow.accounting_year_id) }
   }
 
   const primaryCompany = await context.database
@@ -251,17 +282,6 @@ async function resolveDocumentContext(context: TenantRuntimeContext, input: Docu
 
   if (primaryCompany && activeYear) {
     return { companyId: String(primaryCompany.id), accountingYearId: String(activeYear.id) }
-  }
-
-  const defaultRow = await context.database
-    .selectFrom('default_companies')
-    .select(['company_id', 'accounting_year_id'])
-    .where('is_active', '=', true)
-    .orderBy('id', 'asc')
-    .executeTakeFirst()
-
-  if (defaultRow) {
-    return { companyId: String(defaultRow.company_id), accountingYearId: String(defaultRow.accounting_year_id) }
   }
 
   const company = await context.database.selectFrom('companies').select('id').where('deleted_at', 'is', null).orderBy('id', 'asc').executeTakeFirst()
@@ -322,7 +342,7 @@ function normalizeKind(value: string): DocumentEntryKind {
 }
 
 function defaultPrefix(kind: DocumentEntryKind) {
-  return { deliveryNote: 'DNT', payment: 'PAY', purchase: 'PUR', purchaseReceipt: 'PRC', receipt: 'REC', sales: 'SAL' }[kind]
+  return { bankBook: 'BB', cashBook: 'CB', deliveryNote: 'DNT', payment: 'PAY', purchase: 'PUR', purchaseReceipt: 'PRC', receipt: 'REC', sales: 'SAL' }[kind]
 }
 
 function cleanPrefix(value: string | null | undefined) {

@@ -67,8 +67,8 @@ export function companyLetterheadLines(company: CompanyRecord, labels?: Letterhe
   const addressLines = address ? [
     [address.addressLine1, address.addressLine2].map(printableText).filter(Boolean).join(", "),
     [
-      [labelOrRaw(labels?.cities, address.cityId), districtLabel(labelOrRaw(labels?.districts, address.districtId)), labelOrRaw(labels?.states, address.stateId), labelOrRaw(labels?.countries, address.countryId)].filter(Boolean).join(", "),
-      labelOrRaw(labels?.pincodes, address.pincodeId),
+      [labelOrRaw(labels?.cities, address.cityName ?? address.cityId), districtLabel(labelOrRaw(labels?.districts, address.districtName ?? address.districtId)), labelOrRaw(labels?.states, address.stateName ?? address.stateId), labelOrRaw(labels?.countries, address.countryName ?? address.countryId)].filter(Boolean).join(", "),
+      labelOrRaw(labels?.pincodes, address.pincodeName ?? address.pincodeId),
     ].filter(Boolean).join(" - "),
   ].filter(Boolean) : []
   const email = printableText(company.primaryEmail) || printableText(company.emails.find((item) => item.isActive)?.email)

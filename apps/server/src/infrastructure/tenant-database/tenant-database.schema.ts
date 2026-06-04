@@ -57,6 +57,7 @@ export interface TenantDefaultCompaniesTable {
   industry_id: number
   company_id: number
   accounting_year_id: number
+  landing_app: string
   is_active: boolean
   created_at: Generated<Date>
   updated_at: Generated<Date>
@@ -728,6 +729,96 @@ export interface TenantDocumentNumberSettingsTable {
   updated_at: Generated<Date>
 }
 
+export interface TenantGstProviderSettingsTable {
+  id: Generated<number>
+  uuid: string
+  tenant_id: number
+  company_id: number
+  provider: string
+  environment: string
+  base_url: string
+  email: string
+  username: string
+  password_secret: string | null
+  client_id: string
+  client_secret: string | null
+  gstin: string
+  ip_address: string
+  is_enabled: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantGstProviderTokensTable {
+  id: Generated<number>
+  uuid: string
+  tenant_id: number
+  setting_id: number
+  provider: string
+  environment: string
+  gstin: string
+  auth_token: string
+  sek: string | null
+  token_expiry: Date | null
+  raw_response_json: string | null
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantGstComplianceDocumentsTable {
+  id: Generated<number>
+  uuid: string
+  tenant_id: number
+  company_id: number
+  provider: string
+  environment: string
+  source_type: string
+  source_id: number | null
+  source_uuid: string | null
+  document_type: string
+  document_no: string
+  document_date: string | null
+  gstin: string | null
+  irn: string | null
+  ack_no: string | null
+  ack_date: Date | string | null
+  signed_invoice: string | null
+  signed_qr: string | null
+  eway_bill_no: string | null
+  eway_bill_date: Date | string | null
+  eway_valid_upto: Date | string | null
+  irn_status: string
+  eway_status: string
+  last_operation_id: number | null
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
+export interface TenantGstComplianceOperationsTable {
+  id: Generated<number>
+  uuid: string
+  tenant_id: number
+  company_id: number
+  setting_id: number | null
+  provider: string
+  environment: string
+  operation: string
+  source_type: string | null
+  source_id: number | null
+  source_uuid: string | null
+  document_no: string | null
+  method: string
+  endpoint: string
+  http_status: number | null
+  provider_status: string | null
+  success: boolean
+  error_message: string | null
+  request_json: string | null
+  response_json: string | null
+  created_by: string
+  created_at: Generated<Date>
+}
+
 export interface TenantMastersContactsTable {
   id: Generated<number>
   uuid: string
@@ -844,6 +935,10 @@ export interface TenantDatabaseSchema {
   sales_entry_activities: TenantSalesEntryActivitiesTable
   company_settings: TenantCompanySettingsTable
   document_number_settings: TenantDocumentNumberSettingsTable
+  gst_provider_settings: TenantGstProviderSettingsTable
+  gst_provider_tokens: TenantGstProviderTokensTable
+  gst_compliance_documents: TenantGstComplianceDocumentsTable
+  gst_compliance_operations: TenantGstComplianceOperationsTable
   masters_contacts: TenantMastersContactsTable
   masters_products: TenantMastersProductsTable
   masters_orders: TenantMastersOrdersTable

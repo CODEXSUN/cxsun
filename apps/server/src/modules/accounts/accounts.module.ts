@@ -1,0 +1,23 @@
+import { Module } from '../../core/decorators/module.js'
+import { TenantContextService } from '../../core/tenant/tenant-context.service.js'
+import { AuthRepository } from '../auth/infrastructure/auth.repository.js'
+import { TenantRepository } from '../../core/tenant/infrastructure/tenant.repository.js'
+import { TenantDomainRepository } from '../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
+import { AccountsController } from './accounts.controller.js'
+import { AccountsRepository } from './accounts.repository.js'
+import { AccountsService } from './accounts.service.js'
+import { DocumentNumberRepository } from '../settings/document-settings/infrastructure/document-number.repository.js'
+
+@Module({
+  controllers: [AccountsController],
+  providers: [
+    AuthRepository,
+    TenantRepository,
+    TenantDomainRepository,
+    TenantContextService,
+    DocumentNumberRepository,
+    AccountsRepository,
+    AccountsService,
+  ],
+})
+export class AccountsModule {}

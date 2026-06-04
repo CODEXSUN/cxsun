@@ -1998,3 +1998,28 @@ User prompt:
 ```
 read assist/readme and create log
 ```
+
+## 2026-06-04
+
+User prompt:
+
+```
+ok we first work on gst compliances connect with eway and einvoice with gsp provider like mastergst so set tables and required backend for this with Enabled e-Invoice API Methods and You can test here
+Use Base URL as: https://api.mastergst.com
+
+https://app.mastergst.com/
+```
+
+## 2026-06-04
+
+User prompt:
+
+```
+read assist/readme and find cash book and fix this in show + print
+
+in this change title cash book to cash voucher and bank voucher and reduce top gap between company name and border and expand voucher no : in one row and move ledger , particulars to Narration in order
+
+Ledger : 
+<particulars>
+and <Narration>
+```

@@ -1,18 +1,19 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { AppSidebar, type DashboardMode, type DashboardPage } from 'src/components/blocks/sidebar/app-sidebar'
 import { SiteHeader } from 'src/components/blocks/layout/site-header'
 import { SidebarInset, SidebarProvider } from 'src/components/ui/sidebar'
 import { DashboardHome } from './dashboard-home'
 import {
-  clearSession,
+  clearAuthCache,
   getStoredSession,
   roleMatchesSurface,
   switchTenant,
   type AuthSurface,
   type AuthSession,
 } from 'src/features/auth/auth-client'
-import { getDefaultCompanyContext } from 'src/features/company/company-client'
+import { getDefaultCompanyContext, updateDefaultCompanyContext } from 'src/features/company/company-client'
 import { pageModuleKey, pageModuleKind } from 'src/features/master-data/application/master-data-service'
 import {
   appModulePages,
@@ -80,6 +81,12 @@ const ProductPage = lazy(() =>
 )
 const SalesPage = lazy(() =>
   import('src/features/sales/sales-page').then((module) => ({ default: module.SalesPage })),
+)
+const CashBookPage = lazy(() =>
+  import('src/features/accounts/accounts-book-page').then((module) => ({ default: module.CashBookPage })),
+)
+const BankBookPage = lazy(() =>
+  import('src/features/accounts/accounts-book-page').then((module) => ({ default: module.BankBookPage })),
 )
 const PurchasePage = lazy(() =>
   import('src/features/purchase/purchase-page').then((module) => ({ default: module.PurchasePage })),
@@ -166,6 +173,7 @@ function dashboardAppFromPage(page: DashboardPage): DashboardAppId | null {
 
 function defaultPageForApp(appId: DashboardAppId): DashboardPage {
   if (appId === "billing") return "app-billing-sales"
+  if (appId === "accounts") return "app-accounts-cash-book"
   if (appId === "inventory") return "app-inventory-purchase"
   if (appId === "mail") return "app-mail-inbox"
   if (appId === "taskmanager") return "app-taskmanager-tasks"
@@ -222,6 +230,12 @@ function prefetchAppModules(appId: DashboardAppId) {
       void import('src/features/receipt/receipt-page')
       void import('src/features/payment/payment-page')
       void import('src/features/report/billing-statement-page')
+      void import('src/features/accounts/accounts-book-page')
+      return
+    }
+
+    if (appId === "accounts") {
+      void import('src/features/accounts/accounts-book-page')
       return
     }
 
@@ -267,6 +281,7 @@ export function DashboardView({
   mode?: DashboardMode
   onBackHome: () => void
 }) {
+  const queryClient = useQueryClient()
   const authSurface: AuthSurface = mode === "super-admin" ? "super-admin" : mode
   const initialPage = dashboardPageFromPath(basePath)
   const storedSession = getStoredSession(authSurface)
@@ -322,6 +337,46 @@ export function DashboardView({
     queryKey: ["default-company-context", session?.selectedTenant.slug],
     queryFn: () => getDefaultCompanyContext(session as AuthSession),
   })
+  const landingMutation = useMutation({
+    mutationFn: (appId: DashboardAppId) => {
+      if (!session || !defaultCompanyContextQuery.data) {
+        throw new Error("Default company context is not available.")
+      }
+
+      return updateDefaultCompanyContext(session, {
+        companyId: defaultCompanyContextQuery.data.companyId,
+        accountingYearId: defaultCompanyContextQuery.data.accountingYearId,
+        landingApp: appId,
+      })
+    },
+    onSuccess: async (context) => {
+      toast.success("Landing desk updated")
+      await queryClient.invalidateQueries({ queryKey: ["default-company-context", session?.selectedTenant.slug] })
+      if (context.landingApp && isDashboardAppId(context.landingApp) && enabledApps[context.landingApp]) {
+        setLandingApp(context.landingApp)
+      }
+    },
+    onError: (error) => {
+      toast.error("Landing desk not saved", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      })
+    },
+  })
+
+  useEffect(() => {
+    const savedLandingApp = defaultCompanyContextQuery.data?.landingApp
+    if (mode !== "tenant" || !savedLandingApp || !isDashboardAppId(savedLandingApp) || !enabledApps[savedLandingApp]) {
+      return
+    }
+
+    setLandingApp(savedLandingApp)
+    if (activePage === "overview") {
+      const nextPage = defaultPageForApp(savedLandingApp)
+      setActiveApp(savedLandingApp)
+      setActivePage(nextPage)
+      pushDashboardPage(basePath, nextPage)
+    }
+  }, [activePage, basePath, defaultCompanyContextQuery.data?.landingApp, enabledApps, mode])
 
   useEffect(() => {
     if (needsLogin) return
@@ -375,7 +430,8 @@ export function DashboardView({
   }
 
   function logout() {
-    clearSession(authSurface)
+    clearAuthCache(authSurface)
+    queryClient.clear()
     setSession(null)
     window.history.pushState(null, "", loginPath)
   }
@@ -429,7 +485,7 @@ export function DashboardView({
     }
 
     setLandingApp(appId)
-    window.localStorage.setItem("cxsun.landingApp.v1", appId)
+    landingMutation.mutate(appId)
   }
 
   return (
@@ -442,6 +498,7 @@ export function DashboardView({
         onNavigate={navigate}
         onTenantChange={changeTenant}
         defaultCompanyContext={defaultCompanyContextQuery.data ?? null}
+        onLogout={logout}
         selectedTenant={session.selectedTenant.slug}
         tenants={session.tenants}
         user={session.user}
@@ -479,6 +536,7 @@ export function DashboardView({
               landingApp={landingApp}
               onChangeApp={changeApp}
               onChangeLandingApp={changeLandingApp}
+              isSaving={landingMutation.isPending}
             />
           ) : visiblePage === "system-update" ? (
             <SystemUpdateView session={session} />
@@ -496,6 +554,10 @@ export function DashboardView({
             <SupportPage type="tenant-roles" />
           ) : visiblePage === "app-billing-sales" ? (
             <SalesPage session={session} />
+          ) : visiblePage === "app-accounts-cash-book" || visiblePage === "app-billing-cash-book" ? (
+            <CashBookPage session={session} />
+          ) : visiblePage === "app-accounts-bank-book" || visiblePage === "app-billing-bank-book" ? (
+            <BankBookPage session={session} />
           ) : visiblePage === "app-billing-purchase" ? (
             <PurchasePage session={session} />
           ) : visiblePage === "app-inventory-purchase" ? (
@@ -643,9 +705,11 @@ function LandingDeskSettingsPage({
   landingApp,
   onChangeApp,
   onChangeLandingApp,
+  isSaving,
 }: {
   activeApp: DashboardAppId
   enabledApps: Record<DashboardAppId, boolean>
+  isSaving: boolean
   landingApp: DashboardAppId
   onChangeApp(appId: DashboardAppId): void
   onChangeLandingApp(appId: DashboardAppId): void
@@ -662,7 +726,7 @@ function LandingDeskSettingsPage({
       <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
         <CardHeader>
           <CardTitle>Default landing app</CardTitle>
-          <p className="text-sm text-muted-foreground">Only enabled apps are available as landing choices.</p>
+          <p className="text-sm text-muted-foreground">{isSaving ? "Saving landing desk..." : "Only enabled apps are available as landing choices."}</p>
         </CardHeader>
         <CardContent>
           <RadioGroup value={landingApp} onValueChange={(value) => isDashboardAppId(value) && onChangeLandingApp(value)} className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -817,8 +881,7 @@ function parseTenantPayloadSettings(value?: string): { apps?: { enabled?: unknow
 }
 
 function readStoredLandingApp(enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
-  const value = window.localStorage.getItem("cxsun.landingApp.v1") ?? ""
-  return isDashboardAppId(value) && enabledApps[value] ? value : fallbackLandingApp(enabledApps)
+  return fallbackLandingApp(enabledApps)
 }
 
 function fallbackLandingApp(enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
