@@ -39,7 +39,7 @@ MariaDB is expected to already exist on the same Docker network with service/con
 Redis runs as a separate container on `codexion-network` by default:
 
 ```bash
-.container/setup-cloud.sh
+bash .container/setup-cloud.sh
 ```
 
 The app defaults to these container service names:

@@ -158,6 +158,15 @@ export class TenantDomainRepository {
       .where('tenant_domains.domain', '=', normalizeDomain(domain))
       .executeTakeFirst() as Promise<TenantDomain | undefined>
   }
+
+  async deleteById(id: number): Promise<boolean> {
+    const result = await getDatabase()
+      .deleteFrom('tenant_domains')
+      .where('id', '=', id)
+      .executeTakeFirst()
+
+    return Number(result.numDeletedRows) > 0
+  }
 }
 
 export function normalizeDomain(value: string) {

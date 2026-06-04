@@ -1,6 +1,6 @@
 import { Inject } from '../../decorators/inject.js'
 import { Injectable } from '../../decorators/injectable.js'
-import type { TenantDomainResolution, TenantDomainStatus, TenantDomainUpsertInput } from '../domain/tenant-domain.types.js'
+import type { TenantDomainDeleteInput, TenantDomainResolution, TenantDomainStatus, TenantDomainUpsertInput } from '../domain/tenant-domain.types.js'
 import { DomainResolutionEngine } from './domain-resolution.engine.js'
 import { normalizeDomain, TenantDomainRepository } from '../infrastructure/tenant-domain.repository.js'
 
@@ -75,6 +75,38 @@ export class TenantDomainService {
       tenant: result.tenant,
     }
   }
+
+  async delete(id: number, input: TenantDomainDeleteInput = {}) {
+    if (!Number.isInteger(id) || id <= 0) {
+      return { ok: false, error: 'Domain is required.' }
+    }
+
+    const domain = await this.domains.findById(id)
+    if (!domain) {
+      return { ok: false, error: 'Domain was not found.' }
+    }
+
+    const force = Boolean(input.force)
+    if (!force && isDomainInUse(domain)) {
+      return {
+        ok: false,
+        error: 'Domain is active or primary. Suspend it or use force delete after verifying it is no longer needed.',
+      }
+    }
+
+    if (force && input.confirmation !== domain.domain) {
+      return { ok: false, error: `Type ${domain.domain} to confirm force delete.` }
+    }
+
+    const deleted = await this.domains.deleteById(id)
+    return deleted
+      ? { ok: true, domain }
+      : { ok: false, error: 'Domain could not be deleted.' }
+  }
+}
+
+function isDomainInUse(domain: { status: TenantDomainStatus; is_primary: number }) {
+  return domain.status === 'active' || Boolean(domain.is_primary)
 }
 
 function numberOrUndefined(value: unknown) {

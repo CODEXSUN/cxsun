@@ -59,3 +59,8 @@ export interface TenantDomainUpsertInput {
   status?: TenantDomainStatus
   settings?: string | Record<string, unknown>
 }
+
+export interface TenantDomainDeleteInput {
+  force?: boolean
+  confirmation?: string
+}

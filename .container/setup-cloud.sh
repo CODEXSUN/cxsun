@@ -64,6 +64,7 @@ export CXMEDIA_PORT="${CXMEDIA_PORT:-6050}"
 export CXMEDIA_ADMIN_PASSWORD="${CXMEDIA_ADMIN_PASSWORD:-Sundarcomputers@123}"
 export VITE_MEDIA_MANAGER_URL="${VITE_MEDIA_MANAGER_URL:-http://localhost:${CXMEDIA_PORT}}"
 export INSTALL_RUN_TESTS="${INSTALL_RUN_TESTS:-false}"
+export AUTO_SEED_TENANT_DOMAINS="${AUTO_SEED_TENANT_DOMAINS:-false}"
 export SKIP_MARIADB_WAIT="${SKIP_MARIADB_WAIT:-true}"
 export HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-900}"
 
@@ -83,6 +84,7 @@ echo "Redis: $REDIS_HOST:$REDIS_PORT"
 echo "Media storage volume: $CXMEDIA_STORAGE_VOLUME"
 echo "Fresh reinstall: $FRESH_INSTALL"
 echo "Install tests: $INSTALL_RUN_TESTS"
+echo "Auto seed tenant domains: $AUTO_SEED_TENANT_DOMAINS"
 echo "MariaDB preflight wait skipped: $SKIP_MARIADB_WAIT"
 echo "Health wait limit: ${HEALTH_WAIT_SECONDS}s"
 
@@ -362,8 +364,17 @@ for attempt in $(seq 1 "$HEALTH_ATTEMPTS"); do
   sleep 5
 done
 
-echo "Checking tenant static resolver"
-docker compose -f "$COMPOSE_FILE" exec -T cxsun bash -lc "curl -fsS 'http://127.0.0.1:${PORT}/api/site/tenant-static?domain=codexsun.com' | grep -q '\"resolved\":true'"
+if [ "$AUTO_SEED_TENANT_DOMAINS" = "true" ]; then
+  echo "Checking tenant static resolver"
+  docker compose -f "$COMPOSE_FILE" exec -T cxsun bash -lc "curl -fsS 'http://127.0.0.1:${PORT}/api/site/tenant-static?domain=codexsun.com' | grep -q '\"resolved\":true'"
+else
+  echo "Skipping auto-seeded tenant static resolver check"
+  if docker compose -f "$COMPOSE_FILE" exec -T cxsun bash -lc "curl -fsS 'http://127.0.0.1:${PORT}/api/site/tenant-static?domain=codexsun.com' | grep -q '\"resolved\":true'"; then
+    echo "Tenant static resolver passed for existing configured domain."
+  else
+    echo "Tenant domain was not auto-created. Configure tenant domains manually in Super Admin."
+  fi
+fi
 
 echo "Current status"
 docker compose -f "$COMPOSE_FILE" ps

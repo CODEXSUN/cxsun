@@ -1,10 +1,10 @@
-import { Controller, Get, Post } from '../../../decorators/controller.js'
-import { Body, Headers, Query } from '../../../decorators/http-params.js'
+import { Controller, Delete, Get, Post } from '../../../decorators/controller.js'
+import { Body, Headers, Param, Query } from '../../../decorators/http-params.js'
 import { Inject } from '../../../decorators/inject.js'
 import { UseGuards } from '../../../decorators/guards.js'
 import { AuthGuard } from '../../../guards/auth.guard.js'
 import { TenantDomainService } from '../../application/tenant-domain.service.js'
-import type { TenantDomainUpsertInput } from '../../domain/tenant-domain.types.js'
+import type { TenantDomainDeleteInput, TenantDomainUpsertInput } from '../../domain/tenant-domain.types.js'
 
 @Controller('api/v1/tenant-domains')
 @UseGuards(AuthGuard)
@@ -27,5 +27,15 @@ export class TenantDomainsV1Controller {
   @Post('upsert')
   upsert(@Body() body: TenantDomainUpsertInput) {
     return this.tenantDomains.upsert(body)
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string, @Body() body: TenantDomainDeleteInput | undefined) {
+    return this.tenantDomains.delete(Number(id), body)
+  }
+
+  @Post(':id/delete')
+  deleteViaPost(@Param('id') id: string, @Body() body: TenantDomainDeleteInput | undefined) {
+    return this.tenantDomains.delete(Number(id), body)
   }
 }

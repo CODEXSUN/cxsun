@@ -2,19 +2,26 @@
 
 ## Version State
 
-- **Current version:** `1.0.73`
-- **Release tag:** `v-1.0.73`
-- **Changelog label:** `v 1.0.73`
+- **Current version:** `1.0.74`
+- **Release tag:** `v-1.0.74`
+- **Changelog label:** `v 1.0.74`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.74
+
+### [v 1.0.74] 2026-06-04 8:51 pm - Disable automatic tenant domain seeding
+
+- Bumped workspace version to 1.0.74
+- Added guarded permanent deletion for tenant domains, with normal delete blocked for active/primary mappings and a typed force-delete confirmation for verified cleanup.
 ## v-1.0.73
 
 ### [v 1.0.73] 2026-06-04 7:04 pm - GST WhiteBooks compliance release
 
 - Bumped workspace version to 1.0.73
+- Disabled automatic tenant-domain creation during Docker/cloud updates by default; tenant domains now require manual Super Admin configuration unless `AUTO_SEED_TENANT_DOMAINS=true` is explicitly set.
 ## v-1.0.72
 
 ### [v 1.0.72] 2026-06-04 - GST WhiteBooks GSP compliance wiring

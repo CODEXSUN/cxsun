@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState, type Dispatch, type FormEvent, type ReactNode, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Globe2, Pencil, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Globe2, Pencil, Plus, RefreshCw, RotateCcw, Save, ShieldAlert, Trash2, X } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "src/components/ui/alert-dialog"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { Input } from "src/components/ui/input"
@@ -94,12 +104,43 @@ async function upsertDomain(session: AuthSession, input: TenantDomainForm) {
   return result.domain
 }
 
+async function deleteDomain(session: AuthSession, input: { domain: TenantDomainRecord; force: boolean; confirmation: string }) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains/${input.domain.id}`, {
+    body: JSON.stringify({
+      force: input.force,
+      confirmation: input.confirmation,
+    }),
+    cache: "no-store",
+    headers: {
+      ...authHeaders(session),
+      "Content-Type": "application/json",
+    },
+    method: "DELETE",
+  })
+
+  const result = await response
+    .json()
+    .catch(() => null) as { ok?: boolean; domain?: TenantDomainRecord; error?: string; message?: string } | null
+
+  if (!response.ok) {
+    throw new Error(result?.error ?? result?.message ?? `Domain delete failed with status ${response.status}.`)
+  }
+
+  if (!result?.ok) {
+    throw new Error(result?.error ?? "Domain delete failed.")
+  }
+
+  return result.domain ?? input.domain
+}
+
 export function TenantDomainPage({ session }: { session: AuthSession }) {
   const [route, setRoute] = useState<TenantDomainRoute>(() => tenantDomainRouteFromPath())
   const domainsQuery = useQuery({ queryKey: ["tenant-domains", session.selectedTenant.slug], queryFn: () => listDomains(session) })
   const queryClient = useQueryClient()
   const upsertMutation = useMutation({ mutationFn: (input: TenantDomainForm) => upsertDomain(session, input) })
+  const deleteMutation = useMutation({ mutationFn: (input: { domain: TenantDomainRecord; force: boolean; confirmation: string }) => deleteDomain(session, input) })
   const domains = domainsQuery.data ?? []
+  const [deleteTarget, setDeleteTarget] = useState<TenantDomainRecord | null>(null)
 
   useEffect(() => {
     function syncRoute() {
@@ -131,6 +172,24 @@ export function TenantDomainPage({ session }: { session: AuthSession }) {
     await queryClient.invalidateQueries({ queryKey: ["tenant-domains", session.selectedTenant.slug] })
   }
 
+  async function destroyDomain(input: { domain: TenantDomainRecord; force: boolean; confirmation: string }) {
+    try {
+      const deletedDomain = await deleteMutation.mutateAsync(input)
+      toast.success("Domain deleted", {
+        description: `${deletedDomain.domain} was permanently removed.`,
+      })
+      setDeleteTarget(null)
+      await queryClient.invalidateQueries({ queryKey: ["tenant-domains", session.selectedTenant.slug] })
+      if (route.mode === "show" && route.id === deletedDomain.id) {
+        navigate({ mode: "list" })
+      }
+    } catch (error) {
+      toast.error("Domain delete failed", {
+        description: error instanceof Error ? error.message : "Unable to delete domain.",
+      })
+    }
+  }
+
   if (route.mode === "new") {
     return <TenantDomainUpsertPage domains={domains} mode="new" session={session} onBack={() => navigate({ mode: "list" })} onSaved={(domain) => navigate({ mode: "show", id: domain.id })} />
   }
@@ -143,28 +202,46 @@ export function TenantDomainPage({ session }: { session: AuthSession }) {
   if (route.mode === "show") {
     const domain = domains.find((record) => record.id === route.id)
     return (
-      <TenantDomainShowPage
-        domain={domain}
-        isLoading={domainsQuery.isFetching}
-        onBack={() => navigate({ mode: "list" })}
-        onEdit={() => navigate({ mode: "edit", id: route.id })}
-        onRestore={() => { if (domain) void changeStatus(domain, "active") }}
-        onSuspend={() => { if (domain) void changeStatus(domain, "suspend") }}
-      />
+      <>
+        <TenantDomainShowPage
+          domain={domain}
+          isLoading={domainsQuery.isFetching}
+          onBack={() => navigate({ mode: "list" })}
+          onDelete={() => { if (domain) setDeleteTarget(domain) }}
+          onEdit={() => navigate({ mode: "edit", id: route.id })}
+          onRestore={() => { if (domain) void changeStatus(domain, "active") }}
+          onSuspend={() => { if (domain) void changeStatus(domain, "suspend") }}
+        />
+        <TenantDomainDeleteDialog
+          domain={deleteTarget}
+          isDeleting={deleteMutation.isPending}
+          onClose={() => setDeleteTarget(null)}
+          onDelete={(input) => void destroyDomain(input)}
+        />
+      </>
     )
   }
 
   return (
-    <TenantDomainMasterListPage
-      domains={domains}
-      isFetching={domainsQuery.isFetching}
-      onCreate={() => navigate({ mode: "new" })}
-      onEdit={(domain) => navigate({ mode: "edit", id: domain.id })}
-      onRefresh={() => void domainsQuery.refetch()}
-      onRestore={(domain) => void changeStatus(domain, "active")}
-      onShow={(domain) => navigate({ mode: "show", id: domain.id })}
-      onSuspend={(domain) => void changeStatus(domain, "suspend")}
-    />
+    <>
+      <TenantDomainMasterListPage
+        domains={domains}
+        isFetching={domainsQuery.isFetching}
+        onCreate={() => navigate({ mode: "new" })}
+        onDelete={(domain) => setDeleteTarget(domain)}
+        onEdit={(domain) => navigate({ mode: "edit", id: domain.id })}
+        onRefresh={() => void domainsQuery.refetch()}
+        onRestore={(domain) => void changeStatus(domain, "active")}
+        onShow={(domain) => navigate({ mode: "show", id: domain.id })}
+        onSuspend={(domain) => void changeStatus(domain, "suspend")}
+      />
+      <TenantDomainDeleteDialog
+        domain={deleteTarget}
+        isDeleting={deleteMutation.isPending}
+        onClose={() => setDeleteTarget(null)}
+        onDelete={(input) => void destroyDomain(input)}
+      />
+    </>
   )
 }
 
@@ -172,6 +249,7 @@ function TenantDomainMasterListPage({
   domains,
   isFetching,
   onCreate,
+  onDelete,
   onEdit,
   onRefresh,
   onRestore,
@@ -181,6 +259,7 @@ function TenantDomainMasterListPage({
   domains: TenantDomainRecord[]
   isFetching: boolean
   onCreate(): void
+  onDelete(domain: TenantDomainRecord): void
   onEdit(domain: TenantDomainRecord): void
   onRefresh(): void
   onRestore(domain: TenantDomainRecord): void
@@ -275,14 +354,19 @@ function TenantDomainMasterListPage({
                   <td className="px-4 py-2"><DomainStatusBadge status={domain.status} /></td>
                   <td className="px-4 py-2 text-muted-foreground">{formatDate(domain.updated_at)}</td>
                   <td className="px-4 py-1.5 text-right">
-                    <MasterListRowActions
-                      title={domain.domain}
-                      isSuspended={domain.status === "suspend"}
-                      onDelete={() => onSuspend(domain)}
-                      onEdit={() => onEdit(domain)}
-                      onRestore={() => onRestore(domain)}
-                      onView={() => onShow(domain)}
-                    />
+                    <div className="flex justify-end gap-1">
+                      <Button aria-label={`Delete ${domain.domain}`} className="size-8 rounded-md text-destructive hover:text-destructive" onClick={() => onDelete(domain)} size="icon" title="Delete permanently" type="button" variant="ghost">
+                        <Trash2 className="size-4" />
+                      </Button>
+                      <MasterListRowActions
+                        title={domain.domain}
+                        isSuspended={domain.status === "suspend"}
+                        onDelete={() => onSuspend(domain)}
+                        onEdit={() => onEdit(domain)}
+                        onRestore={() => onRestore(domain)}
+                        onView={() => onShow(domain)}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -313,6 +397,7 @@ function TenantDomainShowPage({
   domain,
   isLoading,
   onBack,
+  onDelete,
   onEdit,
   onRestore,
   onSuspend,
@@ -320,6 +405,7 @@ function TenantDomainShowPage({
   domain?: TenantDomainRecord
   isLoading: boolean
   onBack(): void
+  onDelete(): void
   onEdit(): void
   onRestore(): void
   onSuspend(): void
@@ -350,6 +436,12 @@ function TenantDomainShowPage({
             <Button onClick={onSuspend} type="button" variant="destructive" className="h-9 rounded-md">
               <Trash2 className="size-4" />
               Suspend
+            </Button>
+          ) : null}
+          {domain ? (
+            <Button onClick={onDelete} type="button" variant="destructive" className="h-9 rounded-md">
+              <Trash2 className="size-4" />
+              Delete
             </Button>
           ) : null}
         </div>
@@ -385,6 +477,80 @@ function TenantDomainShowPage({
         </div>
       )}
     </MasterListPageFrame>
+  )
+}
+
+function TenantDomainDeleteDialog({
+  domain,
+  isDeleting,
+  onClose,
+  onDelete,
+}: {
+  domain: TenantDomainRecord | null
+  isDeleting: boolean
+  onClose(): void
+  onDelete(input: { domain: TenantDomainRecord; force: boolean; confirmation: string }): void
+}) {
+  const [force, setForce] = useState(false)
+  const [confirmation, setConfirmation] = useState("")
+  const isOpen = Boolean(domain)
+  const canDelete = Boolean(domain && (!force || confirmation === domain.domain))
+
+  useEffect(() => {
+    if (!isOpen) {
+      setForce(false)
+      setConfirmation("")
+    }
+  }, [isOpen])
+
+  return (
+    <AlertDialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
+      <AlertDialogContent className="max-w-lg sm:max-w-lg">
+        <AlertDialogHeader className="text-left sm:place-items-start">
+          <AlertDialogMedia className="bg-destructive/10 text-destructive">
+            <ShieldAlert className="size-5" />
+          </AlertDialogMedia>
+          <AlertDialogTitle>Delete tenant domain?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This permanently removes the domain mapping. Safe delete is allowed only when the domain is not active and not primary.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {domain ? (
+          <div className="grid gap-4 text-sm">
+            <div className="rounded-md border border-border/70 bg-muted/30 p-3">
+              <div className="font-mono font-medium">{domain.domain}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {domain.tenant_name} ({domain.tenant_slug}) - {domain.status.replace("_", " ")} - {domain.is_primary ? "Primary" : "Alias"}
+              </div>
+            </div>
+            <label className={cn("flex cursor-pointer items-center justify-between gap-4 rounded-md border px-3 py-2", force ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border/70")}>
+              <span>
+                <span className="block font-medium">Force delete</span>
+                <span className="block text-xs text-muted-foreground">Use only after confirming this domain is no longer used for login, public site, or tenant routing.</span>
+              </span>
+              <Switch checked={force} onCheckedChange={setForce} />
+            </label>
+            {force ? (
+              <Field label={`Type ${domain.domain} to confirm`}>
+                <Input className="h-10 rounded-md font-mono" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} />
+              </Field>
+            ) : null}
+          </div>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <Button
+            disabled={!domain || !canDelete || isDeleting}
+            onClick={() => { if (domain) onDelete({ domain, force, confirmation }) }}
+            type="button"
+            variant="destructive"
+          >
+            <Trash2 className={cn("size-4", isDeleting && "animate-spin")} />
+            {force ? "Force delete" : "Delete"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 

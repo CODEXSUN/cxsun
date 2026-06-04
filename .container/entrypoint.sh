@@ -34,6 +34,7 @@ REDIS_SERVICE_TLS="${REDIS_TLS:-false}"
 QUEUE_RUNTIME_ENABLED="${QUEUE_ENABLED:-true}"
 DATABASE_BACKUP_INTERVAL="${DATABASE_BACKUP_INTERVAL_HOURS:-6}"
 INSTALL_RUN_TESTS="${INSTALL_RUN_TESTS:-false}"
+AUTO_SEED_TENANT_DOMAINS="${AUTO_SEED_TENANT_DOMAINS:-false}"
 SKIP_MARIADB_WAIT="${SKIP_MARIADB_WAIT:-true}"
 HEALTH_WAIT_SECONDS="${HEALTH_WAIT_SECONDS:-900}"
 
@@ -161,6 +162,7 @@ set_env_value "REDIS_TLS" "$REDIS_SERVICE_TLS"
 set_env_value "QUEUE_ENABLED" "$QUEUE_RUNTIME_ENABLED"
 set_env_value "DATABASE_BACKUP_INTERVAL_HOURS" "$DATABASE_BACKUP_INTERVAL"
 set_env_value "INSTALL_RUN_TESTS" "$INSTALL_RUN_TESTS"
+set_env_value "AUTO_SEED_TENANT_DOMAINS" "$AUTO_SEED_TENANT_DOMAINS"
 set_env_value "SKIP_MARIADB_WAIT" "$SKIP_MARIADB_WAIT"
 set_env_value "HEALTH_WAIT_SECONDS" "$HEALTH_WAIT_SECONDS"
 
@@ -196,12 +198,14 @@ export REDIS_TLS="$REDIS_SERVICE_TLS"
 export QUEUE_ENABLED="$QUEUE_RUNTIME_ENABLED"
 export DATABASE_BACKUP_INTERVAL_HOURS="$DATABASE_BACKUP_INTERVAL"
 export INSTALL_RUN_TESTS="$INSTALL_RUN_TESTS"
+export AUTO_SEED_TENANT_DOMAINS="$AUTO_SEED_TENANT_DOMAINS"
 export SKIP_MARIADB_WAIT="$SKIP_MARIADB_WAIT"
 export HEALTH_WAIT_SECONDS="$HEALTH_WAIT_SECONDS"
 
 echo "Configured ports: backend=$SERVER_PORT frontend=$FRONTEND_PORT api=$API_BASE_URL storage=$STORAGE_BASE_URL media=$MEDIA_MANAGER_URL"
 echo "Configured services: db=$DB_HOST:$DB_PORT redis=$REDIS_HOST:$REDIS_PORT"
 echo "Install tests: $INSTALL_RUN_TESTS"
+echo "Auto seed tenant domains: $AUTO_SEED_TENANT_DOMAINS"
 echo "MariaDB wait skipped: $SKIP_MARIADB_WAIT"
 echo "Health wait limit: ${HEALTH_WAIT_SECONDS}s"
 
@@ -305,9 +309,18 @@ for attempt in $(seq 1 "$HEALTH_ATTEMPTS"); do
   sleep 2
 done
 
-log_step "Checking strict tenant resolver"
-curl -fsS "http://127.0.0.1:${SERVER_PORT}/api/site/tenant-static?domain=codexsun.com" | grep -q '"resolved":true'
-echo "Tenant resolver passed"
+if [ "$AUTO_SEED_TENANT_DOMAINS" = "true" ]; then
+  log_step "Checking strict tenant resolver"
+  curl -fsS "http://127.0.0.1:${SERVER_PORT}/api/site/tenant-static?domain=codexsun.com" | grep -q '"resolved":true'
+  echo "Tenant resolver passed"
+else
+  log_step "Skipping auto-seeded tenant resolver check"
+  if curl -fsS "http://127.0.0.1:${SERVER_PORT}/api/site/tenant-static?domain=codexsun.com" | grep -q '"resolved":true'; then
+    echo "Tenant resolver passed for existing configured domain"
+  else
+    echo "Tenant resolver domain is not auto-created. Configure tenant domains manually in Super Admin."
+  fi
+fi
 
 trap shutdown INT TERM
 

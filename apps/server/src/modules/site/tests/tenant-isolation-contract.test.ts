@@ -7,6 +7,8 @@ import { SiteSliderRepository } from '../slider/infrastructure/site-slider.repos
 
 const marker = `tenant-isolation-${Date.now()}`
 
+process.env.AUTO_SEED_TENANT_DOMAINS = 'true'
+
 await initializeDatabase()
 
 try {
