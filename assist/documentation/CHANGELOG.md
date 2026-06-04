@@ -2,14 +2,21 @@
 
 ## Version State
 
-- **Current version:** `1.0.77`
-- **Release tag:** `v-1.0.77`
-- **Changelog label:** `v 1.0.77`
+- **Current version:** `1.0.78`
+- **Release tag:** `v-1.0.78`
+- **Changelog label:** `v 1.0.78`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.78
+
+### [v 1.0.78] 2026-06-04 10:50 pm - Billing chart runtime fix
+
+- Bumped workspace version to 1.0.78
+- Fixed the Billing Overview Recharts runtime crash by removing explicit Y-axis components that triggered an undefined `allowDataOverflow` axis read in the generated chart bundle.
+- Kept the Billing Overview transaction charts active with shadcn chart containers, X-axis labels, grid lines, tooltips, transaction movement lines, and GST bars.
 ## v-1.0.77
 
 ### [v 1.0.77] 2026-06-04 10:34 pm - Billing overview transaction dashboard

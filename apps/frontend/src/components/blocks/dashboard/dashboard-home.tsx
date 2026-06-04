@@ -1,6 +1,6 @@
 import { Bug, Building2, ChevronRight, Headset, Network, RefreshCw, ShieldCheck } from "lucide-react"
 import { useMemo } from "react"
-import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis } from "recharts"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
 import { SectionCards } from "./section-cards"
@@ -179,7 +179,6 @@ function BillingTransactionDashboard({ session }: { session: AuthSession }) {
               <LineChart accessibilityLayer data={summary.monthly}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => compactCurrency(Number(value))} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Line dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} type="monotone" dot={false} />
                 <Line dataKey="purchase" stroke="var(--color-purchase)" strokeWidth={2} type="monotone" dot={false} />
@@ -200,7 +199,6 @@ function BillingTransactionDashboard({ session }: { session: AuthSession }) {
               <BarChart accessibilityLayer data={summary.gstChart}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value) => compactCurrency(Number(value))} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="amount" radius={[6, 6, 0, 0]} fill="var(--color-amount)" />
               </BarChart>
@@ -403,12 +401,4 @@ function formatCurrency(value: number) {
     maximumFractionDigits: 2,
     style: "currency",
   }).format(value)
-}
-
-function compactCurrency(value: number) {
-  const absolute = Math.abs(value)
-  if (absolute >= 10000000) return `${(value / 10000000).toFixed(1)} Cr`
-  if (absolute >= 100000) return `${(value / 100000).toFixed(1)} L`
-  if (absolute >= 1000) return `${(value / 1000).toFixed(1)} K`
-  return `${Math.round(value)}`
 }
