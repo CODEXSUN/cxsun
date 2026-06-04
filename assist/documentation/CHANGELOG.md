@@ -17,6 +17,8 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 - Bumped workspace version to 1.0.78
 - Fixed the Billing Overview Recharts runtime crash by removing explicit Y-axis components that triggered an undefined `allowDataOverflow` axis read in the generated chart bundle.
 - Kept the Billing Overview transaction charts active with shadcn chart containers, X-axis labels, grid lines, tooltips, transaction movement lines, and GST bars.
+- Replaced the Billing Overview chart surface with custom animated SVG bars, removed duplicate mini totals from Transaction Movement, clipped Recent Transactions to match chart height, and made recent rows open their matching sales, purchase, receipt, or payment show page.
+- Polished Billing Overview summary cards with cleaner spacing, hidden bill counts, colorful transaction icons, and distinct receipt/payment icons.
 ## v-1.0.77
 
 ### [v 1.0.77] 2026-06-04 10:34 pm - Billing overview transaction dashboard

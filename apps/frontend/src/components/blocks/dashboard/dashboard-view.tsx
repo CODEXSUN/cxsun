@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { AppSidebar, type DashboardMode, type DashboardPage } from 'src/components/blocks/sidebar/app-sidebar'
 import { SiteHeader } from 'src/components/blocks/layout/site-header'
 import { SidebarInset, SidebarProvider } from 'src/components/ui/sidebar'
-import { DashboardHome } from './dashboard-home'
+import { DashboardHome, type BillingRecentTransaction } from './dashboard-home'
 import {
   clearAuthCache,
   getStoredSession,
@@ -301,6 +301,7 @@ export function DashboardView({
   const [enabledApps, setEnabledApps] = useState<Record<DashboardAppId, boolean>>(() => initialEnabledApps)
   const [landingApp, setLandingApp] = useState<DashboardAppId>(() => initialLandingApp)
   const [activeApp, setActiveApp] = useState<DashboardAppId>(() => dashboardAppFromPage(initialPage) ?? (initialPage === "overview" && mode === "tenant" ? initialLandingApp : readStoredApp()))
+  const [focusedBillingEntry, setFocusedBillingEntry] = useState<{ id: string; type: BillingRecentTransaction["type"] } | null>(null)
 
   useEffect(() => {
     if (mode !== "tenant" || !session) return
@@ -476,6 +477,17 @@ export function DashboardView({
     pushDashboardPage(basePath, page)
   }
 
+  function openBillingEntry(entry: BillingRecentTransaction) {
+    const pageByType: Record<BillingRecentTransaction["type"], DashboardPage> = {
+      payment: "app-billing-payments",
+      purchase: "app-billing-purchase",
+      receipt: "app-billing-receipts",
+      sales: "app-billing-sales",
+    }
+    setFocusedBillingEntry({ id: entry.id, type: entry.type })
+    navigate(pageByType[entry.type])
+  }
+
   function changeApp(appId: DashboardAppId) {
     if (!enabledApps[appId]) {
       return
@@ -541,6 +553,7 @@ export function DashboardView({
               appEnabled={enabledApps}
               mode={mode}
               onChangeApp={changeApp}
+              onOpenBillingEntry={openBillingEntry}
               onNavigate={navigate}
               session={session}
             />
@@ -576,13 +589,13 @@ export function DashboardView({
           ) : visiblePage === "tenant-roles" ? (
             <SupportPage type="tenant-roles" />
           ) : visiblePage === "app-billing-sales" ? (
-            <SalesPage session={session} />
+            <SalesPage initialEntryUuid={focusedBillingEntry?.type === "sales" ? focusedBillingEntry.id : null} session={session} />
           ) : visiblePage === "app-accounts-cash-book" || visiblePage === "app-billing-cash-book" ? (
             <CashBookPage session={session} />
           ) : visiblePage === "app-accounts-bank-book" || visiblePage === "app-billing-bank-book" ? (
             <BankBookPage session={session} />
           ) : visiblePage === "app-billing-purchase" ? (
-            <PurchasePage session={session} />
+            <PurchasePage initialEntryUuid={focusedBillingEntry?.type === "purchase" ? focusedBillingEntry.id : null} session={session} />
           ) : visiblePage === "app-inventory-purchase" ? (
             <PurchaseReceiptPage session={session} />
           ) : visiblePage === "app-inventory-delivery-note" ? (
@@ -590,9 +603,9 @@ export function DashboardView({
           ) : visiblePage === "app-inventory-stock-ledger" ? (
             <StockLedgerPage session={session} />
           ) : visiblePage === "app-billing-receipts" ? (
-            <ReceiptPage session={session} />
+            <ReceiptPage initialEntryUuid={focusedBillingEntry?.type === "receipt" ? focusedBillingEntry.id : null} session={session} />
           ) : visiblePage === "app-billing-payments" ? (
-            <PaymentPage session={session} />
+            <PaymentPage initialEntryUuid={focusedBillingEntry?.type === "payment" ? focusedBillingEntry.id : null} session={session} />
           ) : visiblePage === "app-billing-customer-statement" ? (
             <CustomerStatementReportPage session={session} />
           ) : visiblePage === "app-billing-supplier-statement" ? (
@@ -645,6 +658,7 @@ export function DashboardView({
               appEnabled={enabledApps}
               mode={mode}
               onChangeApp={changeApp}
+              onOpenBillingEntry={openBillingEntry}
               onNavigate={navigate}
               session={session}
             />

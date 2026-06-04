@@ -1,4 +1,4 @@
-import { Bug, Building2, ChevronRight, Headset, Network, RefreshCw, ShieldCheck } from "lucide-react"
+import { Bug, Building2, ChevronRight, HandCoins, Headset, Network, RefreshCw, ReceiptIndianRupee, ReceiptText, ShieldCheck, ShoppingBag } from "lucide-react"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
@@ -62,6 +62,7 @@ export function DashboardHome({
   activeApp = "application",
   mode,
   onChangeApp,
+  onOpenBillingEntry,
   onNavigate,
   session,
 }: {
@@ -69,6 +70,7 @@ export function DashboardHome({
   appEnabled?: Record<DashboardAppId, boolean>
   mode: DashboardMode
   onChangeApp?: (appId: DashboardAppId) => void
+  onOpenBillingEntry?: (entry: BillingRecentTransaction) => void
   onNavigate?: (page: DashboardPage) => void
   session?: AuthSession
 }) {
@@ -105,7 +107,7 @@ export function DashboardHome({
         </div>
       </div>
       {metrics.length ? <SectionCards metrics={metrics} /> : null}
-      {mode === "tenant" && activeApp === "billing" && session ? <BillingTransactionDashboard session={session} /> : null}
+      {mode === "tenant" && activeApp === "billing" && session ? <BillingTransactionDashboard onOpenBillingEntry={onOpenBillingEntry} session={session} /> : null}
       {mode === "tenant" ? <DeskShortcutCards appId={selectedApp.id} onNavigate={onNavigate} onChangeApp={onChangeApp} /> : null}
       {cards.length ? (
         <div className="grid gap-4 px-4 lg:grid-cols-3 lg:px-6">
@@ -126,7 +128,7 @@ export function DashboardHome({
   )
 }
 
-function BillingTransactionDashboard({ session }: { session: AuthSession }) {
+function BillingTransactionDashboard({ onOpenBillingEntry, session }: { onOpenBillingEntry?: (entry: BillingRecentTransaction) => void; session: AuthSession }) {
   const salesQuery = useQuery({ queryKey: ["billing-overview-sales", session.selectedTenant.slug], queryFn: () => listSalesEntries(session) })
   const purchaseQuery = useQuery({ queryKey: ["billing-overview-purchase", session.selectedTenant.slug], queryFn: () => listPurchaseEntries(session) })
   const receiptQuery = useQuery({ queryKey: ["billing-overview-receipt", session.selectedTenant.slug], queryFn: () => listReceiptEntries(session) })
@@ -144,54 +146,57 @@ function BillingTransactionDashboard({ session }: { session: AuthSession }) {
   )
 
   return (
-    <div className="space-y-4 px-4 lg:px-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {summary.cards.map((card) => (
-          <Card key={card.label} className="rounded-md border-border/70 bg-card/95 shadow-sm">
-            <CardHeader className="pb-2">
-              <p className="text-sm text-muted-foreground">{card.label}</p>
-              <CardTitle className="text-2xl tabular-nums">{isLoading ? "..." : formatCurrency(card.yearAmount)}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1 text-sm">
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">This year</span>
-                <span className="font-medium">{card.yearCount} entries</span>
-              </div>
-              <div className="flex justify-between gap-3">
-                <span className="text-muted-foreground">This month</span>
-                <span className="font-medium">{formatCurrency(card.monthAmount)} · {card.monthCount}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-5 px-4 lg:px-6">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        {summary.cards.map((card) => {
+          const visual = billingCardVisual(card.label)
+          const Icon = visual.icon
+          return (
+            <Card key={card.label} className="rounded-md border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="px-5 pb-3 pt-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{card.label}</p>
+                    <CardTitle className="mt-1 text-2xl tabular-nums">{isLoading ? "..." : formatCurrency(card.yearAmount)}</CardTitle>
+                  </div>
+                  <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-md text-white", visual.accent)}>
+                    <Icon className="size-5" />
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 px-5 pb-5 text-sm">
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">This year</span>
+                  <span className="font-medium">{formatCurrency(card.yearAmount)}</span>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <span className="text-muted-foreground">This month</span>
+                  <span className="font-medium">{formatCurrency(card.monthAmount)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-        <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
-          <CardHeader>
+      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <Card className="h-full rounded-md border-border/70 bg-card/95 shadow-sm">
+          <CardHeader className="px-5 pb-4 pt-5">
             <CardTitle>Transaction Movement</CardTitle>
             <p className="text-sm text-muted-foreground">Monthly sales, purchase, receipts, and payments for the current accounting year list.</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-5 pb-5">
             <TransactionBars rows={summary.monthly} />
           </CardContent>
         </Card>
 
-        <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
-          <CardHeader>
-            <CardTitle>GST Totals</CardTitle>
-            <p className="text-sm text-muted-foreground">Output, input, and net GST values from billing entries.</p>
+        <Card className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border-border/70 bg-card/95 shadow-sm">
+          <CardHeader className="px-5 pb-4 pt-5">
+            <CardTitle>Recent Transactions</CardTitle>
+            <p className="text-sm text-muted-foreground">Latest sales, purchase, receipt, and payment activity.</p>
           </CardHeader>
-          <CardContent>
-            <GstBars rows={summary.gstChart} />
-            <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
-              {summary.gstChart.map((item) => (
-                <div key={item.label} className="rounded-md border border-border/70 p-2">
-                  <div className="text-muted-foreground">{item.label}</div>
-                  <div className="font-semibold">{formatCurrency(item.amount)}</div>
-                </div>
-              ))}
-            </div>
+          <CardContent className="min-h-0 flex-1 overflow-hidden px-5 pb-5">
+            <RecentTransactions onOpen={onOpenBillingEntry} rows={summary.recent} />
           </CardContent>
         </Card>
       </div>
@@ -236,69 +241,114 @@ function DeskShortcutCards({ appId, onChangeApp, onNavigate }: { appId: Dashboar
 function TransactionBars({ rows }: { rows: Array<{ month: string; payments: number; purchase: number; receipts: number; sales: number }> }) {
   const maxValue = Math.max(1, ...rows.flatMap((row) => [row.sales, row.purchase, row.receipts, row.payments]))
   const series = [
-    { key: "sales", label: "Sales", color: "bg-emerald-600" },
-    { key: "purchase", label: "Purchase", color: "bg-sky-500" },
-    { key: "receipts", label: "Receipts", color: "bg-amber-500" },
-    { key: "payments", label: "Payments", color: "bg-rose-500" },
+    { key: "sales", label: "Sales", color: "#059669" },
+    { key: "purchase", label: "Purchase", color: "#0ea5e9" },
+    { key: "receipts", label: "Receipts", color: "#f59e0b" },
+    { key: "payments", label: "Payments", color: "#e11d48" },
   ] as const
+  const width = 720
+  const height = 280
+  const padding = { bottom: 34, left: 32, right: 16, top: 14 }
+  const chartHeight = height - padding.top - padding.bottom
+  const chartWidth = width - padding.left - padding.right
+  const groupWidth = chartWidth / rows.length
+  const barWidth = Math.min(9, Math.max(4, groupWidth / 7))
+  const chartBottom = height - padding.bottom
+
+  function yFor(value: number) {
+    return chartBottom - (value / maxValue) * chartHeight
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
         {series.map((item) => (
           <span key={item.key} className="inline-flex items-center gap-1.5">
-            <span className={cn("size-2 rounded-sm", item.color)} />
+            <span className="size-2 rounded-sm" style={{ backgroundColor: item.color }} />
             {item.label}
           </span>
         ))}
       </div>
-      <div className="grid h-[260px] grid-cols-12 items-end gap-2 border-b border-border/70 pb-6">
-        {rows.map((row) => (
-          <div key={row.month} className="relative flex h-full min-w-0 items-end justify-center gap-0.5">
-            {series.map((item) => {
-              const value = row[item.key]
-              return (
-                <span
-                  aria-label={`${item.label} ${row.month}: ${formatCurrency(value)}`}
-                  className={cn("w-full max-w-[8px] rounded-t-sm", item.color)}
-                  key={item.key}
-                  style={{ height: `${Math.max(value > 0 ? 4 : 0, (value / maxValue) * 100)}%` }}
-                  title={`${item.label}: ${formatCurrency(value)}`}
-                />
-              )
-            })}
-            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[11px] text-muted-foreground">{row.month}</span>
-          </div>
-        ))}
+      <div className="overflow-hidden rounded-md border border-border/70 bg-background/70 px-4 py-5">
+        <svg aria-label="Monthly billing transaction movement" className="h-[300px] w-full" preserveAspectRatio="none" role="img" viewBox={`0 0 ${width} ${height}`}>
+          {[0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = chartBottom - chartHeight * ratio
+            return <line key={ratio} stroke="hsl(var(--border))" strokeOpacity="0.7" strokeWidth="1" x1={padding.left} x2={width - padding.right} y1={y} y2={y} />
+          })}
+          {rows.map((row, monthIndex) => {
+            const groupStart = padding.left + monthIndex * groupWidth
+            const groupCenter = groupStart + groupWidth / 2
+            return (
+              <g key={row.month}>
+                {series.map((item, seriesIndex) => {
+                  const value = row[item.key]
+                  const barHeight = (value / maxValue) * chartHeight
+                  const x = groupCenter - (series.length * barWidth + (series.length - 1) * 3) / 2 + seriesIndex * (barWidth + 3)
+                  const y = yFor(value)
+                  const begin = `${monthIndex * 35 + seriesIndex * 25}ms`
+                  return (
+                    <rect fill={item.color} key={item.key} rx="3" width={barWidth} x={x} y={chartBottom} height="0">
+                      <title>{`${item.label} ${row.month}: ${formatCurrency(value)}`}</title>
+                      <animate attributeName="height" begin={begin} dur="650ms" fill="freeze" from="0" to={String(Math.max(0, barHeight))} />
+                      <animate attributeName="y" begin={begin} dur="650ms" fill="freeze" from={String(chartBottom)} to={String(y)} />
+                    </rect>
+                  )
+                })}
+                <text fill="hsl(var(--muted-foreground))" fontSize="11" textAnchor="middle" x={groupCenter} y={height - 8}>{row.month}</text>
+              </g>
+            )
+          })}
+        </svg>
       </div>
     </div>
   )
 }
 
-function GstBars({ rows }: { rows: Array<{ amount: number; label: string }> }) {
-  const maxValue = Math.max(1, ...rows.map((row) => Math.abs(row.amount)))
+function billingCardVisual(label: string) {
+  if (label === "Total Sales") return { accent: "bg-emerald-600", icon: ReceiptText }
+  if (label === "Total Purchase") return { accent: "bg-sky-600", icon: ShoppingBag }
+  if (label === "Receipts") return { accent: "bg-amber-500", icon: ReceiptIndianRupee }
+  return { accent: "bg-rose-600", icon: HandCoins }
+}
+
+function RecentTransactions({ onOpen, rows }: { onOpen?: (entry: BillingRecentTransaction) => void; rows: BillingRecentTransaction[] }) {
+  if (!rows.length) {
+    return <div className="rounded-md border border-dashed border-border/70 p-4 text-sm text-muted-foreground">No recent transactions found for the current accounting year.</div>
+  }
 
   return (
-    <div className="space-y-3">
-      {rows.map((row) => {
-        const negative = row.amount < 0
-        return (
-          <div key={row.label} className="space-y-1.5">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="font-medium">{row.label}</span>
-              <span className="text-muted-foreground">{formatCurrency(row.amount)}</span>
+    <div className="max-h-[395px] space-y-3 overflow-hidden">
+      {rows.map((row) => (
+        <button
+          key={`${row.type}-${row.id}`}
+          className="flex w-full items-start justify-between gap-4 rounded-md border border-border/70 bg-background/70 px-4 py-3.5 text-left transition hover:border-primary/40 hover:bg-primary/5"
+          onClick={() => onOpen?.(row)}
+          title={`Open ${row.documentNo}`}
+          type="button"
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className={cn("size-2 rounded-full", transactionTone(row.type))} />
+              <span className="truncate text-sm font-semibold">{row.documentNo}</span>
             </div>
-            <div className="h-8 overflow-hidden rounded-md bg-muted">
-              <div
-                className={cn("h-full rounded-md", negative ? "bg-rose-500" : "bg-emerald-600")}
-                style={{ width: `${Math.max(2, (Math.abs(row.amount) / maxValue) * 100)}%` }}
-              />
-            </div>
+            <div className="mt-1 truncate text-xs text-muted-foreground">{row.partyName || row.type}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{formatDisplayDate(row.date)}</div>
           </div>
-        )
-      })}
+          <div className="shrink-0 text-right">
+            <div className="text-sm font-semibold tabular-nums">{formatCurrency(row.amount)}</div>
+            <div className="mt-1 text-xs capitalize text-muted-foreground">{row.type}</div>
+          </div>
+        </button>
+      ))}
     </div>
   )
+}
+
+function transactionTone(type: BillingRecentTransaction["type"]) {
+  if (type === "sales") return "bg-emerald-600"
+  if (type === "purchase") return "bg-sky-500"
+  if (type === "receipt") return "bg-amber-500"
+  return "bg-rose-500"
 }
 
 function ShortcutButton({ item, onSelect }: { item: DashboardAppMenuItem; onSelect(page: DashboardPage): void }) {
@@ -352,6 +402,15 @@ interface BillingSummaryInput {
   sales: SalesEntry[]
 }
 
+export interface BillingRecentTransaction {
+  amount: number
+  date: string | null
+  documentNo: string
+  id: string
+  partyName: string
+  type: "payment" | "purchase" | "receipt" | "sales"
+}
+
 function buildBillingSummary(input: BillingSummaryInput) {
   const now = new Date()
   const currentMonth = now.getMonth()
@@ -368,8 +427,6 @@ function buildBillingSummary(input: BillingSummaryInput) {
   const payments = summarizeTransactions(input.payments, (entry) => entry.payment_date, (entry) => entry.net_amount, currentMonth, (entry) => {
     addMonthly(monthly, entry.payment_date, "payments", entry.net_amount)
   })
-  const outputGst = input.sales.reduce((total, entry) => total + numeric(entry.tax_total), 0)
-  const inputGst = input.purchases.reduce((total, entry) => total + numeric(entry.tax_total), 0)
 
   return {
     cards: [
@@ -378,13 +435,48 @@ function buildBillingSummary(input: BillingSummaryInput) {
       { label: "Receipts", ...receipts },
       { label: "Payments", ...payments },
     ],
-    gstChart: [
-      { label: "Output", amount: outputGst },
-      { label: "Input", amount: inputGst },
-      { label: "Net", amount: outputGst - inputGst },
-    ],
     monthly,
+    recent: recentBillingTransactions(input),
   }
+}
+
+function recentBillingTransactions(input: BillingSummaryInput): BillingRecentTransaction[] {
+  return [
+    ...input.sales.map((entry) => ({
+      amount: numeric(entry.grand_total),
+      date: entry.invoice_date,
+      documentNo: entry.invoice_no,
+      id: String(entry.uuid ?? entry.id),
+      partyName: entry.customer_name,
+      type: "sales" as const,
+    })),
+    ...input.purchases.map((entry) => ({
+      amount: numeric(entry.grand_total),
+      date: entry.entry_date,
+      documentNo: entry.entry_no,
+      id: String(entry.uuid ?? entry.id),
+      partyName: entry.supplier_name,
+      type: "purchase" as const,
+    })),
+    ...input.receipts.map((entry) => ({
+      amount: numeric(entry.net_amount),
+      date: entry.receipt_date,
+      documentNo: entry.receipt_no,
+      id: String(entry.uuid ?? entry.id),
+      partyName: entry.party_name,
+      type: "receipt" as const,
+    })),
+    ...input.payments.map((entry) => ({
+      amount: numeric(entry.net_amount),
+      date: entry.payment_date,
+      documentNo: entry.payment_no,
+      id: String(entry.uuid ?? entry.id),
+      partyName: entry.party_name,
+      type: "payment" as const,
+    })),
+  ]
+    .sort((left, right) => (parseEntryDate(right.date)?.getTime() ?? 0) - (parseEntryDate(left.date)?.getTime() ?? 0))
+    .slice(0, 8)
 }
 
 function summarizeTransactions<T>(
@@ -439,4 +531,14 @@ function formatCurrency(value: number) {
     maximumFractionDigits: 2,
     style: "currency",
   }).format(value)
+}
+
+function formatDisplayDate(value: string | null) {
+  const date = parseEntryDate(value)
+  if (!date) return "-"
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date)
 }

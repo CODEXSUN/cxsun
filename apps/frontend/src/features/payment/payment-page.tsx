@@ -89,7 +89,7 @@ const paymentColumnCatalog: Array<{ id: PaymentColumnId; label: string }> = [
   { id: "updated", label: "Updated" },
 ]
 
-export function PaymentPage({ session }: { session: AuthSession }) {
+export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: string | null; session: AuthSession }) {
   const queryClient = useQueryClient()
   const [view, setView] = useState<PaymentView>({ mode: "list" })
   const [searchValue, setSearchValue] = useState("")
@@ -112,6 +112,12 @@ export function PaymentPage({ session }: { session: AuthSession }) {
   useEffect(() => {
     if (entriesQuery.error) toast.error("Payment load failed", { description: entriesQuery.error instanceof Error ? entriesQuery.error.message : "Unable to load payment entries." })
   }, [entriesQuery.error])
+
+  useEffect(() => {
+    if (!initialEntryUuid || !entries.length) return
+    const entry = entries.find((item) => String(item.uuid ?? item.id) === initialEntryUuid)
+    if (entry) setView({ mode: "show", entry })
+  }, [entries, initialEntryUuid])
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey })

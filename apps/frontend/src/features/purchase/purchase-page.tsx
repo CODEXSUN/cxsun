@@ -112,7 +112,7 @@ const purchaseColumnCatalog: Array<{ id: PurchaseColumnId; label: string }> = [
   { id: "updated", label: "Updated" },
 ]
 
-export function PurchasePage({ session }: { session: AuthSession }) {
+export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?: string | null; session: AuthSession }) {
   const queryClient = useQueryClient()
   const [view, setView] = useState<PurchaseView>({ mode: "list" })
   const [searchValue, setSearchValue] = useState("")
@@ -135,6 +135,12 @@ export function PurchasePage({ session }: { session: AuthSession }) {
   useEffect(() => {
     if (entriesQuery.error) toast.error("Purchase load failed", { description: entriesQuery.error instanceof Error ? entriesQuery.error.message : "Unable to load Purchase entries." })
   }, [entriesQuery.error])
+
+  useEffect(() => {
+    if (!initialEntryUuid || !entries.length) return
+    const entry = entries.find((item) => String(item.uuid ?? item.id) === initialEntryUuid)
+    if (entry) setView({ mode: "show", entry })
+  }, [entries, initialEntryUuid])
 
   async function refresh() {
     await queryClient.invalidateQueries({ queryKey })
