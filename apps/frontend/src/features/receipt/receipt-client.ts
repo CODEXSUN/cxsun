@@ -144,9 +144,9 @@ export async function addReceiptComment(session: AuthSession, entry: ReceiptEntr
   return result.entry
 }
 
-export async function runReceiptTool(session: AuthSession, entry: ReceiptEntry, tool: string) {
+export async function runReceiptTool(session: AuthSession, entry: ReceiptEntry, tool: string, printHtml?: string) {
   const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt/${entry.uuid}/tools`, {
-    body: JSON.stringify({ tool }),
+    body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",

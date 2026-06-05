@@ -174,7 +174,14 @@ function MailMessagesPage({ session, view }: { session: AuthSession; view: MailV
                     {visibleColumns.from ? <td className="truncate px-4 py-2.5">{message.from_name || message.from_email || message.created_by}</td> : null}
                     {visibleColumns.to ? <td className="truncate px-4 py-2.5 text-muted-foreground">{message.to_json.join(", ") || "-"}</td> : null}
                     {visibleColumns.status ? <td className="px-4 py-2.5"><StatusBadge status={message.status} /></td> : null}
-                    {visibleColumns.attachments ? <td className="px-4 py-2.5 text-right text-muted-foreground">{message.attachments?.length ?? 0}</td> : null}
+                    {visibleColumns.attachments ? (
+                      <td className="px-4 py-2.5 text-right text-muted-foreground">
+                        <span className={cn("inline-flex items-center justify-end gap-1.5", message.attachments?.length ? "text-foreground" : "")}>
+                          {message.attachments?.length ? <Paperclip className="size-4 text-primary" /> : null}
+                          {message.attachments?.length ?? 0}
+                        </span>
+                      </td>
+                    ) : null}
                     <td className="px-4 py-2 text-right">
                       <MasterListRowActions
                         deleteLabel="Trash"
@@ -267,8 +274,18 @@ function MailViewDialog({ message, onOpenChange }: { message: MailMessage | null
             <div className="rounded-md border border-border/70 bg-background p-3 leading-6 text-muted-foreground whitespace-pre-wrap">{message.body_text || "-"}</div>
             {message.attachments?.length ? (
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Attachments</h3>
-                {message.attachments.map((attachment) => <div key={attachment.uuid} className="rounded-md bg-muted/50 px-2 py-1 text-xs">{attachment.file_name} - {formatBytes(attachment.size_bytes)}</div>)}
+                <h3 className="flex items-center gap-2 text-sm font-medium"><Paperclip className="size-4 text-primary" />Attachments ({message.attachments.length})</h3>
+                <div className="grid gap-2">
+                  {message.attachments.map((attachment) => (
+                    <div key={attachment.uuid} className="flex items-center gap-3 rounded-md border border-border/70 bg-muted/30 px-3 py-2">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary"><Paperclip className="size-4" /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-foreground">{attachment.file_name}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{attachment.mime_type} · {formatBytes(attachment.size_bytes)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : null}
             {message.events?.length ? (

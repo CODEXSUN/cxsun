@@ -75,13 +75,13 @@ export class PurchaseEntryService {
     return { ok: true, entry }
   }
 
-  async tool(headers: TenantRequestHeaders, idOrUuid: string, body: { tool?: unknown }) {
+  async tool(headers: TenantRequestHeaders, idOrUuid: string, body: { printHtml?: unknown; tool?: unknown }) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const tool = String(body.tool ?? 'tool').trim()
     const existing = await this.purchaseEntries.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Purchase entry was not found.')
     const recipient = emailRecipient(tool)
-    if (recipient) await this.documentMail.queueEntryEmail(context, 'purchase', existing as unknown as Record<string, unknown>, recipient)
+    if (recipient) await this.documentMail.queueEntryEmail(context, 'purchase', existing as unknown as Record<string, unknown>, recipient, body.printHtml)
     const activity = recipient ? `Email queued to ${recipient}` : `${tool} requested`
     const entry = await this.purchaseEntries.addActivity(context, idOrUuid, 'tool', activity)
     if (!entry) throw new NotFoundException('Purchase entry was not found.')

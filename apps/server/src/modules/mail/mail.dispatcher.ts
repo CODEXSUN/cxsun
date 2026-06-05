@@ -1,12 +1,14 @@
 import nodemailer from 'nodemailer'
+import { access } from 'node:fs/promises'
 import { getDatabase } from '../../infrastructure/database/connection.js'
 import { getTenantDatabase } from '../../infrastructure/tenant-database/tenant-database.connection.js'
 import type { Tenant } from '../../core/tenant/domain/tenant.types.js'
 import { defaultMailTransportSettings } from './mail-defaults.js'
+import { parseTemporaryMailAttachments, removeTemporaryMailAttachments, temporaryMailAttachmentPath } from './mail-temporary-storage.js'
 
 type DynamicDatabase = Record<string, Record<string, unknown>>
 
-export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageUuid?: unknown; requestedBy?: unknown }) {
+export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageUuid?: unknown; requestedBy?: unknown; temporaryAttachments?: unknown }) {
   const tenantSlug = String(input.tenantSlug ?? '').trim()
   const messageUuid = String(input.messageUuid ?? '').trim()
   if (!tenantSlug || !messageUuid) throw new Error('Mail queue payload requires tenantSlug and messageUuid.')
@@ -17,7 +19,11 @@ export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageU
   const database = getTenantDatabase(tenant as Tenant) as unknown as import('kysely').Kysely<DynamicDatabase>
   const message = await database.selectFrom('mail_messages').selectAll().where('uuid', '=', messageUuid).executeTakeFirst()
   if (!message) throw new Error(`Mail message not found: ${messageUuid}`)
-  if (String(message.status) === 'sent') return { ok: true, alreadySent: true, messageUuid }
+  const temporaryAttachments = parseTemporaryMailAttachments(input.temporaryAttachments)
+  if (String(message.status) === 'sent') {
+    await removeTemporaryMailAttachments(tenantSlug, temporaryAttachments)
+    return { ok: true, alreadySent: true, messageUuid }
+  }
 
   const messageCompanyId = Number(message.company_id ?? 0) || null
   const settingsQuery = database.selectFrom('mail_settings').selectAll()
@@ -30,13 +36,27 @@ export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageU
 
   await database.updateTable('mail_messages').set({ status: 'sending', updated_at: new Date() }).where('id', '=', Number(message.id)).execute()
   try {
+    await ensureTemporaryAttachmentMetadata(database, Number(message.id), temporaryAttachments)
     const attachments = await database.selectFrom('mail_attachments').selectAll().where('mail_message_id', '=', Number(message.id)).orderBy('id', 'asc').execute()
+    await Promise.all(temporaryAttachments.map((attachment) => access(temporaryMailAttachmentPath(tenantSlug, attachment.relativePath))))
     const transporter = nodemailer.createTransport({
       host: String(settings.host),
       port: Number(settings.port ?? 587),
       secure: Boolean(settings.secure),
       auth: settings.username ? { user: String(settings.username), pass: String(settings.password_secret ?? '') } : undefined,
     })
+    const outboundAttachments: Array<{ filename: string; contentType: string; content?: Buffer; path?: string }> = [
+      ...attachments.filter((attachment) => String(attachment.content_base64 ?? '').trim()).map((attachment) => ({
+        filename: String(attachment.file_name),
+        contentType: String(attachment.mime_type),
+        content: Buffer.from(String(attachment.content_base64 ?? ''), 'base64'),
+      })),
+      ...temporaryAttachments.map((attachment) => ({
+        filename: attachment.fileName,
+        contentType: attachment.mimeType,
+        path: temporaryMailAttachmentPath(tenantSlug, attachment.relativePath),
+      })),
+    ]
     const result = await transporter.sendMail({
       from: formatAddress(String(message.from_email), stringOrNull(message.from_name)),
       to: parseArray(message.to_json),
@@ -46,11 +66,7 @@ export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageU
       subject: String(message.subject),
       text: stringOrNull(message.body_text) ?? undefined,
       html: stringOrNull(message.body_html) ?? undefined,
-      attachments: attachments.map((attachment) => ({
-        filename: String(attachment.file_name),
-        contentType: String(attachment.mime_type),
-        content: Buffer.from(String(attachment.content_base64 ?? ''), 'base64'),
-      })),
+      attachments: outboundAttachments,
     })
 
     await database.updateTable('mail_messages').set({
@@ -62,6 +78,7 @@ export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageU
       updated_at: new Date(),
     }).where('id', '=', Number(message.id)).execute()
     await addEvent(database, Number(message.id), 'sent', String(input.requestedBy ?? 'mail-worker'), 'Mail sent through SMTP.', { messageId: result.messageId })
+    await removeTemporaryMailAttachments(tenantSlug, temporaryAttachments)
     return { ok: true, messageUuid, providerMessageId: result.messageId ?? null }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
@@ -73,6 +90,27 @@ export async function dispatchQueuedMail(input: { tenantSlug?: unknown; messageU
     }).where('id', '=', Number(message.id)).execute()
     await addEvent(database, Number(message.id), 'failed', String(input.requestedBy ?? 'mail-worker'), 'Mail delivery failed.', { error: errorMessage })
     throw error
+  }
+}
+
+async function ensureTemporaryAttachmentMetadata(database: import('kysely').Kysely<DynamicDatabase>, messageId: number, attachments: ReturnType<typeof parseTemporaryMailAttachments>) {
+  for (const attachment of attachments) {
+    const existing = await database
+      .selectFrom('mail_attachments')
+      .select('id')
+      .where('mail_message_id', '=', messageId)
+      .where('file_name', '=', attachment.fileName)
+      .executeTakeFirst()
+    if (existing) continue
+    const { dispatchPublicUuid } = await import('../../shared/helpers/public-uuid.js')
+    await database.insertInto('mail_attachments').values({
+      uuid: dispatchPublicUuid(),
+      mail_message_id: messageId,
+      file_name: attachment.fileName,
+      mime_type: attachment.mimeType,
+      size_bytes: attachment.sizeBytes,
+      content_base64: '',
+    }).execute()
   }
 }
 

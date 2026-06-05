@@ -53,13 +53,13 @@ export class ReceiptEntryService {
     return { ok: true, entry }
   }
 
-  async runTool(headers: TenantRequestHeaders, idOrUuid: string, tool: string) {
+  async runTool(headers: TenantRequestHeaders, idOrUuid: string, tool: string, printHtml?: unknown) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     const action = tool?.trim() || 'Receipt tool action recorded'
     const existing = await this.receipts.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Receipt not found.')
     const recipient = emailRecipient(action)
-    if (recipient) await this.documentMail.queueEntryEmail(context, 'receipt', existing as unknown as Record<string, unknown>, recipient)
+    if (recipient) await this.documentMail.queueEntryEmail(context, 'receipt', existing as unknown as Record<string, unknown>, recipient, printHtml)
     const message = recipient ? `Email queued to ${recipient}` : action
     const entry = await this.receipts.addActivity(context, idOrUuid, 'tool', message)
     if (!entry) throw new NotFoundException('Receipt not found.')

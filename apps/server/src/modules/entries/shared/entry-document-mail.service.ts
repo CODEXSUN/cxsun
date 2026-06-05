@@ -1,10 +1,11 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import { Inject } from '../../../core/decorators/inject.js'
 import { Injectable } from '../../../core/decorators/injectable.js'
 import { BadRequestException } from '../../../core/exceptions/http.exception.js'
 import type { TenantRuntimeContext } from '../../../core/tenant/tenant-context.service.js'
 import { MasterQueueService } from '../../../infrastructure/queue/master-queue.service.js'
 import { MailRepository } from '../../mail/mail.repository.js'
+import { removeTemporaryMailAttachments, storeTemporaryMailAttachment } from '../../mail/mail-temporary-storage.js'
+import { PrintHtmlPdfService } from './print-html-pdf.service.js'
 
 type EntryKind = 'payment' | 'purchase' | 'receipt' | 'sales'
 type EntryRecord = Record<string, unknown>
@@ -14,9 +15,10 @@ export class EntryDocumentMailService {
   constructor(
     @Inject(MailRepository) private readonly mail: MailRepository,
     @Inject(MasterQueueService) private readonly queue: MasterQueueService,
+    @Inject(PrintHtmlPdfService) private readonly printPdf: PrintHtmlPdfService,
   ) {}
 
-  async queueEntryEmail(context: TenantRuntimeContext, kind: EntryKind, entry: EntryRecord, recipient: string) {
+  async queueEntryEmail(context: TenantRuntimeContext, kind: EntryKind, entry: EntryRecord, recipient: string, printHtml: unknown) {
     const email = recipient.trim().toLowerCase()
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new BadRequestException('A valid recipient email is required.')
 
@@ -24,36 +26,49 @@ export class EntryDocumentMailService {
     if (!settings.enabled) throw new BadRequestException('Mail settings are not enabled for this tenant.')
 
     const details = entryDetails(kind, entry)
-    const pdf = await createEntryPdf(details, entry)
-    const message = await this.mail.createOutbound(context, {
-      attachments: [{
-        base64: Buffer.from(pdf).toString('base64'),
-        fileName: `${safeFileName(details.documentNo)}.pdf`,
-        mimeType: 'application/pdf',
-      }],
-      bcc: [],
-      bodyHtml: entryMailHtml(details),
-      bodyText: entryMailText(details),
-      cc: [],
-      fromEmail: settings.from_email || context.user.email,
-      fromName: settings.from_name,
-      replyTo: settings.reply_to,
-      status: 'queued',
-      subject: `${details.title} ${details.documentNo}`,
-      to: [email],
+    const pdf = await this.printPdf.render(printHtml)
+    const temporaryAttachment = await storeTemporaryMailAttachment(context.tenant.slug, {
+      contents: pdf,
+      fileName: `${safeFileName(details.documentNo)}.pdf`,
+      mimeType: 'application/pdf',
     })
 
-    await this.queue.enqueue({
-      type: 'mail.send',
-      payload: {
-        tenantSlug: context.tenant.slug,
-        tenantId: context.tenant.id,
-        messageUuid: message.uuid,
-        requestedBy: context.user.email,
-      },
-    })
+    try {
+      const message = await this.mail.createOutbound(context, {
+        attachments: [],
+        attachmentMetadata: [{
+          fileName: temporaryAttachment.fileName,
+          mimeType: temporaryAttachment.mimeType,
+          sizeBytes: temporaryAttachment.sizeBytes,
+        }],
+        bcc: [],
+        bodyHtml: entryMailHtml(details, temporaryAttachment.fileName),
+        bodyText: entryMailText(details, temporaryAttachment.fileName),
+        cc: [],
+        fromEmail: settings.from_email || context.user.email,
+        fromName: settings.from_name,
+        replyTo: settings.reply_to,
+        status: 'queued',
+        subject: `${details.title} ${details.documentNo}`,
+        to: [email],
+      })
 
-    return { message, recipient: email }
+      await this.queue.enqueue({
+        type: 'mail.send',
+        payload: {
+          tenantSlug: context.tenant.slug,
+          tenantId: context.tenant.id,
+          messageUuid: message.uuid,
+          requestedBy: context.user.email,
+          temporaryAttachments: [temporaryAttachment],
+        },
+      })
+
+      return { message, recipient: email }
+    } catch (error) {
+      await removeTemporaryMailAttachments(context.tenant.slug, [temporaryAttachment])
+      throw error
+    }
   }
 }
 
@@ -75,64 +90,7 @@ function entryDetails(kind: EntryKind, entry: EntryRecord) {
   }
 }
 
-async function createEntryPdf(details: ReturnType<typeof entryDetails>, entry: EntryRecord) {
-  const document = await PDFDocument.create()
-  const regular = await document.embedFont(StandardFonts.Helvetica)
-  const bold = await document.embedFont(StandardFonts.HelveticaBold)
-  const state = { document, page: document.addPage([595.28, 841.89]), y: 790 }
-
-  drawText(state.page, details.title, 40, state.y, 18, bold)
-  state.y -= 32
-  drawKeyValue(state.page, 'Document No', details.documentNo, 40, state.y, regular, bold)
-  drawKeyValue(state.page, 'Date', details.date || '-', 315, state.y, regular, bold)
-  state.y -= 22
-  drawKeyValue(state.page, 'Party', details.party, 40, state.y, regular, bold)
-  state.y -= 22
-  drawKeyValue(state.page, 'Total', `INR ${formatMoney(details.amount)}`, 40, state.y, regular, bold)
-  state.y -= 32
-  drawRule(state.page, state.y)
-  state.y -= 24
-
-  const items = Array.isArray(entry.items) ? entry.items as EntryRecord[] : Array.isArray(entry.allocations) ? entry.allocations as EntryRecord[] : []
-  if (items.length) {
-    drawText(state.page, 'Details', 40, state.y, 12, bold)
-    state.y -= 22
-    for (const [index, item] of items.entries()) {
-      if (state.y < 75) {
-        state.page = document.addPage([595.28, 841.89])
-        state.y = 790
-      }
-      const name = textValue(item.product_name ?? item.reference_no ?? item.document_no ?? item.description) || `Line ${index + 1}`
-      const quantity = textValue(item.quantity)
-      const amount = moneyValue(item.line_total ?? item.allocated_amount ?? item.amount)
-      drawText(state.page, `${index + 1}. ${truncate(name, 68)}`, 40, state.y, 9, regular)
-      drawText(state.page, quantity ? `Qty ${quantity}` : '', 370, state.y, 9, regular)
-      drawText(state.page, amount ? `INR ${formatMoney(amount)}` : '', 455, state.y, 9, regular)
-      state.y -= 18
-    }
-    state.y -= 8
-    drawRule(state.page, state.y)
-  }
-
-  drawText(state.page, `Generated from CXSun for ${details.party}`, 40, 42, 8, regular, rgb(0.4, 0.4, 0.4))
-  return document.save()
-}
-
-function drawKeyValue(page: PDFPage, label: string, value: string, x: number, y: number, regular: PDFFont, bold: PDFFont) {
-  drawText(page, `${label}:`, x, y, 9, bold)
-  drawText(page, truncate(value, 42), x + 70, y, 9, regular)
-}
-
-function drawRule(page: PDFPage, y: number) {
-  page.drawLine({ start: { x: 40, y }, end: { x: 555, y }, thickness: 0.7, color: rgb(0.75, 0.75, 0.75) })
-}
-
-function drawText(page: PDFPage, value: string, x: number, y: number, size: number, font: PDFFont, color = rgb(0.08, 0.08, 0.08)) {
-  if (!value) return
-  page.drawText(value, { x, y, size, font, color })
-}
-
-function entryMailHtml(details: ReturnType<typeof entryDetails>) {
+function entryMailHtml(details: ReturnType<typeof entryDetails>, attachmentFileName: string) {
   return `<div style="background:#f6f8fb;padding:28px;font-family:Arial,sans-serif;color:#172033">
   <div style="max-width:640px;margin:auto;background:#fff;border:1px solid #e4e8ef;border-radius:8px;overflow:hidden">
     <div style="background:#059669;color:#fff;padding:20px 24px"><div style="font-size:13px;opacity:.9">CXSun Billing</div><div style="font-size:22px;font-weight:700;margin-top:4px">${escapeHtml(details.title)}</div></div>
@@ -140,14 +98,14 @@ function entryMailHtml(details: ReturnType<typeof entryDetails>) {
       <table style="width:100%;border-collapse:collapse;margin:20px 0">
         ${htmlRow('Document', details.documentNo)}${htmlRow('Date', details.date || '-')}${htmlRow('Party', details.party)}${htmlRow('Total', `INR ${formatMoney(details.amount)}`)}
       </table>
-      <p style="font-size:13px;color:#667085;margin-bottom:0">This email was queued from the CXSun entry desk. The PDF attachment is the document copy for your records.</p>
+      <p style="font-size:13px;color:#667085;margin-bottom:0">Attached file: <strong>${escapeHtml(attachmentFileName)}</strong>. This PDF is the document copy for your records.</p>
     </div>
   </div>
 </div>`
 }
 
-function entryMailText(details: ReturnType<typeof entryDetails>) {
-  return `${details.title} ${details.documentNo}\nDate: ${details.date || '-'}\nParty: ${details.party}\nTotal: INR ${formatMoney(details.amount)}\n\nThe PDF document is attached.`
+function entryMailText(details: ReturnType<typeof entryDetails>, attachmentFileName: string) {
+  return `${details.title} ${details.documentNo}\nDate: ${details.date || '-'}\nParty: ${details.party}\nTotal: INR ${formatMoney(details.amount)}\n\nAttached file: ${attachmentFileName}`
 }
 
 function htmlRow(label: string, value: string) {
@@ -160,10 +118,6 @@ function escapeHtml(value: string) {
 
 function safeFileName(value: string) {
   return value.replace(/[/\\?%*:|"<>]/g, '-').trim() || 'document'
-}
-
-function truncate(value: string, length: number) {
-  return value.length > length ? `${value.slice(0, length - 3)}...` : value
 }
 
 function textValue(value: unknown) {

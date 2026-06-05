@@ -11,6 +11,7 @@ import { PurchaseEntryV1Controller } from './interface/http/purchase-entry-v1.co
 import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
 import { MailRepository } from '../../mail/mail.repository.js'
 import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
+import { PrintHtmlPdfService } from '../shared/print-html-pdf.service.js'
 
 @Module({
   controllers: [PurchaseEntryV1Controller],
@@ -22,6 +23,7 @@ import { EntryDocumentMailService } from '../shared/entry-document-mail.service.
     MasterQueueService,
     MailRepository,
     EntryDocumentMailService,
+    PrintHtmlPdfService,
     PurchaseEntryEventBus,
     DocumentNumberRepository,
     PurchaseEntryRepository,

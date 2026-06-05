@@ -2,13 +2,26 @@
 
 ## Version State
 
-- **Current version:** `1.0.79`
-- **Release tag:** `v-1.0.79`
-- **Changelog label:** `v 1.0.79`
+- **Current version:** `1.0.80`
+- **Release tag:** `v-1.0.80`
+- **Changelog label:** `v 1.0.80`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.80
+
+### [v 1.0.80] 2026-06-05 9:38 am - Entry PDF email delivery and attachment visibility
+
+- Bumped workspace version to 1.0.80
+- Activated Send to Email from Sales, Purchase, Receipt, and Payment show pages through the existing tenant SMTP mail queue.
+- Changed entry email attachments to render the exact visible print document with Chromium, preserving letterhead, logo, GST details, QR/barcodes, selected print copies, A4 margins, and print pagination.
+- Stored generated PDFs temporarily under each tenant's `storage/<tenant>/public/pdf` folder, retained files for delivery retries, and removed them after successful SMTP delivery.
+- Added Chromium and the required Playwright renderer configuration to the cloud container.
+- Added clean PDF attachment filenames to the HTML and text email body, while keeping unique internal temporary storage paths.
+- Persisted temporary PDF attachment metadata without storing PDF contents in the database, and prevented metadata-only rows from creating duplicate empty SMTP attachments.
+- Added Mail Desk paperclip indicators, attachment counts, and attachment filename, MIME type, and size details in the mail show popup.
 
 ## v-1.0.79
 

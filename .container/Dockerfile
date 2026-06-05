@@ -7,6 +7,7 @@ RUN apt-get update \
     bash \
     ca-certificates \
     curl \
+    chromium \
     git \
     mariadb-client \
     nano \
@@ -15,6 +16,8 @@ RUN apt-get update \
     make \
     g++ \
   && rm -rf /var/lib/apt/lists/*
+
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /workspace
 

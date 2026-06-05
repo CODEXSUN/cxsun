@@ -144,9 +144,9 @@ export async function addPaymentComment(session: AuthSession, entry: PaymentEntr
   return result.entry
 }
 
-export async function runPaymentTool(session: AuthSession, entry: PaymentEntry, tool: string) {
+export async function runPaymentTool(session: AuthSession, entry: PaymentEntry, tool: string, printHtml?: string) {
   const response = await fetch(`${apiBaseUrl}/api/v1/entries/payment/${entry.uuid}/tools`, {
-    body: JSON.stringify({ tool }),
+    body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",

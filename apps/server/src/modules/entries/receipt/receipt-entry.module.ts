@@ -7,6 +7,7 @@ import { TenantDomainRepository } from '../../../core/tenant-domain/infrastructu
 import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
 import { MailRepository } from '../../mail/mail.repository.js'
 import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
+import { PrintHtmlPdfService } from '../shared/print-html-pdf.service.js'
 import { ReceiptEntryController } from './receipt-entry.controller.js'
 import { ReceiptEntryRepository } from './receipt-entry.repository.js'
 import { ReceiptEntryService } from './receipt-entry.service.js'
@@ -21,6 +22,7 @@ import { ReceiptEntryService } from './receipt-entry.service.js'
     MasterQueueService,
     MailRepository,
     EntryDocumentMailService,
+    PrintHtmlPdfService,
     DocumentNumberRepository,
     ReceiptEntryRepository,
     ReceiptEntryService,

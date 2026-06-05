@@ -23,6 +23,7 @@ import {
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
+import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { emptyAddress, emptyContact, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
 import { listCompanies } from "src/features/company/company-client"
@@ -126,7 +127,7 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
   const destroyMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => destroyPurchaseEntry(session, entry) })
   const restoreMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => restorePurchaseEntry(session, entry) })
   const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: PurchaseEntry; body: string }) => addPurchaseComment(session, entry, body) })
-  const toolMutation = useMutation({ mutationFn: ({ entry, tool }: { entry: PurchaseEntry; tool: string }) => runPurchaseTool(session, entry, tool) })
+  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PurchaseEntry; printHtml?: string; tool: string }) => runPurchaseTool(session, entry, tool, printHtml) })
   const entries = entriesQuery.data ?? []
   const filteredEntries = useMemo(() => filterPurchase(searchPurchase(entries, searchValue), statusFilter).sort((left, right) => compareDocumentNo(left.entry_no, right.entry_no)), [entries, searchValue, statusFilter])
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage))
@@ -204,8 +205,9 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
         onPrevious={previousEntry ? () => setView({ mode: "show", entry: previousEntry }) : undefined}
         onRestore={() => void restore(entry)}
         onTool={async (entry, tool) => {
-          const updated = await toolMutation.mutateAsync({ entry, tool })
-          toast.success(`${tool} queued`, { description: "The activity was recorded for this Purchase entry." })
+          const isEmail = tool.startsWith("Send to Email:")
+          const updated = await toolMutation.mutateAsync({ entry, printHtml: isEmail ? capturePrintDocument(".purchase-print-page") : undefined, tool })
+          toast.success(isEmail ? "Email queued" : `${tool} queued`, { description: isEmail ? "The purchase PDF was queued for email delivery." : "The activity was recorded for this Purchase entry." })
           await refresh()
           setView({ mode: "show", entry: updated })
         }}
@@ -507,7 +509,7 @@ function PurchaseShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEd
                         <Button disabled={isWorking || !emailAddress.trim()} onClick={() => {
                           const email = emailAddress.trim()
                           void onTool(entry, `Send to Email: ${email}`).then(() => {
-                            recordToolActivity(`Sent entry email to ${email}`)
+                            recordToolActivity(`Queued entry email to ${email}`)
                             setEmailAddress("")
                           })
                         }} type="button" className="size-9 rounded-md p-0"><Send className="size-4" /></Button>

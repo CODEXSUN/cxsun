@@ -47,7 +47,7 @@ export class PurchaseEntryV1Controller {
   tool(
     @Headers() headers: TenantRequestHeaders,
     @Param('idOrUuid') idOrUuid: string,
-    @Body() body: { tool?: unknown },
+    @Body() body: { printHtml?: unknown; tool?: unknown },
   ) {
     return this.purchaseEntries.tool(headers, idOrUuid, body)
   }

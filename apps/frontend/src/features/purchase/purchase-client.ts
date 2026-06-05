@@ -226,9 +226,9 @@ export async function addPurchaseComment(session: AuthSession, entry: PurchaseEn
   return result.entry
 }
 
-export async function runPurchaseTool(session: AuthSession, entry: PurchaseEntry, tool: string) {
+export async function runPurchaseTool(session: AuthSession, entry: PurchaseEntry, tool: string, printHtml?: string) {
   const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase/${entry.uuid}/tools`, {
-    body: JSON.stringify({ tool }),
+    body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",

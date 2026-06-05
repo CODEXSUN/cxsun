@@ -25,6 +25,12 @@ export interface MailAttachmentInput {
   base64: string
 }
 
+export interface MailAttachmentMetadataInput {
+  fileName: string
+  mimeType?: string
+  sizeBytes: number
+}
+
 export interface MailComposeInput {
   to: string[]
   cc?: string[]

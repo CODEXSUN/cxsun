@@ -222,9 +222,9 @@ export async function addSalesComment(session: AuthSession, entry: SalesEntry, b
   return result.entry
 }
 
-export async function runSalesTool(session: AuthSession, entry: SalesEntry, tool: string) {
+export async function runSalesTool(session: AuthSession, entry: SalesEntry, tool: string, printHtml?: string) {
   const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales/${entry.uuid}/tools`, {
-    body: JSON.stringify({ tool }),
+    body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",

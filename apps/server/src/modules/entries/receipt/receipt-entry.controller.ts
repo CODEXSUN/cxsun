@@ -40,7 +40,7 @@ export class ReceiptEntryController {
   }
 
   @Post(':idOrUuid/tools')
-  runTool(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: { tool?: string }) {
-    return this.receipts.runTool(headers, idOrUuid, body.tool ?? '')
+  runTool(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: { printHtml?: unknown; tool?: string }) {
+    return this.receipts.runTool(headers, idOrUuid, body.tool ?? '', body.printHtml)
   }
 }

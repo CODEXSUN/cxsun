@@ -21,6 +21,7 @@ import {
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
+import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { listCompanies, type CompanyBankAccount, type CompanyRecord } from "src/features/company/company-client"
 import { LetterheadBuilder } from "src/features/company/letterhead-builder"
@@ -103,7 +104,7 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   const destroyMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => destroyReceiptEntry(session, entry) })
   const restoreMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => restoreReceiptEntry(session, entry) })
   const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: ReceiptEntry; body: string }) => addReceiptComment(session, entry, body) })
-  const toolMutation = useMutation({ mutationFn: ({ entry, tool }: { entry: ReceiptEntry; tool: string }) => runReceiptTool(session, entry, tool) })
+  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: ReceiptEntry; printHtml?: string; tool: string }) => runReceiptTool(session, entry, tool, printHtml) })
   const entries = entriesQuery.data ?? []
   const filteredEntries = useMemo(() => filterReceipts(searchReceipts(entries, searchValue), statusFilter).sort((left, right) => left.receipt_no.localeCompare(right.receipt_no)), [entries, searchValue, statusFilter])
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage))
@@ -176,8 +177,9 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
         onPrevious={previousEntry ? () => setView({ mode: "show", entry: previousEntry }) : undefined}
         onRestore={() => void restore(entry)}
         onTool={async (entryValue, tool) => {
-          const updated = await toolMutation.mutateAsync({ entry: entryValue, tool })
-          toast.success("Action recorded", { description: "The activity was recorded for this receipt." })
+          const isEmail = tool.startsWith("Send to Email:")
+          const updated = await toolMutation.mutateAsync({ entry: entryValue, printHtml: isEmail ? capturePrintDocument(".receipt-print-page") : undefined, tool })
+          toast.success(isEmail ? "Email queued" : "Action recorded", { description: isEmail ? "The receipt PDF was queued for email delivery." : "The activity was recorded for this receipt." })
           await refresh()
           setView({ mode: "show", entry: updated })
         }}
@@ -383,7 +385,7 @@ function ReceiptShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdi
                 {tool.id === "tags" && tags.length ? <div className="px-3 pb-2"><ToolPills values={tags} onRemove={(value) => removeListValue(value, setTags)} /></div> : null}
                 {openTool === tool.id ? (
                   <div className="px-3 pb-2">
-                    {tool.id === "email" ? <ToolSendInput disabled={isWorking} placeholder="Email address" value={emailAddress} onChange={setEmailAddress} onSend={(value) => void onTool(entry, `Send to Email: ${value}`).then(() => { recordToolActivity(`Sent receipt email to ${value}`); setEmailAddress("") })} /> : null}
+                    {tool.id === "email" ? <ToolSendInput disabled={isWorking} placeholder="Email address" value={emailAddress} onChange={setEmailAddress} onSend={(value) => void onTool(entry, `Send to Email: ${value}`).then(() => { recordToolActivity(`Queued receipt email to ${value}`); setEmailAddress("") })} /> : null}
                     {tool.id === "assign" ? <Input value={assigneeInput} onChange={(event) => setAssigneeInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addListValue(assigneeInput, setAssigneeInput, setAssignees, (value) => `Assigned ${entry.receipt_no} to ${value}`) } }} placeholder="User name or email" className="h-9 rounded-md" /> : null}
                     {tool.id === "attachments" ? <Input type="file" multiple className="h-9 rounded-md" onChange={(event) => { const names = Array.from(event.target.files ?? []).map((file) => file.name); if (names.length) setAttachments((current) => [...current, ...names.filter((name) => !current.includes(name))]); names.forEach((name) => recordToolActivity(`Attached file ${name}`)); event.currentTarget.value = "" }} /> : null}
                     {tool.id === "tags" ? <Input value={tagInput} onChange={(event) => setTagInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addListValue(tagInput, setTagInput, setTags, (value) => `Added tag ${value}`) } }} placeholder="Tag" className="h-9 rounded-md" /> : null}

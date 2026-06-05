@@ -4,7 +4,7 @@ import { Injectable } from '../../core/decorators/injectable.js'
 import type { TenantRuntimeContext } from '../../core/tenant/tenant-context.service.js'
 import { dispatchPublicUuid } from '../../shared/helpers/public-uuid.js'
 import { defaultMailSettings } from './mail-defaults.js'
-import type { MailAttachment, MailAttachmentInput, MailEvent, MailMessage, MailMessageStatus, MailSettings, MailSettingsInput } from './mail.types.js'
+import type { MailAttachment, MailAttachmentInput, MailAttachmentMetadataInput, MailEvent, MailMessage, MailMessageStatus, MailSettings, MailSettingsInput } from './mail.types.js'
 
 type DynamicDatabase = Record<string, Record<string, unknown>>
 
@@ -100,6 +100,7 @@ export class MailRepository {
     bodyHtml: string | null
     status: MailMessageStatus
     attachments: MailAttachmentInput[]
+    attachmentMetadata?: MailAttachmentMetadataInput[]
   }) {
     const subject = input.subject.trim()
     if (!subject) throw new BadRequestException('Subject is required.')
@@ -131,6 +132,9 @@ export class MailRepository {
     const messageId = Number(result.insertId)
     for (const attachment of input.attachments) {
       await this.addAttachment(context, messageId, attachment)
+    }
+    for (const attachment of input.attachmentMetadata ?? []) {
+      await this.addAttachmentMetadata(context, messageId, attachment)
     }
     await this.addEvent(context, messageId, input.status === 'draft' ? 'drafted' : 'queued', input.status === 'draft' ? 'Mail saved as draft.' : 'Mail queued for delivery.', {})
 
@@ -193,6 +197,20 @@ export class MailRepository {
         mime_type: clean(input.mimeType) || 'application/octet-stream',
         size_bytes: sizeBytes,
         content_base64: base64,
+      })
+      .execute()
+  }
+
+  private async addAttachmentMetadata(context: TenantRuntimeContext, messageId: number, input: MailAttachmentMetadataInput) {
+    await this.database(context)
+      .insertInto('mail_attachments')
+      .values({
+        uuid: dispatchPublicUuid(),
+        mail_message_id: messageId,
+        file_name: cleanFileName(input.fileName),
+        mime_type: clean(input.mimeType) || 'application/octet-stream',
+        size_bytes: Math.max(0, Number(input.sizeBytes) || 0),
+        content_base64: '',
       })
       .execute()
   }
