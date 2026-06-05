@@ -1,7 +1,7 @@
 {
   "name": "@cxsun/server",
   "private": true,
-  "version": "1.0.78",
+  "version": "1.0.79",
   "type": "module",
   "scripts": {
     "dev": "node ../../apps/cli/preflight.mjs server",
@@ -29,6 +29,7 @@
     "kysely": "^0.29.0",
     "mysql2": "^3.22.3",
     "nodemailer": "^8.0.10",
+    "pdf-lib": "^1.17.1",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {

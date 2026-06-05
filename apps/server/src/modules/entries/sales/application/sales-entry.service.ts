@@ -5,6 +5,7 @@ import { TenantContextService, type TenantRequestHeaders } from '../../../../cor
 import { SalesEntryAggregate } from '../domain/aggregates/sales-entry.aggregate.js'
 import { salesEntryEvent } from '../domain/events/sales-entry.events.js'
 import { SalesEntryRepository, type SalesEntryInput } from '../infrastructure/persistence/sales-entry.repository.js'
+import { EntryDocumentMailService } from '../../shared/entry-document-mail.service.js'
 import { SalesEntryEventBus } from './sales-entry-event-bus.js'
 
 @Injectable()
@@ -13,6 +14,7 @@ export class SalesEntryService {
     @Inject(TenantContextService) private readonly tenantContext: TenantContextService,
     @Inject(SalesEntryRepository) private readonly salesEntries: SalesEntryRepository,
     @Inject(SalesEntryEventBus) private readonly events: SalesEntryEventBus,
+    @Inject(EntryDocumentMailService) private readonly documentMail: EntryDocumentMailService,
   ) {}
 
   async list(headers: TenantRequestHeaders) {
@@ -75,15 +77,25 @@ export class SalesEntryService {
 
   async tool(headers: TenantRequestHeaders, idOrUuid: string, body: { tool?: unknown }) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
-    const entry = await this.salesEntries.addActivity(context, idOrUuid, 'tool', `${String(body.tool ?? 'tool')} requested`)
+    const tool = String(body.tool ?? 'tool').trim()
+    const existing = await this.salesEntries.find(context, idOrUuid)
+    if (!existing) throw new NotFoundException('Sales entry was not found.')
+    const recipient = emailRecipient(tool)
+    if (recipient) await this.documentMail.queueEntryEmail(context, 'sales', existing as unknown as Record<string, unknown>, recipient)
+    const activity = recipient ? `Email queued to ${recipient}` : `${tool} requested`
+    const entry = await this.salesEntries.addActivity(context, idOrUuid, 'tool', activity)
     if (!entry) throw new NotFoundException('Sales entry was not found.')
     await this.events.publish(salesEntryEvent('entries.sales.tool', {
       actorEmail: context.user.email,
       entryId: entry.id,
-      payload: { tool: String(body.tool ?? 'tool'), invoiceNo: entry.invoice_no },
+      payload: { tool, invoiceNo: entry.invoice_no },
       tenantId: context.tenant.id,
       uuid: entry.uuid,
     }))
     return { ok: true, entry }
   }
+}
+
+function emailRecipient(tool: string) {
+  return /^Send to Email:\s*(.+)$/i.exec(tool)?.[1]?.trim() || null
 }

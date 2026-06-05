@@ -183,6 +183,9 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
 
   if (view.mode === "show") {
     const entry = entries.find((entry) => entry.uuid === view.entry.uuid) ?? view.entry
+    const entryIndex = filteredEntries.findIndex((item) => item.uuid === entry.uuid)
+    const previousEntry = entryIndex > 0 ? filteredEntries[entryIndex - 1] : null
+    const nextEntry = entryIndex >= 0 && entryIndex < filteredEntries.length - 1 ? filteredEntries[entryIndex + 1] : null
     return (
       <SalesShowPage
         entry={entry}
@@ -196,6 +199,8 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
         }}
         onDestroy={() => void destroy(entry)}
         onEdit={() => setView({ mode: "upsert", entry })}
+        onNext={nextEntry ? () => setView({ mode: "show", entry: nextEntry }) : undefined}
+        onPrevious={previousEntry ? () => setView({ mode: "show", entry: previousEntry }) : undefined}
         onRestore={() => void restore(entry)}
         onTool={async (entry, tool) => {
           const updated = await toolMutation.mutateAsync({ entry, tool })
@@ -318,13 +323,15 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
   )
 }
 
-function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit, onRestore, onTool, session }: {
+function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit, onNext, onPrevious, onRestore, onTool, session }: {
   entry: SalesEntry
   isWorking: boolean
   onBack(): void
   onComment(entry: SalesEntry, body: string): Promise<void>
   onDestroy(): void
   onEdit(): void
+  onNext?(): void
+  onPrevious?(): void
   onRestore(): void
   onTool(entry: SalesEntry, tool: string): Promise<void>
   session: AuthSession
@@ -398,7 +405,7 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit,
   const activityItems = [...toolActivities, ...entry.activities]
 
   return (
-    <main className="theme-shell mx-auto min-h-screen w-[94%] pb-8 pt-8 text-black sm:w-[92%] lg:w-[90%] print:fixed print:inset-0 print:z-[9999] print:min-h-0 print:w-full print:overflow-visible print:bg-white print:p-0">
+    <main className="sales-print-page theme-shell mx-auto min-h-screen w-[94%] pb-8 pt-8 text-black sm:w-[92%] lg:w-[90%] print:static print:min-h-0 print:w-full print:overflow-visible print:bg-white print:p-0">
       <div className="mx-auto mb-3 grid w-full gap-2 print:hidden">
         <div>
           <h1 className="text-3xl font-semibold tracking-normal text-foreground">{entry.customer_name}</h1>
@@ -407,8 +414,8 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit,
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={onBack}><ArrowLeft className="size-4" />Back</Button>
-            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled><ChevronLeft className="size-4" />Prev</Button>
-            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled><ChevronRight className="size-4" />Next</Button>
+            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled={!onPrevious} onClick={onPrevious}><ChevronLeft className="size-4" />Prev</Button>
+            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled={!onNext} onClick={onNext}><ChevronRight className="size-4" />Next</Button>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-xl border border-border bg-card px-2 py-1 text-sm shadow-sm">
@@ -429,10 +436,10 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit,
           </div>
         </div>
       </div>
-      <section className="mx-auto w-fit max-w-full overflow-hidden rounded-md border border-border/70 bg-card shadow-sm print:contents">
-        <div className="grid gap-4 overflow-x-auto p-3 print:contents sm:p-4">
-          {selectedPrintCopies.map((copy, index) => (
-            <div key={copy} className={index === selectedPrintCopies.length - 1 ? "print:contents" : "print:break-after-page"}>
+      <section className="mx-auto w-fit max-w-full overflow-hidden rounded-md border border-border/70 bg-card shadow-sm print:block print:w-full print:max-w-none print:overflow-visible print:border-0 print:bg-white print:shadow-none">
+        <div className="sales-print-pages grid gap-4 overflow-x-auto p-3 print:block print:overflow-visible print:p-0 sm:p-4">
+          {selectedPrintCopies.map((copy) => (
+            <div key={copy} className="sales-print-copy">
               <SalesInvoiceDocument addressLabels={addressLabels} billingParty={billingParty} company={printCompany} copy={copy} customTerms={customTerms} letterheadSettings={softwareSettings.letterheadSettings} record={entry} shippingParty={shippingParty} {...printItemSettings} />
             </div>
           ))}

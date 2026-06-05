@@ -2,6 +2,7 @@ import { Inject } from '../../../core/decorators/inject.js'
 import { Injectable } from '../../../core/decorators/injectable.js'
 import { BadRequestException, NotFoundException } from '../../../core/exceptions/http.exception.js'
 import { TenantContextService, type TenantRequestHeaders } from '../../../core/tenant/tenant-context.service.js'
+import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
 import { PaymentEntryRepository } from './payment-entry.repository.js'
 import type { PaymentEntryInput } from './payment-entry.types.js'
 
@@ -10,6 +11,7 @@ export class PaymentEntryService {
   constructor(
     @Inject(TenantContextService) private readonly tenants: TenantContextService,
     @Inject(PaymentEntryRepository) private readonly payments: PaymentEntryRepository,
+    @Inject(EntryDocumentMailService) private readonly documentMail: EntryDocumentMailService,
   ) {}
 
   async list(headers: TenantRequestHeaders) {
@@ -52,9 +54,19 @@ export class PaymentEntryService {
   }
 
   async runTool(headers: TenantRequestHeaders, idOrUuid: string, tool: string) {
-    const message = tool?.trim() || 'Payment tool action recorded'
-    const entry = await this.payments.addActivity(await this.tenants.resolve(headers, 'company.manage'), idOrUuid, 'tool', message)
+    const context = await this.tenants.resolve(headers, 'company.manage')
+    const action = tool?.trim() || 'Payment tool action recorded'
+    const existing = await this.payments.find(context, idOrUuid)
+    if (!existing) throw new NotFoundException('Payment not found.')
+    const recipient = emailRecipient(action)
+    if (recipient) await this.documentMail.queueEntryEmail(context, 'payment', existing as unknown as Record<string, unknown>, recipient)
+    const message = recipient ? `Email queued to ${recipient}` : action
+    const entry = await this.payments.addActivity(context, idOrUuid, 'tool', message)
     if (!entry) throw new NotFoundException('Payment not found.')
     return { ok: true, entry }
   }
+}
+
+function emailRecipient(tool: string) {
+  return /^Send to Email:\s*(.+)$/i.exec(tool)?.[1]?.trim() || null
 }

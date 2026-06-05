@@ -2,14 +2,22 @@
 
 ## Version State
 
-- **Current version:** `1.0.78`
-- **Release tag:** `v-1.0.78`
-- **Changelog label:** `v 1.0.78`
+- **Current version:** `1.0.79`
+- **Release tag:** `v-1.0.79`
+- **Changelog label:** `v 1.0.79`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.79
+
+### [v 1.0.79] 2026-06-05 12:06 am - Billing financial year overview
+
+- Bumped workspace version to 1.0.79
+- Changed Billing Overview transaction movement from calendar-month order to financial-year order, showing Apr through Mar.
+- Matched Billing Overview summary totals, this-month totals, monthly bars, and recent transactions to the same current financial-year range.
+- Made the Billing Overview total cards clickable shortcuts to Sales, Purchase, Receipts, and Payments list pages with a small hover lift animation.
 ## v-1.0.78
 
 ### [v 1.0.78] 2026-06-04 10:50 pm - Billing chart runtime fix

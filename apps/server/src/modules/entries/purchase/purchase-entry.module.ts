@@ -9,6 +9,8 @@ import { PurchaseEntryService } from './application/purchase-entry.service.js'
 import { PurchaseEntryRepository } from './infrastructure/persistence/purchase-entry.repository.js'
 import { PurchaseEntryV1Controller } from './interface/http/purchase-entry-v1.controller.js'
 import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
+import { MailRepository } from '../../mail/mail.repository.js'
+import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
 
 @Module({
   controllers: [PurchaseEntryV1Controller],
@@ -18,6 +20,8 @@ import { DocumentNumberRepository } from '../../settings/document-settings/infra
     TenantDomainRepository,
     TenantContextService,
     MasterQueueService,
+    MailRepository,
+    EntryDocumentMailService,
     PurchaseEntryEventBus,
     DocumentNumberRepository,
     PurchaseEntryRepository,

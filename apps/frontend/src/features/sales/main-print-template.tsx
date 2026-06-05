@@ -13,18 +13,47 @@ export function MainPrintTemplate({ children }: { children: ReactNode }) {
           html,
           body {
             width: auto;
-            min-height: 297mm;
+            height: auto;
+            min-height: 0;
             margin: 0;
             background: #ffffff !important;
           }
 
           body {
-            display: flex;
-            justify-content: center;
+            display: block;
+          }
+
+          body:has(.sales-print-page) *:has(.sales-print-page) {
+            min-height: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+
+          body:has(.sales-print-page) *:has(.sales-print-page) > *:not(.sales-print-page):not(:has(.sales-print-page)) {
+            display: none !important;
+          }
+
+          .sales-print-page {
+            position: static !important;
+            width: 100% !important;
+            overflow: visible !important;
           }
 
           .main-print-sheet {
-            transform: translateX(1.5mm);
+            display: block;
+          }
+
+          .sales-print-copy {
+            display: block;
+            width: 100%;
+            overflow: visible;
+            break-after: auto;
+            page-break-after: auto;
+          }
+
+          .sales-print-copy:not(:last-child) {
+            break-after: page;
+            page-break-after: always;
           }
         }
       `}</style>

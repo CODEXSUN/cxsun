@@ -5,6 +5,8 @@ import { AuthRepository } from '../../auth/infrastructure/auth.repository.js'
 import { TenantRepository } from '../../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
 import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
+import { MailRepository } from '../../mail/mail.repository.js'
+import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
 import { PaymentEntryController } from './payment-entry.controller.js'
 import { PaymentEntryRepository } from './payment-entry.repository.js'
 import { PaymentEntryService } from './payment-entry.service.js'
@@ -17,6 +19,8 @@ import { PaymentEntryService } from './payment-entry.service.js'
     TenantDomainRepository,
     TenantContextService,
     MasterQueueService,
+    MailRepository,
+    EntryDocumentMailService,
     DocumentNumberRepository,
     PaymentEntryRepository,
     PaymentEntryService,

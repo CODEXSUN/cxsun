@@ -1,4 +1,4 @@
-import { Bug, Building2, ChevronRight, HandCoins, Headset, Network, RefreshCw, ReceiptIndianRupee, ReceiptText, ShieldCheck, ShoppingBag } from "lucide-react"
+import { Bug, Building2, ChevronRight, HandCoins, Headset, Network, RefreshCw, ReceiptIndianRupee, ReceiptText, ShieldCheck, ShoppingBag, UserRoundCheck } from "lucide-react"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
@@ -84,9 +84,11 @@ export function DashboardHome({
   return (
     <div className="@container/main flex flex-1 flex-col gap-6 py-4 md:py-6">
       <div className="px-4 lg:px-6">
-        <div className="relative overflow-hidden rounded-2xl border bg-card/90 p-5 shadow-sm">
-          <div className="absolute right-8 top-6 h-28 w-28 rounded-full bg-primary/10 blur-2xl" />
-          <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div
+          className="overflow-hidden rounded-2xl border bg-card/90 p-5 shadow-sm"
+          style={{ backgroundImage: deskHeaderBackground(selectedApp.id) }}
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
               <span className={cn("flex size-14 shrink-0 items-center justify-center rounded-xl", selectedApp.accent)}>
                 <SelectedAppIcon className="size-7" />
@@ -97,17 +99,17 @@ export function DashboardHome({
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{selectedApp.description || content.description}</p>
               </div>
             </div>
-            <div className="flex w-fit items-center gap-3 rounded-full border bg-background px-4 py-2 shadow-sm">
-              <SelectedAppIcon className="size-4 text-primary" />
-              <span className="font-mono text-xs font-semibold tracking-[0.32em] text-foreground">
-                Signed in workspace
+            <div className="flex w-fit items-center gap-2.5 rounded-full border bg-background/90 px-4 py-2 shadow-sm backdrop-blur-sm">
+              <UserRoundCheck className="size-4 text-primary" />
+              <span className="text-xs font-semibold text-foreground">
+                Signed in as {session?.user.name ?? "Workspace user"}
               </span>
             </div>
           </div>
         </div>
       </div>
       {metrics.length ? <SectionCards metrics={metrics} /> : null}
-      {mode === "tenant" && activeApp === "billing" && session ? <BillingTransactionDashboard onOpenBillingEntry={onOpenBillingEntry} session={session} /> : null}
+      {mode === "tenant" && activeApp === "billing" && session ? <BillingTransactionDashboard onNavigate={onNavigate} onOpenBillingEntry={onOpenBillingEntry} session={session} /> : null}
       {mode === "tenant" ? <DeskShortcutCards appId={selectedApp.id} onNavigate={onNavigate} onChangeApp={onChangeApp} /> : null}
       {cards.length ? (
         <div className="grid gap-4 px-4 lg:grid-cols-3 lg:px-6">
@@ -128,7 +130,32 @@ export function DashboardHome({
   )
 }
 
-function BillingTransactionDashboard({ onOpenBillingEntry, session }: { onOpenBillingEntry?: (entry: BillingRecentTransaction) => void; session: AuthSession }) {
+function deskHeaderBackground(appId: DashboardAppId) {
+  const accentByApp: Record<DashboardAppId, string> = {
+    accounts: "rgba(77, 124, 15, 0.20)",
+    application: "rgba(15, 23, 42, 0.16)",
+    billing: "rgba(5, 150, 105, 0.20)",
+    crm: "rgba(37, 99, 235, 0.18)",
+    ecommerce: "rgba(219, 39, 119, 0.18)",
+    inventory: "rgba(234, 88, 12, 0.18)",
+    mail: "rgba(13, 148, 136, 0.18)",
+    media: "rgba(2, 132, 199, 0.18)",
+    sites: "rgba(124, 58, 237, 0.18)",
+    taskmanager: "rgba(8, 145, 178, 0.18)",
+  }
+
+  return `radial-gradient(circle at 82% 18%, ${accentByApp[appId]}, transparent 44%)`
+}
+
+function BillingTransactionDashboard({
+  onNavigate,
+  onOpenBillingEntry,
+  session,
+}: {
+  onNavigate?: (page: DashboardPage) => void
+  onOpenBillingEntry?: (entry: BillingRecentTransaction) => void
+  session: AuthSession
+}) {
   const salesQuery = useQuery({ queryKey: ["billing-overview-sales", session.selectedTenant.slug], queryFn: () => listSalesEntries(session) })
   const purchaseQuery = useQuery({ queryKey: ["billing-overview-purchase", session.selectedTenant.slug], queryFn: () => listPurchaseEntries(session) })
   const receiptQuery = useQuery({ queryKey: ["billing-overview-receipt", session.selectedTenant.slug], queryFn: () => listReceiptEntries(session) })
@@ -152,7 +179,12 @@ function BillingTransactionDashboard({ onOpenBillingEntry, session }: { onOpenBi
           const visual = billingCardVisual(card.label)
           const Icon = visual.icon
           return (
-            <Card key={card.label} className="rounded-md border-border/70 bg-card/95 shadow-sm">
+            <button
+              key={card.label}
+              className="group/card flex flex-col gap-4 overflow-hidden rounded-md border border-border/70 bg-card/95 py-4 text-left text-sm text-card-foreground shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md"
+              onClick={() => onNavigate?.(billingCardPage(card.label))}
+              type="button"
+            >
               <CardHeader className="px-5 pb-3 pt-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -174,7 +206,7 @@ function BillingTransactionDashboard({ onOpenBillingEntry, session }: { onOpenBi
                   <span className="font-medium">{formatCurrency(card.monthAmount)}</span>
                 </div>
               </CardContent>
-            </Card>
+            </button>
           )
         })}
       </div>
@@ -311,6 +343,13 @@ function billingCardVisual(label: string) {
   return { accent: "bg-rose-600", icon: HandCoins }
 }
 
+function billingCardPage(label: string): DashboardPage {
+  if (label === "Total Sales") return "app-billing-sales"
+  if (label === "Total Purchase") return "app-billing-purchase"
+  if (label === "Receipts") return "app-billing-receipts"
+  return "app-billing-payments"
+}
+
 function RecentTransactions({ onOpen, rows }: { onOpen?: (entry: BillingRecentTransaction) => void; rows: BillingRecentTransaction[] }) {
   if (!rows.length) {
     return <div className="rounded-md border border-dashed border-border/70 p-4 text-sm text-muted-foreground">No recent transactions found for the current accounting year.</div>
@@ -393,7 +432,7 @@ function appGroupDescription(title: string) {
   return descriptions[title] ?? "Workspace menu shortcuts."
 }
 
-const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const financialYearMonthLabels = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
 
 interface BillingSummaryInput {
   payments: PaymentEntry[]
@@ -413,19 +452,19 @@ export interface BillingRecentTransaction {
 
 function buildBillingSummary(input: BillingSummaryInput) {
   const now = new Date()
-  const currentMonth = now.getMonth()
-  const monthly = monthLabels.map((month) => ({ month, sales: 0, purchase: 0, receipts: 0, payments: 0 }))
-  const sales = summarizeTransactions(input.sales, (entry) => entry.invoice_date, (entry) => entry.grand_total, currentMonth, (entry) => {
-    addMonthly(monthly, entry.invoice_date, "sales", entry.grand_total)
+  const financialYear = financialYearRange(now)
+  const monthly = financialYearMonthLabels.map((month) => ({ month, sales: 0, purchase: 0, receipts: 0, payments: 0 }))
+  const sales = summarizeTransactions(input.sales, (entry) => entry.invoice_date, (entry) => entry.grand_total, financialYear, (entry) => {
+    addMonthly(monthly, entry.invoice_date, "sales", entry.grand_total, financialYear)
   })
-  const purchase = summarizeTransactions(input.purchases, (entry) => entry.entry_date, (entry) => entry.grand_total, currentMonth, (entry) => {
-    addMonthly(monthly, entry.entry_date, "purchase", entry.grand_total)
+  const purchase = summarizeTransactions(input.purchases, (entry) => entry.entry_date, (entry) => entry.grand_total, financialYear, (entry) => {
+    addMonthly(monthly, entry.entry_date, "purchase", entry.grand_total, financialYear)
   })
-  const receipts = summarizeTransactions(input.receipts, (entry) => entry.receipt_date, (entry) => entry.net_amount, currentMonth, (entry) => {
-    addMonthly(monthly, entry.receipt_date, "receipts", entry.net_amount)
+  const receipts = summarizeTransactions(input.receipts, (entry) => entry.receipt_date, (entry) => entry.net_amount, financialYear, (entry) => {
+    addMonthly(monthly, entry.receipt_date, "receipts", entry.net_amount, financialYear)
   })
-  const payments = summarizeTransactions(input.payments, (entry) => entry.payment_date, (entry) => entry.net_amount, currentMonth, (entry) => {
-    addMonthly(monthly, entry.payment_date, "payments", entry.net_amount)
+  const payments = summarizeTransactions(input.payments, (entry) => entry.payment_date, (entry) => entry.net_amount, financialYear, (entry) => {
+    addMonthly(monthly, entry.payment_date, "payments", entry.net_amount, financialYear)
   })
 
   return {
@@ -436,11 +475,11 @@ function buildBillingSummary(input: BillingSummaryInput) {
       { label: "Payments", ...payments },
     ],
     monthly,
-    recent: recentBillingTransactions(input),
+    recent: recentBillingTransactions(input, financialYear),
   }
 }
 
-function recentBillingTransactions(input: BillingSummaryInput): BillingRecentTransaction[] {
+function recentBillingTransactions(input: BillingSummaryInput, financialYear: FinancialYearRange): BillingRecentTransaction[] {
   return [
     ...input.sales.map((entry) => ({
       amount: numeric(entry.grand_total),
@@ -474,7 +513,7 @@ function recentBillingTransactions(input: BillingSummaryInput): BillingRecentTra
       partyName: entry.party_name,
       type: "payment" as const,
     })),
-  ]
+  ].filter((entry) => isInFinancialYear(parseEntryDate(entry.date), financialYear))
     .sort((left, right) => (parseEntryDate(right.date)?.getTime() ?? 0) - (parseEntryDate(left.date)?.getTime() ?? 0))
     .slice(0, 8)
 }
@@ -483,17 +522,18 @@ function summarizeTransactions<T>(
   entries: T[],
   dateOf: (entry: T) => string | null | undefined,
   amountOf: (entry: T) => number | null | undefined,
-  currentMonth: number,
+  financialYear: FinancialYearRange,
   onEntry: (entry: T) => void,
 ) {
   return entries.reduce(
     (summary, entry) => {
       const amount = numeric(amountOf(entry))
       const date = parseEntryDate(dateOf(entry))
+      if (!isInFinancialYear(date, financialYear)) return summary
       onEntry(entry)
       summary.yearAmount += amount
       summary.yearCount += 1
-      if (date?.getMonth() === currentMonth && date.getFullYear() === new Date().getFullYear()) {
+      if (date?.getMonth() === financialYear.now.getMonth() && date.getFullYear() === financialYear.now.getFullYear()) {
         summary.monthAmount += amount
         summary.monthCount += 1
       }
@@ -508,10 +548,34 @@ function addMonthly(
   dateValue: string | null | undefined,
   key: "payments" | "purchase" | "receipts" | "sales",
   value: number | null | undefined,
+  financialYear: FinancialYearRange,
 ) {
   const date = parseEntryDate(dateValue)
-  if (!date) return
-  rows[date.getMonth()][key] += numeric(value)
+  if (!isInFinancialYear(date, financialYear)) return
+  rows[financialYearMonthIndex(date)][key] += numeric(value)
+}
+
+interface FinancialYearRange {
+  end: Date
+  now: Date
+  start: Date
+}
+
+function financialYearRange(now: Date): FinancialYearRange {
+  const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1
+  return {
+    end: new Date(startYear + 1, 3, 1),
+    now,
+    start: new Date(startYear, 3, 1),
+  }
+}
+
+function financialYearMonthIndex(date: Date) {
+  return (date.getMonth() + 9) % 12
+}
+
+function isInFinancialYear(date: Date | null, financialYear: FinancialYearRange): date is Date {
+  return date !== null && date >= financialYear.start && date < financialYear.end
 }
 
 function parseEntryDate(value: string | null | undefined) {

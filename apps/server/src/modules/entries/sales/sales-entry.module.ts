@@ -9,6 +9,8 @@ import { SalesEntryService } from './application/sales-entry.service.js'
 import { SalesEntryRepository } from './infrastructure/persistence/sales-entry.repository.js'
 import { SalesEntryV1Controller } from './interface/http/sales-entry-v1.controller.js'
 import { DocumentNumberRepository } from '../../settings/document-settings/infrastructure/document-number.repository.js'
+import { MailRepository } from '../../mail/mail.repository.js'
+import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
 
 @Module({
   controllers: [SalesEntryV1Controller],
@@ -18,6 +20,8 @@ import { DocumentNumberRepository } from '../../settings/document-settings/infra
     TenantDomainRepository,
     TenantContextService,
     MasterQueueService,
+    MailRepository,
+    EntryDocumentMailService,
     SalesEntryEventBus,
     DocumentNumberRepository,
     SalesEntryRepository,

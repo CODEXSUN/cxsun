@@ -156,6 +156,9 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
 
   if (view.mode === "show") {
     const entry = entries.find((item) => item.uuid === view.entry.uuid) ?? view.entry
+    const entryIndex = filteredEntries.findIndex((item) => item.uuid === entry.uuid)
+    const previousEntry = entryIndex > 0 ? filteredEntries[entryIndex - 1] : null
+    const nextEntry = entryIndex >= 0 && entryIndex < filteredEntries.length - 1 ? filteredEntries[entryIndex + 1] : null
     return (
       <PaymentShowPage
         entry={entry}
@@ -169,6 +172,8 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
         }}
         onDestroy={() => void destroy(entry)}
         onEdit={() => setView({ mode: "upsert", entry })}
+        onNext={nextEntry ? () => setView({ mode: "show", entry: nextEntry }) : undefined}
+        onPrevious={previousEntry ? () => setView({ mode: "show", entry: previousEntry }) : undefined}
         onRestore={() => void restore(entry)}
         onTool={async (entryValue, tool) => {
           const updated = await toolMutation.mutateAsync({ entry: entryValue, tool })
@@ -261,13 +266,15 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   )
 }
 
-function PaymentShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit, onRestore, onTool, session }: {
+function PaymentShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit, onNext, onPrevious, onRestore, onTool, session }: {
   entry: PaymentEntry
   isWorking: boolean
   onBack(): void
   onComment(entry: PaymentEntry, body: string): Promise<void>
   onDestroy(): void
   onEdit(): void
+  onNext?(): void
+  onPrevious?(): void
   onRestore(): void
   onTool(entry: PaymentEntry, tool: string): Promise<void>
   session: AuthSession
@@ -320,8 +327,8 @@ function PaymentShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdi
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant="outline" className="h-9 rounded-xl" onClick={onBack}><ArrowLeft className="size-4" />Back</Button>
-            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled><ChevronLeft className="size-4" />Prev</Button>
-            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled><ChevronRight className="size-4" />Next</Button>
+            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled={!onPrevious} onClick={onPrevious}><ChevronLeft className="size-4" />Prev</Button>
+            <Button type="button" variant="outline" className="h-9 rounded-xl" disabled={!onNext} onClick={onNext}><ChevronRight className="size-4" />Next</Button>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button className="rounded-xl" onClick={() => window.print()} type="button"><Printer className="size-4" />Print</Button>
