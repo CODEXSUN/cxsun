@@ -38,6 +38,7 @@ It should support:
 - Products, services, catalog, pricing, and tax setup.
 - Customers, suppliers, leads, and contacts.
 - Sales orders, purchases, stock movement, invoices, receipts, payments, and reports.
+- Separate domestic and export invoicing, with export currency selection and company-controlled feature availability.
 - Storefront settings, channels, order fulfillment, and customer communication.
 
 Tenant users must only see their own tenant data. Tenant company and role data belongs in the tenant database.
@@ -138,7 +139,7 @@ Tenant modules must resolve through `TenantContextService` and use the tenant da
 - Future `tenant-rbac`: tenant-local roles and role-policy assignments.
 - Future `catalog`: tenant products, services, categories, brands, units, and prices.
 - Future `inventory`: locations, stock, transfers, adjustments, and batches.
-- Future `sales`: quotes, orders, invoices, receipts, returns, and customer balances.
+- `sales`: domestic invoices, export invoices, receipts, returns, customer balances, GST compliance, print, and queued PDF email delivery.
 - Future `purchase`: suppliers, purchase orders, bills, payments, and returns.
 - Future `storefront`: theme, navigation, product publication, cart, checkout, shipping, and order tracking.
 - Future `finance`: ledgers, taxes, accounting periods, journal entries, and reports.

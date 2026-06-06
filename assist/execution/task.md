@@ -1,17 +1,17 @@
 # Tasks
 
-## Barcode Printing
+## Export Sales
 
-- [ ] `6.3` Verify labels render with readable barcode text and scannable value.
+- [ ] Verify currency presentation in Export Sales show and print output.
+- [ ] Verify enabled/disabled feature visibility after refresh and direct URL entry.
 
-## Live Stock Movements
+## Billing Context
 
-- [ ] `7.3` Add movement reversal/update handling for edited serializations.
+- [ ] Verify overview cards and month table after company/accounting-year switches.
+- [ ] Define foreign-currency conversion rules before combining Export Sales with INR charts or reports.
 
-## Outward Scan Checks
+## Compliance And Communication
 
-- [ ] `8.1` Add delivery note scan and availability warning plan before submit.
-- [ ] `8.2` Add sales scan and availability warning plan before submit.
-- [ ] `8.3` Warn on unknown serial/barcode.
-- [ ] `8.4` Warn on already consumed serial/barcode.
-- [ ] `8.5` On submit, add outward movement and reduce live stock.
+- [ ] Persist detailed GSP operation request/response and retry state.
+- [ ] Add GST cancellation flows and stronger preflight validation.
+- [ ] Add WhatsApp delivery only after a provider and audit model are chosen.

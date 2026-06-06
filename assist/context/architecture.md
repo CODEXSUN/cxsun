@@ -18,6 +18,7 @@ Read `assist/context/product-picture.md` alongside this file for the product-lev
 | 2026-05-16 | Keep framework/platform modules in `core`, reusable record engines in `modules/foundation`, and business modules in bounded module groups. | The backend now separates core runtime, shared helpers, foundation primitives, master, common, and entries so modules can be reused, dropped, or enhanced independently. |
 | 2026-05-16 | Use `id INT AUTO_INCREMENT PRIMARY KEY` plus `uuid CHAR(8) NOT NULL UNIQUE` on application tables. | Numeric IDs stay fast and stable for internal joins, while short uppercase alphanumeric public UUIDs hide sequence IDs from APIs and UI. Move public UUIDs to 16 characters later when scale requires it. |
 | 2026-05-22 | Route user-facing frontend modules to feature-owned standalone pages. | Product, contact, company, sales, and future modules should keep custom UI behavior inside their own feature pages instead of expanding generic master-data/common-data pages with module-specific branches. |
+| 2026-06-06 | Keep Export Sales separate from domestic Sales and gate its visibility with a company feature setting. | Export invoices need separate persistence, numbering, currency selection, print/mail workflows, and optional visibility without deleting stored records. |
 
 ## Active Workspaces
 
@@ -53,7 +54,7 @@ Run targeted checks during development, or `npm run check` before finalizing mea
 - Put reusable generic module engines under `apps/server/src/modules/foundation`.
 - Put standalone master modules under `apps/server/src/modules/master`.
 - Put business common modules under `apps/server/src/modules/common/<group>/<module>`.
-- Put tenant entries under `apps/server/src/modules/entries`.
+- Put tenant entries under `apps/server/src/modules/entries`; current billing entry modules include sales, export sales, purchase, receipt, and payment.
 - Put infrastructure configuration and lifecycle code under `apps/server/src/infrastructure`.
 - Put platform database migration/seed modules beside the owning backend module and register them in `apps/server/src/infrastructure/database/platform-modules.ts`.
 - Put tenant database connection, provisioning, and tenant-local schema types under `apps/server/src/infrastructure/tenant-database`.
@@ -135,14 +136,16 @@ Boundary rules:
 - `foundation/master-data` is the compatibility registry/API around common module definitions. It must not become the owner of standalone master modules.
 - `common/<group>/<module>` modules own common tenant tables and endpoints under `/api/v1/common/<moduleKey>`.
 - `master/<module>` modules own standalone master domains such as company, contact, product, and order.
-- `entries/sales` owns tenant sales entry records, comments, tools, activity, and queue events.
+- `entries/sales` owns domestic tenant sales records.
+- `entries/export-sales` owns export invoices, separate numbering/tables, Common Currency references, print/mail workflows, comments, tools, and activity.
+- Company software settings own feature visibility such as `feature-export-sales`; disabled features must disappear from navigation, overview, direct routes, and related settings without deleting data.
 - Keep public HTTP routes stable when moving internal folders unless the user explicitly asks to change the API.
 
 ## Dashboard Mode Notes
 
 - `super-admin`: split into two clear navigation areas. Platform / Master Database contains tenant, domain, industry, system update, and admin user manager. Tenant Database contains tenant-owned modules such as company.
 - `admin`: software operations; helpdesk, bug triage, and system update.
-- `tenant`: isolated client workspace; tenant database companies and tenant-local roles.
+- `tenant`: isolated client workspace with enabled application desks, selected default company/accounting year, tenant-local roles, and company feature settings.
 
 The frontend enforces this with dashboard mode route guards in `DashboardView` and separate sidebar menus in `AppSidebar`.
 

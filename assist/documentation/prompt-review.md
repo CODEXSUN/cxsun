@@ -2089,3 +2089,8 @@ when tenant send for einvoice it collect credential from master and merge user a
 in tenant only have switch to generate sandbox and production
 
 this is i asked
+## 2026-06-06 - Assist documentation sync
+
+read assist/readme and update assists rules and files according to this application updates , scan through application and update properly not overthinking
+
+write log on change log

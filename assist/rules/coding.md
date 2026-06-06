@@ -60,6 +60,8 @@
 - Keep `@cxsun/shared` limited to types, constants, and pure utilities.
 - Frontend module pages must be standalone feature pages routed explicitly from the dashboard/router.
 - Keep module-specific UI logic inside that module's feature folder. Do not add product/contact/company/sales-specific switches to generic master-data or common-data pages.
+- When wiring a company feature toggle, centralize the enabled decision at the dashboard shell and pass it into navigation, overview, routing, and settings surfaces. Avoid separate unsynchronized local checks.
+- Keep copied transaction modules independent after creation. Export Sales may reuse Sales patterns, but changes must preserve its separate routes, persistence tables, document numbering, currency fields, and feature visibility.
 
 ## Database Identity
 

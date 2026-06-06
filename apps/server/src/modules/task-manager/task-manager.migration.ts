@@ -40,6 +40,8 @@ export async function migrateTaskManagerTables(database: Kysely<DynamicDatabase>
     )
   `).execute(database)
 
+  await sql.raw(`ALTER TABLE task_manager_tasks MODIFY priority VARCHAR(80) NOT NULL DEFAULT 'normal'`).execute(database)
+
   await sql.raw(`
     CREATE TABLE IF NOT EXISTS task_manager_activities (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,

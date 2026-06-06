@@ -20,6 +20,13 @@ Frontend changes under `apps/frontend`:
 
 - `npm -w apps/frontend run typecheck`
 - `npm -w apps/frontend run build`
+- For feature-visibility changes, verify both enabled and disabled states cover sidebar, shortcuts, overview, direct routes, and related settings.
+
+Billing entry or print/mail changes:
+
+- Verify the selected company and accounting year are respected.
+- Verify list, show, upsert, print, and document-number behavior for the affected entry type.
+- For PDF email delivery, verify the queued attachment matches the visible print and temporary files remain for retries but are deleted after successful delivery.
 
 Shared package changes under `packages/shared`:
 

@@ -2,20 +2,36 @@
 
 ## Version State
 
-- **Current version:** `1.0.82`
-- **Release tag:** `v-1.0.82`
-- **Changelog label:** `v 1.0.82`
+- **Current version:** `1.0.83`
+- **Release tag:** `v-1.0.83`
+- **Changelog label:** `v 1.0.83`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
 
+## v-1.0.83
+
+### [v 1.0.83] 2026-06-06 10:12 am - Task Manager priority and show page rework
+
+- Bumped workspace version to 1.0.83
+- Reworked the New Task dialog with a compact layout, TipTap rich-text subject editor, and tenant-user-only assignment autocomplete.
+- Added reusable Common Priorities with name, colour, and stable tag fields, seeded default priorities, and exposed Priority maintenance under Common -> Others.
+- Replaced hard-coded task priorities with shared priority tags, coloured dots, task-list badges, and name/tag search support.
+- Added fast priority creation directly from the priority autocomplete, automatically generating the current tag and a default random colour.
+- Rebuilt the Task Show page with animated Details and Activity tabs, full-width content cards, all task metadata, status controls, and a dedicated activity timeline.
+
 ## v-1.0.82
 
-### [v 1.0.82] 2026-06-06 8:38 am - working on export sales
+### [v 1.0.82] 2026-06-06 8:38 am - Export sales currency and feature controls
 
 - Bumped workspace version to 1.0.82
-- working on export sales
+- Added Common Currency selection and persistence to Export Sales, with Currency shown and searchable in the main list.
+- Added Export Sales totals to Billing Overview cards and the financial-year month summary table.
+- Added a company-published Export Sales feature switch under Sales Settings -> Features.
+- Wired the Export Sales feature switch across Billing navigation, shortcuts, overview metrics/month table, direct route access, and Document Settings.
+- Made Billing overview metric cards fill the available width when Export Sales is disabled.
+- Synchronized the assist README, architecture and coding rules, verification guidance, product context, billing gap analysis, session plan, task list, and work log with the current Export Sales, GST/GSP, accounting-year, print-mail, feature-visibility, and tenant-domain behavior.
 ## v-1.0.81
 
 ### [v 1.0.81] 2026-06-06 7:33 am - Export sales and accounting-year dashboard

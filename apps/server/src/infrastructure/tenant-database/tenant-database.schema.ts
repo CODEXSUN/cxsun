@@ -700,6 +700,18 @@ export interface TenantSalesEntryActivitiesTable {
   created_at: Generated<Date>
 }
 
+export interface TenantCommonPrioritiesTable {
+  id: Generated<number>
+  uuid: string
+  name: string
+  colour: string
+  tag: string
+  is_active: boolean
+  created_at: Generated<Date>
+  updated_at: Generated<Date>
+  deleted_at: Date | null
+}
+
 export interface TenantExportSalesEntriesTable extends TenantSalesEntriesTable {
   currency_id: number | null
   currency_name: string | null
@@ -939,6 +951,7 @@ export interface TenantDatabaseSchema {
   common_colours: TenantCommonColoursTable
   common_sizes: TenantCommonSizesTable
   common_currencies: TenantCommonCurrenciesTable
+  common_priorities: TenantCommonPrioritiesTable
   common_order_types: TenantCommonOrderTypesTable
   common_styles: TenantCommonStylesTable
   common_transports: TenantCommonTransportsTable

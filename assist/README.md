@@ -1,6 +1,6 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.82
+**Project version:** 1.0.83
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
@@ -52,7 +52,10 @@ Current backend boundary layout:
 - `apps/server/src/modules/foundation`: reusable engines and compatibility registries (`master-record`, `master-data`).
 - `apps/server/src/modules/common/<group>/<module>`: standalone common tenant modules.
 - `apps/server/src/modules/master/<module>`: standalone master modules (`company`, `contact`, `product`, `order`).
-- `apps/server/src/modules/entries/sales`: tenant-isolated sales entries.
+- `apps/server/src/modules/entries/<module>`: tenant-isolated transaction modules including sales, export sales, purchase, receipt, and payment.
+- `apps/server/src/modules/gst/gst-compliance`: tenant GST credentials, global GSP provider credentials, token state, and compliance operations.
+- `apps/server/src/modules/mail`: tenant SMTP settings, queued messages, attachment metadata, events, and delivery.
+- `apps/server/src/modules/settings`: company software settings and document numbering.
 
 Current important API surfaces:
 
@@ -69,6 +72,10 @@ Current important API surfaces:
 - `GET/POST /api/v1/orders`
 - `GET/POST /api/v1/common/<moduleKey>`
 - `GET/POST /api/v1/entries/sales`
+- `GET/POST /api/v1/entries/export-sales`
+- `GET/PATCH /api/v1/company-settings/<key>`
+- `GET/PATCH/POST /api/v1/gst-compliance/*`
+- `GET/PATCH/POST /api/v1/mail/*`
 
 ## Dashboard Boundaries
 
@@ -76,7 +83,15 @@ The active frontend dashboard is split by authenticated role:
 
 - `super-admin` sees two orchestration areas: Platform / Master Database for tenant, domain, industry, system update, and admin user manager; Tenant Database for tenant-owned modules such as company.
 - `admin` sees the software operations dashboard for helpdesk, bugs, and update/support work.
-- Tenant roles (`admin`, `manager`, `staff`, and `user`) see only the tenant dashboard, currently focused on tenant database companies and tenant-local roles. The `super-admin` role is reserved for the single platform owner account.
+- Tenant roles (`admin`, `manager`, `staff`, and `user`) use isolated application desks such as Application, Billing, Accounts, Inventory, Mail, Media, Sites, and Task Manager according to enabled app and company feature settings. The `super-admin` role is reserved for the platform owner account.
+
+Billing desk behavior:
+
+- The selected default company and accounting year control billing lists, reports, overview totals, month summaries, and document numbering context.
+- Domestic Sales and Export Sales are separate entry modules and database tables.
+- Export Sales stores a selected Common Currency reference and saved currency name.
+- Sales Settings -> Features owns the company-level `feature-export-sales` switch. When disabled, Export Sales is hidden from navigation, shortcuts, overview totals/month table, direct routes, and document settings without deleting existing records.
+- Entry PDF email delivery captures the exact visible print document, queues it through tenant Mail, stores retryable temporary PDFs under `storage/<tenant>/public/pdf`, and removes them after successful delivery.
 
 Keep these boundaries explicit when adding pages. Do not add platform orchestration pages to the tenant dashboard.
 

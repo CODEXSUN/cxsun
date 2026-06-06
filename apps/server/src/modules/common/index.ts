@@ -17,6 +17,7 @@ import { BrandsCommonModule } from './product/brands/index.js'
 import { ColoursCommonModule } from './product/colours/index.js'
 import { SizesCommonModule } from './product/sizes/index.js'
 import { CurrenciesCommonModule } from './others/currencies/index.js'
+import { PrioritiesCommonModule } from './others/priorities/index.js'
 import { OrderTypesCommonModule } from './orders/order-types/index.js'
 import { StylesCommonModule } from './product/styles/index.js'
 import { TransportsCommonModule } from './orders/transports/index.js'
@@ -45,6 +46,7 @@ import { migrateBrandsCommonTable } from './product/brands/index.js'
 import { migrateColoursCommonTable } from './product/colours/index.js'
 import { migrateSizesCommonTable } from './product/sizes/index.js'
 import { migrateCurrenciesCommonTable } from './others/currencies/index.js'
+import { migratePrioritiesCommonTable } from './others/priorities/index.js'
 import { migrateOrderTypesCommonTable } from './orders/order-types/index.js'
 import { migrateStylesCommonTable } from './product/styles/index.js'
 import { migrateTransportsCommonTable } from './orders/transports/index.js'
@@ -73,6 +75,7 @@ import { seedBrandsCommonTable } from './product/brands/index.js'
 import { seedColoursCommonTable } from './product/colours/index.js'
 import { seedSizesCommonTable } from './product/sizes/index.js'
 import { seedCurrenciesCommonTable } from './others/currencies/index.js'
+import { seedPrioritiesCommonTable } from './others/priorities/index.js'
 import { seedOrderTypesCommonTable } from './orders/order-types/index.js'
 import { seedStylesCommonTable } from './product/styles/index.js'
 import { seedTransportsCommonTable } from './orders/transports/index.js'
@@ -107,6 +110,7 @@ export const commonModuleClasses = [
   ColoursCommonModule,
   SizesCommonModule,
   CurrenciesCommonModule,
+  PrioritiesCommonModule,
   OrderTypesCommonModule,
   StylesCommonModule,
   TransportsCommonModule,
@@ -138,6 +142,7 @@ export async function migrateCommonModuleTables(database: Kysely<TenantDatabaseS
   await migrateColoursCommonTable(database)
   await migrateSizesCommonTable(database)
   await migrateCurrenciesCommonTable(database)
+  await migratePrioritiesCommonTable(database)
   await migrateOrderTypesCommonTable(database)
   await migrateStylesCommonTable(database)
   await migrateTransportsCommonTable(database)
@@ -169,6 +174,7 @@ export async function seedCommonModuleTables(database: Kysely<TenantDatabaseSche
   await seedColoursCommonTable(database)
   await seedSizesCommonTable(database)
   await seedCurrenciesCommonTable(database)
+  await seedPrioritiesCommonTable(database)
   await seedOrderTypesCommonTable(database)
   await seedStylesCommonTable(database)
   await seedTransportsCommonTable(database)

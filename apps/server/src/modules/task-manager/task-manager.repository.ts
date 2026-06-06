@@ -194,7 +194,8 @@ function toActivity(row: Record<string, unknown>): TaskManagerActivity {
 }
 
 function priorityValue(value: unknown): TaskManagerPriority {
-  return value === 'low' || value === 'high' || value === 'urgent' ? value : 'normal'
+  const tag = typeof value === 'string' ? value.trim().toLowerCase().replace(/\s+/g, '-') : ''
+  return tag || 'normal'
 }
 
 function statusValue(value: unknown): TaskManagerStatus {

@@ -17,6 +17,7 @@ import { brandsCommonDefinition } from './product/brands/definition.js'
 import { coloursCommonDefinition } from './product/colours/definition.js'
 import { sizesCommonDefinition } from './product/sizes/definition.js'
 import { currenciesCommonDefinition } from './others/currencies/definition.js'
+import { prioritiesCommonDefinition } from './others/priorities/definition.js'
 import { orderTypesCommonDefinition } from './orders/order-types/definition.js'
 import { stylesCommonDefinition } from './product/styles/definition.js'
 import { transportsCommonDefinition } from './orders/transports/definition.js'
@@ -48,6 +49,7 @@ export const commonModuleDefinitions: MasterDataModuleDefinition[] = [
   coloursCommonDefinition,
   sizesCommonDefinition,
   currenciesCommonDefinition,
+  prioritiesCommonDefinition,
   orderTypesCommonDefinition,
   stylesCommonDefinition,
   transportsCommonDefinition,
@@ -79,6 +81,7 @@ export const commonModuleFolderContracts = [
   { key: 'colours', group: 'product', module: 'colours', moduleClass: 'ColoursCommonModule', migration: 'migrateColoursCommonTable' },
   { key: 'sizes', group: 'product', module: 'sizes', moduleClass: 'SizesCommonModule', migration: 'migrateSizesCommonTable' },
   { key: 'currencies', group: 'others', module: 'currencies', moduleClass: 'CurrenciesCommonModule', migration: 'migrateCurrenciesCommonTable' },
+  { key: 'priorities', group: 'others', module: 'priorities', moduleClass: 'PrioritiesCommonModule', migration: 'migratePrioritiesCommonTable' },
   { key: 'orderTypes', group: 'orders', module: 'order-types', moduleClass: 'OrderTypesCommonModule', migration: 'migrateOrderTypesCommonTable' },
   { key: 'styles', group: 'product', module: 'styles', moduleClass: 'StylesCommonModule', migration: 'migrateStylesCommonTable' },
   { key: 'transports', group: 'orders', module: 'transports', moduleClass: 'TransportsCommonModule', migration: 'migrateTransportsCommonTable' },

@@ -1,5 +1,15 @@
 # Work Log
 
+## 2026-06-06
+
+- Added Export Sales as a separate tenant Billing entry module with independent tables, API, document numbering, list/show/upsert/print, GST actions, comments, activity, and exact-print PDF email delivery.
+- Added Common Currency selection to Export Sales and persisted both the selected currency id and saved display name.
+- Added Export Sales year/month totals to Billing Overview and the monthly financial-year summary table while keeping domestic Sales separate.
+- Added the company-published `feature-export-sales` switch under Sales Settings -> Features and wired it across sidebar navigation, shortcuts, overview, routes, and document settings.
+- Kept Billing Overview and billing entry lists scoped to the selected default company and accounting year.
+- Hardened tenant mail attachment visibility and temporary exact-print PDF lifecycle.
+- Documented the database-backed global GSP plus tenant GST credential split and the manual-by-default tenant-domain behavior.
+
 ## 2026-06-03
 
 - Added the tenant-aware Mail app surface with Mail Desk navigation, compose, inbox, drafts, scheduled, sent, trash, contacts, and tenant mail settings.

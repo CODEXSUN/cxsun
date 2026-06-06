@@ -115,6 +115,14 @@ Avoid direct cross-module imports. Use explicit public module exports, applicati
 - Put tenant transaction/entry modules under `apps/server/src/modules/entries/<module>`.
 - Keep internal folder moves API-stable unless the user explicitly requests a route change.
 
+## Tenant Feature Visibility
+
+- Company software settings are persisted tenant-side and apply to the selected default company.
+- A feature switch must control every discoverable frontend surface for that feature: sidebar navigation, overview cards/tables, shortcuts, route access, and related settings.
+- Hidden frontend features must also reject or redirect direct route access. Do not rely only on removing a menu item.
+- Disabling a feature is a visibility/capability decision, not a data deletion operation. Preserve existing records unless deletion is explicitly requested.
+- Keep feature-specific data modules separate even when their screens begin from a copied workflow. Domestic Sales and Export Sales must not share entry tables or numbering sequences.
+
 ## Database Identity Rules
 
 All application-owned tables must keep a compact internal primary key and a separate short public identifier:
@@ -181,7 +189,7 @@ Frontend dashboard routing must remain split by role:
 
 - `super-admin` is platform orchestration and can reach platform management surfaces.
 - `admin` is software operations and should focus on bugs, helpdesk, client notes, and updates.
-- Tenant users are isolated to tenant-local data such as companies and tenant-local RBAC roles.
+- Tenant users are isolated to enabled tenant-local application desks and their selected company/accounting-year context.
 
 When adding a dashboard page, first decide which dashboard mode owns it. Avoid relying only on hidden menu items; route guards should also reject pages outside the active dashboard mode.
 
@@ -247,3 +255,10 @@ Current default local ports:
 
 - Frontend: `6010`
 - Server: `6005`
+
+GST and domain deployment rules:
+
+- Keep global GSP client credentials in database-backed Super Admin GST provider settings, split by sandbox/production and credential purpose. Do not restore obsolete WhiteBooks client-id/client-secret environment variables.
+- Tenant GST settings own tenant-specific GST username, password, GSTIN, and sandbox/production selection.
+- `GSP_SANDBOX_BASE_URL` may remain an environment-level provider endpoint default; secrets must not be committed.
+- Cloud/Docker reinstall must not create tenant domains automatically unless `AUTO_SEED_TENANT_DOMAINS=true` is explicitly set.

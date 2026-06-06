@@ -1,35 +1,37 @@
 # Session Plan
 
-**Date:** 2026-05-24  
-**Version:** 1.0.26  
-**Focus:** Remaining stock ledger follow-up work.
+**Date:** 2026-06-06
+**Version:** 1.0.82
+**Focus:** Stabilize the current Billing and Export Sales application shape.
 
 ## Objective
 
-Finish the open stock ledger items that are not yet implemented or verified.
+Keep the current tenant Billing desk coherent after the Export Sales, overview, settings, GST, print, and mail updates.
 
 ## Remaining Scope
 
-### Barcode Label Verification
+### Export Sales
 
-- Verify printed labels render the readable barcode text and scannable value correctly.
-- Confirm label layout works for single-row print and multi-select print.
+- Verify currency selection persists and appears correctly in list/show/print where required.
+- Verify `feature-export-sales` enabled and disabled states across navigation, overview, routes, shortcuts, and document settings.
+- Keep Export Sales persistence and numbering separate from domestic Sales.
 
-### Edited Serialization Handling
+### Billing Context
 
-- Define how edited or revised serializations should be reversed or adjusted after stock has been posted.
-- Add movement reversal/update behavior without mutating historical ledger records.
+- Verify lists, overview totals, month summaries, reports, and numbering follow the selected company and accounting year.
+- Avoid aggregating foreign-currency Export Sales into INR domestic Sales charts without an explicit conversion rule.
 
-### Outward Stock Checks
+### Compliance And Delivery
 
-- Add scan and availability checks before Sales submit.
-- Add scan and availability checks before Delivery Note submit.
-- Warn when a scan is unknown, already consumed, belongs to another product, belongs to another warehouse, or has insufficient quantity.
-- On successful Sales or Delivery Note submit, add outward ledger movements and reduce live stock.
+- Harden GST gateway request/response logs, cancellation, retries, and validation.
+- Keep exact-print PDF mail attachments retryable and remove temporary files only after successful delivery.
+- Leave WhatsApp as a separate follow-up until a real dispatch provider is selected.
 
 ## Verification Needed
 
 - Run server typecheck after backend changes.
 - Run frontend typecheck after UI/client changes.
 - Run frontend build after stock ledger or voucher UI changes.
-- Smoke test the purchase receipt label print flow and outward scan warnings when those slices are implemented.
+- Smoke test Export Sales feature visibility in enabled and disabled states.
+- Smoke test selected-company/accounting-year switching on Billing Overview and entry lists.
+- Smoke test exact-print PDF email delivery and cleanup.

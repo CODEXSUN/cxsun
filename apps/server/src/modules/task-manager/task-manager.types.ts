@@ -1,4 +1,4 @@
-export type TaskManagerPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type TaskManagerPriority = string
 export type TaskManagerStatus = 'new' | 'todo' | 'in_progress' | 'review' | 'completed' | 'cancelled'
 
 export interface TaskManagerTask {

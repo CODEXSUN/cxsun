@@ -1,12 +1,12 @@
 # Billing Gap Analysis
 
-Updated: 2026-06-04
+Updated: 2026-06-06
 
 ## Scope Reviewed
 
 This scan focused on the current billing and billing-adjacent code paths:
 
-- Frontend billing entries: sales, purchase, receipt, payment, cash book, bank book.
+- Frontend billing entries: sales, export sales, purchase, receipt, payment, cash book, bank book.
 - Inventory-linked billing flows: purchase receipt, delivery note, stock ledger and barcode verification.
 - Reports: customer statement, supplier statement, GST statement.
 - Settings: company software settings, document numbering, sales layout/print options.
@@ -16,7 +16,8 @@ This scan focused on the current billing and billing-adjacent code paths:
 
 1. Core entry surfaces exist end to end.
 
-- Sales and purchase have list, show, print preview, upsert, comments, tools, activities, document numbers, GST fields, transport fields, e-invoice/e-way fields, round-off, balances, and item tables.
+- Sales, Export Sales, and purchase have list, show, print preview, upsert, comments, tools, activities, document numbers, GST fields, transport fields, e-invoice/e-way fields, round-off, balances, and item tables.
+- Export Sales uses separate tables and numbering, stores Common Currency id/name, and can be hidden company-wide from Sales Settings -> Features.
 - Receipts and payments have list, show, print, upsert, allocations, comments, tools, activities, and document numbers.
 - Cash book and bank book now have voucher list, show, print, comments, tools, activities, ledger selection, and document numbers.
 - Purchase receipt, delivery note, and stock ledger are present under the inventory/stock area.
@@ -29,7 +30,7 @@ This scan focused on the current billing and billing-adjacent code paths:
 
 3. Numbering foundation is in place.
 
-- Document number settings cover `sales`, `purchase`, `purchaseReceipt`, `deliveryNote`, `payment`, `receipt`, `cashBook`, and `bankBook`.
+- Document number settings cover `sales`, `exportSales`, `purchase`, `purchaseReceipt`, `deliveryNote`, `payment`, `receipt`, `cashBook`, and `bankBook`.
 - Most entry repositories consume document numbers and handle duplicate/manual-number conflicts.
 
 4. Print work is active and practical.
@@ -46,18 +47,17 @@ This scan focused on the current billing and billing-adjacent code paths:
 
 ## Main Gaps
 
-### 1. GST and Compliance Are Still Preview-Level
+### 1. GST and Compliance Needs Production Hardening
 
 Current state:
 
-- Sales and purchase forms store IRN, Ack no, Ack date, Signed QR, E-way bill no/date, transport data, and vehicle data.
-- Generate buttons create random/local preview numbers and show messages that live gateway wiring will be added later.
+- Super Admin stores sandbox/production GSP credentials with separate E-invoice + E-way and E-way-only purposes.
+- Tenant GST settings store tenant GST username/password/GSTIN and sandbox/production selection.
+- Sales GST operations merge global GSP credentials with tenant credentials, persist IRN/Ack/signed QR/e-way results, and print saved barcode details.
 - GST report calculates from local item tax fields.
 
 Gaps to fill:
 
-- Add real e-invoice gateway integration with request/response persistence.
-- Add real e-way bill gateway integration with part A / part B behavior.
 - Store gateway status, request payload, response payload, error code/message, generated/cancelled timestamps, and retry state.
 - Add cancel e-invoice and cancel e-way flows.
 - Add validation before generation: GSTIN, state code, HSN, taxable values, invoice date, distance/vehicle/transport fields.
@@ -207,20 +207,19 @@ Gaps to fill:
 
 Priority: Medium.
 
-### 10. Mail/WhatsApp/Tools Are Activity Stubs
+### 10. WhatsApp and General Attachments Are Still Incomplete
 
 Current state:
 
-- Show pages have tool panels for email, WhatsApp, assign, attachments, tags.
-- Tool actions generally record activity; actual sending/attachment storage is not complete in these billing pages.
-- A mail module exists separately.
+- Sales, Export Sales, Purchase, Receipt, and Payment can queue the exact visible print as a PDF email attachment through tenant Mail.
+- Temporary PDFs are stored under `storage/<tenant>/public/pdf`, retained for retries, and removed after successful SMTP delivery.
+- Mail Desk shows attachment counts and metadata.
+- WhatsApp, assign, tags, and general uploaded document attachments remain incomplete.
 
 Gaps to fill:
 
-- Connect billing documents to mail compose/send with generated PDF attachment.
 - Persist uploaded attachments against document records.
 - Add WhatsApp dispatch workflow or clearly mark it as activity-only until integrated.
-- Queue sends and show delivery history.
 - Add permissions and audit for sending documents.
 
 Priority: Medium.
@@ -270,9 +269,9 @@ Priority: Medium.
 4. Add accounting posting foundation for sales, purchase, receipts, payments, cash and bank vouchers.
 5. Wire stock outward checks/posting for delivery note and sales.
 6. Split sales-heavy settings into shared billing/sales/purchase/inventory settings.
-7. Replace e-invoice/e-way preview generation with gateway-ready service boundaries and persisted request/response logs.
+7. Harden GSP compliance with persisted request/response logs, cancellation, validation, and retries.
 8. Move reports to backend aggregation endpoints and add export/queued PDF path.
-9. Connect billing documents to mail queue with PDF attachment.
+9. Add WhatsApp dispatch and general document attachment storage.
 10. Add validation and period-lock rules before production use.
 
 ## Immediate Quick Wins
