@@ -28,6 +28,15 @@ export class QueueManagerController {
     return this.queueManager.enqueueBackup()
   }
 
+  @Post('runtime')
+  runtime(@Body() body: { mode?: 'database' | 'redis' }) {
+    if (body?.mode !== 'database' && body?.mode !== 'redis') {
+      return { ok: false, error: 'Invalid queue runtime mode.' }
+    }
+
+    return this.queueManager.setRuntimeMode(body.mode)
+  }
+
   @Post('jobs/:id/action')
   action(@Param('id') id: string, @Body() body: { action?: 'retry' | 'cancel' | 'delete' }) {
     const action = body?.action

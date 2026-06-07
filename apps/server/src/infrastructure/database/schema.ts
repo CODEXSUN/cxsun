@@ -131,6 +131,14 @@ export interface QueueJobsTable {
   updated_at: Generated<string>
 }
 
+export interface QueueRuntimeSettingsTable {
+  setting_key: string
+  setting_value: string
+  updated_by: string | null
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
 export interface GstProviderGlobalSettingsTable {
   id: Generated<number>
   uuid: string
@@ -159,5 +167,6 @@ export interface DatabaseSchema {
   rbac_policies: RbacPoliciesTable
   tenant_rbac_policies: TenantRbacPoliciesTable
   queue_jobs: QueueJobsTable
+  queue_runtime_settings: QueueRuntimeSettingsTable
   gst_provider_global_settings: GstProviderGlobalSettingsTable
 }

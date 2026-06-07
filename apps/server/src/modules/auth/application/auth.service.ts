@@ -2,6 +2,7 @@ import { Inject } from '../../../core/decorators/inject.js'
 import { Injectable } from '../../../core/decorators/injectable.js'
 import type { TenantRequestHeaders } from '../../../core/tenant/tenant-context.service.js'
 import { signJwt } from '../../../infrastructure/auth/jwt.js'
+import { verifyJwt } from '../../../infrastructure/auth/jwt.js'
 import { verifyPassword } from '../../../infrastructure/auth/password-hash.js'
 import { getTenantDatabase } from '../../../infrastructure/tenant-database/tenant-database.connection.js'
 import type { Tenant } from '../../../core/tenant/domain/tenant.types.js'
@@ -43,6 +44,60 @@ export class AuthService {
     }
 
     return this.loginTenantUser({ email, password, loginTenant })
+  }
+
+  async session(headers: TenantRequestHeaders = {}) {
+    const authHeader = firstHeader(headers.authorization)
+    if (!authHeader?.startsWith('Bearer ')) {
+      return { ok: false, error: 'Session token is required.' }
+    }
+
+    const payload = verifyJwt(authHeader.slice(7))
+    if (!payload) {
+      return { ok: false, error: 'Session token is invalid.' }
+    }
+
+    if (payload.identitySource === 'platform') {
+      return {
+        ok: true,
+        token: authHeader.slice(7),
+        user: { id: payload.sub, name: payload.email, email: payload.email },
+        tenants: [platformTenant(payload.role)],
+        selectedTenant: platformTenant(payload.role),
+      }
+    }
+
+    const loginTenant = await this.auth.findTenantBySlug(payload.tenantCode)
+    if (!loginTenant || loginTenant.status !== 'active') {
+      return { ok: false, error: 'Tenant session is no longer active.' }
+    }
+
+    const tenantDatabase = getTenantDatabase(loginTenant)
+    const user = await tenantDatabase
+      .selectFrom('users')
+      .innerJoin('user_tenants', 'user_tenants.user_id', 'users.id')
+      .select(['users.id', 'users.name', 'users.email', 'user_tenants.role', 'users.status'])
+      .where('users.id', '=', payload.sub)
+      .where('users.email', '=', payload.email)
+      .where('user_tenants.status', '=', 'active')
+      .executeTakeFirst()
+
+    if (!user || user.status !== 'active' || user.role !== payload.role) {
+      return { ok: false, error: 'Tenant session is no longer valid.' }
+    }
+
+    const selectedTenant = {
+      ...loginTenant,
+      role: user.role,
+    }
+
+    return {
+      ok: true,
+      token: authHeader.slice(7),
+      user: { id: user.id, name: user.name, email: user.email },
+      tenants: [selectedTenant],
+      selectedTenant,
+    }
   }
 
   private async resolveLoginDomainTenant(headers: TenantRequestHeaders) {

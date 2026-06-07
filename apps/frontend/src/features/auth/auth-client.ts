@@ -156,3 +156,27 @@ export async function login(
   storeSession(result, surface)
   return result
 }
+
+export async function refreshSession(session: AuthSession, surface: AuthSurface = "tenant") {
+  const response = await fetch(`${apiBaseUrl}/api/v1/auth/session`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Session refresh failed with status ${response.status}.`)
+  }
+
+  const result = (await response.json()) as ({ ok: true } & AuthSession) | { ok: false; error?: string }
+
+  if (!result.ok) {
+    throw new Error(result.error ?? "Session refresh failed.")
+  }
+
+  if (!roleMatchesSurface(result.selectedTenant.role, surface)) {
+    throw new Error("This refreshed session is not allowed for the current surface.")
+  }
+
+  storeSession(result, surface)
+  return result
+}

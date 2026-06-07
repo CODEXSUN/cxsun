@@ -22,6 +22,15 @@ export interface QueueOverview {
   stats: { status: string; count: number }[]
   latest: QueueJob[]
   bullmq?: { name: string; counts: null | Record<string, number> }[]
+  runtime?: QueueRuntimeStatus
+}
+
+export interface QueueRuntimeStatus {
+  enabled: boolean
+  mode: "database" | "redis"
+  configuredMode: "database" | "redis"
+  redisAvailable: boolean | null
+  worker: { type: "database" | "redis"; started: boolean }
 }
 
 export interface DatabaseOverview {
@@ -56,6 +65,13 @@ export async function queueJobAction(session: AuthSession, id: number, action: "
 
 export async function enqueueDatabaseBackup(session: AuthSession) {
   return request<{ ok: boolean }>(session, "/api/system/queue-manager/enqueue-backup", { method: "POST" })
+}
+
+export async function setQueueRuntimeMode(session: AuthSession, mode: "database" | "redis") {
+  return request<QueueRuntimeStatus>(session, "/api/system/queue-manager/runtime", {
+    method: "POST",
+    body: JSON.stringify({ mode }),
+  })
 }
 
 export async function getDatabaseOverview(session: AuthSession) {

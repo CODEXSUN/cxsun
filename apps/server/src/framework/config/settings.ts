@@ -28,6 +28,7 @@ export const settings = {
   },
   queue: {
     enabled: envString('QUEUE_ENABLED', 'true') !== 'false',
+    driver: envString('QUEUE_DRIVER', 'database') === 'redis' ? 'redis' : 'database',
     backupIntervalHours: envNumber('DATABASE_BACKUP_INTERVAL_HOURS', 6),
   },
   mail: {

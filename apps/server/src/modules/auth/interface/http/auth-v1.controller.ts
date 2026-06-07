@@ -1,5 +1,5 @@
 import { Body, Headers } from '../../../../core/decorators/http-params.js'
-import { Controller, Post } from '../../../../core/decorators/controller.js'
+import { Controller, Get, Post } from '../../../../core/decorators/controller.js'
 import { Inject } from '../../../../core/decorators/inject.js'
 import type { TenantRequestHeaders } from '../../../../core/tenant/tenant-context.service.js'
 import { AuthService } from '../../application/auth.service.js'
@@ -14,5 +14,10 @@ export class AuthV1Controller {
   @Post('login')
   login(@Body() body: LoginInput, @Headers() headers: TenantRequestHeaders) {
     return this.authService.login(body, headers)
+  }
+
+  @Get('session')
+  session(@Headers() headers: TenantRequestHeaders) {
+    return this.authService.session(headers)
   }
 }

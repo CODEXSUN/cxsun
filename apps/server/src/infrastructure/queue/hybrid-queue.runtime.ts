@@ -5,9 +5,11 @@ import { sql } from 'kysely'
 
 import { settings } from '../../framework/config/index.js'
 import { getDatabase } from '../database/connection.js'
+import { nowIso } from '../database/database-module.js'
 import { dispatchQueuedMail } from '../../modules/mail/mail.dispatcher.js'
 
 export type HybridQueueName = 'events' | 'mail' | 'reports' | 'database-backup' | 'system-update' | 'tenant-maintenance'
+export type QueueRuntimeMode = 'database' | 'redis'
 
 interface HybridJobPayload {
   dbJobId?: number
@@ -19,6 +21,9 @@ let redisConnection: IORedis | null = null
 const queues = new Map<HybridQueueName, Queue>()
 const workers: Worker[] = []
 let workersStarted = false
+let databaseWorkerStarted = false
+let databaseWorkerRunning = false
+let databaseWorkerTimer: NodeJS.Timeout | null = null
 let redisAvailable: boolean | null = null
 let redisWarningShown = false
 
@@ -29,6 +34,7 @@ export async function enqueueHybridJob(input: {
   runAt?: string
 }) {
   if (!settings.queue.enabled) return
+  if (await getQueueRuntimeMode() === 'database') return
 
   try {
     if (!(await isRedisAvailable())) return
@@ -56,6 +62,11 @@ export function queueNameForJobType(type: string): HybridQueueName {
 
 export async function scheduleDatabaseBackups() {
   if (!settings.queue.enabled || settings.queue.backupIntervalHours <= 0) return
+  if (await getQueueRuntimeMode() === 'database') {
+    await scheduleNextDatabaseBackupJob()
+    console.log(`  ok Database backup queue scheduled in database mode every ${settings.queue.backupIntervalHours} hour(s)`)
+    return
+  }
 
   try {
     if (!(await isRedisAvailable())) {
@@ -82,6 +93,13 @@ export async function scheduleDatabaseBackups() {
 export async function startHybridQueueWorkers() {
   if (workersStarted || !settings.queue.enabled) return
   workersStarted = true
+
+  if (await getQueueRuntimeMode() === 'database') {
+    startDatabaseQueueWorkers()
+    await scheduleDatabaseBackups()
+    console.log('  ok Database queue workers started')
+    return
+  }
 
   try {
     if (!(await isRedisAvailable())) {
@@ -112,6 +130,7 @@ export function getHybridQueue(name: HybridQueueName) {
 
 export async function getHybridQueueCounts() {
   if (!settings.queue.enabled) return []
+  if (await getQueueRuntimeMode() === 'database') return []
   if (!(await isRedisAvailable())) return []
 
   const names: HybridQueueName[] = ['events', 'mail', 'reports', 'database-backup', 'system-update', 'tenant-maintenance']
@@ -126,6 +145,60 @@ export async function getHybridQueueCounts() {
   }
 
   return counts
+}
+
+export async function getQueueRuntimeStatus() {
+  const mode = await getQueueRuntimeMode()
+  return {
+    enabled: settings.queue.enabled,
+    mode,
+    configuredMode: settings.queue.driver,
+    redisAvailable: mode === 'redis' ? await isRedisAvailable() : null,
+    worker: mode === 'database'
+      ? { type: 'database', started: databaseWorkerStarted }
+      : { type: 'redis', started: workersStarted },
+  }
+}
+
+export async function setQueueRuntimeMode(mode: QueueRuntimeMode, updatedBy?: string) {
+  await getDatabase()
+    .insertInto('queue_runtime_settings')
+    .values({
+      setting_key: 'driver',
+      setting_value: mode,
+      updated_by: updatedBy ?? null,
+    })
+    .onDuplicateKeyUpdate({
+      setting_value: mode,
+      updated_by: updatedBy ?? null,
+      updated_at: sql`CURRENT_TIMESTAMP`,
+    })
+    .execute()
+
+  if (mode === 'database') {
+    closeRedisQueues()
+    startDatabaseQueueWorkers()
+    return getQueueRuntimeStatus()
+  }
+
+  stopDatabaseQueueWorkers()
+  workersStarted = false
+  await startHybridQueueWorkers()
+  return getQueueRuntimeStatus()
+}
+
+export async function getQueueRuntimeMode(): Promise<QueueRuntimeMode> {
+  const row = await getDatabase()
+    .selectFrom('queue_runtime_settings')
+    .select('setting_value')
+    .where('setting_key', '=', 'driver')
+    .executeTakeFirst()
+
+  const value = row?.setting_value === 'redis' || row?.setting_value === 'database'
+    ? row.setting_value
+    : settings.queue.driver
+
+  return value === 'redis' ? 'redis' : 'database'
 }
 
 function startWorker(name: HybridQueueName, processor: (job: { data: HybridJobPayload }) => Promise<void>) {
@@ -143,6 +216,118 @@ function startWorker(name: HybridQueueName, processor: (job: { data: HybridJobPa
     if (dbJobId) await markJob(dbJobId, { status: 'completed', progress: 100, result, finished: true })
   })
   workers.push(worker)
+}
+
+function startDatabaseQueueWorkers() {
+  if (databaseWorkerStarted) return
+  databaseWorkerStarted = true
+  void processDueDatabaseJobs()
+  databaseWorkerTimer = setInterval(() => {
+    void processDueDatabaseJobs()
+  }, 2_000)
+  databaseWorkerTimer.unref?.()
+}
+
+function stopDatabaseQueueWorkers() {
+  databaseWorkerStarted = false
+  databaseWorkerRunning = false
+  if (databaseWorkerTimer) {
+    clearInterval(databaseWorkerTimer)
+    databaseWorkerTimer = null
+  }
+}
+
+async function processDueDatabaseJobs() {
+  if (databaseWorkerRunning || await getQueueRuntimeMode() !== 'database') return
+  databaseWorkerRunning = true
+
+  try {
+    const jobs = await getDatabase()
+      .selectFrom('queue_jobs')
+      .selectAll()
+      .where('status', '=', 'pending')
+      .where('run_at', '<=', nowIso())
+      .orderBy('run_at', 'asc')
+      .orderBy('id', 'asc')
+      .limit(5)
+      .execute()
+
+    for (const job of jobs) {
+      const claimed = await getDatabase()
+        .updateTable('queue_jobs')
+        .set({
+          status: 'processing',
+          attempts: sql`attempts + 1`,
+          progress: 5,
+          started_at: sql`COALESCE(started_at, CURRENT_TIMESTAMP)`,
+          updated_at: sql`CURRENT_TIMESTAMP`,
+        })
+        .where('id', '=', job.id)
+        .where('status', '=', 'pending')
+        .executeTakeFirst()
+
+      if (Number(claimed.numUpdatedRows) <= 0) continue
+
+      try {
+        await processDatabaseRuntimeJob({
+          dbJobId: job.id,
+          type: job.type,
+          payload: parsePayload(job.payload) as Record<string, unknown>,
+        })
+      } catch (error) {
+        await markJob(job.id, { status: 'failed', error: message(error), finished: true })
+      }
+
+      if (job.type === 'database.backup.interval') {
+        await scheduleNextDatabaseBackupJob()
+      }
+    }
+  } finally {
+    databaseWorkerRunning = false
+  }
+}
+
+async function processDatabaseRuntimeJob(data: HybridJobPayload) {
+  const queueName = queueNameForType(data.type)
+  if (queueName === 'database-backup') {
+    await processDatabaseBackupJob({ data })
+    return
+  }
+
+  if (queueName === 'mail') {
+    await processMailJob({ data })
+    return
+  }
+
+  await processPlaceholderJob({ data })
+}
+
+async function scheduleNextDatabaseBackupJob() {
+  const runAt = new Date(Date.now() + settings.queue.backupIntervalHours * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ')
+  const existing = await getDatabase()
+    .selectFrom('queue_jobs')
+    .select('id')
+    .where('type', '=', 'database.backup.interval')
+    .where('status', '=', 'pending')
+    .executeTakeFirst()
+
+  if (existing) return
+
+  await getDatabase()
+    .insertInto('queue_jobs')
+    .values({
+      queue_name: 'database-backup',
+      type: 'database.backup.interval',
+      payload: JSON.stringify({ source: 'database-schedule' }),
+      status: 'pending',
+      attempts: 0,
+      progress: 0,
+      run_at: runAt,
+    })
+    .execute()
 }
 
 async function processDatabaseBackupJob(job: { data: HybridJobPayload }) {
@@ -216,6 +401,20 @@ function getRedisConnection() {
   return redisConnection
 }
 
+function closeRedisQueues() {
+  for (const worker of workers.splice(0)) {
+    void worker.close()
+  }
+  for (const queue of queues.values()) {
+    void queue.close()
+  }
+  queues.clear()
+  redisConnection?.disconnect()
+  redisConnection = null
+  redisAvailable = false
+  workersStarted = false
+}
+
 async function isRedisAvailable() {
   if (redisAvailable === true) return true
 
@@ -279,4 +478,14 @@ function nodeCommand() {
 
 function message(error: unknown) {
   return error instanceof Error ? error.message : String(error)
+}
+
+function parsePayload(value: unknown) {
+  if (typeof value !== 'string') return value
+
+  try {
+    return JSON.parse(value)
+  } catch {
+    return {}
+  }
 }

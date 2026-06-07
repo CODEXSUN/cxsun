@@ -25,6 +25,16 @@ export const queueDatabaseModule: PlatformDatabaseModule = {
       )
     `).execute(database)
 
+    await sql.raw(`
+      CREATE TABLE IF NOT EXISTS queue_runtime_settings (
+        setting_key VARCHAR(80) NOT NULL PRIMARY KEY,
+        setting_value VARCHAR(191) NOT NULL,
+        updated_by VARCHAR(191) NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `).execute(database)
+
     await addColumnIfMissing(database, 'queue_jobs', 'queue_name', "VARCHAR(80) NOT NULL DEFAULT 'events' AFTER id")
     await addColumnIfMissing(database, 'queue_jobs', 'progress', 'INT NOT NULL DEFAULT 0 AFTER attempts')
     await addColumnIfMissing(database, 'queue_jobs', 'result', 'LONGTEXT NULL AFTER progress')

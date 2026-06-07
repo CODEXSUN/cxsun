@@ -150,6 +150,7 @@ function deskHeaderBackground(appId: DashboardAppId) {
     mail: "rgba(13, 148, 136, 0.18)",
     media: "rgba(2, 132, 199, 0.18)",
     sites: "rgba(124, 58, 237, 0.18)",
+    tally: "rgba(29, 78, 216, 0.18)",
     taskmanager: "rgba(8, 145, 178, 0.18)",
   }
 

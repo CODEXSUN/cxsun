@@ -127,6 +127,15 @@ export class AuthRepository {
     return row?.slug
   }
 
+  findTenantBySlug(slug: string): Promise<Tenant | undefined> {
+    return getDatabase()
+      .selectFrom('tenants')
+      .selectAll()
+      .where('slug', '=', slug)
+      .where('deleted_at', 'is', null)
+      .executeTakeFirst() as Promise<Tenant | undefined>
+  }
+
   async listUserTenantSummaries(): Promise<TenantUserSummary[]> {
     const tenants = await getDatabase()
       .selectFrom('tenants')

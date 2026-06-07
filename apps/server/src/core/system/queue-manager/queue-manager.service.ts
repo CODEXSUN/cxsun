@@ -3,7 +3,7 @@ import { sql } from 'kysely'
 import { Injectable } from '../../decorators/injectable.js'
 import { Inject } from '../../decorators/inject.js'
 import { getDatabase } from '../../../infrastructure/database/connection.js'
-import { enqueueHybridJob, getHybridQueueCounts } from '../../../infrastructure/queue/hybrid-queue.runtime.js'
+import { enqueueHybridJob, getHybridQueueCounts, getQueueRuntimeStatus, setQueueRuntimeMode, type QueueRuntimeMode } from '../../../infrastructure/queue/hybrid-queue.runtime.js'
 import { MasterQueueService } from '../../../infrastructure/queue/master-queue.service.js'
 
 type QueueAction = 'retry' | 'cancel' | 'delete'
@@ -28,7 +28,16 @@ export class QueueManagerService {
       .limit(10)
       .execute()
 
-    return { stats, latest: latest.map(formatJob), bullmq: await getHybridQueueCounts() }
+    return {
+      stats,
+      latest: latest.map(formatJob),
+      bullmq: await getHybridQueueCounts(),
+      runtime: await getQueueRuntimeStatus(),
+    }
+  }
+
+  async setRuntimeMode(mode: QueueRuntimeMode) {
+    return setQueueRuntimeMode(mode)
   }
 
   async list(query: { status?: string; queue?: string; limit?: string }) {

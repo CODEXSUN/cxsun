@@ -8,6 +8,7 @@ import { DashboardHome, type BillingRecentTransaction } from './dashboard-home'
 import {
   clearAuthCache,
   getStoredSession,
+  refreshSession,
   roleMatchesSurface,
   switchTenant,
   type AuthSurface,
@@ -140,6 +141,9 @@ const TaskManagerPage = lazy(() =>
 )
 const TaskManagerAutomationPage = lazy(() =>
   import('src/features/task-manager/task-manager-automation-page').then((module) => ({ default: module.TaskManagerAutomationPage })),
+)
+const TallyPage = lazy(() =>
+  import('src/features/tally/tally-page').then((module) => ({ default: module.TallyPage })),
 )
 const CrmPage = lazy(() =>
   import('src/features/crm/crm-page').then((module) => ({ default: module.CrmPage })),
@@ -300,6 +304,11 @@ function prefetchAppModules(appId: DashboardAppId) {
       return
     }
 
+    if (appId === "tally") {
+      void import('src/features/tally/tally-page')
+      return
+    }
+
     if (appId === "crm") {
       void import('src/features/crm/crm-page')
       return
@@ -349,6 +358,40 @@ export function DashboardView({
       pushDashboardPage(basePath, defaultPageForApp(nextLandingApp))
     }
   }, [activeApp, basePath, mode, session])
+
+  useEffect(() => {
+    if (mode !== "tenant" || !session || needsLogin) return
+
+    let cancelled = false
+    refreshSession(session, "tenant")
+      .then((nextSession) => {
+        if (cancelled) return
+        const nextEnabledApps = enabledAppsForSession(nextSession)
+        const nextLandingApp = readStoredLandingApp(nextEnabledApps)
+        setSession(nextSession)
+        setEnabledApps(nextEnabledApps)
+        setLandingApp(nextLandingApp)
+        if (!nextEnabledApps[activeApp]) {
+          const nextPage = defaultPageForApp(nextLandingApp)
+          setActiveApp(nextLandingApp)
+          setActivePage(nextPage)
+          window.localStorage.setItem("cxsun.activeApp", nextLandingApp)
+          pushDashboardPage(basePath, nextPage)
+        }
+      })
+      .catch(() => {
+        if (cancelled) return
+        clearAuthCache("tenant")
+        setSession(null)
+        window.history.replaceState(null, "", loginPath)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  // Run once for the stored tenant session; follow-up state changes are handled by the normal session effect.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     function syncDashboardPage() {
@@ -717,6 +760,12 @@ export function DashboardView({
             <TaskManagerAutomationPage session={session} view="tags" />
           ) : visiblePage === "app-taskmanager-settings" ? (
             <TaskManagerAutomationPage session={session} view="settings" />
+          ) : visiblePage === "app-tally-desk" ? (
+            <TallyPage session={session} view="desk" />
+          ) : visiblePage === "app-tally-settings" ? (
+            <TallyPage session={session} view="settings" />
+          ) : visiblePage === "app-tally-sync-jobs" ? (
+            <TallyPage session={session} view="jobs" />
           ) : visiblePage === "app-billing-settings" ? (
             <SalesSettingsPage session={session} />
           ) : visiblePage === "app-billing-document-settings" ? (
@@ -948,6 +997,7 @@ function appGroupDescription(title: string) {
     "Library": "Upload, browse, and organize media.",
     "Management": "Share, link, and govern media assets.",
     "Mail Desk": "Compose, queue, and inspect workspace mail.",
+    "Tally Desk": "Connection, voucher sync, and job controls.",
     "Storefront": "Store operations and checkout flow.",
     "Catalog": "Products, collections, and variants.",
     "Customers": "Customer records and engagement.",

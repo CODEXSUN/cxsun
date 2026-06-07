@@ -23,6 +23,7 @@ import { MediaModule } from './media/index.js'
 import { MailModule } from './mail/index.js'
 import { TaskManagerModule } from './task-manager/index.js'
 import { CrmModule } from './crm/index.js'
+import { TallyModule } from './tally/index.js'
 import { AuditorContactCredentialModule } from './auditor/contact-credential/index.js'
 import { AuditorGstFilingModule } from './auditor/gst-filing/index.js'
 import { SystemUpdateModule } from '../core/system/system-update/system-update.module.js'
@@ -71,6 +72,7 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     MailModule,
     TaskManagerModule,
     CrmModule,
+    TallyModule,
     AuditorContactCredentialModule,
     AuditorGstFilingModule,
     CompanyModule,

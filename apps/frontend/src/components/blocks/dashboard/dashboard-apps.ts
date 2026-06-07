@@ -8,6 +8,7 @@ import {
   Brush,
   Building2,
   CalendarDays,
+  Cable,
   ClipboardCheck,
   ContactRound,
   CircleDollarSign,
@@ -51,7 +52,7 @@ import {
 
 import type { DashboardPage } from "src/components/blocks/sidebar/app-sidebar"
 
-export type DashboardAppId = "application" | "accounts" | "auditor" | "billing" | "media" | "mail" | "taskmanager" | "ecommerce" | "crm" | "inventory" | "sites"
+export type DashboardAppId = "application" | "accounts" | "auditor" | "billing" | "media" | "mail" | "taskmanager" | "ecommerce" | "crm" | "inventory" | "sites" | "tally"
 
 export interface DashboardAppMenuItem {
   title: string
@@ -191,6 +192,26 @@ export const dashboardApps: DashboardAppDefinition[] = [
     icon: Landmark,
     menuGroups: [
       { title: "Accounts", icon: Landmark, items: [item("accounts", "cash-book", "Cash Book", Banknote), item("accounts", "bank-book", "Bank Book", Landmark)] },
+    ],
+  }),
+  withMenu({
+    id: "tally",
+    name: "Tally",
+    shortName: "Tally",
+    description: "Tally connection settings, voucher sync controls, job queue, and integration activity.",
+    status: "active",
+    accent: "bg-blue-700 text-white",
+    icon: Cable,
+    menuGroups: [
+      {
+        title: "Tally Desk",
+        icon: Cable,
+        items: [
+          item("tally", "desk", "Tally Desk", Cable),
+          item("tally", "settings", "Tally Settings", Settings),
+          item("tally", "sync-jobs", "Sync Jobs", ClipboardList),
+        ],
+      },
     ],
   }),
   withMenu({

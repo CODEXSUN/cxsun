@@ -155,6 +155,7 @@ export function TenantListPage({ session }: { session: AuthSession }) {
         onBack={() => setSelectedTenant(null)}
         onDestroy={() => void destroy(selectedTenant)}
         onEdit={() => setUpsertState({ tenant: selectedTenant, returnTo: "show" })}
+        onTenantUpdated={setSelectedTenant}
         onRestore={() => void restore(selectedTenant)}
       />
     )
@@ -284,6 +285,7 @@ function TenantShowPage({
   onDestroy,
   onEdit,
   onRestore,
+  onTenantUpdated,
 }: {
   tenant: TenantRecord
   session: AuthSession
@@ -291,6 +293,7 @@ function TenantShowPage({
   onDestroy(): void
   onEdit(): void
   onRestore(): void
+  onTenantUpdated(tenant: TenantRecord): void
 }) {
   const queryClient = useQueryClient()
   const [showTab, setShowTab] = useState("details")
@@ -330,6 +333,7 @@ function TenantShowPage({
   async function publishApps() {
     try {
       const result = await appsMutation.mutateAsync(enabledAppDraft)
+      onTenantUpdated(result)
       toast.success("Tenant apps published", {
         description: `${result.name} app access is ready for next tenant login.`,
       })
