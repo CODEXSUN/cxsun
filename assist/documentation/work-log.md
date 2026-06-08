@@ -1,5 +1,13 @@
 # Work Log
 
+## 2026-06-08
+
+- Added Tally contact resync from the contact edit flow and from already-synced contact rows.
+- Fixed Tally ledger mailing/GST XML so contact address, pincode, state, country, and GSTIN/UIN persist in TallyPrime.
+- Reworked Tally product sync into inventory master sync with stock item group, unit, HSN, GST supply type, and GST rate details.
+- Added default Tally unit/UQC bootstrap and expanded the common unit seed list to match Tally UQC choices.
+- Bumped the workspace to version `1.0.88`.
+
 ## 2026-06-07
 
 - Added the Tally integration desk with strict handshake validation against the selected Tally company.

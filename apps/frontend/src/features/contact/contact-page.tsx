@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { AlertCircle, ArrowLeft, Check, CheckCircle2, ChevronDown, Pencil, Plus, RefreshCw, RotateCw, Save, Trash2, X } from "lucide-react"
+import { AlertCircle, ArrowLeft, Check, CheckCircle2, ChevronDown, Pencil, Plus, RefreshCw, RotateCw, Save, Send, Trash2, X } from "lucide-react"
 import { AnimatedTabs } from "src/components/ui/animated-tabs"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
@@ -26,6 +26,7 @@ import {
 import { cn } from "src/lib/utils"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { contactEmailTypes, contactPhoneTypes, destroyContact, emptyAddress, emptyContact, listContacts, restoreContact, upsertContact, type ContactAddress, type ContactBankAccount, type ContactEmail, type ContactEmailType, type ContactInput, type ContactPhone, type ContactPhoneType, type ContactRecord, type ContactSocialLink } from "./contact-client"
+import { runTallySync } from "src/features/tally/tally-client"
 import { formatDate } from "src/features/master-data/application/master-data-service"
 import { CityAutocompleteLookup } from "src/features/master-data/interface/components/city-autocomplete-lookup"
 import { CommonRecordAutocompleteLookup, getCommonRecordName } from "src/features/master-data/interface/components/common-record-autocomplete-lookup"
@@ -97,10 +98,25 @@ export function ContactPage({ session }: { session: AuthSession }) {
     await queryClient.invalidateQueries({ queryKey })
   }
 
-  async function save(input: ContactInput) {
+  async function save(input: ContactInput, options: { resyncToTally?: boolean } = {}) {
     try {
       const contact = await upsertMutation.mutateAsync(input)
       toast.success(input.uuid ? "Contact updated" : "Contact created", { description: contact.name })
+      if (options.resyncToTally) {
+        try {
+          const result = await runTallySync(session, "contacts", [contact.uuid])
+          const synced = result.summary.synced ?? 0
+          const failed = result.summary.failed ?? 0
+          if (failed > 0) {
+            toast.error("Tally contact resync failed", { description: `${synced} synced, ${failed} failed. Check the Tally contact sync page for details.` })
+          } else {
+            toast.success("Tally contact resynced", { description: `${contact.name} pushed to Tally.` })
+          }
+          await queryClient.invalidateQueries({ queryKey: ["tally-sync-list", session.selectedTenant.slug] })
+        } catch (error) {
+          toast.error("Contact saved, Tally resync failed", { description: error instanceof Error ? error.message : "Open Tally and retry from Tally Contact Sync." })
+        }
+      }
       await refresh()
       setView({ mode: "show", contact })
     } catch (error) {
@@ -212,8 +228,9 @@ function ContactShowPage({ contact, onBack, onEdit, onRestore, onSuspend, sessio
   )
 }
 
-function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { contact: ContactRecord | null; isSaving: boolean; onBack(): void; onSubmit(input: ContactInput): Promise<void>; session: AuthSession }) {
+function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { contact: ContactRecord | null; isSaving: boolean; onBack(): void; onSubmit(input: ContactInput, options?: { resyncToTally?: boolean }): Promise<void>; session: AuthSession }) {
   const [form, setForm] = useState<ContactInput>(() => contact ? contactToInput(contact) : emptyContact())
+  const [resyncToTally, setResyncToTally] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const nameError = submitted && !String(form.name ?? "").trim()
   const contactTypeError = submitted && !String(form.contactTypeId ?? "").trim()
@@ -228,7 +245,7 @@ function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { c
       toast.warning("Fill mandatory fields", { description: "Name and Contact Type are required before saving." })
       return
     }
-    void onSubmit(form)
+    void onSubmit(form, { resyncToTally: Boolean(contact && resyncToTally) })
   }
 
   return (
@@ -241,7 +258,7 @@ function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { c
         { value: "addresses", label: "Addresses", content: <TabPanel><Collection title="Addresses" onAdd={() => setForm((current) => ({ ...current, addresses: [...current.addresses, { ...emptyAddress(), isDefault: current.addresses.length === 0 }] }))}>{form.addresses.map((item, index) => <AddressRow key={index} item={item} session={session} onChange={(patch) => setForm((current) => ({ ...current, addresses: updateAt(current.addresses, index, patch) }))} onRemove={() => setForm((current) => ({ ...current, addresses: current.addresses.filter((_, itemIndex) => itemIndex !== index) }))} />)}</Collection></TabPanel> },
         { value: "finance", label: "Finance", content: <TabPanel><Collection title="Bank Accounts" onAdd={() => setForm((current) => ({ ...current, bankAccounts: [...current.bankAccounts, { bankName: "", accountNumber: "", accountHolderName: "", ifsc: "", branch: "", isPrimary: current.bankAccounts.length === 0 }] }))}>{form.bankAccounts.map((item, index) => <BankRow key={index} item={item} session={session} onChange={(patch) => setForm((current) => ({ ...current, bankAccounts: updateAt(current.bankAccounts, index, patch) }))} onRemove={() => setForm((current) => ({ ...current, bankAccounts: current.bankAccounts.filter((_, itemIndex) => itemIndex !== index) }))} />)}</Collection></TabPanel> },
         { value: "more", label: "More", content: <TabPanel><div className="grid gap-5 md:grid-cols-2"><Field label="Website" value={form.website ?? ""} onChange={(value) => setForm((current) => ({ ...current, website: value }))} /><TextField label="Description" value={form.description ?? ""} onChange={(value) => setForm((current) => ({ ...current, description: value }))} /><Collection title="Social Links" onAdd={() => setForm((current) => ({ ...current, socialLinks: [...current.socialLinks, { platform: socialPlatformOptions[0], url: "", isActive: true }] }))}>{form.socialLinks.map((item, index) => <SocialRow key={index} item={item} onChange={(patch) => setForm((current) => ({ ...current, socialLinks: updateAt(current.socialLinks, index, patch) }))} onRemove={() => setForm((current) => ({ ...current, socialLinks: current.socialLinks.filter((_, itemIndex) => itemIndex !== index) }))} />)}</Collection></div></TabPanel> },
-      ]} /><div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6"><Button type="submit" disabled={isSaving} className="h-10 rounded-md px-5"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button><Button type="button" variant="outline" onClick={onBack} className="h-10 rounded-md px-5"><X className="size-4" />Cancel</Button></div></form></MasterListUpsertCard></MasterListUpsertLayout>
+      ]} /><div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6"><Button type="submit" disabled={isSaving} className="h-10 rounded-md px-5"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button>{contact ? <label className="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-border/70 bg-background px-3 text-sm font-medium"><Switch checked={resyncToTally} onCheckedChange={setResyncToTally} /><Send className="size-4 text-muted-foreground" />Resync to Tally after save</label> : null}<Button type="button" variant="outline" onClick={onBack} className="h-10 rounded-md px-5"><X className="size-4" />Cancel</Button></div></form></MasterListUpsertCard></MasterListUpsertLayout>
     </MasterListPageFrame>
   )
 }

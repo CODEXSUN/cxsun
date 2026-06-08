@@ -2,13 +2,24 @@
 
 ## Version State
 
-- **Current version:** `1.0.87`
-- **Release tag:** `v-1.0.87`
-- **Changelog label:** `v 1.0.87`
+- **Current version:** `1.0.88`
+- **Release tag:** `v-1.0.88`
+- **Changelog label:** `v 1.0.88`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.88
+
+### [v 1.0.88] 2026-06-08 9:18 am - Tally master sync defaults
+
+- Bumped workspace version to 1.0.88
+- Added contact edit resync controls and Tally contact sync resync support for already-synced contacts.
+- Fixed Tally contact ledger sync to persist mailing address lines, city, state, country, pincode, and GST registration details through TallyPrime mailing/GST detail lists.
+- Added product inventory master sync for Tally stock items with product group, unit, HSN, GST type of supply, taxable rate details, and post-import verification.
+- Added Tally default unit/UQC bootstrap with GST UQC mappings and a Product Sync action to create or repair default unit masters before item sync.
+- Expanded common unit seed defaults to match the Tally UQC list used by inventory master sync.
 
 ## v-1.0.87
 

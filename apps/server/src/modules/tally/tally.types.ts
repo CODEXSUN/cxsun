@@ -76,7 +76,7 @@ export interface TallyConnectionValidation {
   response_excerpt: string | null
 }
 
-export type TallySyncResource = 'contacts' | 'products' | 'sales' | 'purchase'
+export type TallySyncResource = 'contacts' | 'products' | 'sales' | 'purchase' | 'defaults'
 
 export interface TallySyncLink {
   id: number

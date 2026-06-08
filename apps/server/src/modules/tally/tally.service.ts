@@ -118,6 +118,7 @@ export class TallyService {
     const resource = assertSyncResource(resourceValue)
     const query = normalizeSyncQuery(rawQuery)
 
+    if (resource === 'defaults') return { resource, rows: [] }
     if (resource === 'contacts') return this.contactSyncList(context, query)
     if (resource === 'products') return this.productSyncList(context, query)
     if (resource === 'sales') return this.salesSyncList(context, query)
@@ -129,14 +130,22 @@ export class TallyService {
     const resource = assertSyncResource(resourceValue)
     const ids = uniqueStrings(input?.ids ?? [])
 
+    if (resource === 'defaults') return this.syncDefaults(context)
+
     if (!ids.length) {
       throw new BadRequestException('Select at least one record to sync.')
     }
 
     if (resource === 'contacts') return this.syncContacts(context, ids)
     if (resource === 'products') return this.syncProducts(context, ids)
-    if (resource === 'sales') return this.queueSales(context, ids)
+    if (resource === 'sales') return this.syncSales(context, ids)
     return this.queuePurchase(context, ids)
+  }
+
+  private async syncDefaults(context: TenantRuntimeContext) {
+    const settings = await this.requireValidatedSettings(context)
+    await ensureTallyDefaultMasters(settings)
+    return { ok: true, summary: { synced: TALLY_DEFAULT_UNITS.length, failed: 0 } }
   }
 
   private async contactSyncList(
@@ -240,11 +249,18 @@ export class TallyService {
   private async syncProducts(context: TenantRuntimeContext, ids: string[]) {
     const settings = await this.requireValidatedSettings(context)
     const lookups = await commonLookups(context)
+    await ensureTallyDefaultMasters(settings)
     const records = ((await this.products.list(context)) as AnyRow[]).filter((record) => ids.includes(String(record.uuid)))
     const summary = { failed: 0, synced: 0 }
 
     for (const record of records) {
-      const result = await syncProductToTally(settings, record, lookups)
+      const result = await syncProductToTally(settings, record, lookups).catch((error) => ({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Tally product sync failed.',
+        payload: null,
+        tallyGuid: null,
+        tallyName: productDisplayName(record),
+      }))
       await this.tally.saveSyncLink(context, {
         module_key: 'products',
         record_type: 'master',
@@ -266,11 +282,11 @@ export class TallyService {
     return { ok: summary.failed === 0, summary }
   }
 
-  private async queueSales(context: TenantRuntimeContext, ids: string[]) {
-    await this.requireValidatedSettings(context)
+  private async syncSales(context: TenantRuntimeContext, ids: string[]) {
+    const settings = await this.requireValidatedSettings(context)
     const links = await this.linkMap(context, ['contacts', 'products', 'sales'])
     const entries = ((await this.salesEntries.list(context)) as AnyRow[]).filter((entry) => ids.includes(String(entry.uuid)))
-    const summary = { failed: 0, queued: 0 }
+    const summary = { failed: 0, synced: 0 }
 
     for (const entry of entries) {
       const row = toSalesSyncRow(entry, links)
@@ -289,37 +305,28 @@ export class TallyService {
         continue
       }
 
-      await this.tally.createJob(context, {
-        job_type: 'sales-entry-sync',
-        direction: 'export',
-        payload: {
-          mode: 'single-operation',
-          operation: 'export-sales-entry',
-          resource: 'sales',
-          record_uuid: entry.uuid,
-          record_label: entry.invoice_no,
-          dependencies: {
-            customer_uuid: entry.customer_id ?? null,
-            product_uuids: uniqueStrings((entry.items ?? []).map((item: AnyRow) => valueOrNull(item.product_id))),
-          },
-        },
-      })
-      await this.queue.enqueue({
-        type: 'tally.sync.requested',
-        payload: { tenantId: context.tenant.id, requestedBy: context.user.email, jobType: 'sales-entry-sync', recordUuid: entry.uuid },
-      })
+      const result = await syncSalesEntryToTally(settings, entry, links).catch((error) => ({
+        ok: false,
+        error: error instanceof Error ? error.message : 'Tally sales voucher sync failed.',
+        payload: null,
+        tallyGuid: null,
+        tallyName: String(entry.invoice_no ?? ''),
+      }))
       await this.tally.saveSyncLink(context, {
         module_key: 'sales',
         record_type: 'entry',
         record_id: valueOrNull(entry.id),
         record_uuid: String(entry.uuid),
         record_label: String(entry.invoice_no ?? ''),
-        status: 'queued',
-        last_synced_at: null,
-        last_error: null,
-        payload: { mode: 'single-operation', operation: 'export-sales-entry' },
+        tally_name: result.tallyName,
+        tally_guid: result.tallyGuid,
+        status: result.ok ? 'synced' : 'failed',
+        last_synced_at: result.ok ? new Date() : null,
+        last_error: result.ok ? null : result.error,
+        payload: result.payload,
       })
-      summary.queued += 1
+      if (result.ok) summary.synced += 1
+      else summary.failed += 1
     }
 
     return { ok: summary.failed === 0, summary }
@@ -472,7 +479,17 @@ async function syncContactToTally(
   const endpoint = tallyEndpoint(settings.tally_host, settings.tally_port)
   const companyName = settings.company_name?.trim() ?? ''
   const name = contactDisplayName(record)
+  const gstin = contactGstin(record)
   const address = contactAddress(record, lookups)
+  if (gstin && !validTallyGstinOrUin(gstin)) {
+    return {
+      ok: false,
+      error: `GSTIN/UIN "${gstin}" is invalid. Tally requires a 15-character GSTIN/UIN before it will load tax registration details.`,
+      payload: null,
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
   const objectBefore = await fetchTallyObjectByName(endpoint, companyName, 'Ledger', name, ['Name', 'MasterID', 'Parent'])
   const action = objectBefore.found ? 'Alter' : 'Create'
   const importResponse = await postTallyXml(endpoint, tallyImportEnvelope(companyName, ledgerImportMessage(record, name, groupName, address, action)))
@@ -481,12 +498,66 @@ async function syncContactToTally(
     return { ok: false, error: importError, payload: compactExcerpt(importResponse.xml), tallyGuid: null, tallyName: name }
   }
 
-  const objectAfter = await fetchTallyObjectByName(endpoint, companyName, 'Ledger', name, ['Name', 'MasterID', 'Parent', 'PARTYGSTIN'])
+  const objectAfter = await fetchTallyObjectByName(endpoint, companyName, 'Ledger', name, [
+    'Name',
+    'MasterID',
+    'Parent',
+    'Address',
+    'StateName',
+    'CountryName',
+    'PinCode',
+    'LedMailingDetails',
+    'PARTYGSTIN',
+    'GSTIN',
+    'GSTRegistrationType',
+    'LedGSTRegDetails',
+  ])
   if (!objectAfter.found) {
     const lookupError = captureXmlTag(objectAfter.xml, 'ERRORMSG') || captureXmlTag(objectAfter.xml, 'LINEERROR')
     return {
       ok: false,
       error: lookupError || `Tally imported the ledger request, but did not return "${name}" in post-import verification.`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  const returnedGstin = captureXmlTag(objectAfter.xml, 'PARTYGSTIN') || captureXmlTag(objectAfter.xml, 'GSTIN')
+  if (gstin && normalizeText(returnedGstin) !== normalizeText(gstin)) {
+    return {
+      ok: false,
+      error: `Tally imported the ledger "${name}", but did not return the GSTIN/UIN "${gstin}". Check the contact GSTIN format/state and retry.`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  const missingAddressLine = address.lines.find((line) => !xmlIncludesNormalized(objectAfter.xml, line))
+  if (missingAddressLine) {
+    return {
+      ok: false,
+      error: `Tally imported the ledger "${name}", but did not return address line "${missingAddressLine}". Check Tally mailing details and retry.`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  if (address.pincode && !xmlIncludesNormalized(objectAfter.xml, address.pincode)) {
+    return {
+      ok: false,
+      error: `Tally imported the ledger "${name}", but did not return pincode "${address.pincode}". Check Tally mailing details and retry.`,
       payload: {
         import_response: compactExcerpt(importResponse.xml),
         verification_response: compactExcerpt(objectAfter.xml),
@@ -509,22 +580,87 @@ async function syncProductToTally(settings: TallySettings, record: AnyRow, looku
   const endpoint = tallyEndpoint(settings.tally_host, settings.tally_port)
   const companyName = settings.company_name?.trim() ?? ''
   const name = productDisplayName(record)
-  const unitName = productUnitLabel(record, lookups) || 'Nos'
-  await postTallyXml(endpoint, tallyImportEnvelope(companyName, unitImportMessage(unitName)))
+  const unitName = tallyUnitDefinition(productUnitLabel(record, lookups) || 'Nos').name
+  const groupName = productStockGroupName(record, lookups)
+  await ensureTallyUnit(endpoint, companyName, unitName)
+  if (groupName) await ensureTallyStockGroup(endpoint, companyName, groupName)
   const objectBefore = await fetchTallyObjectByName(endpoint, companyName, 'Stock Item', name, ['Name', 'MasterID', 'BaseUnits'])
   const action = objectBefore.found ? 'Alter' : 'Create'
-  const importResponse = await postTallyXml(endpoint, tallyImportEnvelope(companyName, stockItemImportMessage(record, name, unitName, lookups, action)))
+  const importResponse = await postTallyXml(endpoint, tallyImportEnvelope(companyName, stockItemImportMessage(record, name, unitName, groupName, lookups, action)))
   const importError = tallyImportError(importResponse.xml)
   if (importError) {
     return { ok: false, error: importError, payload: compactExcerpt(importResponse.xml), tallyGuid: null, tallyName: name }
   }
 
-  const objectAfter = await fetchTallyObjectByName(endpoint, companyName, 'Stock Item', name, ['Name', 'MasterID', 'BaseUnits'])
+  const objectAfter = await fetchTallyObjectByName(endpoint, companyName, 'Stock Item', name, [
+    'Name',
+    'MasterID',
+    'Parent',
+    'BaseUnits',
+    'GSTApplicable',
+    'GSTTypeOfSupply',
+    'GSTDetails',
+    'HSNCode',
+  ])
   if (!objectAfter.found) {
     const lookupError = captureXmlTag(objectAfter.xml, 'ERRORMSG') || captureXmlTag(objectAfter.xml, 'LINEERROR')
     return {
       ok: false,
       error: lookupError || `Tally imported the stock item request, but did not return "${name}" in post-import verification.`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  if (normalizeText(captureXmlTag(objectAfter.xml, 'BASEUNITS')) !== normalizeText(unitName)) {
+    return {
+      ok: false,
+      error: `Tally imported the stock item "${name}", but did not return base unit "${unitName}".`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  if (groupName && !xmlIncludesNormalized(objectAfter.xml, groupName)) {
+    return {
+      ok: false,
+      error: `Tally imported the stock item "${name}", but did not return stock group "${groupName}".`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  const hsnCode = productHsnCode(record, lookups)
+  if (hsnCode && !xmlIncludesNormalized(objectAfter.xml, hsnCode)) {
+    return {
+      ok: false,
+      error: `Tally imported the stock item "${name}", but did not return HSN "${hsnCode}".`,
+      payload: {
+        import_response: compactExcerpt(importResponse.xml),
+        verification_response: compactExcerpt(objectAfter.xml),
+      },
+      tallyGuid: null,
+      tallyName: name,
+    }
+  }
+
+  const taxRate = productTaxRate(record, lookups)
+  if (taxRate > 0 && !xmlIncludesNormalized(objectAfter.xml, formatTallyNumber(taxRate))) {
+    return {
+      ok: false,
+      error: `Tally imported the stock item "${name}", but did not return GST rate "${formatTallyNumber(taxRate)}".`,
       payload: {
         import_response: compactExcerpt(importResponse.xml),
         verification_response: compactExcerpt(objectAfter.xml),
@@ -543,6 +679,72 @@ async function syncProductToTally(settings: TallySettings, record: AnyRow, looku
   }
 }
 
+async function syncSalesEntryToTally(settings: TallySettings, entry: AnyRow, links: Map<string, TallySyncLink>) {
+  const endpoint = tallyEndpoint(settings.tally_host, settings.tally_port)
+  const companyName = settings.company_name?.trim() ?? ''
+  const invoiceNo = String(entry.invoice_no ?? '').trim()
+  if (!invoiceNo) throw new Error('Sales invoice number is required before exporting to Tally.')
+
+  const customerLink = links.get(`contacts:${String(entry.customer_id)}`)
+  const customerName = customerLink?.tally_name || String(entry.customer_name ?? '').trim()
+  if (!customerName) throw new Error('Sales invoice customer is required before exporting to Tally.')
+
+  const customer = await fetchTallyObjectByName(endpoint, companyName, 'Ledger', customerName, ['Name', 'MasterID', 'Parent'])
+  if (!customer.found) {
+    throw new Error(`Tally does not contain the synced customer ledger "${customerName}". Resync the contact before exporting this sales invoice.`)
+  }
+
+  const itemLinks = salesItemLinks(entry, links)
+  const tallyItems: TallySalesVoucherItem[] = []
+  for (const item of salesItems(entry)) {
+    const productLink = itemLinks.get(String(item.product_id))
+    const itemName = productLink?.tally_name || String(item.product_name ?? '').trim()
+    if (!itemName) throw new Error('Sales invoice contains an item without a Tally stock item name.')
+
+    const stockItem = await fetchTallyObjectByName(endpoint, companyName, 'Stock Item', itemName, ['Name', 'MasterID', 'BaseUnits'])
+    if (!stockItem.found) {
+      throw new Error(`Tally does not contain the synced stock item "${itemName}". Resync the product before exporting this sales invoice.`)
+    }
+
+    tallyItems.push({
+      amount: salesItemTaxableAmount(item),
+      description: stringOrNull(item.description),
+      hsnCode: stringOrNull(item.hsn_code),
+      name: stockItem.name || itemName,
+      quantity: Math.abs(numberValue(item.quantity)),
+      rate: numberValue(item.rate),
+      taxAmount: numberValue(item.tax_amount),
+      taxRate: numberValue(item.tax_rate),
+      unitName: captureXmlTag(stockItem.xml, 'BASEUNITS') || stringOrNull(item.unit),
+    })
+  }
+
+  if (!tallyItems.length) throw new Error('Sales invoice must contain at least one item before exporting to Tally.')
+
+  const isIgst = normalizeText(entry.place_of_supply) === 'igst'
+  await ensureTallySalesVoucherLedgers(endpoint, companyName, isIgst, numberValue(entry.round_off) !== 0)
+
+  const importResponse = await postTallyXml(endpoint, tallyVoucherImportEnvelope(companyName, salesVoucherImportMessage(entry, {
+    action: links.get(`sales:${String(entry.uuid)}`)?.status === 'synced' ? 'Alter' : 'Create',
+    customerName: customer.name || customerName,
+    invoiceNo,
+    isIgst,
+    items: tallyItems,
+  })))
+  const importError = tallyImportError(importResponse.xml)
+  if (importError) {
+    return { ok: false, error: importError, payload: compactExcerpt(importResponse.xml), tallyGuid: null, tallyName: invoiceNo }
+  }
+
+  return {
+    ok: true,
+    error: null,
+    payload: compactExcerpt(importResponse.xml),
+    tallyGuid: captureXmlTag(importResponse.xml, 'LASTVCHID') || captureXmlTag(importResponse.xml, 'MASTERID'),
+    tallyName: invoiceNo,
+  }
+}
+
 async function fetchTallyObjectByName(endpoint: string, companyName: string, subtype: string, objectName: string, fields: string[]) {
   const response = await postTallyXml(endpoint, tallyNamedObjectEnvelope(companyName, subtype, objectName, fields))
   const lineError = captureXmlTag(response.xml, 'LINEERROR') || captureXmlTag(response.xml, 'ERRORMSG')
@@ -552,6 +754,59 @@ async function fetchTallyObjectByName(endpoint: string, companyName: string, sub
     name: captureObjectName(response.xml),
     xml: response.xml,
   }
+}
+
+async function ensureTallyDefaultMasters(settings: TallySettings) {
+  const endpoint = tallyEndpoint(settings.tally_host, settings.tally_port)
+  const companyName = settings.company_name?.trim() ?? ''
+  const response = await postTallyXml(endpoint, tallyImportEnvelope(companyName, TALLY_DEFAULT_UNITS.map((unit) => unitImportMessage(unit, 'Alter')).join('')), 60_000)
+  const error = tallyImportError(response.xml)
+  if (error && !/duplicate/i.test(error)) throw new Error(`Tally default unit bootstrap failed: ${error}`)
+}
+
+async function ensureTallyUnit(endpoint: string, companyName: string, unitName: string) {
+  const unit = tallyUnitDefinition(unitName)
+  const existing = await fetchTallyObjectByName(endpoint, companyName, 'Unit', unit.name, ['Name', 'OriginalName', 'FormalName', 'GSTRepUOM', 'DecimalPlaces'])
+  const hasUqc = normalizeText(captureXmlTag(existing.xml, 'GSTREPUOM')) === normalizeText(unit.uqc)
+  if (existing.found && hasUqc) return
+
+  const response = await postTallyXml(endpoint, tallyImportEnvelope(companyName, unitImportMessage(unit, existing.found ? 'Alter' : 'Create')))
+  const error = tallyImportError(response.xml)
+  if (error && !/duplicate/i.test(error)) throw new Error(`Tally unit "${unit.name}" import failed: ${error}`)
+}
+
+async function ensureTallyStockGroup(endpoint: string, companyName: string, groupName: string) {
+  const existing = await fetchTallyObjectByName(endpoint, companyName, 'Stock Group', groupName, ['Name', 'Parent'])
+  if (existing.found) return
+  const response = await postTallyXml(endpoint, tallyImportEnvelope(companyName, stockGroupImportMessage(groupName)))
+  const error = tallyImportError(response.xml)
+  if (error && !/duplicate/i.test(error)) throw new Error(`Tally stock group "${groupName}" import failed: ${error}`)
+}
+
+async function ensureTallySalesVoucherLedgers(endpoint: string, companyName: string, isIgst: boolean, hasRoundOff: boolean) {
+  const ledgers = [
+    { name: 'Sales', parent: 'Sales Accounts', taxHead: null },
+    ...(isIgst
+      ? [{ name: 'Output IGST', parent: 'Duties & Taxes', taxHead: 'Integrated Tax' }]
+      : [
+        { name: 'Output CGST', parent: 'Duties & Taxes', taxHead: 'Central Tax' },
+        { name: 'Output SGST', parent: 'Duties & Taxes', taxHead: 'State Tax' },
+      ]),
+    ...(hasRoundOff ? [{ name: 'Round Off', parent: 'Indirect Expenses', taxHead: null }] : []),
+  ]
+
+  for (const ledger of ledgers) {
+    await ensureSimpleTallyLedger(endpoint, companyName, ledger.name, ledger.parent, ledger.taxHead)
+  }
+}
+
+async function ensureSimpleTallyLedger(endpoint: string, companyName: string, name: string, parent: string, taxHead: string | null) {
+  const existing = await fetchTallyObjectByName(endpoint, companyName, 'Ledger', name, ['Name', 'Parent', 'TaxType', 'GSTDutyHead'])
+  if (existing.found) return
+
+  const response = await postTallyXml(endpoint, tallyImportEnvelope(companyName, simpleLedgerImportMessage(name, parent, taxHead)))
+  const error = tallyImportError(response.xml)
+  if (error && !/duplicate/i.test(error)) throw new Error(`Tally ledger "${name}" import failed: ${error}`)
 }
 
 async function commonLookups(context: TenantRuntimeContext) {
@@ -594,6 +849,92 @@ interface CommonLookups {
   taxes: Map<string, string>
   productTypes: Map<string, string>
 }
+
+interface ContactAddress {
+  city: string | null
+  country: string | null
+  line1: string | null
+  line2: string | null
+  lines: string[]
+  pincode: string | null
+  state: string | null
+  text: string | null
+}
+
+interface TallyUnitDefinition {
+  decimalPlaces: number
+  formalName: string
+  name: string
+  uqc: string
+}
+
+interface TallySalesVoucherItem {
+  amount: number
+  description: string | null
+  hsnCode: string | null
+  name: string
+  quantity: number
+  rate: number
+  taxAmount: number
+  taxRate: number
+  unitName: string | null
+}
+
+interface TallySalesVoucherInput {
+  action: 'Create' | 'Alter'
+  customerName: string
+  invoiceNo: string
+  isIgst: boolean
+  items: TallySalesVoucherItem[]
+}
+
+const TALLY_DEFAULT_UNITS: TallyUnitDefinition[] = [
+  { name: 'Bags', formalName: 'Bags', uqc: 'BAG-BAGS', decimalPlaces: 0 },
+  { name: 'Bale', formalName: 'Bale', uqc: 'BAL-BALE', decimalPlaces: 0 },
+  { name: 'Bundles', formalName: 'Bundles', uqc: 'BDL-BUNDLES', decimalPlaces: 0 },
+  { name: 'Buckles', formalName: 'Buckles', uqc: 'BKL-BUCKLES', decimalPlaces: 0 },
+  { name: 'Billion Units', formalName: 'Billion Units', uqc: 'BOU-BILLION OF UNITS', decimalPlaces: 0 },
+  { name: 'Box', formalName: 'Box', uqc: 'BOX-BOX', decimalPlaces: 0 },
+  { name: 'Bottles', formalName: 'Bottles', uqc: 'BTL-BOTTLES', decimalPlaces: 0 },
+  { name: 'Bunches', formalName: 'Bunches', uqc: 'BUN-BUNCHES', decimalPlaces: 0 },
+  { name: 'Cans', formalName: 'Cans', uqc: 'CAN-CANS', decimalPlaces: 0 },
+  { name: 'Cubic Meters', formalName: 'Cubic Meters', uqc: 'CBM-CUBIC METERS', decimalPlaces: 2 },
+  { name: 'Cubic Centimeters', formalName: 'Cubic Centimeters', uqc: 'CCM-CUBIC CENTIMETERS', decimalPlaces: 2 },
+  { name: 'Centimeters', formalName: 'Centimeters', uqc: 'CMS-CENTIMETERS', decimalPlaces: 2 },
+  { name: 'Cartons', formalName: 'Cartons', uqc: 'CTN-CARTONS', decimalPlaces: 0 },
+  { name: 'Dozen', formalName: 'Dozen', uqc: 'DOZ-DOZEN', decimalPlaces: 0 },
+  { name: 'Drums', formalName: 'Drums', uqc: 'DRM-DRUMS', decimalPlaces: 0 },
+  { name: 'Great Gross', formalName: 'Great Gross', uqc: 'GGK-GREAT GROSS', decimalPlaces: 0 },
+  { name: 'Gram', formalName: 'Gram', uqc: 'GMS-GRAMMES', decimalPlaces: 2 },
+  { name: 'Gross', formalName: 'Gross', uqc: 'GRS-GROSS', decimalPlaces: 0 },
+  { name: 'Gross Yards', formalName: 'Gross Yards', uqc: 'GYD-GROSS YARDS', decimalPlaces: 2 },
+  { name: 'Kg', formalName: 'Kilogram', uqc: 'KGS-KILOGRAMS', decimalPlaces: 2 },
+  { name: 'Kilolitre', formalName: 'Kilolitre', uqc: 'KLR-KILOLITRE', decimalPlaces: 2 },
+  { name: 'Kilometre', formalName: 'Kilometre', uqc: 'KME-KILOMETRE', decimalPlaces: 2 },
+  { name: 'Litre', formalName: 'Litre', uqc: 'LTR-LITRES', decimalPlaces: 2 },
+  { name: 'Millilitre', formalName: 'Millilitre', uqc: 'MLT-MILLILITRE', decimalPlaces: 2 },
+  { name: 'Meter', formalName: 'Meter', uqc: 'MTR-METERS', decimalPlaces: 2 },
+  { name: 'Metric Ton', formalName: 'Metric Ton', uqc: 'MTS-METRIC TON', decimalPlaces: 2 },
+  { name: 'Nos', formalName: 'Numbers', uqc: 'NOS-NUMBERS', decimalPlaces: 0 },
+  { name: 'Others', formalName: 'Others', uqc: 'OTH-OTHERS', decimalPlaces: 0 },
+  { name: 'Packs', formalName: 'Packs', uqc: 'PAC-PACKS', decimalPlaces: 0 },
+  { name: 'Pcs', formalName: 'Pieces', uqc: 'PCS-PIECES', decimalPlaces: 0 },
+  { name: 'Pair', formalName: 'Pairs', uqc: 'PRS-PAIRS', decimalPlaces: 0 },
+  { name: 'Quintal', formalName: 'Quintal', uqc: 'QTL-QUINTAL', decimalPlaces: 2 },
+  { name: 'Rolls', formalName: 'Rolls', uqc: 'ROL-ROLLS', decimalPlaces: 0 },
+  { name: 'Sets', formalName: 'Sets', uqc: 'SET-SETS', decimalPlaces: 0 },
+  { name: 'Square Feet', formalName: 'Square Feet', uqc: 'SQF-SQUARE FEET', decimalPlaces: 2 },
+  { name: 'Square Meters', formalName: 'Square Meters', uqc: 'SQM-SQUARE METERS', decimalPlaces: 2 },
+  { name: 'Square Yards', formalName: 'Square Yards', uqc: 'SQY-SQUARE YARDS', decimalPlaces: 2 },
+  { name: 'Tablets', formalName: 'Tablets', uqc: 'TBS-TABLETS', decimalPlaces: 0 },
+  { name: 'Ten Gross', formalName: 'Ten Gross', uqc: 'TGM-TEN GROSS', decimalPlaces: 0 },
+  { name: 'Thousands', formalName: 'Thousands', uqc: 'THD-THOUSANDS', decimalPlaces: 0 },
+  { name: 'Tonnes', formalName: 'Tonnes', uqc: 'TON-TONNES', decimalPlaces: 2 },
+  { name: 'Tubes', formalName: 'Tubes', uqc: 'TUB-TUBES', decimalPlaces: 0 },
+  { name: 'US Gallons', formalName: 'US Gallons', uqc: 'UGS-US GALLONS', decimalPlaces: 2 },
+  { name: 'Units', formalName: 'Units', uqc: 'UNT-UNITS', decimalPlaces: 0 },
+  { name: 'Yards', formalName: 'Yards', uqc: 'YDS-YARDS', decimalPlaces: 2 },
+]
 
 async function buildLookupMap(context: TenantRuntimeContext, tableName: string, label: (row: AnyRow) => string) {
   const rows = await (context.database as any).selectFrom(tableName).selectAll().execute() as AnyRow[]
@@ -767,38 +1108,79 @@ function productUnitLabel(record: AnyRow, lookups: CommonLookups) {
   return labelFrom(lookups.units, record.unit_id) || 'Nos'
 }
 
+function productStockGroupName(record: AnyRow, lookups: CommonLookups) {
+  const groupName = labelFrom(lookups.productTypes, record.product_type_id)
+  if (!groupName || groupName === '-') return null
+  return groupName
+}
+
+function productHsnCode(record: AnyRow, lookups: CommonLookups) {
+  const hsnCode = labelFrom(lookups.hsnCodes, record.hsn_code_id)
+  if (!hsnCode || hsnCode === '-' || hsnCode === '00000000') return null
+  return hsnCode
+}
+
+function productTaxRate(record: AnyRow, lookups: CommonLookups) {
+  const label = labelFrom(lookups.taxes, record.tax_id)
+  const rate = Number(String(label ?? '').replace('%', '').trim())
+  return Number.isFinite(rate) ? rate : 0
+}
+
 function contactGstin(record: AnyRow) {
-  const gstin = stringOrNull(record.gstin)
+  const gstin = stringOrNull(record.gstin ?? record.gstIn ?? record.gst_in)
   if (gstin) return gstin
   if (Array.isArray(record.gstDetails)) {
-    for (const detail of record.gstDetails) {
-      const current = stringOrNull(detail?.gstin)
+    const ordered = [
+      ...record.gstDetails.filter((detail) => booleanValue(detail?.isDefault ?? detail?.is_default)),
+      ...record.gstDetails.filter((detail) => !booleanValue(detail?.isDefault ?? detail?.is_default)),
+    ]
+    for (const detail of ordered) {
+      const current = stringOrNull(detail?.gstin ?? detail?.gstIn ?? detail?.gst_in)
       if (current) return current
     }
   }
   return null
 }
 
-function contactAddress(record: AnyRow, lookups: CommonLookups) {
+function contactGstState(record: AnyRow) {
+  if (!Array.isArray(record.gstDetails)) return null
+  const selected = record.gstDetails.find((detail) => booleanValue(detail?.isDefault ?? detail?.is_default)) ?? record.gstDetails[0]
+  return stringOrNull(selected?.state)
+}
+
+function contactAddress(record: AnyRow, lookups: CommonLookups): ContactAddress {
   const addresses = Array.isArray(record.addresses) ? record.addresses : []
   const selected = addresses.find((address) => booleanValue(address?.isDefault ?? address?.is_default)) ?? addresses[0] ?? null
-  if (!selected) return { country: 'India', pincode: null, state: null, text: null }
+  if (!selected) return { city: null, country: 'India', line1: null, line2: null, lines: [], pincode: null, state: contactGstState(record), text: null }
+
+  const line1 = stringOrNull(selected.addressLine1 ?? selected.address_line1)
+  const line2 = stringOrNull(selected.addressLine2 ?? selected.address_line2)
+  const city = labelFrom(lookups.cities, selected.cityId ?? selected.city_id)
+  const district = labelFrom(lookups.districts, selected.districtId ?? selected.district_id)
+  const state = labelFrom(lookups.states, selected.stateId ?? selected.state_id) ?? contactGstState(record)
+  const pincode = labelFrom(lookups.pincodes, selected.pincodeId ?? selected.pincode_id)
+  const country = labelFrom(lookups.countries, selected.countryId ?? selected.country_id) || 'India'
+  const lines = uniqueStrings([line1, line2, city])
 
   const parts = [
-    stringOrNull(selected.addressLine1 ?? selected.address_line1),
-    stringOrNull(selected.addressLine2 ?? selected.address_line2),
-    labelFrom(lookups.cities, selected.cityId ?? selected.city_id),
-    labelFrom(lookups.districts, selected.districtId ?? selected.district_id),
-    labelFrom(lookups.states, selected.stateId ?? selected.state_id),
-    labelFrom(lookups.pincodes, selected.pincodeId ?? selected.pincode_id),
-    labelFrom(lookups.countries, selected.countryId ?? selected.country_id),
+    line1,
+    line2,
+    city,
+    district,
+    state,
+    pincode,
+    country,
   ].filter(Boolean) as string[]
 
   return {
+    city,
+    country,
+    line1,
+    line2,
+    lines,
+    pincode,
+    state,
     text: parts.join(', '),
-    state: labelFrom(lookups.states, selected.stateId ?? selected.state_id),
-    country: labelFrom(lookups.countries, selected.countryId ?? selected.country_id) || 'India',
-    pincode: labelFrom(lookups.pincodes, selected.pincodeId ?? selected.pincode_id),
   }
 }
 
@@ -851,7 +1233,7 @@ function filterEntryRows(rows: TallyEntrySyncRow[], query: TallySyncQuery) {
 }
 
 function assertSyncResource(value: string): TallySyncResource {
-  if (value === 'contacts' || value === 'products' || value === 'sales' || value === 'purchase') return value
+  if (value === 'contacts' || value === 'products' || value === 'sales' || value === 'purchase' || value === 'defaults') return value
   throw new BadRequestException(`Unsupported Tally sync resource: ${value}.`)
 }
 
@@ -865,7 +1247,7 @@ function readHandshake(value: string | null) {
   }
 }
 
-async function postTallyXml(endpoint: string, xml: string) {
+async function postTallyXml(endpoint: string, xml: string, timeoutMs = 15_000) {
   const response = await fetch(endpoint, {
     body: xml,
     headers: {
@@ -873,7 +1255,7 @@ async function postTallyXml(endpoint: string, xml: string) {
       'Content-Type': 'text/xml; charset=utf-8',
     },
     method: 'POST',
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return {
     ok: response.ok,
@@ -972,11 +1354,54 @@ function tallyImportEnvelope(companyName: string, requestData: string) {
   ].join('')
 }
 
-function ledgerImportMessage(record: AnyRow, name: string, groupName: string, address: { text: string | null; state: string | null; country: string | null; pincode: string | null }, action: 'Create' | 'Alter') {
+function tallyVoucherImportEnvelope(companyName: string, requestData: string) {
+  return [
+    '<ENVELOPE>',
+    '<HEADER>',
+    '<VERSION>1</VERSION>',
+    '<TALLYREQUEST>Import</TALLYREQUEST>',
+    '<TYPE>Data</TYPE>',
+    '<ID>Vouchers</ID>',
+    '</HEADER>',
+    '<BODY>',
+    '<DESC>',
+    '<STATICVARIABLES>',
+    `<SVCURRENTCOMPANY>${escapeXml(companyName)}</SVCURRENTCOMPANY>`,
+    '</STATICVARIABLES>',
+    '</DESC>',
+    '<DATA>',
+    requestData,
+    '</DATA>',
+    '</BODY>',
+    '</ENVELOPE>',
+  ].join('')
+}
+
+function simpleLedgerImportMessage(name: string, parent: string, taxHead: string | null) {
+  return [
+    '<TALLYMESSAGE xmlns:UDF="TallyUDF">',
+    `<LEDGER NAME="${escapeXml(name)}" ACTION="Create">`,
+    '<NAME.LIST TYPE="String">',
+    `<NAME>${escapeXml(name)}</NAME>`,
+    '</NAME.LIST>',
+    `<PARENT>${escapeXml(parent)}</PARENT>`,
+    '<ISBILLWISEON>No</ISBILLWISEON>',
+    taxHead ? '<TAXTYPE>GST</TAXTYPE>' : '',
+    taxHead ? `<GSTDUTYHEAD>${escapeXml(taxHead)}</GSTDUTYHEAD>` : '',
+    taxHead ? `<DUTYHEAD>${escapeXml(taxHead)}</DUTYHEAD>` : '',
+    '</LEDGER>',
+    '</TALLYMESSAGE>',
+  ].join('')
+}
+
+function ledgerImportMessage(record: AnyRow, name: string, groupName: string, address: ContactAddress, action: 'Create' | 'Alter') {
   const gstin = contactGstin(record)
   const phone = stringOrNull(record.primaryPhone ?? record.primary_phone)
   const email = stringOrNull(record.primaryEmail ?? record.primary_email)
   const mailingName = stringOrNull(record.name) || name
+  const pan = stringOrNull(record.pan ?? record.panNo ?? record.pan_no)
+  const addressLines = address.lines.length ? address.lines : address.text ? [address.text] : []
+  const gstApplicableFrom = tallyDate()
   return [
     '<TALLYMESSAGE xmlns:UDF="TallyUDF">',
     `<LEDGER NAME="${escapeXml(name)}" ACTION="${action}">`,
@@ -986,44 +1411,273 @@ function ledgerImportMessage(record: AnyRow, name: string, groupName: string, ad
     `<PARENT>${escapeXml(groupName)}</PARENT>`,
     `<MAILINGNAME>${escapeXml(mailingName)}</MAILINGNAME>`,
     '<ISBILLWISEON>Yes</ISBILLWISEON>',
-    address.text ? `<ADDRESS.LIST TYPE="String"><ADDRESS>${escapeXml(address.text)}</ADDRESS></ADDRESS.LIST>` : '',
+    addressLines.length ? [
+      '<ADDRESS.LIST TYPE="String">',
+      ...addressLines.map((line) => `<ADDRESS>${escapeXml(line)}</ADDRESS>`),
+      '</ADDRESS.LIST>',
+    ].join('') : '',
     address.state ? `<STATENAME>${escapeXml(address.state)}</STATENAME>` : '',
     address.country ? `<COUNTRYNAME>${escapeXml(address.country)}</COUNTRYNAME>` : '<COUNTRYNAME>India</COUNTRYNAME>',
+    address.country ? `<COUNTRYOFRESIDENCE>${escapeXml(address.country)}</COUNTRYOFRESIDENCE>` : '<COUNTRYOFRESIDENCE>India</COUNTRYOFRESIDENCE>',
     address.pincode ? `<PINCODE>${escapeXml(address.pincode)}</PINCODE>` : '',
+    addressLines.length ? [
+      '<LEDMAILINGDETAILS.LIST>',
+      `<APPLICABLEFROM>${gstApplicableFrom}</APPLICABLEFROM>`,
+      '<ADDRESS.LIST TYPE="String">',
+      ...addressLines.map((line) => `<ADDRESS>${escapeXml(line)}</ADDRESS>`),
+      '</ADDRESS.LIST>',
+      `<MAILINGNAME>${escapeXml(mailingName)}</MAILINGNAME>`,
+      address.state ? `<STATE>${escapeXml(address.state)}</STATE>` : '',
+      address.country ? `<COUNTRY>${escapeXml(address.country)}</COUNTRY>` : '<COUNTRY>India</COUNTRY>',
+      address.pincode ? `<PINCODE>${escapeXml(address.pincode)}</PINCODE>` : '',
+      '</LEDMAILINGDETAILS.LIST>',
+    ].join('') : '',
     phone ? `<LEDGERPHONE>${escapeXml(phone)}</LEDGERPHONE>` : '',
     email ? `<EMAIL>${escapeXml(email)}</EMAIL>` : '',
+    pan ? `<INCOMETAXNUMBER>${escapeXml(pan)}</INCOMETAXNUMBER>` : '',
     gstin ? '<GSTREGISTRATIONTYPE>Regular</GSTREGISTRATIONTYPE>' : '<GSTREGISTRATIONTYPE>Unregistered</GSTREGISTRATIONTYPE>',
     gstin ? `<PARTYGSTIN>${escapeXml(gstin)}</PARTYGSTIN>` : '',
+    gstin ? `<GSTIN>${escapeXml(gstin)}</GSTIN>` : '',
+    gstin ? [
+      '<LEDGSTREGDETAILS.LIST>',
+      `<APPLICABLEFROM>${gstApplicableFrom}</APPLICABLEFROM>`,
+      address.state ? `<STATE>${escapeXml(address.state)}</STATE>` : '',
+      address.state ? `<PLACEOFSUPPLY>${escapeXml(address.state)}</PLACEOFSUPPLY>` : '',
+      '<GSTREGISTRATIONTYPE>Regular</GSTREGISTRATIONTYPE>',
+      `<GSTIN>${escapeXml(gstin)}</GSTIN>`,
+      '</LEDGSTREGDETAILS.LIST>',
+    ].join('') : '',
     '</LEDGER>',
     '</TALLYMESSAGE>',
   ].join('')
 }
 
-function unitImportMessage(unitName: string) {
+function unitImportMessage(unit: TallyUnitDefinition, action: 'Create' | 'Alter') {
   return [
     '<TALLYMESSAGE xmlns:UDF="TallyUDF">',
-    `<UNIT NAME="${escapeXml(unitName)}" ACTION="Create">`,
-    `<NAME>${escapeXml(unitName)}</NAME>`,
-    `<ORIGINALNAME>${escapeXml(unitName)}</ORIGINALNAME>`,
+    `<UNIT NAME="${escapeXml(unit.name)}" ACTION="${action}">`,
+    `<NAME>${escapeXml(unit.name)}</NAME>`,
+    `<ORIGINALNAME>${escapeXml(unit.formalName)}</ORIGINALNAME>`,
+    `<FORMALNAME>${escapeXml(unit.formalName)}</FORMALNAME>`,
+    `<GSTREPUOM>${escapeXml(unit.uqc)}</GSTREPUOM>`,
     '<ISSIMPLEUNIT>Yes</ISSIMPLEUNIT>',
+    `<DECIMALPLACES>${unit.decimalPlaces}</DECIMALPLACES>`,
     '</UNIT>',
     '</TALLYMESSAGE>',
   ].join('')
 }
 
-function stockItemImportMessage(record: AnyRow, name: string, unitName: string, lookups: CommonLookups, action: 'Create' | 'Alter') {
-  const hsnCode = labelFrom(lookups.hsnCodes, record.hsn_code_id)
+function tallyUnitDefinition(unitName: string): TallyUnitDefinition {
+  const normalized = normalizeText(unitName)
+  const aliases: Record<string, string> = {
+    bag: 'Bags',
+    bags: 'Bags',
+    bale: 'Bale',
+    bales: 'Bale',
+    bdl: 'Bundles',
+    bundle: 'Bundles',
+    bundles: 'Bundles',
+    box: 'Box',
+    boxes: 'Box',
+    bottle: 'Bottles',
+    bottles: 'Bottles',
+    can: 'Cans',
+    cans: 'Cans',
+    carton: 'Cartons',
+    cartons: 'Cartons',
+    cm: 'Centimeters',
+    cms: 'Centimeters',
+    centimeter: 'Centimeters',
+    centimeters: 'Centimeters',
+    dozen: 'Dozen',
+    doz: 'Dozen',
+    drum: 'Drums',
+    drums: 'Drums',
+    gm: 'Gram',
+    gram: 'Gram',
+    grams: 'Gram',
+    kg: 'Kg',
+    kgs: 'Kg',
+    kilogram: 'Kg',
+    kilograms: 'Kg',
+    litre: 'Litre',
+    liter: 'Litre',
+    ltr: 'Litre',
+    meter: 'Meter',
+    metre: 'Meter',
+    mtr: 'Meter',
+    nos: 'Nos',
+    no: 'Nos',
+    number: 'Nos',
+    numbers: 'Nos',
+    packet: 'Packs',
+    packets: 'Packs',
+    pack: 'Packs',
+    packs: 'Packs',
+    pair: 'Pair',
+    pairs: 'Pair',
+    pc: 'Pcs',
+    pcs: 'Pcs',
+    pieces: 'Pcs',
+    piece: 'Pcs',
+    roll: 'Rolls',
+    rolls: 'Rolls',
+    set: 'Sets',
+    sets: 'Sets',
+    ton: 'Tonnes',
+    tonne: 'Tonnes',
+    tonnes: 'Tonnes',
+    unit: 'Units',
+    units: 'Units',
+    yard: 'Yards',
+    yards: 'Yards',
+  }
+  const canonicalName = aliases[normalized] ?? unitName
+  return TALLY_DEFAULT_UNITS.find((unit) => normalizeText(unit.name) === normalizeText(canonicalName)) ?? {
+    name: unitName,
+    formalName: unitName,
+    uqc: 'OTH-OTHERS',
+    decimalPlaces: 2,
+  }
+}
+
+function stockGroupImportMessage(groupName: string) {
+  return [
+    '<TALLYMESSAGE xmlns:UDF="TallyUDF">',
+    `<STOCKGROUP NAME="${escapeXml(groupName)}" ACTION="Create">`,
+    `<NAME>${escapeXml(groupName)}</NAME>`,
+    '<PARENT>&#4; Primary</PARENT>',
+    '<ISSUBLEDGER>No</ISSUBLEDGER>',
+    '</STOCKGROUP>',
+    '</TALLYMESSAGE>',
+  ].join('')
+}
+
+function stockItemImportMessage(record: AnyRow, name: string, unitName: string, groupName: string | null, lookups: CommonLookups, action: 'Create' | 'Alter') {
+  const hsnCode = productHsnCode(record, lookups)
+  const taxRate = productTaxRate(record, lookups)
+  const halfTaxRate = taxRate / 2
   return [
     '<TALLYMESSAGE xmlns:UDF="TallyUDF">',
     `<STOCKITEM NAME="${escapeXml(name)}" ACTION="${action}">`,
     '<NAME.LIST TYPE="String">',
     `<NAME>${escapeXml(name)}</NAME>`,
     '</NAME.LIST>',
-    '<PARENT>Primary</PARENT>',
+    groupName ? `<PARENT>${escapeXml(groupName)}</PARENT>` : '<PARENT>&#4; Primary</PARENT>',
     `<BASEUNITS>${escapeXml(unitName)}</BASEUNITS>`,
+    '<GSTTYPEOFSUPPLY>Goods</GSTTYPEOFSUPPLY>',
+    hsnCode || taxRate > 0 ? '<GSTAPPLICABLE>&#4; Applicable</GSTAPPLICABLE>' : '',
+    hsnCode ? '<GSTHSNNAME>&#4; Specify Details Here</GSTHSNNAME>' : '',
+    hsnCode ? `<GSTHSNCODE>${escapeXml(hsnCode)}</GSTHSNCODE>` : '',
     hsnCode ? `<HSNCODE>${escapeXml(hsnCode)}</HSNCODE>` : '',
+    hsnCode || taxRate > 0 ? [
+      '<GSTDETAILS.LIST>',
+      `<APPLICABLEFROM>${tallyDate()}</APPLICABLEFROM>`,
+      '<CALCULATIONTYPE>On Value</CALCULATIONTYPE>',
+      hsnCode ? `<HSNCODE>${escapeXml(hsnCode)}</HSNCODE>` : '',
+      hsnCode ? `<HSN>${escapeXml(hsnCode)}</HSN>` : '',
+      '<TAXABILITY>Taxable</TAXABILITY>',
+      '<SRCOFGSTDETAILS>&#4; Specify Details Here</SRCOFGSTDETAILS>',
+      taxRate > 0 ? [
+        '<STATEWISEDETAILS.LIST>',
+        '<STATENAME>&#4; Any</STATENAME>',
+        gstRateDetail('Integrated Tax', taxRate),
+        gstRateDetail('Central Tax', halfTaxRate),
+        gstRateDetail('State Tax', halfTaxRate),
+        '</STATEWISEDETAILS.LIST>',
+      ].join('') : '',
+      '</GSTDETAILS.LIST>',
+    ].join('') : '',
     '</STOCKITEM>',
     '</TALLYMESSAGE>',
+  ].join('')
+}
+
+function salesVoucherImportMessage(entry: AnyRow, input: TallySalesVoucherInput) {
+  const date = tallyDateFrom(entry.invoice_date)
+  const referenceNo = stringOrNull(entry.reference_no)
+  const taxLines = salesVoucherTaxLedgerLines(input.items, input.isIgst)
+  const roundOff = numberValue(entry.round_off)
+  return [
+    '<TALLYMESSAGE xmlns:UDF="TallyUDF">',
+    `<VOUCHER VCHTYPE="Sales" ACTION="${input.action}" OBJVIEW="Invoice Voucher View">`,
+    `<DATE>${date}</DATE>`,
+    `<EFFECTIVEDATE>${date}</EFFECTIVEDATE>`,
+    '<VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>',
+    `<VOUCHERNUMBER>${escapeXml(input.invoiceNo)}</VOUCHERNUMBER>`,
+    referenceNo ? `<REFERENCE>${escapeXml(referenceNo)}</REFERENCE>` : '',
+    `<PARTYLEDGERNAME>${escapeXml(input.customerName)}</PARTYLEDGERNAME>`,
+    '<PERSISTEDVIEW>Invoice Voucher View</PERSISTEDVIEW>',
+    '<ISINVOICE>Yes</ISINVOICE>',
+    '<ISVATDUTYPAID>Yes</ISVATDUTYPAID>',
+    salesPartyLedgerEntry(input.customerName, -Math.abs(numberValue(entry.grand_total))),
+    ...input.items.map((item) => salesInventoryEntry(item)),
+    ...taxLines.map((line) => salesTaxLedgerEntry(line.ledgerName, line.amount)),
+    roundOff !== 0 ? salesTaxLedgerEntry('Round Off', roundOff) : '',
+    '</VOUCHER>',
+    '</TALLYMESSAGE>',
+  ].join('')
+}
+
+function salesPartyLedgerEntry(ledgerName: string, amount: number) {
+  return [
+    '<ALLLEDGERENTRIES.LIST>',
+    `<LEDGERNAME>${escapeXml(ledgerName)}</LEDGERNAME>`,
+    '<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>',
+    '<ISPARTYLEDGER>Yes</ISPARTYLEDGER>',
+    `<AMOUNT>${formatTallyNumber(amount)}</AMOUNT>`,
+    '</ALLLEDGERENTRIES.LIST>',
+  ].join('')
+}
+
+function salesInventoryEntry(item: TallySalesVoucherItem) {
+  return [
+    '<INVENTORYENTRIES.LIST>',
+    `<STOCKITEMNAME>${escapeXml(item.name)}</STOCKITEMNAME>`,
+    item.description ? `<BASICUSERDESCRIPTION.LIST TYPE="String"><BASICUSERDESCRIPTION>${escapeXml(item.description)}</BASICUSERDESCRIPTION></BASICUSERDESCRIPTION.LIST>` : '',
+    item.hsnCode ? `<HSNCODE>${escapeXml(item.hsnCode)}</HSNCODE>` : '',
+    '<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>',
+    `<RATE>${escapeXml(tallyRate(item.rate, item.unitName))}</RATE>`,
+    `<AMOUNT>${formatTallyNumber(Math.abs(item.amount))}</AMOUNT>`,
+    `<ACTUALQTY>${escapeXml(tallyQuantity(item.quantity, item.unitName))}</ACTUALQTY>`,
+    `<BILLEDQTY>${escapeXml(tallyQuantity(item.quantity, item.unitName))}</BILLEDQTY>`,
+    '<ACCOUNTINGALLOCATIONS.LIST>',
+    '<LEDGERNAME>Sales</LEDGERNAME>',
+    '<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>',
+    `<AMOUNT>${formatTallyNumber(Math.abs(item.amount))}</AMOUNT>`,
+    '</ACCOUNTINGALLOCATIONS.LIST>',
+    '</INVENTORYENTRIES.LIST>',
+  ].join('')
+}
+
+function salesTaxLedgerEntry(ledgerName: string, amount: number) {
+  const isPositive = amount >= 0
+  return [
+    '<ALLLEDGERENTRIES.LIST>',
+    `<LEDGERNAME>${escapeXml(ledgerName)}</LEDGERNAME>`,
+    `<ISDEEMEDPOSITIVE>${isPositive ? 'No' : 'Yes'}</ISDEEMEDPOSITIVE>`,
+    `<AMOUNT>${formatTallyNumber(amount)}</AMOUNT>`,
+    '</ALLLEDGERENTRIES.LIST>',
+  ].join('')
+}
+
+function salesVoucherTaxLedgerLines(items: TallySalesVoucherItem[], isIgst: boolean) {
+  const totalTax = roundTallyAmount(sumNumbers(items.map((item) => item.taxAmount)))
+  if (totalTax === 0) return []
+  if (isIgst) return [{ ledgerName: 'Output IGST', amount: totalTax }]
+  return [
+    { ledgerName: 'Output CGST', amount: roundTallyAmount(totalTax / 2) },
+    { ledgerName: 'Output SGST', amount: roundTallyAmount(totalTax / 2) },
+  ]
+}
+
+function gstRateDetail(head: string, rate: number) {
+  return [
+    '<RATEDETAILS.LIST>',
+    `<GSTRATEDUTYHEAD>${escapeXml(head)}</GSTRATEDUTYHEAD>`,
+    '<GSTRATEVALUATIONTYPE>Based on Value</GSTRATEVALUATIONTYPE>',
+    `<GSTRATE>${formatTallyNumber(rate)}</GSTRATE>`,
+    '</RATEDETAILS.LIST>',
   ].join('')
 }
 
@@ -1050,9 +1704,9 @@ function captureCompanyObjectName(xml: string) {
 }
 
 function captureObjectName(xml: string) {
-  const attributeMatch = /<(?:COMPANY|LEDGER|STOCKITEM)\b[^>]*\bNAME="([^"]+)"/i.exec(xml)
+  const attributeMatch = /<(?:COMPANY|LEDGER|STOCKITEM|UNIT|STOCKGROUP)\b[^>]*\bNAME="([^"]+)"/i.exec(xml)
   if (attributeMatch?.[1]?.trim()) return unescapeXml(attributeMatch[1].trim())
-  const objectMatch = /<(?:COMPANY|LEDGER|STOCKITEM)\b[\s\S]*?<NAME(?:\s[^>]*)?>([\s\S]*?)<\/NAME>/i.exec(xml)
+  const objectMatch = /<(?:COMPANY|LEDGER|STOCKITEM|UNIT|STOCKGROUP)\b[\s\S]*?<NAME(?:\s[^>]*)?>([\s\S]*?)<\/NAME>/i.exec(xml)
   return objectMatch?.[1]?.trim() || null
 }
 
@@ -1082,7 +1736,70 @@ function compactExcerpt(xml: string) {
 }
 
 function normalizeText(value: string | null | undefined) {
-  return (value ?? '').trim().toLowerCase()
+  return (value ?? '').trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
+function xmlIncludesNormalized(xml: string, value: string) {
+  return normalizeText(unescapeXml(xml)).includes(normalizeText(value))
+}
+
+function validTallyGstinOrUin(value: string) {
+  return /^[0-9A-Z]{15}$/.test(value.trim().toUpperCase())
+}
+
+function salesItems(entry: AnyRow) {
+  return Array.isArray(entry.items) ? entry.items as AnyRow[] : []
+}
+
+function salesItemLinks(entry: AnyRow, links: Map<string, TallySyncLink>) {
+  const map = new Map<string, TallySyncLink>()
+  for (const item of salesItems(entry)) {
+    const productId = valueOrNull(item.product_id)
+    if (!productId) continue
+    const link = links.get(`products:${productId}`)
+    if (link) map.set(productId, link)
+  }
+  return map
+}
+
+function salesItemTaxableAmount(item: AnyRow) {
+  const explicitTaxable = numberValue(item.taxable_amount ?? item.taxableTotal ?? item.taxable_total)
+  if (explicitTaxable > 0) return explicitTaxable
+  const lineTotal = numberValue(item.line_total)
+  const taxAmount = numberValue(item.tax_amount)
+  if (lineTotal > 0) return Math.max(0, roundTallyAmount(lineTotal - taxAmount))
+  return Math.max(0, roundTallyAmount(numberValue(item.quantity) * numberValue(item.rate) - numberValue(item.discount_amount)))
+}
+
+function tallyRate(rate: number, unitName: string | null) {
+  return unitName ? `${formatTallyNumber(rate)}/${unitName}` : formatTallyNumber(rate)
+}
+
+function tallyQuantity(quantity: number, unitName: string | null) {
+  return unitName ? `${formatTallyNumber(quantity)} ${unitName}` : formatTallyNumber(quantity)
+}
+
+function tallyDateFrom(value: unknown) {
+  const raw = stringOrNull(value)
+  const date = raw ? new Date(raw) : new Date()
+  return Number.isNaN(date.getTime()) ? tallyDate() : tallyDate(date)
+}
+
+function numberValue(value: unknown) {
+  const number = Number(value ?? 0)
+  return Number.isFinite(number) ? number : 0
+}
+
+function sumNumbers(values: number[]) {
+  return values.reduce((total, value) => total + numberValue(value), 0)
+}
+
+function roundTallyAmount(value: number) {
+  return Number(numberValue(value).toFixed(2))
+}
+
+function formatTallyNumber(value: number) {
+  return roundTallyAmount(value).toString()
 }
 
 function escapeXml(value: string) {
@@ -1125,6 +1842,13 @@ function booleanValue(value: unknown, fallback = false) {
   if (value === null || value === undefined || value === '') return fallback
   if (typeof value === 'string') return value !== '0' && value.toLowerCase() !== 'false'
   return Boolean(value)
+}
+
+function tallyDate(value = new Date()) {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}${month}${day}`
 }
 
 function dateString(value: Date | null) {

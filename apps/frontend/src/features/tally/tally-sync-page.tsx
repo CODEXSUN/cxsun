@@ -88,6 +88,21 @@ export function TallySyncPage({ session, view }: { session: AuthSession; view: T
     },
   })
 
+  const defaultsMutation = useMutation({
+    mutationFn: () => runTallySync(session, "defaults", []),
+    onSuccess: async (result) => {
+      toast.success("Default Tally masters synced", {
+        description: `${result.summary.synced ?? 0} units created or repaired.`,
+      })
+      await query.refetch()
+    },
+    onError: (error) => {
+      toast.error("Default Tally master sync failed", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      })
+    },
+  })
+
   function toggleSelected(id: string, checked: CheckedState) {
     setSelectedIds((current) => {
       const next = new Set(current)
@@ -112,6 +127,18 @@ export function TallySyncPage({ session, view }: { session: AuthSession; view: T
             <RefreshCw className={cn("size-4", query.isFetching && "animate-spin")} />
             Refresh
           </Button>
+          {view === "products" ? (
+            <Button
+              className="rounded-md"
+              variant="outline"
+              type="button"
+              disabled={defaultsMutation.isPending}
+              onClick={() => defaultsMutation.mutate()}
+            >
+              <Send className={cn("size-4", defaultsMutation.isPending && "animate-pulse")} />
+              Create default units
+            </Button>
+          ) : null}
           <Button
             className="rounded-md"
             type="button"
@@ -119,7 +146,7 @@ export function TallySyncPage({ session, view }: { session: AuthSession; view: T
             onClick={() => syncMutation.mutate(selectedSyncableIds)}
           >
             <Send className="size-4" />
-            {view === "contacts" || view === "products" ? `Sync selected (${selectedSyncableIds.length})` : `Queue selected (${selectedSyncableIds.length})`}
+            {selectedActionLabel(view, selectedSyncableIds.length)}
           </Button>
         </div>
       }
@@ -129,7 +156,7 @@ export function TallySyncPage({ session, view }: { session: AuthSession; view: T
         <StatCard icon={BadgeCheck} label="Synced to Tally" value={String(syncedCount)} />
         <StatCard
           icon={Send}
-          label={view === "contacts" || view === "products" ? "Ready to sync" : "Ready to queue"}
+          label={view === "purchase" ? "Ready to queue" : "Ready to sync/resync"}
           value={String(syncableIds.length)}
         />
       </div>
@@ -441,8 +468,9 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
 function syncableRecordIds(view: TallySyncResource, rows: TallySyncRow[]) {
   return rows
     .filter((row) => {
-      if (view === "contacts") return ["not-synced", "failed"].includes((row as TallyContactSyncRow).sync_status)
-      if (view === "products") return ["not-synced", "failed"].includes((row as TallyProductSyncRow).sync_status)
+      if (view === "contacts") return ["not-synced", "failed", "synced"].includes((row as TallyContactSyncRow).sync_status)
+      if (view === "products") return ["not-synced", "failed", "synced"].includes((row as TallyProductSyncRow).sync_status)
+      if (view === "sales") return (row as TallyEntrySyncRow).prerequisite_status === "ready" && ["ready", "failed", "synced"].includes((row as TallyEntrySyncRow).sync_status)
       return (row as TallyEntrySyncRow).prerequisite_status === "ready" && ["ready", "failed"].includes((row as TallyEntrySyncRow).sync_status)
     })
     .map((row) => row.uuid)
@@ -458,7 +486,7 @@ function pageTitle(view: TallySyncView) {
 function pageDescription(view: TallySyncView) {
   if (view === "contacts") return "Sync customer and supplier contacts to Tally ledgers with GST and address details."
   if (view === "products") return "Sync product masters to Tally stock items and keep reusable item status in one place."
-  if (view === "sales") return "Check whether each sales invoice already has synced masters before it is queued to Tally."
+  if (view === "sales") return "Verify synced customer and product masters, then export selected sales invoices into Tally."
   return "Check whether each purchase entry already has synced masters before it is queued to Tally."
 }
 
@@ -489,21 +517,28 @@ function statusOptions(view: TallySyncView) {
   return [
     { value: "all", label: "All statuses" },
     { value: "ready", label: "Ready" },
+    ...(view === "sales" ? [{ value: "synced", label: "Synced" }] : []),
     { value: "queued", label: "Queued" },
     { value: "failed", label: "Failed" },
     { value: "missing-masters", label: "Missing masters" },
   ]
 }
 
+function selectedActionLabel(view: TallySyncView, count: number) {
+  if (view === "contacts" || view === "products") return `Sync / resync selected (${count})`
+  if (view === "sales") return `Export / resync selected (${count})`
+  return `Queue selected (${count})`
+}
+
 function syncActionLabel(view: TallySyncView) {
   if (view === "contacts") return "Contact sync completed"
   if (view === "products") return "Product sync completed"
-  if (view === "sales") return "Sales export queued"
+  if (view === "sales") return "Sales export completed"
   return "Purchase export queued"
 }
 
 function summarizeResult(view: TallySyncView, summary: Record<string, number>) {
-  if (view === "contacts" || view === "products") {
+  if (view === "contacts" || view === "products" || view === "sales") {
     return `${summary.synced ?? 0} synced, ${summary.failed ?? 0} failed`
   }
   return `${summary.queued ?? 0} queued, ${summary.failed ?? 0} blocked`
