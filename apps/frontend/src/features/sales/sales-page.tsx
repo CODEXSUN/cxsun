@@ -200,6 +200,7 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
         }}
         onDestroy={() => void destroy(entry)}
         onEdit={() => setView({ mode: "upsert", entry })}
+        onNew={openNewEntry}
         onNext={nextEntry ? () => setView({ mode: "show", entry: nextEntry }) : undefined}
         onPrevious={previousEntry ? () => setView({ mode: "show", entry: previousEntry }) : undefined}
         onRestore={() => void restore(entry)}
@@ -325,13 +326,14 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
   )
 }
 
-function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit, onNext, onPrevious, onRestore, onTool, session }: {
+function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit, onNew, onNext, onPrevious, onRestore, onTool, session }: {
   entry: SalesEntry
   isWorking: boolean
   onBack(): void
   onComment(entry: SalesEntry, body: string): Promise<void>
   onDestroy(): void
   onEdit(): void
+  onNew(): void
   onNext?(): void
   onPrevious?(): void
   onRestore(): void
@@ -409,9 +411,12 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onDestroy, onEdit,
   return (
     <main className="sales-print-page theme-shell mx-auto min-h-screen w-[94%] pb-8 pt-8 text-black sm:w-[92%] lg:w-[90%] print:static print:min-h-0 print:w-full print:overflow-visible print:bg-white print:p-0">
       <div className="mx-auto mb-3 grid w-full gap-2 print:hidden">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-normal text-foreground">{entry.customer_name}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{entry.invoice_no}</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-semibold tracking-normal text-foreground">{entry.customer_name}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{entry.invoice_no}</p>
+          </div>
+          <Button type="button" className="h-9 shrink-0 rounded-md" onClick={onNew}><Plus className="size-4" />New</Button>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
