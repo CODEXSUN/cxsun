@@ -164,6 +164,23 @@ Reload Nginx after editing:
 nginx -t && systemctl reload nginx
 ```
 
+Create or refresh tenant Nginx sites with the repo-owned Python helper:
+
+```bash
+python3 .container/cli/codexsun.py tirupurconnect.com --ssl --dry-run
+sudo python3 .container/cli/codexsun.py tirupurconnect.com --ssl --force
+```
+
+Install the short command on the cloud server when wanted:
+
+```bash
+sudo ln -sf /workspace/cxsun/.container/cli/codexsun.py /usr/local/bin/codexsun
+sudo chmod +x /workspace/cxsun/.container/cli/codexsun.py
+sudo codexsun tirupurconnect.com --ssl --force
+```
+
+The helper writes `/etc/nginx/sites-available/<domain>`, symlinks it into `/etc/nginx/sites-enabled/<domain>`, runs `nginx -t`, reloads Nginx, and runs Certbot when `--ssl` is used before the certificate files exist.
+
 Open CXMedia:
 
 ```bash

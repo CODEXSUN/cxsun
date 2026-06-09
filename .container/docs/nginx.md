@@ -72,3 +72,22 @@ sudo systemctl reload nginx
 ```
 
 sudo certbot --nginx -d sukraa.codexsun.com
+
+## Tenant CLI
+
+Use the repo-owned helper for repeated CXSun tenant domain setup:
+
+```bash
+python3 .container/cli/codexsun.py tirupurconnect.com --ssl --dry-run
+sudo python3 .container/cli/codexsun.py tirupurconnect.com --ssl --force
+```
+
+Optional installed command:
+
+```bash
+sudo ln -sf /workspace/cxsun/.container/cli/codexsun.py /usr/local/bin/codexsun
+sudo chmod +x /workspace/cxsun/.container/cli/codexsun.py
+sudo codexsun tirupurconnect.com --ssl --force
+```
+
+It writes `/etc/nginx/sites-available/<domain>`, links `/etc/nginx/sites-enabled/<domain>`, tests Nginx, reloads Nginx, and can run Certbot when `--ssl` is used.

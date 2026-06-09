@@ -98,3 +98,4 @@ ln -sf /etc/nginx/sites-available/office.aaran.org /etc/nginx/sites-enabled/offi
 ln -sf /etc/nginx/sites-available/arabab.codexsun.com /etc/nginx/sites-enabled/arabab.codexsun.com
 ln -sf /etc/nginx/sites-available/tirupurtextiles.codexsun.com /etc/nginx/sites-enabled/tirupurtextiles.codexsun.com
 ln -sf /etc/nginx/sites-available/asknits.codexsun.com /etc/nginx/sites-enabled/asknits.codexsun.com
+ln -sf /etc/nginx/sites-available/tirupurconnect.com /etc/nginx/sites-enabled/tirupurconnect.com

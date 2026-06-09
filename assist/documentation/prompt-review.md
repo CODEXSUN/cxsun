@@ -2233,3 +2233,15 @@ User prompt:
 User prompt:
 
 > create each tenant domain has it own static home page with related content on it
+
+## 2026-06-09 - Repo-owned Nginx tenant CLI
+
+User prompt:
+
+> create a Python CLI under the repo for repeated Nginx tenant domain setup, writing sites-available, enabling sites-enabled, testing/reloading Nginx, and optionally setting SSL with Certbot
+
+## 2026-06-09 - Nginx CLI changelog and version bump
+
+User prompt:
+
+> write log in changelog and version update

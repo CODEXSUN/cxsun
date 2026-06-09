@@ -2,13 +2,26 @@
 
 ## Version State
 
-- **Current version:** `1.0.90`
-- **Release tag:** `v-1.0.90`
-- **Changelog label:** `v 1.0.90`
+- **Current version:** `1.0.91`
+- **Release tag:** `v-1.0.91`
+- **Changelog label:** `v 1.0.91`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.91
+
+### [v 1.0.91] 2026-06-09 1:56 pm - Nginx tenant CLI
+
+- Bumped workspace version to 1.0.91
+- Added a repo-owned Python CLI under `.container/cli` for repeated tenant Nginx site setup.
+- Generated CXSun tenant vhosts with `/storage/`, `/api/`, `/health`, and frontend proxy routing aligned to backend port `6005` and frontend port `6010`.
+- Added SSL-ready vhost rendering with a temporary HTTP setup path so first-time Certbot issuance can run before the final HTTPS redirect config is written.
+- Added safe operator options for dry-run, force overwrite, custom aliases, backend/frontend ports, Nginx test/reload skips, and explicit `--www` handling.
+- Set no-`www` as the default domain behavior, with `--www` used only when a domain should include a `www.<domain>` alias.
+- Documented CLI usage in `.container/cli/README.md` and linked the helper from the container Nginx/deploy docs.
+- Verified the helper with Python compile checks and dry-run output for root domains, root domains with `--www`, and subdomains.
 
 ## v-1.0.90
 

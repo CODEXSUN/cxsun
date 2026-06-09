@@ -1,5 +1,13 @@
 # Work Log
 
+## 2026-06-09
+
+- Added a repo-owned Python Nginx tenant CLI under `.container/cli` for repeated cloud domain setup.
+- Wired the generated vhost shape to the CXSun cloud ports: backend/storage/API/health on `6005` and frontend on `6010`.
+- Added dry-run, SSL/Certbot, force overwrite, alias, `--www`, and no-`www` default behavior for tenant domains and subdomains.
+- Documented server usage in the CLI README and container Nginx docs.
+- Bumped the workspace to version `1.0.91`.
+
 ## 2026-06-08
 
 - Added Tally contact resync from the contact edit flow and from already-synced contact rows.
