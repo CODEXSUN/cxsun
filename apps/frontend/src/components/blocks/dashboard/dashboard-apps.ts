@@ -54,7 +54,7 @@ import {
 
 import type { DashboardPage } from "src/components/blocks/sidebar/app-sidebar"
 
-export type DashboardAppId = "application" | "accounts" | "auditor" | "billing" | "media" | "mail" | "taskmanager" | "ecommerce" | "crm" | "inventory" | "tirupur-connect" | "sites" | "tally"
+export type DashboardAppId = "application" | "accounts" | "auditor" | "billing" | "media" | "mail" | "taskmanager" | "ecommerce" | "crm" | "inventory" | "tconnect" | "sites" | "tally" | "frappe"
 
 export interface DashboardAppMenuItem {
   title: string
@@ -233,6 +233,27 @@ export const dashboardApps: DashboardAppDefinition[] = [
     ],
   }),
   withMenu({
+    id: "frappe",
+    name: "Frappe",
+    shortName: "Frappe",
+    description: "Frappe handshake, DocType read/post workbench, sync jobs, and record activity.",
+    status: "active",
+    accent: "bg-sky-700 text-white",
+    icon: Cable,
+    menuGroups: [
+      {
+        title: "Frappe Desk",
+        icon: Cable,
+        items: [
+          item("frappe", "handshake", "Frappe Handshake", ShieldCheck),
+          item("frappe", "desk", "Frappe Desk", Cable),
+          item("frappe", "settings", "Connection Settings", Settings),
+          item("frappe", "sync-jobs", "Sync Jobs", ClipboardList),
+        ],
+      },
+    ],
+  }),
+  withMenu({
     id: "mail",
     name: "Mail",
     shortName: "Mail",
@@ -319,27 +340,27 @@ export const dashboardApps: DashboardAppDefinition[] = [
     ],
   }),
   withMenu({
-    id: "tirupur-connect",
-    name: "Tirupur Connect",
+    id: "tconnect",
+    name: "TConnect",
     shortName: "TC",
-    description: "B2B trade desk for Tirupur suppliers, global buyers, RFQs, leads, messages, and membership activity.",
+    description: "Trade connection desk for supplier profiles, products, RFQs, leads, messages, and membership activity.",
     status: "active",
-    accent: "bg-emerald-700 text-white",
+    accent: "bg-cyan-700 text-white",
     icon: Handshake,
     menuGroups: [
       {
         title: "Workspace",
         icon: Handshake,
         items: [
-          item("tirupur-connect", "dashboard", "Dashboard", LayoutDashboard),
-          item("tirupur-connect", "profile", "Supplier Profile", Building2),
-          item("tirupur-connect", "products", "Products", PackageSearch),
-          item("tirupur-connect", "rfqs", "RFQs", ClipboardList),
-          item("tirupur-connect", "leads", "Leads", UsersRound),
-          item("tirupur-connect", "messages", "Messages", Mail),
-          item("tirupur-connect", "membership", "Membership", ShieldCheck),
-          item("tirupur-connect", "analytics", "Analytics", BarChart3),
-          item("tirupur-connect", "settings", "Settings", Settings),
+          item("tconnect", "dashboard", "Dashboard", LayoutDashboard),
+          item("tconnect", "profile", "Supplier Profile", Building2),
+          item("tconnect", "products", "Products", PackageSearch),
+          item("tconnect", "rfqs", "RFQs", ClipboardList),
+          item("tconnect", "leads", "Leads", UsersRound),
+          item("tconnect", "messages", "Messages", Mail),
+          item("tconnect", "membership", "Membership", ShieldCheck),
+          item("tconnect", "analytics", "Analytics", BarChart3),
+          item("tconnect", "settings", "Settings", Settings),
         ],
       },
     ],

@@ -3,128 +3,128 @@ import { Injectable } from '../../../core/decorators/injectable.js'
 import { BadRequestException, ForbiddenException, NotFoundException } from '../../../core/exceptions/http.exception.js'
 import { TenantContextService, type TenantRequestHeaders } from '../../../core/tenant/tenant-context.service.js'
 import type {
-  TirupurConnectBuyerCompanyInput,
-  TirupurConnectProductInput,
-  TirupurConnectPublicInquiryInput,
-  TirupurConnectRfqInput,
-  TirupurConnectSettings,
-  TirupurConnectSupplierProfileInput,
-} from '../core/tirupur-connect.types.js'
-import { TirupurConnectPublicRepository } from '../infrastructure/tirupur-connect-public.repository.js'
-import { TirupurConnectRepository } from '../infrastructure/tirupur-connect.repository.js'
+  TConnectBuyerCompanyInput,
+  TConnectProductInput,
+  TConnectPublicInquiryInput,
+  TConnectRfqInput,
+  TConnectSettings,
+  TConnectSupplierProfileInput,
+} from '../core/tconnect.types.js'
+import { TConnectPublicRepository } from '../infrastructure/tconnect-public.repository.js'
+import { TConnectRepository } from '../infrastructure/tconnect.repository.js'
 
 @Injectable()
-export class TirupurConnectService {
+export class TConnectService {
   constructor(
     @Inject(TenantContextService) private readonly tenants: TenantContextService,
-    @Inject(TirupurConnectRepository) private readonly tirupurConnect: TirupurConnectRepository,
-    @Inject(TirupurConnectPublicRepository) private readonly publicMarketplace: TirupurConnectPublicRepository,
+    @Inject(TConnectRepository) private readonly tConnect: TConnectRepository,
+    @Inject(TConnectPublicRepository) private readonly publicMarketplace: TConnectPublicRepository,
   ) {}
 
   async overview(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    return this.tirupurConnect.overview(context)
+    return this.tConnect.overview(context)
   }
 
-  async upsertSettings(headers: TenantRequestHeaders, input: Partial<TirupurConnectSettings>) {
+  async upsertSettings(headers: TenantRequestHeaders, input: Partial<TConnectSettings>) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    return { ok: true, overview: await this.tirupurConnect.upsertSettings(context, input) }
+    return { ok: true, overview: await this.tConnect.upsertSettings(context, input) }
   }
 
   async listSuppliers(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    return { ok: true, records: await this.tirupurConnect.listSuppliers(context) }
+    return { ok: true, records: await this.tConnect.listSuppliers(context) }
   }
 
-  async createSupplier(headers: TenantRequestHeaders, input: TirupurConnectSupplierProfileInput) {
+  async createSupplier(headers: TenantRequestHeaders, input: TConnectSupplierProfileInput) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    await this.tirupurConnect.createSupplier(context, input)
-    return { ok: true, records: await this.tirupurConnect.listSuppliers(context) }
+    await this.tConnect.createSupplier(context, input)
+    return { ok: true, records: await this.tConnect.listSuppliers(context) }
   }
 
   async listBuyers(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
-    return { ok: true, records: await this.tirupurConnect.listBuyers(context) }
+    return { ok: true, records: await this.tConnect.listBuyers(context) }
   }
 
-  async createBuyer(headers: TenantRequestHeaders, input: TirupurConnectBuyerCompanyInput) {
+  async createBuyer(headers: TenantRequestHeaders, input: TConnectBuyerCompanyInput) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
-    await this.tirupurConnect.createBuyer(context, input)
-    return { ok: true, records: await this.tirupurConnect.listBuyers(context) }
+    await this.tConnect.createBuyer(context, input)
+    return { ok: true, records: await this.tConnect.listBuyers(context) }
   }
 
   async listProducts(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    return { ok: true, records: await this.tirupurConnect.listProducts(context) }
+    return { ok: true, records: await this.tConnect.listProducts(context) }
   }
 
-  async createProduct(headers: TenantRequestHeaders, input: TirupurConnectProductInput) {
+  async createProduct(headers: TenantRequestHeaders, input: TConnectProductInput) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    await this.tirupurConnect.createProduct(context, input)
-    return { ok: true, records: await this.tirupurConnect.listProducts(context) }
+    await this.tConnect.createProduct(context, input)
+    return { ok: true, records: await this.tConnect.listProducts(context) }
   }
 
   async listRfqs(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
-    return { ok: true, records: await this.tirupurConnect.listRfqs(context) }
+    return { ok: true, records: await this.tConnect.listRfqs(context) }
   }
 
-  async createRfq(headers: TenantRequestHeaders, input: TirupurConnectRfqInput) {
+  async createRfq(headers: TenantRequestHeaders, input: TConnectRfqInput) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
-    await this.tirupurConnect.createRfq(context, input)
-    return { ok: true, records: await this.tirupurConnect.listRfqs(context) }
+    await this.tConnect.createRfq(context, input)
+    return { ok: true, records: await this.tConnect.listRfqs(context) }
   }
 
   async publishSupplier(headers: TenantRequestHeaders, input: { uuid?: string }) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    if (this.tirupurConnect.isMarketplaceTenant(context)) {
+    if (this.tConnect.isMarketplaceTenant(context)) {
       throw new ForbiddenException('Marketplace tenant manages reviews directly; client publish API is not used here.')
     }
     if (!input.uuid) throw new ForbiddenException('Supplier UUID is required.')
-    await this.tirupurConnect.publishSupplier(context, input.uuid)
-    return { ok: true, records: await this.tirupurConnect.listSuppliers(context) }
+    await this.tConnect.publishSupplier(context, input.uuid)
+    return { ok: true, records: await this.tConnect.listSuppliers(context) }
   }
 
   async publishProduct(headers: TenantRequestHeaders, input: { uuid?: string }) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    if (this.tirupurConnect.isMarketplaceTenant(context)) {
+    if (this.tConnect.isMarketplaceTenant(context)) {
       throw new ForbiddenException('Marketplace tenant manages reviews directly; client publish API is not used here.')
     }
     if (!input.uuid) throw new ForbiddenException('Product UUID is required.')
-    await this.tirupurConnect.publishProduct(context, input.uuid)
-    return { ok: true, records: await this.tirupurConnect.listProducts(context) }
+    await this.tConnect.publishProduct(context, input.uuid)
+    return { ok: true, records: await this.tConnect.listProducts(context) }
   }
 
   async listSupplierPublications(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
-    return { ok: true, records: await this.tirupurConnect.listSupplierPublications(context) }
+    return { ok: true, records: await this.tConnect.listSupplierPublications(context) }
   }
 
   async reviewSupplierPublication(headers: TenantRequestHeaders, input: { uuid?: string; status?: string }) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
     if (!input.uuid) throw new ForbiddenException('Publication UUID is required.')
-    await this.tirupurConnect.reviewSupplierPublication(context, input.uuid, input.status ?? 'pending_review')
-    return { ok: true, records: await this.tirupurConnect.listSupplierPublications(context) }
+    await this.tConnect.reviewSupplierPublication(context, input.uuid, input.status ?? 'pending_review')
+    return { ok: true, records: await this.tConnect.listSupplierPublications(context) }
   }
 
   async listProductPublications(headers: TenantRequestHeaders) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
-    return { ok: true, records: await this.tirupurConnect.listProductPublications(context) }
+    return { ok: true, records: await this.tConnect.listProductPublications(context) }
   }
 
   async reviewProductPublication(headers: TenantRequestHeaders, input: { uuid?: string; status?: string }) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     this.assertMarketplace(context)
     if (!input.uuid) throw new ForbiddenException('Publication UUID is required.')
-    await this.tirupurConnect.reviewProductPublication(context, input.uuid, input.status ?? 'pending_review')
-    return { ok: true, records: await this.tirupurConnect.listProductPublications(context) }
+    await this.tConnect.reviewProductPublication(context, input.uuid, input.status ?? 'pending_review')
+    return { ok: true, records: await this.tConnect.listProductPublications(context) }
   }
 
   async publicSuppliers() {
@@ -157,7 +157,7 @@ export class TirupurConnectService {
     return { ok: true, record }
   }
 
-  async createPublicInquiry(input: TirupurConnectPublicInquiryInput) {
+  async createPublicInquiry(input: TConnectPublicInquiryInput) {
     const entityType = normalizeEntityType(input.entityType)
     const buyerName = requiredText(input.buyerName, 'Buyer name')
     const message = requiredText(input.message, 'Message')
@@ -176,8 +176,8 @@ export class TirupurConnectService {
   }
 
   private assertMarketplace(context: Awaited<ReturnType<TenantContextService['resolve']>>) {
-    if (!this.tirupurConnect.isMarketplaceTenant(context)) {
-      throw new ForbiddenException('This Tirupur Connect desk is client-side. RFQ, leads, messages, membership, and analytics belong to the central Tirupur Connect tenant.')
+    if (!this.tConnect.isMarketplaceTenant(context)) {
+      throw new ForbiddenException('This TConnect desk is client-side. RFQ, leads, messages, membership, and analytics belong to the central TConnect tenant.')
     }
   }
 }

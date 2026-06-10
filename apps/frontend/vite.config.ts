@@ -11,8 +11,6 @@ const defaultAllowedHosts = [
   'codexsun.com',
   'www.codexsun.com',
   '.codexsun.com',
-  'tirupurconnect.com',
-  'www.tirupurconnect.com',
   'tenkasisports.com',
   'www.tenkasisports.com',
   'tirupurdirect.com',

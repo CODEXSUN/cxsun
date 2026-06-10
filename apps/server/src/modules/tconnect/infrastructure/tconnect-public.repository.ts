@@ -5,20 +5,20 @@ import { getDatabase } from '../../../infrastructure/database/connection.js'
 import { getTenantDatabase } from '../../../infrastructure/tenant-database/tenant-database.connection.js'
 import { dispatchPublicUuid } from '../../../shared/helpers/public-uuid.js'
 import type {
-  TirupurConnectProductPublication,
-  TirupurConnectProductPublicationDetail,
-  TirupurConnectPublicInquiryInput,
-  TirupurConnectPublicRfq,
-  TirupurConnectSupplierPublication,
-  TirupurConnectSupplierPublicationDetail,
-} from '../core/tirupur-connect.types.js'
-import { tirupurConnectTenantSlug } from './database/migrations/tirupur-connect.migration.js'
+  TConnectProductPublication,
+  TConnectProductPublicationDetail,
+  TConnectPublicInquiryInput,
+  TConnectPublicRfq,
+  TConnectSupplierPublication,
+  TConnectSupplierPublicationDetail,
+} from '../core/tconnect.types.js'
+import { tConnectTenantSlug } from './database/migrations/tconnect.migration.js'
 
 type DynamicDatabase = Record<string, Record<string, unknown>>
 
 @Injectable()
-export class TirupurConnectPublicRepository {
-  async listSuppliers(): Promise<TirupurConnectSupplierPublication[]> {
+export class TConnectPublicRepository {
+  async listSuppliers(): Promise<TConnectSupplierPublication[]> {
     const central = await this.centralMarketplace()
     const result = await sql<PublicSupplierRow>`
       SELECT id, uuid, source_tenant_id, source_tenant_slug, source_supplier_uuid, brand_name, business_type,
@@ -34,7 +34,7 @@ export class TirupurConnectPublicRepository {
     return result.rows.map(mapSupplierPublication)
   }
 
-  async getSupplier(uuid: string): Promise<TirupurConnectSupplierPublicationDetail | null> {
+  async getSupplier(uuid: string): Promise<TConnectSupplierPublicationDetail | null> {
     const central = await this.centralMarketplace()
     const result = await sql<PublicSupplierRow & { about: string | null; factory_address: string | null }>`
       SELECT id, uuid, source_tenant_id, source_tenant_slug, source_supplier_uuid, brand_name, business_type,
@@ -59,7 +59,7 @@ export class TirupurConnectPublicRepository {
       : null
   }
 
-  async listProducts(): Promise<TirupurConnectProductPublication[]> {
+  async listProducts(): Promise<TConnectProductPublication[]> {
     const central = await this.centralMarketplace()
     const result = await sql<PublicProductRow>`
       SELECT id, uuid, source_tenant_id, source_tenant_slug, source_product_uuid, source_supplier_uuid, slug,
@@ -75,7 +75,7 @@ export class TirupurConnectPublicRepository {
     return result.rows.map(mapProductPublication)
   }
 
-  async getProduct(uuidOrSlug: string): Promise<TirupurConnectProductPublicationDetail | null> {
+  async getProduct(uuidOrSlug: string): Promise<TConnectProductPublicationDetail | null> {
     const central = await this.centralMarketplace()
     const result = await sql<PublicProductRow & { fabric_details: string | null; certification_details: string | null }>`
       SELECT id, uuid, source_tenant_id, source_tenant_slug, source_product_uuid, source_supplier_uuid, slug,
@@ -94,7 +94,7 @@ export class TirupurConnectPublicRepository {
       : null
   }
 
-  async listRfqs(): Promise<TirupurConnectPublicRfq[]> {
+  async listRfqs(): Promise<TConnectPublicRfq[]> {
     const central = await this.centralMarketplace()
     const result = await sql<PublicRfqRow>`
       SELECT id, uuid, title, description, quantity, delivery_deadline, budget_min, budget_max, status, created_at
@@ -109,7 +109,7 @@ export class TirupurConnectPublicRepository {
     return result.rows.map(mapRfq)
   }
 
-  async getRfq(uuid: string): Promise<TirupurConnectPublicRfq | null> {
+  async getRfq(uuid: string): Promise<TConnectPublicRfq | null> {
     const central = await this.centralMarketplace()
     const result = await sql<PublicRfqRow>`
       SELECT id, uuid, title, description, quantity, delivery_deadline, budget_min, budget_max, status, created_at
@@ -125,7 +125,7 @@ export class TirupurConnectPublicRepository {
     return row ? mapRfq(row) : null
   }
 
-  async createInquiry(input: Required<Pick<TirupurConnectPublicInquiryInput, 'buyerName' | 'entityType' | 'message'>> & TirupurConnectPublicInquiryInput) {
+  async createInquiry(input: Required<Pick<TConnectPublicInquiryInput, 'buyerName' | 'entityType' | 'message'>> & TConnectPublicInquiryInput) {
     const central = await this.centralMarketplace()
     await sql`
       INSERT INTO tc_inquiries (
@@ -143,11 +143,11 @@ export class TirupurConnectPublicRepository {
     const tenant = await getDatabase()
       .selectFrom('tenants')
       .selectAll()
-      .where('slug', '=', tirupurConnectTenantSlug)
+      .where('slug', '=', tConnectTenantSlug)
       .where('deleted_at', 'is', null)
       .executeTakeFirst() as Tenant | undefined
 
-    if (!tenant) throw new Error('Central Tirupur Connect tenant is not provisioned.')
+    if (!tenant) throw new Error('Central TConnect tenant is not provisioned.')
 
     return {
       tenant,
@@ -201,7 +201,7 @@ type PublicRfqRow = {
   created_at: Date | string
 }
 
-function mapSupplierPublication(row: PublicSupplierRow): TirupurConnectSupplierPublication {
+function mapSupplierPublication(row: PublicSupplierRow): TConnectSupplierPublication {
   return {
     id: Number(row.id),
     uuid: row.uuid,
@@ -218,7 +218,7 @@ function mapSupplierPublication(row: PublicSupplierRow): TirupurConnectSupplierP
   }
 }
 
-function mapProductPublication(row: PublicProductRow): TirupurConnectProductPublication {
+function mapProductPublication(row: PublicProductRow): TConnectProductPublication {
   return {
     id: Number(row.id),
     uuid: row.uuid,
@@ -236,7 +236,7 @@ function mapProductPublication(row: PublicProductRow): TirupurConnectProductPubl
   }
 }
 
-function mapRfq(row: PublicRfqRow): TirupurConnectPublicRfq {
+function mapRfq(row: PublicRfqRow): TConnectPublicRfq {
   return {
     id: Number(row.id),
     uuid: row.uuid,

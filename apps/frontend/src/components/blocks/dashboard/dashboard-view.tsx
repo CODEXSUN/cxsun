@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { AppSidebar, type DashboardMode, type DashboardPage } from 'src/components/blocks/sidebar/app-sidebar'
@@ -151,11 +151,11 @@ const TallyPage = lazy(() =>
 const TallySyncPage = lazy(() =>
   import('src/features/tally/tally-sync-page').then((module) => ({ default: module.TallySyncPage })),
 )
+const FrappePage = lazy(() =>
+  import('src/features/frappe/frappe-page').then((module) => ({ default: module.FrappePage })),
+)
 const CrmPage = lazy(() =>
   import('src/features/crm/crm-page').then((module) => ({ default: module.CrmPage })),
-)
-const TirupurConnectPage = lazy(() =>
-  import('src/features/tirupur-connect/tirupur-connect-page').then((module) => ({ default: module.TirupurConnectPage })),
 )
 const SiteSliderPage = lazy(() =>
   import('src/features/site/slider/site-slider-page').then((module) => ({ default: module.SiteSliderPage })),
@@ -320,13 +320,13 @@ function prefetchAppModules(appId: DashboardAppId) {
       return
     }
 
-    if (appId === "crm") {
-      void import('src/features/crm/crm-page')
+    if (appId === "frappe") {
+      void import('src/features/frappe/frappe-page')
       return
     }
 
-    if (appId === "tirupur-connect") {
-      void import('src/features/tirupur-connect/tirupur-connect-page')
+    if (appId === "crm") {
+      void import('src/features/crm/crm-page')
       return
     }
 
@@ -447,8 +447,12 @@ export function DashboardView({
   })
   const exportSalesEnabled = softwareSettingsQuery.data ? isSoftwareSettingEnabled(softwareSettingsQuery.data, "feature-export-sales") : true
   const quotationEnabled = softwareSettingsQuery.data ? isSoftwareSettingEnabled(softwareSettingsQuery.data, "feature-quotation") : true
-  const tirupurConnectEnabled = softwareSettingsQuery.data ? isSoftwareSettingEnabled(softwareSettingsQuery.data, "feature-tirupur-connect") : false
-  const tirupurConnectAppEnabled = enabledApps["tirupur-connect"] || tirupurConnectEnabled
+  const tConnectEnabled = softwareSettingsQuery.data ? isSoftwareSettingEnabled(softwareSettingsQuery.data, "feature-tconnect") : false
+  const tConnectAppEnabled = enabledApps.tconnect || tConnectEnabled
+  const featureEnabledApps = useMemo(
+    () => ({ ...enabledApps, tconnect: tConnectAppEnabled }),
+    [enabledApps, tConnectAppEnabled],
+  )
 
   useEffect(() => {
     function refreshSoftwareSettings(event: Event) {
@@ -525,7 +529,7 @@ export function DashboardView({
     onSuccess: async (context) => {
       toast.success("Landing desk updated")
       await queryClient.invalidateQueries({ queryKey: ["default-company-context", session?.selectedTenant.slug] })
-      if (context.landingApp && isDashboardAppId(context.landingApp) && isAppAvailableForLanding(enabledApps, context.landingApp, tirupurConnectAppEnabled)) {
+      if (context.landingApp && isDashboardAppId(context.landingApp) && isAppAvailableForLanding(featureEnabledApps, context.landingApp)) {
         setLandingApp(context.landingApp)
       }
     },
@@ -538,7 +542,7 @@ export function DashboardView({
 
   useEffect(() => {
     const savedLandingApp = defaultCompanyContextQuery.data?.landingApp
-    if (mode !== "tenant" || !savedLandingApp || !isDashboardAppId(savedLandingApp) || !isAppAvailableForLanding(enabledApps, savedLandingApp, tirupurConnectAppEnabled)) {
+    if (mode !== "tenant" || !savedLandingApp || !isDashboardAppId(savedLandingApp) || !isAppAvailableForLanding(featureEnabledApps, savedLandingApp)) {
       return
     }
 
@@ -550,7 +554,7 @@ export function DashboardView({
       setActivePage(nextPage)
       pushDashboardPage(basePath, nextPage)
     }
-  }, [activePage, basePath, defaultCompanyContextQuery.data?.landingApp, enabledApps, mode, tirupurConnectAppEnabled])
+  }, [activePage, basePath, defaultCompanyContextQuery.data?.landingApp, featureEnabledApps, mode])
 
   useEffect(() => {
     if (needsLogin) return
@@ -620,14 +624,9 @@ export function DashboardView({
 
   const accessiblePage = pageAccess[mode].includes(activePage) ? activePage : "overview"
   const activePageApp = dashboardAppFromPage(accessiblePage)
-  const featureEnabledApps: Record<DashboardAppId, boolean> = {
-    ...enabledApps,
-    "tirupur-connect": tirupurConnectAppEnabled,
-  }
   const featureHiddenPages = [
     ...(!quotationEnabled ? ["app-billing-quotation" as const] : []),
     ...(!exportSalesEnabled ? ["app-billing-export-sales" as const] : []),
-    ...(!tirupurConnectAppEnabled ? appModulePages.filter((page) => page.startsWith("app-tirupur-connect-")) : []),
   ]
   const featureVisiblePage = featureHiddenPages.includes(accessiblePage as (typeof featureHiddenPages)[number]) ? "app-billing-overview" : accessiblePage
   const visiblePage = activePageApp && !featureEnabledApps[activePageApp] ? "overview" : featureVisiblePage
@@ -816,8 +815,6 @@ export function DashboardView({
             <MailDeskPage session={session} view="settings" />
           ) : visiblePage === "app-sites-sliders" ? (
             <SiteSliderPage session={session} />
-          ) : visiblePage.startsWith("app-tirupur-connect-") ? (
-            <TirupurConnectPage page={visiblePage} session={session} />
           ) : visiblePage === "app-crm-tasks" || visiblePage === "app-taskmanager-my-tasks" ? (
             <TaskManagerPage scope="my" session={session} />
           ) : visiblePage === "app-crm-leads" ? (
@@ -860,6 +857,12 @@ export function DashboardView({
             <TallySyncPage session={session} view="purchase" />
           ) : visiblePage === "app-tally-sync-jobs" ? (
             <TallyPage session={session} view="jobs" />
+          ) : visiblePage === "app-frappe-handshake" || visiblePage === "app-frappe-settings" ? (
+            <FrappePage session={session} view="handshake" />
+          ) : visiblePage === "app-frappe-desk" ? (
+            <FrappePage session={session} view="desk" />
+          ) : visiblePage === "app-frappe-sync-jobs" ? (
+            <FrappePage session={session} view="jobs" />
           ) : visiblePage === "app-billing-settings" ? (
             <SalesSettingsPage session={session} />
           ) : visiblePage === "app-billing-document-settings" ? (
@@ -1093,6 +1096,7 @@ function appGroupDescription(title: string) {
     "Management": "Share, link, and govern media assets.",
     "Mail Desk": "Compose, queue, and inspect workspace mail.",
     "Tally Desk": "Handshake, single-operation sync, and job controls.",
+    "Frappe Desk": "Handshake, DocType operations, and sync activity.",
     "Master Sync": "Contacts and products pushed as reusable Tally masters.",
     "Entry Sync": "Invoice and purchase checks built on synced masters.",
     "Storefront": "Store operations and checkout flow.",
@@ -1114,6 +1118,7 @@ function appGroupDescription(title: string) {
     "Purchase": "Purchase, suppliers, and receipts.",
     "Product Common": "Categories, brands, and units.",
     "Sites": "Sites, landing pages, and domains.",
+    "Workspace": "Profiles, products, RFQs, leads, and membership activity.",
   }
   return descriptions[title] ?? "Workspace menu shortcuts."
 }
@@ -1173,6 +1178,6 @@ function isAppAvailableFromAccess(enabledApps: Record<DashboardAppId, boolean>, 
   return enabledApps[appId]
 }
 
-function isAppAvailableForLanding(enabledApps: Record<DashboardAppId, boolean>, appId: DashboardAppId, tirupurConnectEnabled: boolean) {
-  return appId === "tirupur-connect" ? tirupurConnectEnabled : enabledApps[appId]
+function isAppAvailableForLanding(enabledApps: Record<DashboardAppId, boolean>, appId: DashboardAppId) {
+  return enabledApps[appId]
 }

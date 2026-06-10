@@ -1,14 +1,14 @@
-export type TirupurConnectStatus = 'active' | 'draft' | 'paused'
+export type TConnectStatus = 'active' | 'draft' | 'paused'
 
-export interface TirupurConnectSettings {
-  status: TirupurConnectStatus
+export interface TConnectSettings {
+  status: TConnectStatus
   platformName: string
   tagline: string
   positioning: string
 }
 
-export interface TirupurConnectOverview {
-  settings: TirupurConnectSettings
+export interface TConnectOverview {
+  settings: TConnectSettings
   mode: 'marketplace' | 'client'
   counts: {
     buyers: number
@@ -21,7 +21,7 @@ export interface TirupurConnectOverview {
   }
 }
 
-export interface TirupurConnectSupplierProfile {
+export interface TConnectSupplierProfile {
   id: number
   uuid: string
   contactId: number
@@ -36,7 +36,7 @@ export interface TirupurConnectSupplierProfile {
   createdAt: string
 }
 
-export interface TirupurConnectSupplierProfileInput {
+export interface TConnectSupplierProfileInput {
   contactId?: number | string
   brandName?: string
   businessType?: string
@@ -47,7 +47,7 @@ export interface TirupurConnectSupplierProfileInput {
   status?: string
 }
 
-export interface TirupurConnectBuyerCompany {
+export interface TConnectBuyerCompany {
   id: number
   uuid: string
   contactId: number
@@ -58,7 +58,7 @@ export interface TirupurConnectBuyerCompany {
   createdAt: string
 }
 
-export interface TirupurConnectBuyerCompanyInput {
+export interface TConnectBuyerCompanyInput {
   contactId?: number | string
   buyerType?: string
   annualVolume?: string
@@ -66,7 +66,7 @@ export interface TirupurConnectBuyerCompanyInput {
   status?: string
 }
 
-export interface TirupurConnectProduct {
+export interface TConnectProduct {
   id: number
   uuid: string
   productId: number
@@ -81,7 +81,7 @@ export interface TirupurConnectProduct {
   createdAt: string
 }
 
-export interface TirupurConnectProductInput {
+export interface TConnectProductInput {
   productId?: number | string
   supplierProfileId?: number | string
   slug?: string
@@ -93,7 +93,7 @@ export interface TirupurConnectProductInput {
   status?: string
 }
 
-export interface TirupurConnectRfq {
+export interface TConnectRfq {
   id: number
   uuid: string
   buyerCompanyId: number
@@ -107,7 +107,7 @@ export interface TirupurConnectRfq {
   createdAt: string
 }
 
-export interface TirupurConnectRfqInput {
+export interface TConnectRfqInput {
   buyerCompanyId?: number | string
   title?: string
   description?: string
@@ -118,7 +118,7 @@ export interface TirupurConnectRfqInput {
   status?: string
 }
 
-export interface TirupurConnectPublicRfq {
+export interface TConnectPublicRfq {
   id: number
   uuid: string
   title: string
@@ -131,7 +131,7 @@ export interface TirupurConnectPublicRfq {
   createdAt: string
 }
 
-export interface TirupurConnectPublicInquiryInput {
+export interface TConnectPublicInquiryInput {
   entityType?: string
   entityUuid?: string
   sourceTenantSlug?: string
@@ -142,7 +142,7 @@ export interface TirupurConnectPublicInquiryInput {
   message?: string
 }
 
-export interface TirupurConnectSupplierPublication {
+export interface TConnectSupplierPublication {
   id: number
   uuid: string
   sourceTenantId: number
@@ -157,13 +157,13 @@ export interface TirupurConnectSupplierPublication {
   reviewedAt: string | null
 }
 
-export interface TirupurConnectSupplierPublicationDetail extends TirupurConnectSupplierPublication {
+export interface TConnectSupplierPublicationDetail extends TConnectSupplierPublication {
   about: string | null
   factoryAddress: string | null
   verificationLevel: string
 }
 
-export interface TirupurConnectProductPublication {
+export interface TConnectProductPublication {
   id: number
   uuid: string
   sourceTenantId: number
@@ -179,7 +179,7 @@ export interface TirupurConnectProductPublication {
   reviewedAt: string | null
 }
 
-export interface TirupurConnectProductPublicationDetail extends TirupurConnectProductPublication {
+export interface TConnectProductPublicationDetail extends TConnectProductPublication {
   fabricDetails: string | null
   certificationDetails: string | null
 }

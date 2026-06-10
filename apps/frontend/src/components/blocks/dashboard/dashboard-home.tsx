@@ -148,13 +148,14 @@ function deskHeaderBackground(appId: DashboardAppId) {
     billing: "rgba(5, 150, 105, 0.20)",
     crm: "rgba(37, 99, 235, 0.18)",
     ecommerce: "rgba(219, 39, 119, 0.18)",
+    frappe: "rgba(3, 105, 161, 0.18)",
     inventory: "rgba(234, 88, 12, 0.18)",
     mail: "rgba(13, 148, 136, 0.18)",
     media: "rgba(2, 132, 199, 0.18)",
     sites: "rgba(124, 58, 237, 0.18)",
     tally: "rgba(29, 78, 216, 0.18)",
     taskmanager: "rgba(8, 145, 178, 0.18)",
-    "tirupur-connect": "rgba(4, 120, 87, 0.20)",
+    tconnect: "rgba(14, 116, 144, 0.20)",
   }
 
   return `radial-gradient(circle at 82% 18%, ${accentByApp[appId]}, transparent 44%)`

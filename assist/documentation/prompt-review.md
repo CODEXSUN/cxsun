@@ -82,6 +82,16 @@ now test e2e that live server is working fine
 ## Current Prompt
 
 ```
+read assist/readme and find ./temp/apps/frappe and find frappe framework and create new module app for frappe in our system to get and sync and post records to frappe from our application
+
+first create hanshake to frappe with getting api token and api secret like tally
+
+make desk workspace , breadcrumb menu , app switch and wire connection setting page for frappe
+```
+
+## Current Prompt
+
+```
 ok fine now read assist readme and create log on changelog to next version bump
 ```
 
@@ -2210,13 +2220,13 @@ the same for product individually
 and make this as reusable for  sale invoice and purchase entries that can check use of these masters and then push their records to tally
 
 create log for this with version update in changelog
-## 2026-06-09 - Tirupur Connect execution
+## 2026-06-09 - TConnect execution
 
 User prompt:
 
-> ok fine read assist/execution/tirupur-connect and implement this with writing planning.md and task.md and complete this
+> ok fine read assist/execution/tconnect and implement this with writing planning.md and task.md and complete this
 
-## 2026-06-09 - Continue Tirupur Connect public marketplace
+## 2026-06-09 - Continue TConnect public marketplace
 
 User prompt:
 

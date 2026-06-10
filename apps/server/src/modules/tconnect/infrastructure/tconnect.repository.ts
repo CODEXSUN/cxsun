@@ -5,30 +5,30 @@ import type { Tenant } from '../../../core/tenant/domain/tenant.types.js'
 import { getDatabase } from '../../../infrastructure/database/connection.js'
 import { getTenantDatabase } from '../../../infrastructure/tenant-database/tenant-database.connection.js'
 import { dispatchPublicUuid } from '../../../shared/helpers/public-uuid.js'
-import { defaultTirupurConnectSettings } from '../core/tirupur-connect.defaults.js'
-import { tirupurConnectTenantSlug } from './database/migrations/tirupur-connect.migration.js'
+import { defaultTConnectSettings } from '../core/tconnect.defaults.js'
+import { tConnectTenantSlug } from './database/migrations/tconnect.migration.js'
 import type {
-  TirupurConnectBuyerCompany,
-  TirupurConnectBuyerCompanyInput,
-  TirupurConnectOverview,
-  TirupurConnectProduct,
-  TirupurConnectProductInput,
-  TirupurConnectProductPublication,
-  TirupurConnectRfq,
-  TirupurConnectRfqInput,
-  TirupurConnectSettings,
-  TirupurConnectSupplierPublication,
-  TirupurConnectSupplierProfile,
-  TirupurConnectSupplierProfileInput,
-} from '../core/tirupur-connect.types.js'
+  TConnectBuyerCompany,
+  TConnectBuyerCompanyInput,
+  TConnectOverview,
+  TConnectProduct,
+  TConnectProductInput,
+  TConnectProductPublication,
+  TConnectRfq,
+  TConnectRfqInput,
+  TConnectSettings,
+  TConnectSupplierPublication,
+  TConnectSupplierProfile,
+  TConnectSupplierProfileInput,
+} from '../core/tconnect.types.js'
 
 type DynamicDatabase = Record<string, Record<string, unknown>>
 
 const settingsKey = 'module-settings'
 
 @Injectable()
-export class TirupurConnectRepository {
-  async overview(context: TenantRuntimeContext): Promise<TirupurConnectOverview> {
+export class TConnectRepository {
+  async overview(context: TenantRuntimeContext): Promise<TConnectOverview> {
     const marketplace = this.isMarketplaceTenant(context)
     const [settings, suppliers, products] = await Promise.all([
       this.settings(context),
@@ -52,7 +52,7 @@ export class TirupurConnectRepository {
     }
   }
 
-  async settings(context: TenantRuntimeContext): Promise<TirupurConnectSettings> {
+  async settings(context: TenantRuntimeContext): Promise<TConnectSettings> {
     const row = await this.database(context)
       .selectFrom('tc_system_settings')
       .select('setting_value')
@@ -65,7 +65,7 @@ export class TirupurConnectRepository {
     return normalizeSettings(row?.setting_value)
   }
 
-  async upsertSettings(context: TenantRuntimeContext, input: Partial<TirupurConnectSettings>): Promise<TirupurConnectOverview> {
+  async upsertSettings(context: TenantRuntimeContext, input: Partial<TConnectSettings>): Promise<TConnectOverview> {
     const current = await this.settings(context)
     const next = normalizeSettings({ ...current, ...input })
     const existing = await this.database(context)
@@ -101,7 +101,7 @@ export class TirupurConnectRepository {
     return this.overview(context)
   }
 
-  async listSuppliers(context: TenantRuntimeContext): Promise<TirupurConnectSupplierProfile[]> {
+  async listSuppliers(context: TenantRuntimeContext): Promise<TConnectSupplierProfile[]> {
     const result = await sql<{
       id: number
       uuid: string
@@ -140,7 +140,7 @@ export class TirupurConnectRepository {
     }))
   }
 
-  async createSupplier(context: TenantRuntimeContext, input: TirupurConnectSupplierProfileInput) {
+  async createSupplier(context: TenantRuntimeContext, input: TConnectSupplierProfileInput) {
     const contactId = requiredNumber(input.contactId, 'contactId')
     await sql`
       INSERT INTO tc_supplier_profiles (
@@ -154,7 +154,7 @@ export class TirupurConnectRepository {
     `.execute(this.database(context))
   }
 
-  async listBuyers(context: TenantRuntimeContext): Promise<TirupurConnectBuyerCompany[]> {
+  async listBuyers(context: TenantRuntimeContext): Promise<TConnectBuyerCompany[]> {
     const result = await sql<{
       id: number
       uuid: string
@@ -185,7 +185,7 @@ export class TirupurConnectRepository {
     }))
   }
 
-  async createBuyer(context: TenantRuntimeContext, input: TirupurConnectBuyerCompanyInput) {
+  async createBuyer(context: TenantRuntimeContext, input: TConnectBuyerCompanyInput) {
     const contactId = requiredNumber(input.contactId, 'contactId')
     await sql`
       INSERT INTO tc_buyer_companies (
@@ -198,7 +198,7 @@ export class TirupurConnectRepository {
     `.execute(this.database(context))
   }
 
-  async listProducts(context: TenantRuntimeContext): Promise<TirupurConnectProduct[]> {
+  async listProducts(context: TenantRuntimeContext): Promise<TConnectProduct[]> {
     const result = await sql<{
       id: number
       uuid: string
@@ -237,7 +237,7 @@ export class TirupurConnectRepository {
     }))
   }
 
-  async createProduct(context: TenantRuntimeContext, input: TirupurConnectProductInput) {
+  async createProduct(context: TenantRuntimeContext, input: TConnectProductInput) {
     const productId = requiredNumber(input.productId, 'productId')
     const supplierProfileId = requiredNumber(input.supplierProfileId, 'supplierProfileId')
     const slug = requiredString(input.slug, 'slug')
@@ -254,7 +254,7 @@ export class TirupurConnectRepository {
     `.execute(this.database(context))
   }
 
-  async listRfqs(context: TenantRuntimeContext): Promise<TirupurConnectRfq[]> {
+  async listRfqs(context: TenantRuntimeContext): Promise<TConnectRfq[]> {
     const result = await sql<{
       id: number
       uuid: string
@@ -291,7 +291,7 @@ export class TirupurConnectRepository {
     }))
   }
 
-  async createRfq(context: TenantRuntimeContext, input: TirupurConnectRfqInput) {
+  async createRfq(context: TenantRuntimeContext, input: TConnectRfqInput) {
     const buyerCompanyId = requiredNumber(input.buyerCompanyId, 'buyerCompanyId')
     const title = requiredString(input.title, 'title')
     await sql`
@@ -306,7 +306,7 @@ export class TirupurConnectRepository {
     `.execute(this.database(context))
   }
 
-  async listSupplierPublications(context: TenantRuntimeContext): Promise<TirupurConnectSupplierPublication[]> {
+  async listSupplierPublications(context: TenantRuntimeContext): Promise<TConnectSupplierPublication[]> {
     const result = await sql<{
       id: number
       uuid: string
@@ -346,7 +346,7 @@ export class TirupurConnectRepository {
     }))
   }
 
-  async listProductPublications(context: TenantRuntimeContext): Promise<TirupurConnectProductPublication[]> {
+  async listProductPublications(context: TenantRuntimeContext): Promise<TConnectProductPublication[]> {
     const result = await sql<{
       id: number
       uuid: string
@@ -550,7 +550,7 @@ export class TirupurConnectRepository {
   }
 
   isMarketplaceTenant(context: TenantRuntimeContext) {
-    return context.tenant.slug === tirupurConnectTenantSlug
+    return context.tenant.slug === tConnectTenantSlug
   }
 
   private async count(context: TenantRuntimeContext, table: string) {
@@ -571,11 +571,11 @@ export class TirupurConnectRepository {
     const tenant = await getDatabase()
       .selectFrom('tenants')
       .selectAll()
-      .where('slug', '=', tirupurConnectTenantSlug)
+      .where('slug', '=', tConnectTenantSlug)
       .where('deleted_at', 'is', null)
       .executeTakeFirst() as Tenant | undefined
 
-    if (!tenant) throw new Error('Central Tirupur Connect tenant is not provisioned.')
+    if (!tenant) throw new Error('Central TConnect tenant is not provisioned.')
 
     return {
       tenant,
@@ -640,16 +640,16 @@ function toDateString(value: Date | string) {
   return String(value).slice(0, 10)
 }
 
-function normalizeSettings(value: unknown): TirupurConnectSettings {
+function normalizeSettings(value: unknown): TConnectSettings {
   const parsed = parseJsonObject(value)
   const status = parsed.status === 'draft' || parsed.status === 'paused' || parsed.status === 'active'
     ? parsed.status
-    : defaultTirupurConnectSettings.status
+    : defaultTConnectSettings.status
 
   return {
-    platformName: stringOrDefault(parsed.platformName, defaultTirupurConnectSettings.platformName),
-    tagline: stringOrDefault(parsed.tagline, defaultTirupurConnectSettings.tagline),
-    positioning: stringOrDefault(parsed.positioning, defaultTirupurConnectSettings.positioning),
+    platformName: stringOrDefault(parsed.platformName, defaultTConnectSettings.platformName),
+    tagline: stringOrDefault(parsed.tagline, defaultTConnectSettings.tagline),
+    positioning: stringOrDefault(parsed.positioning, defaultTConnectSettings.positioning),
     status,
   }
 }

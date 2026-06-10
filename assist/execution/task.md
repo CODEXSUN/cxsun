@@ -1,29 +1,21 @@
 # Tasks
 
-## Tirupur Connect Marketplace Boundary
+## Frappe Integration Foundation
 
-- [x] Make `tirupur_connect` a central marketplace tenant.
-- [x] Map `tirupurconnect.com`, `www.tirupurconnect.com`, and `tirupurconnect.local` to the central tenant.
-- [x] Keep client tenant TC data limited to supplier/product source profiles.
-- [x] Move RFQ, leads, messages, membership, analytics, events, and news ownership to the central marketplace tenant.
-- [x] Add client publish APIs for supplier/product profiles.
-- [x] Add central review queues for supplier/product publications.
-- [x] Add public approved supplier/product listing APIs.
-- [x] Render approved supplier/product publications on `tirupurconnect.com`.
-- [x] Add public supplier/product detail pages.
-- [x] Add central RFQ board and public RFQ APIs.
-- [x] Add lead/inquiry capture into central marketplace tables.
-- [ ] Replace client numeric IDs with Contact/Product/Supplier autocomplete pickers.
-- [ ] Add membership and verification workflow surfaces.
+- [x] Read `assist/README.md` and confirm tenant dashboard/module boundaries.
+- [x] Inspect `./temp/apps/frappe` for the Frappe framework handshake pattern.
+- [x] Reuse the Tally module pattern for a first-class tenant integration desk.
+- [x] Add tenant Frappe settings, sync job, and record link tables.
+- [x] Add backend Frappe workspace/settings/handshake APIs.
+- [x] Add basic Frappe DocType read/post APIs for the first remote record bridge.
+- [x] Wire Frappe into tenant database provisioning and backend module registration.
+- [x] Add frontend Frappe client and desk/settings page.
+- [x] Wire Frappe into dashboard app switch, breadcrumb/menu, and page routing.
+- [x] Run targeted server and frontend typechecks.
+- [x] Fix verification issues found by typecheck.
 
-## Current Slice
+## Next Slice
 
-- [x] Add read-only public TC marketplace API for approved suppliers.
-- [x] Add read-only public TC marketplace API for approved products.
-- [x] Update the TC public page to show approved marketplace listings.
-- [x] Add public supplier/product detail APIs and pages.
-- [x] Add public RFQ board/detail APIs and page sections.
-- [x] Add public inquiry capture for supplier/product/RFQ detail pages.
-- [x] Run server and frontend typechecks.
-- [x] Run server and frontend builds.
-- [x] Run tenant static content smoke test.
+- [ ] Map Contact/Product masters to Frappe Customer/Supplier/Item.
+- [ ] Add compare-first sync screens before pushing records.
+- [ ] Add Sales/Purchase export queues after master prerequisite checks.

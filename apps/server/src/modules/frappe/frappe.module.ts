@@ -2,22 +2,22 @@ import { Module } from '../../core/decorators/module.js'
 import { TenantContextService } from '../../core/tenant/tenant-context.service.js'
 import { TenantRepository } from '../../core/tenant/infrastructure/tenant.repository.js'
 import { TenantDomainRepository } from '../../core/tenant-domain/infrastructure/tenant-domain.repository.js'
+import { MasterQueueService } from '../../infrastructure/queue/master-queue.service.js'
 import { AuthRepository } from '../auth/infrastructure/auth.repository.js'
-import { TirupurConnectService } from './application/tirupur-connect.service.js'
-import { TirupurConnectPublicRepository } from './infrastructure/tirupur-connect-public.repository.js'
-import { TirupurConnectRepository } from './infrastructure/tirupur-connect.repository.js'
-import { TirupurConnectController } from './interface/http/tirupur-connect.controller.js'
+import { FrappeController } from './frappe.controller.js'
+import { FrappeRepository } from './frappe.repository.js'
+import { FrappeService } from './frappe.service.js'
 
 @Module({
-  controllers: [TirupurConnectController],
+  controllers: [FrappeController],
   providers: [
     AuthRepository,
     TenantRepository,
     TenantDomainRepository,
     TenantContextService,
-    TirupurConnectPublicRepository,
-    TirupurConnectRepository,
-    TirupurConnectService,
+    MasterQueueService,
+    FrappeRepository,
+    FrappeService,
   ],
 })
-export class TirupurConnectModule {}
+export class FrappeModule {}

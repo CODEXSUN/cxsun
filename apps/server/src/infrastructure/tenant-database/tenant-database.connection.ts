@@ -26,7 +26,8 @@ import { migrateMailTables } from '../../modules/mail/index.js'
 import { migrateTaskManagerTables } from '../../modules/task-manager/index.js'
 import { migrateCrmTables } from '../../modules/crm/index.js'
 import { migrateTallyTables } from '../../modules/tally/index.js'
-import { migrateTirupurConnectTables } from '../../modules/tirupur-connect/index.js'
+import { migrateFrappeTables } from '../../modules/frappe/index.js'
+import { migrateTConnectTables } from '../../modules/tconnect/index.js'
 import { migrateAuditorContactCredentialTables } from '../../modules/auditor/contact-credential/index.js'
 import { migrateAuditorGstFilingTables } from '../../modules/auditor/gst-filing/index.js'
 import { migrateSiteSliderTables, seedDefaultSiteSliders } from '../../modules/site/slider/database/site-slider.migration.js'
@@ -142,7 +143,8 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await migrateTaskManagerTables(database as never)
   await migrateCrmTables(database as never)
   await migrateTallyTables(database as never)
-  await migrateTirupurConnectTables(database, tenant)
+  await migrateFrappeTables(database as never)
+  await migrateTConnectTables(database, tenant)
   await migrateAuditorContactCredentialTables(database)
   await migrateAuditorGstFilingTables(database)
   await migrateSiteSliderTables(database as never)

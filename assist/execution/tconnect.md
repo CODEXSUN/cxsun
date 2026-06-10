@@ -1,4 +1,4 @@
-# Tirupur Connect — Execution Prompt
+# TConnect — Execution Prompt
 
 > **Module scope**: New top-level business module group inside the existing CXSun monorepo.
 > **Last updated**: 2026-06-09
@@ -7,7 +7,7 @@
 
 ## Preamble — Read Before Writing Any Code
 
-You are implementing **Tirupur Connect**, a B2B trade platform module connecting Tirupur garment manufacturers with global buyers. This is a **new module inside an existing multi-tenant TypeScript monorepo** — not a standalone application.
+You are implementing **TConnect**, a B2B trade platform module connecting Tirupur garment manufacturers with global buyers. This is a **new module inside an existing multi-tenant TypeScript monorepo** — not a standalone application.
 
 Before writing any code, read and internalise:
 
@@ -29,7 +29,7 @@ Before writing any code, read and internalise:
 
 ### DO
 
-- Create Tirupur Connect as a **separate module group** under `apps/server/src/modules/tirupur-connect/`.
+- Create TConnect as a **separate module group** under `apps/server/src/modules/tconnect/`.
 - Prefix all new database tables with `tc_`.
 - Reuse the existing `TenantContextService` for tenant-scoped APIs.
 - Reuse existing auth (`AuthModule`, `AuthGuard`, `AuthAnyGuard`, JWT).
@@ -38,9 +38,9 @@ Before writing any code, read and internalise:
 - Reuse existing dashboard layout (`DashboardView`, `AppSidebar`).
 - Follow the `id INT AUTO_INCREMENT PRIMARY KEY` + `uuid CHAR(8) NOT NULL UNIQUE` identity pattern.
 - Generate UUIDs through the shared public UUID helper.
-- Put frontend feature pages under `apps/frontend/src/features/tirupur-connect/`.
+- Put frontend feature pages under `apps/frontend/src/features/tconnect/`.
 - Register new routes in the existing `App.tsx` router and `DashboardView` sidebar.
-- Keep public HTTP routes under `/api/v1/tirupur-connect/*`.
+- Keep public HTTP routes under `/api/v1/tconnect/*`.
 - **Reuse existing common and master data tables** — see Master Data Reuse Strategy below.
 
 ### DO NOT
@@ -48,7 +48,7 @@ Before writing any code, read and internalise:
 - Replace or rewrite any existing module, layout, auth, or navigation system.
 - Modify unrelated business logic (sales, purchase, CRM, stock, GST, mail, etc.).
 - Create a new application shell, login system, or standalone SPA.
-- Place module code directly at `apps/server/src/modules/tirupur-connect.ts` — use the group directory pattern.
+- Place module code directly at `apps/server/src/modules/tconnect.ts` — use the group directory pattern.
 - Use any database table without the `tc_` prefix for this module.
 - Break existing typecheck, build, or test verification.
 - **Duplicate data that already exists in common or master tables** — use FK references.
@@ -59,7 +59,7 @@ Before writing any code, read and internalise:
 > [!IMPORTANT]
 > ## Master Data Reuse Strategy — MANDATORY
 >
-> This is the single most important architectural rule for Tirupur Connect. The existing CXSun project already owns common and master data modules with tenant-isolated tables. **Tirupur Connect must reference these tables through foreign keys, not duplicate them.**
+> This is the single most important architectural rule for TConnect. The existing CXSun project already owns common and master data modules with tenant-isolated tables. **TConnect must reference these tables through foreign keys, not duplicate them.**
 
 ### Existing Tables You MUST Reuse
 
@@ -183,7 +183,7 @@ When building forms and filters in TC frontend pages:
 ### Where This Module Lives
 
 ```
-apps/server/src/modules/tirupur-connect/     ← new module group (like entries/, master/, crm/)
+apps/server/src/modules/tconnect/     ← new module group (like entries/, master/, crm/)
 ├── core/                                     ← shared TC services, types, constants
 ├── manufacturer/                             ← manufacturer registration & profiles
 ├── buyer/                                    ← buyer registration & profiles
@@ -198,9 +198,9 @@ apps/server/src/modules/tirupur-connect/     ← new module group (like entries/
 ├── notification/                             ← TC-specific notifications
 ├── analytics/                                ← reports & statistics
 ├── admin/                                    ← TC admin management screens
-└── index.ts                                  ← public exports + TirupurConnectModule
+└── index.ts                                  ← public exports + TConnectModule
 
-apps/frontend/src/features/tirupur-connect/   ← all TC frontend pages
+apps/frontend/src/features/tconnect/   ← all TC frontend pages
 ├── public/                                   ← public-facing pages (home, directory, search)
 ├── manufacturer/                             ← manufacturer dashboard & forms
 ├── buyer/                                    ← buyer dashboard & forms
@@ -213,9 +213,9 @@ apps/frontend/src/features/tirupur-connect/   ← all TC frontend pages
 
 ### Database Layer
 
-Tirupur Connect uses the **tenant MariaDB database** (resolved through `TenantContextService`), not the master/platform database. All tables are tenant-isolated.
+TConnect uses the **tenant MariaDB database** (resolved through `TenantContextService`), not the master/platform database. All tables are tenant-isolated.
 
-Tirupur Connect does **not** create its own location, contact, or product base tables. It references the existing tenant-scoped `common_*` and `masters_*` tables through foreign keys and adds `tc_` extension tables only for fields that do not exist in the base tables.
+TConnect does **not** create its own location, contact, or product base tables. It references the existing tenant-scoped `common_*` and `masters_*` tables through foreign keys and adds `tc_` extension tables only for fields that do not exist in the base tables.
 
 Exception: If any TC table must be platform-wide (e.g., `tc_system_settings`), register it in `infrastructure/database/platform-modules.ts` and use the master database connection.
 
@@ -223,11 +223,11 @@ Exception: If any TC table must be platform-wide (e.g., `tc_system_settings`), r
 
 | Surface | Route Pattern | Auth |
 |---------|---------------|------|
-| Public TC pages | `/tirupur-connect`, `/tirupur-connect/*` | None (public) |
-| Tenant TC dashboard | `/app/tirupur-connect/*` | Tenant JWT |
-| Admin TC management | `/sa/tirupur-connect/*` | Super-admin JWT |
+| Public TC pages | `/tconnect`, `/tconnect/*` | None (public) |
+| Tenant TC dashboard | `/app/tconnect/*` | Tenant JWT |
+| Admin TC management | `/sa/tconnect/*` | Super-admin JWT |
 
-Register `tirupur-connect` in `staticPageSlugs` in `App.tsx` for the public landing page.
+Register `tconnect` in `staticPageSlugs` in `App.tsx` for the public landing page.
 
 ---
 
@@ -363,10 +363,10 @@ company_id INT NULL,
 
 ### 1.2 Module Skeleton
 
-Create the `TirupurConnectModule` following existing patterns:
+Create the `TConnectModule` following existing patterns:
 
 ```typescript
-// apps/server/src/modules/tirupur-connect/tirupur-connect.module.ts
+// apps/server/src/modules/tconnect/tconnect.module.ts
 import { Module } from '../../core/decorators/module.js'
 import { TenantContextService } from '../../core/tenant/tenant-context.service.js'
 import { TenantRepository } from '../../core/tenant/infrastructure/tenant.repository.js'
@@ -386,18 +386,18 @@ import { AuthRepository } from '../auth/infrastructure/auth.repository.js'
     // Register all TC services and repositories here
   ],
 })
-export class TirupurConnectModule {}
+export class TConnectModule {}
 ```
 
 Register in `apps/server/src/modules/index.ts`:
 
 ```typescript
-import { TirupurConnectModule } from './tirupur-connect/tirupur-connect.module.js'
+import { TConnectModule } from './tconnect/tconnect.module.js'
 
 @Module({
   imports: [
     // ... existing modules
-    TirupurConnectModule,
+    TConnectModule,
   ],
   guards: [AuthGuard, AuthAnyGuard],
 })
@@ -406,7 +406,7 @@ export class AppModule {}
 
 ### 1.3 Shared Types & Constants
 
-Create under `apps/server/src/modules/tirupur-connect/core/`:
+Create under `apps/server/src/modules/tconnect/core/`:
 
 ```
 core/
@@ -494,7 +494,7 @@ export const TC_PRODUCT_CATEGORIES = [
 Each sub-module follows this structure:
 
 ```
-apps/server/src/modules/tirupur-connect/<sub-module>/
+apps/server/src/modules/tconnect/<sub-module>/
 ├── domain/
 │   ├── <entity>.ts              ← entity type definitions
 │   └── events/
@@ -510,14 +510,14 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 │       │   └── <timestamp>-create-tc-<table>.ts
 │       └── <entity>.repository.ts
 ├── interface/
-│   └── <entity>.controller.ts   ← HTTP routes under /api/v1/tirupur-connect/<entity>
+│   └── <entity>.controller.ts   ← HTTP routes under /api/v1/tconnect/<entity>
 ├── <sub-module>.module.ts
 └── index.ts
 ```
 
 ### 2.1 Manufacturer Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/suppliers`
+**API Routes**: `/api/v1/tconnect/suppliers`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -533,7 +533,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.2 Buyer Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/buyers`
+**API Routes**: `/api/v1/tconnect/buyers`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -548,7 +548,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.3 Product Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/products`
+**API Routes**: `/api/v1/tconnect/products`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -563,7 +563,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.4 RFQ Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/rfqs`
+**API Routes**: `/api/v1/tconnect/rfqs`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -578,7 +578,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.5 Directory Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/directory`
+**API Routes**: `/api/v1/tconnect/directory`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -592,7 +592,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.6 Lead Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/leads`
+**API Routes**: `/api/v1/tconnect/leads`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -603,7 +603,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.7 Messaging Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/messages`
+**API Routes**: `/api/v1/tconnect/messages`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -616,7 +616,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.8 Membership Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/memberships`
+**API Routes**: `/api/v1/tconnect/memberships`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -627,7 +627,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.9 Verification Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/verifications`
+**API Routes**: `/api/v1/tconnect/verifications`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -638,7 +638,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.10 Events Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/events`
+**API Routes**: `/api/v1/tconnect/events`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -650,7 +650,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.11 News Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/news`
+**API Routes**: `/api/v1/tconnect/news`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -662,7 +662,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.12 Notification Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/notifications`
+**API Routes**: `/api/v1/tconnect/notifications`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -673,7 +673,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.13 Analytics/Reports Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/analytics`
+**API Routes**: `/api/v1/tconnect/analytics`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -686,7 +686,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### 2.14 Admin Sub-Module
 
-**API Routes**: `/api/v1/tirupur-connect/admin`
+**API Routes**: `/api/v1/tconnect/admin`
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -711,7 +711,7 @@ apps/server/src/modules/tirupur-connect/<sub-module>/
 
 ### Audit Service
 
-Create `apps/server/src/modules/tirupur-connect/core/tc.audit.ts`:
+Create `apps/server/src/modules/tconnect/core/tc.audit.ts`:
 
 ```typescript
 interface AuditEntry {
@@ -766,64 +766,64 @@ async updateSupplierProfile(uuid: string, dto: UpdateSupplierDto, userId: number
 
 ## Phase 4 — Frontend Pages
 
-**Goal**: Build all user-facing pages under `apps/frontend/src/features/tirupur-connect/`.
+**Goal**: Build all user-facing pages under `apps/frontend/src/features/tconnect/`.
 
 ### 4.1 Public Pages (No Auth Required)
 
 | Page | Route | Description |
 |------|-------|-------------|
-| TC Home | `/tirupur-connect` | Hero banner, stats, featured manufacturers, latest RFQs, events, CTA |
-| Manufacturer Directory | `/tirupur-connect/manufacturers` | Searchable/filterable directory |
-| Supplier Profile | `/tirupur-connect/suppliers/:uuid` | Full supplier detail page |
-| Product Catalog | `/tirupur-connect/products` | Product grid with category filters |
-| Product Detail | `/tirupur-connect/products/:uuid` | Product detail with inquiry form |
-| RFQ Board | `/tirupur-connect/rfqs` | Public RFQ listings |
-| Events | `/tirupur-connect/events` | Upcoming events |
-| Event Detail | `/tirupur-connect/events/:uuid` | Event detail + registration |
-| News | `/tirupur-connect/news` | Industry news |
-| Article | `/tirupur-connect/news/:slug` | Article detail |
+| TC Home | `/tconnect` | Hero banner, stats, featured manufacturers, latest RFQs, events, CTA |
+| Manufacturer Directory | `/tconnect/manufacturers` | Searchable/filterable directory |
+| Supplier Profile | `/tconnect/suppliers/:uuid` | Full supplier detail page |
+| Product Catalog | `/tconnect/products` | Product grid with category filters |
+| Product Detail | `/tconnect/products/:uuid` | Product detail with inquiry form |
+| RFQ Board | `/tconnect/rfqs` | Public RFQ listings |
+| Events | `/tconnect/events` | Upcoming events |
+| Event Detail | `/tconnect/events/:uuid` | Event detail + registration |
+| News | `/tconnect/news` | Industry news |
+| Article | `/tconnect/news/:slug` | Article detail |
 
-### 4.2 Authenticated Tenant Pages (Under `/app/tirupur-connect/*`)
+### 4.2 Authenticated Tenant Pages (Under `/app/tconnect/*`)
 
 | Page | Route | Role |
 |------|-------|------|
-| Supplier Dashboard | `/app/tirupur-connect/dashboard` | Supplier |
-| Profile Setup | `/app/tirupur-connect/profile` | Supplier |
-| My Products | `/app/tirupur-connect/products` | Supplier |
-| Product Form | `/app/tirupur-connect/products/new` | Supplier |
-| Incoming RFQs | `/app/tirupur-connect/rfqs` | Supplier |
-| My Quotes | `/app/tirupur-connect/quotes` | Supplier |
-| Buyer Dashboard | `/app/tirupur-connect/buyer-dashboard` | Buyer |
-| My RFQs | `/app/tirupur-connect/my-rfqs` | Buyer |
-| Create RFQ | `/app/tirupur-connect/rfqs/new` | Buyer |
-| Saved Suppliers | `/app/tirupur-connect/saved-suppliers` | Buyer |
-| Leads | `/app/tirupur-connect/leads` | Supplier |
-| Messages | `/app/tirupur-connect/messages` | Both |
-| Conversation | `/app/tirupur-connect/messages/:uuid` | Both |
-| Notifications | `/app/tirupur-connect/notifications` | Both |
-| Membership | `/app/tirupur-connect/membership` | Supplier |
-| Verification | `/app/tirupur-connect/verification` | Supplier |
-| Analytics | `/app/tirupur-connect/analytics` | Supplier |
+| Supplier Dashboard | `/app/tconnect/dashboard` | Supplier |
+| Profile Setup | `/app/tconnect/profile` | Supplier |
+| My Products | `/app/tconnect/products` | Supplier |
+| Product Form | `/app/tconnect/products/new` | Supplier |
+| Incoming RFQs | `/app/tconnect/rfqs` | Supplier |
+| My Quotes | `/app/tconnect/quotes` | Supplier |
+| Buyer Dashboard | `/app/tconnect/buyer-dashboard` | Buyer |
+| My RFQs | `/app/tconnect/my-rfqs` | Buyer |
+| Create RFQ | `/app/tconnect/rfqs/new` | Buyer |
+| Saved Suppliers | `/app/tconnect/saved-suppliers` | Buyer |
+| Leads | `/app/tconnect/leads` | Supplier |
+| Messages | `/app/tconnect/messages` | Both |
+| Conversation | `/app/tconnect/messages/:uuid` | Both |
+| Notifications | `/app/tconnect/notifications` | Both |
+| Membership | `/app/tconnect/membership` | Supplier |
+| Verification | `/app/tconnect/verification` | Supplier |
+| Analytics | `/app/tconnect/analytics` | Supplier |
 
-### 4.3 Admin Pages (Under `/sa/tirupur-connect/*`)
+### 4.3 Admin Pages (Under `/sa/tconnect/*`)
 
 | Page | Route |
 |------|-------|
-| TC Admin Overview | `/sa/tirupur-connect` |
-| Supplier Management | `/sa/tirupur-connect/suppliers` |
-| Buyer Management | `/sa/tirupur-connect/buyers` |
-| RFQ Monitoring | `/sa/tirupur-connect/rfqs` |
-| Lead Monitoring | `/sa/tirupur-connect/leads` |
-| Verification Queue | `/sa/tirupur-connect/verifications` |
-| Membership Management | `/sa/tirupur-connect/memberships` |
-| Content Management | `/sa/tirupur-connect/content` |
-| Reports & Analytics | `/sa/tirupur-connect/reports` |
-| Audit Logs | `/sa/tirupur-connect/audit` |
-| TC Settings | `/sa/tirupur-connect/settings` |
+| TC Admin Overview | `/sa/tconnect` |
+| Supplier Management | `/sa/tconnect/suppliers` |
+| Buyer Management | `/sa/tconnect/buyers` |
+| RFQ Monitoring | `/sa/tconnect/rfqs` |
+| Lead Monitoring | `/sa/tconnect/leads` |
+| Verification Queue | `/sa/tconnect/verifications` |
+| Membership Management | `/sa/tconnect/memberships` |
+| Content Management | `/sa/tconnect/content` |
+| Reports & Analytics | `/sa/tconnect/reports` |
+| Audit Logs | `/sa/tconnect/audit` |
+| TC Settings | `/sa/tconnect/settings` |
 
 ### 4.4 Homepage Sections
 
-The public TC homepage (`/tirupur-connect`) must include these sections in order:
+The public TC homepage (`/tconnect`) must include these sections in order:
 
 1. **Hero Banner** — title, subtitle, primary CTA "Find Manufacturers", secondary CTA "Post RFQ"
 2. **Industry Statistics** — total manufacturers, exporters, products, RFQs, countries served (animated counters)
@@ -874,7 +874,7 @@ The public TC homepage (`/tirupur-connect`) must include these sections in order
 
 ### Global Search
 
-Create a unified search endpoint at `/api/v1/tirupur-connect/search`:
+Create a unified search endpoint at `/api/v1/tconnect/search`:
 
 ```typescript
 interface SearchRequest {
@@ -933,7 +933,7 @@ Create seeders under each sub-module's `infrastructure/database/seeders/`:
 Add to `AppSidebar` under the tenant dashboard:
 
 ```
-Tirupur Connect (section header)
+TConnect (section header)
   ├── Dashboard
   ├── My Profile
   ├── Products
@@ -947,7 +947,7 @@ Tirupur Connect (section header)
 Add to super-admin sidebar:
 
 ```
-Tirupur Connect (section header)
+TConnect (section header)
   ├── Overview
   ├── Suppliers
   ├── Buyers
@@ -976,7 +976,7 @@ Use the existing notification patterns if available, or create the `tc_notificat
 Add a TC-specific feature flag to company software settings:
 
 ```typescript
-{ key: 'feature-tirupur-connect', default: false }
+{ key: 'feature-tconnect', default: false }
 ```
 
 When disabled, hide all TC navigation, routes, and dashboard sections without deleting data.
@@ -989,14 +989,14 @@ Generate static/SSR-friendly content pages:
 
 | Page | Target Keyword |
 |------|---------------|
-| `/tirupur-connect/tirupur-manufacturers` | Tirupur Manufacturers |
-| `/tirupur-connect/tirupur-exporters` | Tirupur Exporters |
-| `/tirupur-connect/garment-suppliers` | Tirupur Garment Suppliers |
-| `/tirupur-connect/textile-industry` | Tirupur Textile Industry |
-| `/tirupur-connect/garment-manufacturers-india` | Garment Manufacturers in India |
-| `/tirupur-connect/knitwear-manufacturers` | Knitwear Manufacturers |
-| `/tirupur-connect/private-label-manufacturers` | Private Label Garment Manufacturers |
-| `/tirupur-connect/organic-cotton-manufacturers` | Organic Cotton Manufacturers |
+| `/tconnect/tirupur-manufacturers` | Tirupur Manufacturers |
+| `/tconnect/tirupur-exporters` | Tirupur Exporters |
+| `/tconnect/garment-suppliers` | Tirupur Garment Suppliers |
+| `/tconnect/textile-industry` | Tirupur Textile Industry |
+| `/tconnect/garment-manufacturers-india` | Garment Manufacturers in India |
+| `/tconnect/knitwear-manufacturers` | Knitwear Manufacturers |
+| `/tconnect/private-label-manufacturers` | Private Label Garment Manufacturers |
+| `/tconnect/organic-cotton-manufacturers` | Organic Cotton Manufacturers |
 
 Each SEO page must include:
 
@@ -1081,7 +1081,7 @@ npm run check
 
 | Element | Value |
 |---------|-------|
-| Platform Name | Tirupur Connect |
+| Platform Name | TConnect |
 | Tagline | Connecting Global Buyers with Trusted Tirupur Manufacturers |
 | Positioning | The Official Digital Trade Platform of Tirupur Garment Industry |
 | Hero Title | The Official Digital Trade Platform for Tirupur Manufacturers and Global Buyers |

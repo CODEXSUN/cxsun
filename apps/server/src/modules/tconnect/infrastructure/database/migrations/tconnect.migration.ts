@@ -4,9 +4,9 @@ import type { Tenant } from '../../../../../core/tenant/domain/tenant.types.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
 
-export const tirupurConnectTenantSlug = 'tirupur_connect'
+export const tConnectTenantSlug = 'tconnect'
 
-export async function migrateTirupurConnectTables(database: TenantDatabase, tenant?: Tenant) {
+export async function migrateTConnectTables(database: TenantDatabase, tenant?: Tenant) {
   await sql.raw(`
     CREATE TABLE IF NOT EXISTS tc_system_settings (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -25,10 +25,10 @@ export async function migrateTirupurConnectTables(database: TenantDatabase, tena
     )
   `).execute(database)
 
-  await migrateTirupurConnectSourceTables(database)
+  await migrateTConnectSourceTables(database)
 
-  if (tenant?.slug !== tirupurConnectTenantSlug) {
-    await dropTirupurConnectMarketplaceTables(database)
+  if (tenant?.slug !== tConnectTenantSlug) {
+    await dropTConnectMarketplaceTables(database)
     return
   }
 
@@ -265,12 +265,12 @@ export async function migrateTirupurConnectTables(database: TenantDatabase, tena
     )
   `).execute(database)
 
-  await migrateTirupurConnectPublicationTables(database)
-  await migrateTirupurConnectChildTables(database)
-  await seedTirupurConnectMarketplaceDefaults(database, Number(tenant.id))
+  await migrateTConnectPublicationTables(database)
+  await migrateTConnectChildTables(database)
+  await seedTConnectMarketplaceDefaults(database, Number(tenant.id))
 }
 
-async function migrateTirupurConnectSourceTables(database: TenantDatabase) {
+async function migrateTConnectSourceTables(database: TenantDatabase) {
   await sql.raw(`
     CREATE TABLE IF NOT EXISTS tc_supplier_profiles (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -354,7 +354,7 @@ async function migrateTirupurConnectSourceTables(database: TenantDatabase) {
   await sql.raw(`ALTER TABLE tc_products ADD COLUMN IF NOT EXISTS central_publication_uuid CHAR(8) NULL`).execute(database)
 }
 
-async function migrateTirupurConnectChildTables(database: TenantDatabase) {
+async function migrateTConnectChildTables(database: TenantDatabase) {
   const definitions = [
     { table: 'tc_supplier_export_countries', columns: `supplier_profile_id INT NOT NULL, country_id INT NOT NULL` },
     { table: 'tc_supplier_certifications', columns: `supplier_profile_id INT NOT NULL, certification_id INT NOT NULL, certificate_number VARCHAR(120) NULL, issued_date DATE NULL, expiry_date DATE NULL, document_url VARCHAR(500) NULL, status VARCHAR(80) NOT NULL DEFAULT 'pending'` },
@@ -398,7 +398,7 @@ async function migrateTirupurConnectChildTables(database: TenantDatabase) {
   }
 }
 
-async function migrateTirupurConnectPublicationTables(database: TenantDatabase) {
+async function migrateTConnectPublicationTables(database: TenantDatabase) {
   await sql.raw(`
     CREATE TABLE IF NOT EXISTS tc_supplier_publications (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -464,7 +464,7 @@ async function migrateTirupurConnectPublicationTables(database: TenantDatabase) 
   `).execute(database)
 }
 
-async function dropTirupurConnectMarketplaceTables(database: TenantDatabase) {
+async function dropTConnectMarketplaceTables(database: TenantDatabase) {
   const marketplaceTables = [
     'tc_saved_searches',
     'tc_notifications',
@@ -502,7 +502,7 @@ async function dropTirupurConnectMarketplaceTables(database: TenantDatabase) {
   }
 }
 
-async function seedTirupurConnectMarketplaceDefaults(database: TenantDatabase, tenantId: number) {
+async function seedTConnectMarketplaceDefaults(database: TenantDatabase, tenantId: number) {
   await seedCategory(database, tenantId, 't-shirts', 'T-Shirts', 1)
   await seedCategory(database, tenantId, 'polo-shirts', 'Polo Shirts', 2)
   await seedCategory(database, tenantId, 'hoodies', 'Hoodies', 3)
@@ -518,7 +518,7 @@ async function seedTirupurConnectMarketplaceDefaults(database: TenantDatabase, t
     SELECT LEFT(REPLACE(UUID(), '-', ''), 8), ${tenantId}, NULL, 'marketplace-concepts',
       JSON_OBJECT(
         'pages', JSON_ARRAY('Manufacturers', 'Products', 'RFQs', 'Events', 'News'),
-        'boundary', 'Client tenants publish supplier/product profiles by API. RFQs, leads, messages, membership, and analytics are owned by the central Tirupur Connect tenant.'
+        'boundary', 'Client tenants publish supplier/product profiles by API. RFQs, leads, messages, membership, and analytics are owned by the central TConnect tenant.'
       ),
       NULL, NULL
     WHERE NOT EXISTS (

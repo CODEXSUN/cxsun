@@ -9,7 +9,6 @@ export type LiveClientIndustry =
   | 'sports_club'
   | 'garment_testing_lab'
   | 'business_connect'
-  | 'tirupur_connect'
 
 export interface LiveClientScope {
   code: number
@@ -29,22 +28,6 @@ export interface LiveClientScope {
 }
 
 export const liveClientScopes: LiveClientScope[] = [
-  {
-    code: 115,
-    slug: 'tirupur_connect',
-    name: 'Tirupur Connect',
-    corporateId: 'TIRUPUR_CONNECT',
-    industry: 'tirupur_connect',
-    industryName: 'Tirupur Connect Marketplace',
-    database: 'tirupur_connect_db',
-    domains: ['tirupurconnect.com', 'www.tirupurconnect.com', 'tirupurconnect.local'],
-    companies: ['Tirupur Connect'],
-    apps: ['application', 'tirupur-connect', 'sites', 'crm', 'mail'],
-    landingApp: 'tirupur-connect',
-    requirements: ['tirupur-connect-marketplace', 'marketplace-admin', 'supplier-publication-api', 'domain-owned-rfq-leads-messages'],
-    notes: 'Central Tirupur Connect marketplace tenant. Client workspaces publish supplier/product profiles here through API only; RFQ, leads, messages, membership, and analytics belong to this tenant.',
-    seedDomains: true,
-  },
   {
     code: 101,
     slug: 'codexsun',

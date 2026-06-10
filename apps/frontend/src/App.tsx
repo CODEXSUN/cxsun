@@ -46,11 +46,6 @@ const ForgotPasswordForm = lazy(() =>
     default: module.ForgotPasswordForm,
   })),
 )
-const TirupurConnectPublicPage = lazy(() =>
-  import('src/features/tirupur-connect/public/tirupur-connect-public-page').then((module) => ({
-    default: module.TirupurConnectPublicPage,
-  })),
-)
 const fallbackContent: SiteContent = {
   pages: [
     {
@@ -146,7 +141,6 @@ const staticPageSlugs = [
   'offset',
   'testing-lab',
   'business-connect',
-  'tirupur-connect',
 ] as const
 
 function parseRoute(pathname = window.location.pathname): AppRoute {
@@ -335,28 +329,6 @@ function App() {
       }
     }
   }, [activeView, queryClient, tenantSession, tenantSite])
-
-  if (isPublicSiteView && activePage === 'tirupur-connect') {
-    return (
-      <TooltipProvider>
-        <Suspense fallback={<GlobalLoader />}>
-          <TirupurConnectPublicPage />
-        </Suspense>
-        <Toaster />
-      </TooltipProvider>
-    )
-  }
-
-  if (isPublicSiteView && tenantSite?.resolved && tenantSite.tenant?.industryKey === 'tirupur_connect') {
-    return (
-      <TooltipProvider>
-        <Suspense fallback={<GlobalLoader />}>
-          <TirupurConnectPublicPage />
-        </Suspense>
-        <Toaster />
-      </TooltipProvider>
-    )
-  }
 
   if (isPublicSiteView && tenantSiteQuery.isPending && tenantSiteQuery.fetchStatus !== 'idle') {
     return (

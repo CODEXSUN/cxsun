@@ -12,6 +12,14 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.91
 
+### [v 1.0.91] 2026-06-10 - Frappe integration foundation
+
+- Added a first-class tenant Frappe app foundation with dashboard app switch, side menu, breadcrumb routing, and a connection settings desk.
+- Added tenant Frappe tables for settings, sync jobs, and record activity, with provisioning wired into tenant database startup.
+- Added backend Frappe workspace, settings save, live token/secret handshake, DocType read, DocType post, and sync-job APIs.
+- Added frontend Frappe connection, handshake status, DocType workbench, sync job list, and record activity views.
+- Reset assist planning/task notes around the Frappe handshake-first integration slice.
+
 ### [v 1.0.91] 2026-06-09 1:56 pm - Nginx tenant CLI
 
 - Bumped workspace version to 1.0.91
@@ -25,16 +33,16 @@ Historical changelog entries are immutable. A version bump may update this `Vers
 
 ## v-1.0.90
 
-### [v 1.0.90] 2026-06-09 9:49 am - Tirupur Connect marketplace boundary
+### [v 1.0.90] 2026-06-09 9:49 am - TConnect marketplace boundary
 
 - Bumped workspace version to 1.0.90
-- Added the central `tirupur_connect` marketplace tenant/domain mapping for `tirupurconnect.com`, `www.tirupurconnect.com`, and `tirupurconnect.local`.
-- Split the Tirupur Connect data boundary so client tenants keep only their supplier and product source profiles while the Tirupur Connect domain owns RFQs, leads, messages, memberships, analytics, events, and news.
+- Added the central `tconnect` marketplace tenant/domain mapping for `tconnect.local`, `www.tconnect.local`, and `tconnect.local`.
+- Split the TConnect data boundary so client tenants keep only their supplier and product source profiles while the TConnect domain owns RFQs, leads, messages, memberships, analytics, events, and news.
 - Added tenant-to-marketplace publish APIs for supplier and product profiles, with central marketplace review queues for approve/reject handling.
 - Added public read-only APIs for approved supplier and product listings from the central marketplace tenant.
-- Rendered approved supplier and product marketplace listings on the public Tirupur Connect page.
-- Registered the Tirupur Connect tenant provisioning, overview/settings API, dashboard navigation, and public landing route as the foundation for the isolated marketplace.
-- Reset the assist planning and task documents around the new isolated Tirupur Connect marketplace boundary.
+- Rendered approved supplier and product marketplace listings on the public TConnect page.
+- Registered the TConnect tenant provisioning, overview/settings API, dashboard navigation, and public landing route as the foundation for the isolated marketplace.
+- Reset the assist planning and task documents around the new isolated TConnect marketplace boundary.
 - Verified with server typecheck, frontend typecheck, and the tenant static content smoke test.
 
 ## v-1.0.89

@@ -15,7 +15,7 @@ assert.ok(!allDomains.includes('smaupvc.local'), 'typo domain smaupvc.local must
 assert.ok(!allDomains.includes('smsupvc.local'), 'SMS UPVC must not be seeded during first install')
 assert.deepEqual(
   liveClientScopes.map((client) => client.slug).sort(),
-  ['aaran_associates', 'codexsun', 'deal_o_deal', 'tenkasi_sports', 'the_tirupur_textiles', 'tirupur_connect', 'tirupur_direct'],
+  ['aaran_associates', 'codexsun', 'deal_o_deal', 'tenkasi_sports', 'the_tirupur_textiles', 'tirupur_direct'],
   'first install must seed the active live tenant catalog',
 )
 
