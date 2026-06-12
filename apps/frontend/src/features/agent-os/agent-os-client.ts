@@ -14,6 +14,8 @@ export interface AgentOsStatus {
   models: ZetroModel[]
   api_connection: ZetroApiConnection
   provider_connections: ZetroProviderConnection[]
+  capabilities: ZetroCapability[]
+  agents: ZetroAgentStatus[]
   tables: {
     conversations: number
     agent_logs: number
@@ -52,6 +54,24 @@ export interface ZetroRecommendedUpdate {
   priority: "high" | "medium" | "low"
 }
 
+export interface ZetroCapability {
+  key: string
+  label: string
+  value: string
+  state: "active" | "setup" | "blocked" | "planned"
+  detail: string
+}
+
+export interface ZetroAgentStatus {
+  key: string
+  name: string
+  role: string
+  status: "active" | "blocked" | "planned"
+  stage: string
+  model_policy: string
+  next_action: string
+}
+
 export interface ZetroReadSource {
   id: string
   label: string
@@ -73,6 +93,7 @@ export interface ZetroReadResponse {
   models: ZetroModel[]
   api_connection: ZetroApiConnection
   provider_connections: ZetroProviderConnection[]
+  agents: ZetroAgentStatus[]
   sources: ZetroReadSource[]
   search_examples: string[]
   limits: string[]
@@ -113,6 +134,32 @@ export interface ZetroChatResponse {
   error?: string
 }
 
+export interface ZetroConversationSummary {
+  uuid: string
+  title: string
+  status: string
+  model: string | null
+  provider: string | null
+  message_count: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ZetroConversationMessage {
+  id: string
+  role: "assistant" | "user"
+  body: string
+  model?: string
+  created_at: string
+}
+
+export interface ZetroConversationDetail {
+  ok: boolean
+  error?: string
+  conversation?: Omit<ZetroConversationSummary, "message_count">
+  messages?: ZetroConversationMessage[]
+}
+
 export interface ZetroApiConnectionResponse {
   ok: boolean
   connection: ZetroApiConnection
@@ -128,6 +175,8 @@ export interface ZetroApiConnectionTestResponse {
   message?: string
   model_count?: number
   error?: string
+  warning?: string
+  needs_save?: boolean
   connection: ZetroApiConnection
 }
 
@@ -135,6 +184,13 @@ export interface ZetroApiConnectionSaveResponse extends ZetroApiConnectionRespon
   saved: boolean
   test?: ZetroApiConnectionTestResponse | null
   error?: string
+}
+
+export interface ZetroLearnResponse {
+  ok: boolean
+  learned: number
+  source_count: number
+  query: string | null
 }
 
 export async function getAgentOsStatus(session: AuthSession) {
@@ -247,13 +303,14 @@ export async function saveZetroApiConnection(
 
 export async function sendZetroChat(
   session: AuthSession,
-  input: { message: string; model: string; conversationUuid?: string | null },
+  input: { message: string; model: string; providerKey?: string; conversationUuid?: string | null },
 ) {
   const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/chat`, {
     body: JSON.stringify({
       conversationUuid: input.conversationUuid,
       message: input.message,
       model: input.model,
+      providerKey: input.providerKey,
     }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -270,4 +327,77 @@ export async function sendZetroChat(
   }
 
   return payload
+}
+
+export async function listZetroConversations(session: AuthSession) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations?limit=20`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+  })
+
+  if (!response.ok) {
+    throw new Error(`ZETRO chat history failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as { ok: boolean; conversations: ZetroConversationSummary[] }
+}
+
+export async function getZetroConversation(session: AuthSession, uuid: string) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations/${encodeURIComponent(uuid)}`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+  })
+
+  if (!response.ok) {
+    throw new Error(`ZETRO chat load failed with status ${response.status}.`)
+  }
+
+  const payload = (await response.json()) as ZetroConversationDetail
+  if (!payload.ok) {
+    throw new Error(payload.error ?? "ZETRO chat load failed.")
+  }
+  return payload
+}
+
+export async function clearZetroConversation(session: AuthSession, uuid: string) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations/${encodeURIComponent(uuid)}`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+    method: "DELETE",
+  })
+
+  if (!response.ok) {
+    throw new Error(`ZETRO clear chat failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as { ok: boolean; cleared: number }
+}
+
+export async function clearZetroConversations(session: AuthSession) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+    method: "DELETE",
+  })
+
+  if (!response.ok) {
+    throw new Error(`ZETRO clear history failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as { ok: boolean; cleared: number }
+}
+
+export async function learnZetroDocs(session: AuthSession, query?: string) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/learn`, {
+    body: JSON.stringify({ query: query?.trim() || undefined }),
+    cache: "no-store",
+    headers: { ...authHeaders(session), "Content-Type": "application/json" },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error(`ZETRO learn failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as ZetroLearnResponse
 }

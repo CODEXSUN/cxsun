@@ -161,14 +161,14 @@ Shared memory:
 
 | Role | Model Direction |
 |------|-----------------|
-| Router | Gemini 2.5 Flash via OpenRouter free tier if available. |
-| Helper | DeepSeek Chat or Qwen 3. |
-| Planner | Gemini Flash. |
-| Workflow | DeepSeek Reasoner. |
-| Analytics | Qwen. |
-| Fallback | Any available free OpenRouter model. |
+| Router | Current free/reasoning-capable OpenRouter model when available. |
+| Helper | Current free chat/instruct OpenRouter model, with saved premium providers optional. |
+| Planner | Gemini/OpenRouter model when configured. |
+| Workflow | Reasoning-capable OpenRouter/OpenAI-compatible model when configured. |
+| Analytics | Qwen/OpenRouter/OpenAI-compatible model when configured. |
+| Fallback | First currently available free OpenRouter text model. |
 
-Implementation note: do not hardcode these names. Keep them configurable because free model availability changes.
+Implementation note: do not hardcode free model names. OpenRouter `:free` slugs change, so ZETRO must refresh them from the live model catalog and keep premium models configurable through saved API connections or env fallback.
 
 ## Database Structure
 

@@ -39,7 +39,16 @@
 - [x] Persist encrypted provider API keys for OpenRouter, OpenAI, Gemini, and custom OpenAI-compatible providers.
 - [x] Route ZETRO chat through the active saved provider before env fallback.
 - [x] Make API tests perform a real tiny chat/generateContent call.
-- [ ] Verify live provider response after `OPENROUTER_API_KEY` is present.
+- [x] Refresh OpenRouter free model choices from the live model catalog and skip stale discontinued `:free` slugs.
+- [x] Expose dynamic ZETRO capabilities and multi-agent stack status from the backend.
+- [x] Polish Helper Agent reply prompt and chat markdown rendering.
+- [x] Make model switching persistable from the dashboard and respected by chat.
+- [x] Add bounded model dropdown scrolling and selected-model fallback handling.
+- [x] Add AI platform manager for OpenRouter, OpenAI/GPT, Gemini, and custom providers.
+- [x] Support provider connection through saved API keys and optional env fallback keys.
+- [x] Add ZETRO chat history memory with full-window history view, dated saved chats, load previous chat, new chat from history, clear current, and clear all.
+- [x] Polish ZETRO chat box with adaptive glass UI, signature hero, rotating empty-state prompt, bottom model picker, and auto-scroll to newest messages.
+- [x] Verify live provider response through the saved OpenRouter connection.
 
 ## P2 - Operator Agent
 

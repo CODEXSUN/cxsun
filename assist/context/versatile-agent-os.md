@@ -52,6 +52,7 @@ Allowed:
 - Agent logs.
 - Read-only answers.
 - Minimal chat UI.
+- Dynamic capability and agent status payloads for the ZETRO dashboard.
 
 Not allowed in P1:
 
@@ -59,6 +60,10 @@ Not allowed in P1:
 - Browser automation.
 - Direct database mutation from model output.
 - Cross-tenant reads outside the current actor scope.
+
+Current dashboard rule: status cards and the multi-agent stack must come from backend status, not frontend hardcoded labels. Planned agents should be visible but honest about their state until tools and routing exist.
+
+Current chat rule: ZETRO conversations persist through `conversations` and `agent_logs`. The chat window should expose full-window history, dated saved chats, load previous chat, new chat from history, clear current chat, clear all history, rotating empty-state prompts, bottom model selection, and automatic scroll-to-latest without adding a duplicate chat storage table.
 
 ## Suggested Backend Placement
 
@@ -107,13 +112,15 @@ Do not skip `agent_logs`.
 
 ## Model Configuration
 
-Use OpenRouter-compatible model IDs from config. Do not hardcode free model names in services because availability changes.
+Use saved provider connections first, then environment config as fallback. ZETRO supports OpenRouter, OpenAI/GPT, Gemini, and custom OpenAI-compatible providers through the API platform panel.
+
+OpenRouter free model availability changes. For OpenRouter, refresh the free model list from the live `/api/v1/models` catalog and ignore stale saved defaults when a free slug has disappeared. Keep premium model IDs configurable by API panel/env.
 
 Suggested defaults from the plan:
 
-- Router: Gemini Flash family through OpenRouter.
-- Helper: DeepSeek Chat or Qwen.
-- Planner: Gemini Flash.
-- Workflow: DeepSeek Reasoner.
-- Analytics: Qwen.
-- Fallback: any configured free OpenRouter model.
+- Router: a currently available free/reasoning model through OpenRouter.
+- Helper: a currently available free chat/instruct model through OpenRouter.
+- Planner: Gemini/OpenRouter model when configured.
+- Workflow: reasoning-capable OpenRouter/OpenAI-compatible model when configured.
+- Analytics: Qwen/OpenRouter/OpenAI-compatible model when configured.
+- Fallback: first currently available free OpenRouter text model.

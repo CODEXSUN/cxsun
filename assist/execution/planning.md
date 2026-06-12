@@ -26,7 +26,7 @@ Create the first ZETRO base without disturbing existing site/dashboard flows: a 
 6. Add mini Bot icon shortcut in the dashboard header.
 7. Add base frontend ZETRO page.
 8. Add universal ZETRO chat window with switchable model selector.
-9. Connect OpenRouter-compatible chat calls with free models first and premium models configurable by env.
+9. Connect provider chat calls with saved API keys first, env fallback second, free models first, and premium models configurable by API panel/env.
 10. Update ZRO and assist task records.
 
 ## Verification
@@ -36,7 +36,9 @@ Create the first ZETRO base without disturbing existing site/dashboard flows: a 
 
 ## Model Policy
 
-- Free OpenRouter model IDs are exposed first from `ZETRO_FREE_MODELS`.
-- Premium model IDs are exposed after free IDs from `ZETRO_PREMIUM_MODELS`.
-- Both free and premium calls require `OPENROUTER_API_KEY`.
+- Saved provider connections from the ZETRO API panel are used before env fallback.
+- OpenRouter free model IDs are refreshed from the live OpenRouter `/api/v1/models` catalog because `:free` slugs can disappear.
+- `ZETRO_FREE_MODELS` remains the fallback list when the live catalog cannot be reached.
+- Premium model IDs are exposed after free IDs from saved provider settings or `ZETRO_PREMIUM_MODELS`.
+- OpenRouter calls require a saved OpenRouter key or `OPENROUTER_API_KEY`; OpenAI, Gemini, and custom providers require their saved/API-panel keys.
 - ZETRO logs missing keys, provider failures, latency, model tier, and usage metadata in `agent_logs`.

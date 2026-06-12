@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Bot, CheckCircle2, Database, KeyRound, ListChecks, Network, RefreshCw, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react"
+import { BarChart3, Bot, BrainCircuit, CheckCircle2, ChevronDown, Cloud, Cpu, Database, ExternalLink, GitBranch, KeyRound, ListChecks, Network, RefreshCw, Route, ShieldCheck, Sparkles, Workflow, Wrench, type LucideIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { MasterListPageFrame } from "src/components/blocks/lists/master-list"
@@ -11,7 +11,7 @@ import { Input } from "src/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "src/components/ui/select"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { cn } from "src/lib/utils"
-import { getAgentOsStatus, saveZetroApiConnection, testZetroApiConnection } from "./agent-os-client"
+import { getAgentOsStatus, learnZetroDocs, saveZetroApiConnection, type ZetroAgentStatus, type ZetroCapability, type ZetroModel, type ZetroProviderConnection } from "./agent-os-client"
 
 export function AgentOsPage({ session }: { session: AuthSession }) {
   const [apiKeyDraft, setApiKeyDraft] = useState("")
@@ -20,22 +20,33 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
   const [defaultModel, setDefaultModel] = useState("")
   const [freeModels, setFreeModels] = useState("")
   const [premiumModels, setPremiumModels] = useState("")
+  const initialisedRef = useRef(false)
   const statusQuery = useQuery({
     queryKey: ["agent-os-status", session.selectedTenant.slug],
     queryFn: () => getAgentOsStatus(session),
   })
   const status = statusQuery.data ?? null
+  const platformConnections = status?.provider_connections.length ? status.provider_connections : fallbackProviders
   const activeProvider = useMemo(
-    () => status?.provider_connections.find((connection) => connection.provider === providerKey) ?? status?.api_connection ?? null,
-    [providerKey, status?.api_connection, status?.provider_connections],
+    () => platformConnections.find((connection) => connection.provider === providerKey) ?? status?.api_connection ?? null,
+    [providerKey, status?.api_connection, platformConnections],
   )
-  const freeModelCount = status?.models.filter((model) => model.tier === "free").length ?? 0
-  const premiumModelCount = status?.models.filter((model) => model.tier === "premium").length ?? 0
+  const selectedProviderModels = useMemo(() => providerModels(activeProvider), [activeProvider])
+  const capabilities = status?.capabilities.length ? status.capabilities : fallbackCapabilities
+  const agents = status?.agents.length ? status.agents : fallbackAgents
+  const freeModelCount = selectedProviderModels.filter((model) => model.tier === "free").length
+  const premiumModelCount = selectedProviderModels.filter((model) => model.tier === "premium").length
+  const modelChanged = Boolean(activeProvider?.default_model && defaultModel && defaultModel !== activeProvider.default_model)
+  const selectedProviderIsActive = Boolean(activeProvider?.is_active)
 
   useEffect(() => {
-    if (!status?.api_connection) return
-    setProviderKey(status.api_connection.provider)
-  }, [status?.api_connection])
+    if (initialisedRef.current || !status) return
+    if (status.default_model?.id) setDefaultModel(status.default_model.id)
+    if (status.api_connection?.free_models) setFreeModels(status.api_connection.free_models)
+    if (status.api_connection?.premium_models) setPremiumModels(status.api_connection.premium_models)
+    if (status.api_connection?.provider) setProviderKey(status.api_connection.provider)
+    initialisedRef.current = true
+  }, [status])
 
   useEffect(() => {
     if (!activeProvider) return
@@ -45,35 +56,9 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
     setPremiumModels(activeProvider.premium_models)
   }, [activeProvider])
 
-  const apiTestMutation = useMutation({
-    mutationFn: () => testZetroApiConnection(session, {
-      apiKey: apiKeyDraft.trim() || undefined,
-      providerKey,
-      model: defaultModel || status?.default_model?.id,
-    }),
-    onSuccess: (response) => {
-      if (response.ok) {
-        toast.success("ZETRO API test connected", {
-          description: response.message ?? "Provider responded successfully.",
-        })
-        setApiKeyDraft("")
-        void statusQuery.refetch()
-        return
-      }
-
-      toast.error("ZETRO API test failed", {
-        description: response.error ?? "Check the key and provider model.",
-      })
-    },
-    onError: (error) => {
-      toast.error("ZETRO API test failed", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      })
-    },
-  })
   const apiSaveMutation = useMutation({
-    mutationFn: () => saveZetroApiConnection(session, {
-      apiKey: apiKeyDraft.trim() || undefined,
+    mutationFn: (mode: "key" | "settings" | "model" = "settings") => saveZetroApiConnection(session, {
+      apiKey: mode === "key" ? apiKeyDraft.trim() || undefined : undefined,
       providerKey,
       providerName: activeProvider?.provider_name,
       providerKind: activeProvider?.provider_kind,
@@ -82,12 +67,19 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
       freeModels,
       premiumModels,
       isActive: true,
-      testAfterSave: true,
+      testAfterSave: mode !== "settings",
     }),
     onSuccess: (response) => {
-      toast.success("ZETRO API saved", {
-        description: response.test?.message ?? "Saved as the active provider for chat.",
-      })
+      if (response.test && !response.test.ok) {
+        toast.error("ZETRO API saved but test failed", {
+          description: response.test.error ?? "Check the API key and try again.",
+          duration: 8000,
+        })
+      } else {
+        toast.success("ZETRO API connected", {
+          description: response.test?.message ?? "Saved as the active provider for chat.",
+        })
+      }
       setApiKeyDraft("")
       void statusQuery.refetch()
     },
@@ -98,24 +90,66 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
     },
   })
 
+  function selectPlatform(provider: ZetroProviderConnection) {
+    setProviderKey(provider.provider)
+    setApiKeyDraft("")
+    setBaseUrl(provider.base_url)
+    setDefaultModel(provider.default_model)
+    setFreeModels(provider.free_models)
+    setPremiumModels(provider.premium_models)
+  }
+
+  const apiLearnMutation = useMutation({
+    mutationFn: () => learnZetroDocs(session),
+    onSuccess: (response) => {
+      toast.success("ZETRO learned project docs", {
+        description: `Indexed ${response.learned} chunks from ${response.source_count} markdown sources.`,
+      })
+      void statusQuery.refetch()
+    },
+    onError: (error) => {
+      toast.error("ZETRO learn failed", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      })
+    },
+  })
+
   return (
     <MasterListPageFrame
       title="ZETRO"
       description="Universal AI chat base for helper knowledge, safe tools, workflows, planning, analytics, and memory."
       technicalName="page.agent-os.base"
       action={
-        <Button className="rounded-md" variant="outline" type="button" onClick={() => void statusQuery.refetch()}>
-          <RefreshCw className={cn("size-4", statusQuery.isFetching && "animate-spin")} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            className="rounded-md"
+            disabled={apiLearnMutation.isPending}
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={() => apiLearnMutation.mutate()}
+          >
+            <Database className={cn("size-4", apiLearnMutation.isPending && "animate-pulse")} />
+            {apiLearnMutation.isPending ? "Learning..." : "Learn docs"}
+          </Button>
+          <Button className="rounded-md" variant="outline" type="button" onClick={() => void statusQuery.refetch()}>
+            <RefreshCw className={cn("size-4", statusQuery.isFetching && "animate-spin")} />
+            Refresh
+          </Button>
+        </div>
       }
     >
       <div className="grid gap-3 md:grid-cols-5">
-        <StatusCard icon={Bot} label="Phase" value={status?.phase ?? "P1 Site Helper Agent"} />
-        <StatusCard icon={KeyRound} label="API" value={status?.api_connected ? "Connected" : "Needs key"} />
-        <StatusCard icon={ShieldCheck} label="Automation" value={status?.automation_enabled ? "Enabled" : "Off"} />
-        <StatusCard icon={Network} label="Router" value={status?.router_enabled ? "Enabled" : "Planned"} />
-        <StatusCard icon={Sparkles} label="Helper" value={status?.helper_enabled ? "Enabled" : "Base only"} />
+        {capabilities.map((capability) => (
+          <StatusCard
+            key={capability.key}
+            detail={capability.detail}
+            icon={capabilityIcon(capability.key)}
+            label={capability.label}
+            state={capability.state}
+            value={capability.value}
+          />
+        ))}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
@@ -132,12 +166,90 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
               <TableStat label="Agent logs" value={status?.tables.agent_logs ?? 0} />
               <TableStat label="Knowledge docs" value={status?.tables.knowledge_documents ?? 0} />
             </div>
+
             <div className="rounded-md border border-border/70 bg-background p-4">
-              <div className="text-xs font-semibold uppercase text-muted-foreground">Switchable model</div>
-              <div className="mt-2 text-sm font-semibold">{status?.default_model?.label ?? "Deepseek Chat V3 0324 Free"}</div>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                Backend config exposes {freeModelCount} free model{freeModelCount === 1 ? "" : "s"} first and {premiumModelCount} premium model{premiumModelCount === 1 ? "" : "s"} after that.
-              </p>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">AI platforms</div>
+                  <div className="mt-2 text-sm font-semibold">{platformDisplayName(activeProvider)}</div>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Connect OpenRouter, GPT, Gemini, or custom OpenAI-compatible providers. Each platform keeps its own key and model list.
+                  </p>
+                </div>
+                <Badge className="rounded-md" variant={selectedProviderIsActive ? "default" : "outline"}>
+                  {selectedProviderIsActive ? "active platform" : "available platform"}
+                </Badge>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {platformConnections.map((provider) => (
+                  <PlatformButton
+                    key={provider.provider}
+                    active={provider.provider === providerKey}
+                    icon={platformIcon(provider.provider)}
+                    provider={provider}
+                    onClick={() => selectPlatform(provider)}
+                  />
+                ))}
+              </div>
+              <div className="mt-3 rounded-md border border-border/70 bg-muted/15 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">Models in {platformDisplayName(activeProvider)}</div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="rounded-md" variant="outline">{freeModelCount} free</Badge>
+                    <Badge className="rounded-md" variant="outline">{premiumModelCount} premium</Badge>
+                  </div>
+                </div>
+                <div className="mt-3 grid max-h-40 gap-2 overflow-y-auto pr-1">
+                  {(selectedProviderModels.length ? selectedProviderModels : fallbackModelsForSelect).map((model) => (
+                    <div key={model.id} className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border/60 bg-background px-3 py-2">
+                      <span className="min-w-0 truncate text-sm">{model.label}</span>
+                      <Badge className="shrink-0 rounded-md" variant={model.tier === "free" ? "secondary" : "outline"}>
+                        {model.tier === "free" ? "Free" : "Premium"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-border/70 bg-background p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">Switchable model</div>
+                  <div className="mt-2 text-sm font-semibold">{modelLabel(defaultModel, status?.models) ?? status?.default_model?.label ?? "Loading model"}</div>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    {freeModelCount} free model{freeModelCount === 1 ? "" : "s"} first, {premiumModelCount} premium model{premiumModelCount === 1 ? "" : "s"} after.
+                  </p>
+                </div>
+                <Badge className="rounded-md" variant={modelChanged ? "default" : "outline"}>
+                  {modelChanged ? "unsaved" : "active default"}
+                </Badge>
+              </div>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Select value={defaultModel} onValueChange={setDefaultModel}>
+                  <SelectTrigger className="h-10 min-w-0 flex-1 rounded-md">
+                    <SelectValue placeholder="Select default model" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[80] max-h-[320px] w-[var(--radix-select-trigger-width)] overflow-y-auto" position="popper" align="start">
+                    {(selectedProviderModels.length ? selectedProviderModels : fallbackModelsForSelect).map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {model.label} - {model.tier === "free" ? "Free" : "Premium"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="rounded-md"
+                  disabled={apiSaveMutation.isPending || !defaultModel || !modelChanged}
+                  size="sm"
+                  type="button"
+                  variant={modelChanged ? "default" : "outline"}
+                  onClick={() => apiSaveMutation.mutate("model")}
+                >
+                  <RefreshCw className={cn("size-4", apiSaveMutation.isPending && "animate-spin")} />
+                  {apiSaveMutation.isPending ? "Saving..." : "Save model"}
+                </Button>
+              </div>
             </div>
             <div className="rounded-md border border-border/70 bg-background p-4">
               <div className="flex items-center justify-between gap-3">
@@ -147,7 +259,7 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
                     {status?.api_connection.connected ? (
                       <>
                         <CheckCircle2 className="size-4 text-emerald-600" />
-                        Connected by {status.api_connection.configured_by}
+                        Connected{status.api_connection.configured_by ? ` by ${status.api_connection.configured_by}` : ""}
                       </>
                     ) : (
                       <>
@@ -161,89 +273,127 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
                   {activeProvider?.provider_name ?? "OpenRouter"}
                 </Badge>
               </div>
-              <div className="mt-4 grid gap-2">
-                <Select value={providerKey} onValueChange={setProviderKey}>
-                  <SelectTrigger className="h-10 rounded-md">
-                    <SelectValue placeholder="Provider" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(status?.provider_connections ?? fallbackProviders).map((provider) => (
-                      <SelectItem key={provider.provider} value={provider.provider}>
-                        {provider.provider_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  className="h-10 rounded-md font-mono text-xs"
-                  onChange={(event) => setBaseUrl(event.target.value)}
-                  placeholder="Provider base URL"
-                  value={baseUrl}
-                />
-                <Input
-                  className="h-10 rounded-md font-mono text-xs"
-                  onChange={(event) => setDefaultModel(event.target.value)}
-                  placeholder="Default model"
-                  value={defaultModel}
-                />
-                <Input
-                  className="h-10 rounded-md font-mono text-xs"
-                  onChange={(event) => setFreeModels(event.target.value)}
-                  placeholder="Free model IDs, comma separated"
-                  value={freeModels}
-                />
-                <Input
-                  className="h-10 rounded-md font-mono text-xs"
-                  onChange={(event) => setPremiumModels(event.target.value)}
-                  placeholder="Premium model IDs, comma separated"
-                  value={premiumModels}
-                />
-                <Input
-                  className="h-10 rounded-md font-mono text-xs"
-                  onChange={(event) => setApiKeyDraft(event.target.value)}
-                  placeholder={activeProvider?.connected ? "Paste new key to replace saved key" : "Paste API key to save"}
-                  type="password"
-                  value={apiKeyDraft}
-                />
-                <div className="flex flex-wrap items-center gap-2">
+
+              {!activeProvider?.connected ? (
+                <div className="mt-4 grid gap-3">
+                  <div className="rounded-md bg-muted/30 p-3 text-sm leading-6">
+                    <p className="font-semibold">Connect in 3 steps:</p>
+                    <ol className="mt-1.5 list-inside list-decimal space-y-1 text-muted-foreground">
+                      <li>Get an API key from{" "}
+                        <a className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2" href={platformKeyUrl(providerKey)} rel="noopener noreferrer" target="_blank">
+                          {platformKeyLabel(providerKey)} <ExternalLink className="size-3" />
+                        </a>
+                      </li>
+                      <li>Select the platform and paste its key below</li>
+                      <li>Click <strong>Save &amp; test</strong> to verify the connection</li>
+                    </ol>
+                  </div>
+                  <Select value={providerKey} onValueChange={(value) => { setProviderKey(value); setApiKeyDraft("") }}>
+                    <SelectTrigger className="h-10 rounded-md">
+                      <SelectValue placeholder="Provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(status?.provider_connections ?? fallbackProviders).map((provider) => (
+                        <SelectItem key={provider.provider} value={provider.provider}>
+                          {provider.provider_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    className="h-10 rounded-md font-mono text-xs"
+                    onChange={(event) => setApiKeyDraft(event.target.value)}
+                    placeholder={`Paste ${platformDisplayName(activeProvider)} API key`}
+                    type="password"
+                    value={apiKeyDraft}
+                  />
                   <Button
                     className="rounded-md"
-                    disabled={apiSaveMutation.isPending || (!apiKeyDraft.trim() && !activeProvider?.connected)}
+                    disabled={apiSaveMutation.isPending || !apiKeyDraft.trim()}
                     size="sm"
                     type="button"
-                    onClick={() => apiSaveMutation.mutate()}
+                    onClick={() => apiSaveMutation.mutate("key")}
                   >
-                    <KeyRound className="size-4" />
-                    {apiSaveMutation.isPending ? "Saving..." : "Save & test"}
+                    <KeyRound className={cn("size-4", apiSaveMutation.isPending && "animate-pulse")} />
+                    {apiSaveMutation.isPending ? "Saving & testing..." : "Save & test"}
                   </Button>
+                  <span className="text-xs leading-5 text-muted-foreground">
+                    Key is encrypted server-side. You can change or remove it anytime.
+                  </span>
+                </div>
+              ) : (
+                <div className="mt-4 grid gap-3">
+                  <div className="grid gap-2">
+                    <Input
+                      className="h-10 rounded-md font-mono text-xs"
+                      onChange={(event) => setApiKeyDraft(event.target.value)}
+                      placeholder="Paste a new key to replace the saved key"
+                      type="password"
+                      value={apiKeyDraft}
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        className="rounded-md"
+                        disabled={apiSaveMutation.isPending || !apiKeyDraft.trim()}
+                        size="sm"
+                        type="button"
+                        onClick={() => apiSaveMutation.mutate("key")}
+                      >
+                        <KeyRound className={cn("size-4", apiSaveMutation.isPending && "animate-pulse")} />
+                        {apiSaveMutation.isPending ? "Updating..." : "Update key"}
+                      </Button>
+                      <span className="text-xs leading-5 text-muted-foreground">
+                        Leave blank to keep the current key.
+                      </span>
+                    </div>
+                  </div>
+                  {activeProvider?.last_test_message ? (
+                    <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
+                      {activeProvider.last_test_message}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              <DetailsToggle label="Advanced provider settings">
+                <div className="mt-3 grid gap-2 border-t border-border/50 pt-3">
+                  <Input
+                    className="h-10 rounded-md font-mono text-xs"
+                    onChange={(event) => setBaseUrl(event.target.value)}
+                    placeholder="Provider base URL"
+                    value={baseUrl}
+                  />
+                  <Input
+                    className="h-10 rounded-md font-mono text-xs"
+                    onChange={(event) => setDefaultModel(event.target.value)}
+                    placeholder="Default model"
+                    value={defaultModel}
+                  />
+                  <Input
+                    className="h-10 rounded-md font-mono text-xs"
+                    onChange={(event) => setFreeModels(event.target.value)}
+                    placeholder="Free model IDs, comma separated"
+                    value={freeModels}
+                  />
+                  <Input
+                    className="h-10 rounded-md font-mono text-xs"
+                    onChange={(event) => setPremiumModels(event.target.value)}
+                    placeholder="Premium model IDs, comma separated"
+                    value={premiumModels}
+                  />
                   <Button
-                    className="rounded-md"
-                    disabled={apiTestMutation.isPending || (!apiKeyDraft.trim() && !activeProvider?.connected)}
+                    className="w-fit rounded-md"
+                    disabled={apiSaveMutation.isPending || !activeProvider?.connected}
                     size="sm"
                     type="button"
                     variant="outline"
-                    onClick={() => apiTestMutation.mutate()}
+                    onClick={() => apiSaveMutation.mutate("settings")}
                   >
-                    <KeyRound className="size-4" />
-                    {apiTestMutation.isPending ? "Testing..." : "Test API"}
+                    <RefreshCw className={cn("size-4", apiSaveMutation.isPending && "animate-spin")} />
+                    {apiSaveMutation.isPending ? "Saving..." : "Save provider settings"}
                   </Button>
-                  <span className="text-xs leading-5 text-muted-foreground">
-                    Saved keys are encrypted server-side and used by ZETRO chat.
-                  </span>
                 </div>
-                {activeProvider?.last_test_message ? (
-                  <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs leading-5 text-muted-foreground">
-                    {activeProvider.last_test_message}
-                  </div>
-                ) : null}
-              </div>
-              <div className="mt-4 grid gap-2 text-xs text-muted-foreground">
-                {(status?.api_connection.required_env ?? fallbackRequiredEnv).map((item) => (
-                  <div key={item} className="rounded-md border border-border/70 bg-muted/20 px-2.5 py-2 font-mono">
-                    {item}
-                  </div>
-                ))}
-              </div>
+              </DetailsToggle>
             </div>
             <div className="rounded-md border border-border/70 bg-muted/20 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold">
@@ -254,30 +404,57 @@ export function AgentOsPage({ session }: { session: AuthSession }) {
                 The base keeps Agent OS platform records in the master database. Tenant business actions will still resolve through tenant context when Operator tools are added.
               </p>
             </div>
+            <div className="rounded-md border border-border/70 bg-background p-4">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <GitBranch className="size-4 text-muted-foreground" />
+                Next dynamic steps
+              </div>
+              <div className="mt-3 grid gap-2">
+                {(status?.next.length ? status.next : fallbackNext).map((item) => (
+                  <div key={item} className="flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+                    <CheckCircle2 className="mt-1 size-3.5 shrink-0 text-emerald-600" />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
-          <CardHeader>
-            <CardTitle>Recommended updates</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3">
-            {(status?.recommended_updates.length ? status.recommended_updates : fallbackRecommended).map((item) => (
-              <div key={item.title} className="flex items-start gap-3 rounded-md border border-border/70 bg-background p-3">
-                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <ListChecks className="size-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    {item.title}
-                    <Badge className="rounded-md" variant={item.priority === "high" ? "default" : "outline"}>{item.priority}</Badge>
+        <div className="grid h-fit gap-4">
+          <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
+            <CardHeader>
+              <CardTitle>Multi-agent stack</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              {agents.map((agent) => (
+                <AgentRow key={agent.key} agent={agent} />
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
+            <CardHeader>
+              <CardTitle>Recommended updates</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              {(status?.recommended_updates.length ? status.recommended_updates : fallbackRecommended).map((item) => (
+                <div key={item.title} className="flex items-start gap-3 rounded-md border border-border/70 bg-background p-3">
+                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <ListChecks className="size-4" />
                   </span>
-                  <span className="mt-1 block text-sm leading-6 text-muted-foreground">{item.detail}</span>
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      {item.title}
+                      <Badge className="rounded-md" variant={item.priority === "high" ? "default" : "outline"}>{item.priority}</Badge>
+                    </span>
+                    <span className="mt-1 block text-sm leading-6 text-muted-foreground">{item.detail}</span>
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </MasterListPageFrame>
   )
@@ -299,10 +476,10 @@ const fallbackProviders = [
     configured_by: null,
     base_url: "https://openrouter.ai/api/v1",
     app_title: "CXSun ZETRO",
-    default_model: "deepseek/deepseek-chat-v3-0324:free",
-    free_models: "deepseek/deepseek-chat-v3-0324:free,qwen/qwen3-235b-a22b:free,deepseek/deepseek-r1:free",
-    premium_models: "openai/gpt-5.2,anthropic/claude-sonnet-4.5,google/gemini-2.5-pro",
-    free_model_count: 3,
+    default_model: "nex-agi/nex-n2-pro:free",
+    free_models: "nex-agi/nex-n2-pro:free,nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,poolside/laguna-xs.2:free,poolside/laguna-m.1:free,google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,liquid/lfm-2.5-1.2b-thinking:free,liquid/lfm-2.5-1.2b-instruct:free,nvidia/nemotron-3-nano-30b-a3b:free,nvidia/nemotron-nano-12b-v2-vl:free,qwen/qwen3-next-80b-a3b-instruct:free,nvidia/nemotron-nano-9b-v2:free,openai/gpt-oss-120b:free,openai/gpt-oss-20b:free,qwen/qwen3-coder:free,cognitivecomputations/dolphin-mistral-24b-venice-edition:free,meta-llama/llama-3.3-70b-instruct:free,meta-llama/llama-3.2-3b-instruct:free,nousresearch/hermes-3-llama-3.1-405b:free,nvidia/nemotron-3.5-content-safety:free",
+    premium_models: "openai/gpt-4.1,anthropic/claude-sonnet-4.5,google/gemini-2.5-pro",
+    free_model_count: 22,
     premium_model_count: 3,
     required_env: fallbackRequiredEnv,
     is_active: true,
@@ -381,20 +558,260 @@ const fallbackRecommended = [
   },
 ]
 
-function StatusCard({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+const fallbackModelsForSelect = [
+  { id: "nex-agi/nex-n2-pro:free", label: "Nex N2 Pro Free", tier: "free" },
+  { id: "nvidia/nemotron-3-ultra-550b-a55b:free", label: "Nemotron 3 Ultra 550b A55b Free", tier: "free" },
+  { id: "openai/gpt-4.1", label: "Gpt 4.1", tier: "premium" },
+]
+
+const fallbackCapabilities: ZetroCapability[] = [
+  {
+    key: "phase",
+    label: "Phase",
+    value: "Loading",
+    state: "setup",
+    detail: "Reading ZETRO status from the backend.",
+  },
+  {
+    key: "api",
+    label: "API",
+    value: "Checking",
+    state: "setup",
+    detail: "Provider connection status is loading.",
+  },
+  {
+    key: "knowledge",
+    label: "Knowledge",
+    value: "Checking",
+    state: "setup",
+    detail: "Knowledge index status is loading.",
+  },
+  {
+    key: "router",
+    label: "Router",
+    value: "Queued",
+    state: "planned",
+    detail: "Router comes after Helper and tool registry.",
+  },
+  {
+    key: "automation",
+    label: "Automation",
+    value: "Parked",
+    state: "planned",
+    detail: "Automation is disabled until tools are safe.",
+  },
+]
+
+const fallbackAgents: ZetroAgentStatus[] = [
+  {
+    key: "helper",
+    name: "Helper Agent",
+    role: "Answers project and platform questions.",
+    status: "planned",
+    stage: "MVP v1",
+    model_policy: "Free models first.",
+    next_action: "Load backend status.",
+  },
+]
+
+const fallbackNext = [
+  "Load ZETRO status from the backend",
+  "Connect provider if needed",
+  "Run Learn docs to refresh context",
+]
+
+function PlatformButton({
+  active,
+  icon: Icon,
+  provider,
+  onClick,
+}: {
+  active: boolean
+  icon: LucideIcon
+  provider: ZetroProviderConnection
+  onClick: () => void
+}) {
+  const modelCount = provider.free_model_count + provider.premium_model_count
+  return (
+    <button
+      className={cn(
+        "rounded-md border p-3 text-left transition hover:border-primary/40 hover:bg-primary/5",
+        active ? "border-primary/50 bg-primary/10" : "border-border/70 bg-card",
+      )}
+      type="button"
+      onClick={onClick}
+    >
+      <div className="flex items-start gap-3">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", providerVerified(provider) ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : provider.connected ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-muted text-muted-foreground")}>
+          <Icon className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm font-semibold">{platformDisplayName(provider)}</span>
+            <span className={cn("size-1.5 shrink-0 rounded-full", providerVerified(provider) ? "bg-emerald-500" : provider.connected ? "bg-amber-500" : "bg-muted-foreground")} />
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+            {providerStatusText(provider)}
+          </span>
+          <span className="mt-2 flex flex-wrap items-center gap-1.5">
+            <Badge className="rounded-md" variant="outline">{modelCount} models</Badge>
+            {provider.is_active ? <Badge className="rounded-md">active</Badge> : null}
+          </span>
+        </span>
+      </div>
+    </button>
+  )
+}
+
+function StatusCard({ detail, icon: Icon, label, state, value }: { detail: string; icon: LucideIcon; label: string; state: ZetroCapability["state"]; value: string }) {
   return (
     <Card className="rounded-md border-border/70 bg-card/95 shadow-sm">
-      <CardContent className="flex items-center gap-3 p-4">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+      <CardContent className="flex items-start gap-3 p-4">
+        <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", stateTone(state).icon)}>
           <Icon className="size-5" />
         </span>
-        <div className="min-w-0">
-          <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
-          <div className="truncate text-sm font-semibold text-foreground">{value}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
+            <span className={cn("size-1.5 rounded-full", stateTone(state).dot)} />
+          </div>
+          <div className="mt-1 truncate text-sm font-semibold text-foreground">{value}</div>
+          <div className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{detail}</div>
         </div>
       </CardContent>
     </Card>
   )
+}
+
+function AgentRow({ agent }: { agent: ZetroAgentStatus }) {
+  const Icon = agentIcon(agent.key)
+  return (
+    <article className="rounded-md border border-border/70 bg-background p-3">
+      <div className="flex items-start gap-3">
+        <span className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md", stateTone(agent.status).icon)}>
+          <Icon className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold">{agent.name}</h3>
+            <Badge className="rounded-md" variant={agent.status === "active" ? "default" : "outline"}>{agent.status}</Badge>
+            <Badge className="rounded-md" variant="secondary">{agent.stage}</Badge>
+          </div>
+          <p className="mt-1 text-sm leading-6 text-muted-foreground">{agent.role}</p>
+          <div className="mt-2 rounded-md bg-muted/20 px-2.5 py-2 text-xs leading-5 text-muted-foreground">
+            <span className="font-medium text-foreground">Next:</span> {agent.next_action}
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function capabilityIcon(key: string): LucideIcon {
+  return ({
+    phase: Bot,
+    api: KeyRound,
+    knowledge: Database,
+    router: Network,
+    automation: ShieldCheck,
+  } satisfies Record<string, LucideIcon>)[key] ?? Sparkles
+}
+
+function modelLabel(modelId: string, models?: Array<{ id: string; label: string }>) {
+  if (!modelId) return null
+  return models?.find((model) => model.id === modelId)?.label ?? modelId
+}
+
+function providerModels(provider: ZetroProviderConnection | null): ZetroModel[] {
+  if (!provider) return []
+  const freeModels = splitModelIds(provider.free_models).map((id) => ({
+    id,
+    label: labelFromModelId(id),
+    provider: provider.provider,
+    tier: "free" as const,
+    requiresKey: true,
+  }))
+  const premiumModels = splitModelIds(provider.premium_models).map((id) => ({
+    id,
+    label: labelFromModelId(id),
+    provider: provider.provider,
+    tier: "premium" as const,
+    requiresKey: true,
+  }))
+  return Array.from(new Map([...freeModels, ...premiumModels].map((model) => [model.id, model])).values())
+}
+
+function splitModelIds(value: string | null | undefined) {
+  return String(value ?? "").split(",").map((item) => item.trim()).filter(Boolean)
+}
+
+function labelFromModelId(modelId: string) {
+  const lastPart = modelId.split("/").at(-1) ?? modelId
+  return lastPart
+    .replace(/[-_:]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function platformDisplayName(provider: ZetroProviderConnection | null | undefined) {
+  if (!provider) return "OpenRouter"
+  if (provider.provider === "openai") return "OpenAI / GPT"
+  if (provider.provider === "gemini") return "Google Gemini"
+  if (provider.provider === "custom") return "Custom API"
+  return provider.provider_name
+}
+
+function providerVerified(provider: ZetroProviderConnection) {
+  return provider.last_test_status === "ok" || provider.status === "connected"
+}
+
+function providerStatusText(provider: ZetroProviderConnection) {
+  if (providerVerified(provider)) {
+    return provider.configured_by ? `Connected by ${provider.configured_by}` : "Connected"
+  }
+  if (provider.connected && provider.configured_by) {
+    return `Configured by ${provider.configured_by}; test recommended`
+  }
+  if (provider.connected) return "Configured; test recommended"
+  return "Needs API key"
+}
+
+function platformIcon(providerKey: string): LucideIcon {
+  if (providerKey === "openai") return BrainCircuit
+  if (providerKey === "gemini") return Sparkles
+  if (providerKey === "custom") return Cpu
+  return Cloud
+}
+
+function platformKeyUrl(providerKey: string) {
+  if (providerKey === "openai") return "https://platform.openai.com/api-keys"
+  if (providerKey === "gemini") return "https://aistudio.google.com/app/apikey"
+  if (providerKey === "custom") return "http://localhost:11434"
+  return "https://openrouter.ai/keys"
+}
+
+function platformKeyLabel(providerKey: string) {
+  if (providerKey === "openai") return "platform.openai.com/api-keys"
+  if (providerKey === "gemini") return "aistudio.google.com/app/apikey"
+  if (providerKey === "custom") return "your custom provider"
+  return "openrouter.ai/keys"
+}
+
+function agentIcon(key: string): LucideIcon {
+  return ({
+    helper: Sparkles,
+    operator: Wrench,
+    workflow: Workflow,
+    planner: BrainCircuit,
+    analytics: BarChart3,
+    router: Route,
+  } satisfies Record<string, LucideIcon>)[key] ?? Bot
+}
+
+function stateTone(state: "active" | "setup" | "blocked" | "planned") {
+  if (state === "active") return { icon: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" }
+  if (state === "blocked") return { icon: "bg-destructive/10 text-destructive", dot: "bg-destructive" }
+  if (state === "setup") return { icon: "bg-amber-500/10 text-amber-700 dark:text-amber-300", dot: "bg-amber-500" }
+  return { icon: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" }
 }
 
 function TableStat({ label, value }: { label: string; value: number }) {
@@ -402,6 +819,23 @@ function TableStat({ label, value }: { label: string; value: number }) {
     <div className="rounded-md border border-border/70 bg-background p-4">
       <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
       <div className="mt-2 text-2xl font-semibold tracking-tight">{value}</div>
+    </div>
+  )
+}
+
+function DetailsToggle({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-3">
+      <button
+        className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+        onClick={() => setOpen(!open)}
+        type="button"
+      >
+        <ChevronDown className={cn("size-3.5 transition-transform", open && "rotate-180")} />
+        {label}
+      </button>
+      {open ? children : null}
     </div>
   )
 }

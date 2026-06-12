@@ -12,6 +12,7 @@ import {
 export interface ZetroChatInput {
   message?: string
   model?: string
+  providerKey?: string
   conversationUuid?: string | null
 }
 
@@ -44,38 +45,47 @@ export class AgentOsService {
       countTable(database, 'agent_logs'),
       countTable(database, 'knowledge_documents'),
     ])
+    const hasSavedProviders = (await listProviderRows()).length > 0
+    const agentCounts = { conversations: conversationCount, logs: logCount, knowledge: knowledgeCount }
+    const agents = zetroAgents(providerState.connection.connected, knowledgeCount)
+    const capabilities = zetroCapabilities(providerState.connection.connected, agentCounts)
 
     return {
       ok: true,
       name: 'ZETRO',
-      phase: 'P1 Site Helper Agent',
-      mode: 'base',
+      phase: zetroPhase(providerState.connection.connected, knowledgeCount),
+      mode: zetroMode(providerState.connection.connected, knowledgeCount),
       automation_enabled: false,
       router_enabled: false,
-      helper_enabled: false,
+      helper_enabled: providerState.connection.connected,
       api_connected: providerState.connection.connected,
       provider: providerState.connection.provider,
       default_model: providerState.defaultModel,
       models: providerState.models,
       api_connection: providerState.connection,
       provider_connections: providerState.connections,
+      capabilities,
+      agents,
       tables: {
         conversations: conversationCount,
         agent_logs: logCount,
         knowledge_documents: knowledgeCount,
       },
-      next: [
-        'Ingest ZRO, assist, site, and feature docs',
-        'Ground Helper Agent answers with RAG search',
-        'Add Operator tools after read-only helper is stable',
-      ],
-      recommended_updates: recommendedUpdates(providerState.connection.connected),
+      next: zetroNextSteps(providerState.connection.connected, knowledgeCount),
+      recommended_updates: await recommendedUpdates(providerState.connection.connected, hasSavedProviders, conversationCount, knowledgeCount),
     }
   }
 
   async read() {
     const documents = readZetroMarkdownDocuments()
     const providerState = await zetroProviderState()
+    const database = getDatabase()
+    const [conversationCount, knowledgeCount] = await Promise.all([
+      countTable(database, 'conversations'),
+      countTable(database, 'knowledge_documents'),
+    ])
+    const hasSavedProviders = (await listProviderRows()).length > 0
+    const agents = zetroAgents(providerState.connection.connected, knowledgeCount)
     return {
       ok: true,
       name: 'ZETRO',
@@ -87,6 +97,7 @@ export class AgentOsService {
       models: providerState.models,
       api_connection: providerState.connection,
       provider_connections: providerState.connections,
+      agents,
       sources: documents.map((document) => ({
         id: document.id,
         label: document.label,
@@ -107,19 +118,142 @@ export class AgentOsService {
         'Tool calls and automation are disabled here.',
         'Live assistant chat belongs inside the dashboard after login.',
       ],
-      recommended_updates: recommendedUpdates(providerState.connection.connected),
+      recommended_updates: await recommendedUpdates(providerState.connection.connected, hasSavedProviders, conversationCount, knowledgeCount),
     }
   }
 
   async apiConnection() {
     const providerState = await zetroProviderState()
+    const database = getDatabase()
+    const [conversationCount, knowledgeCount] = await Promise.all([
+      countTable(database, 'conversations'),
+      countTable(database, 'knowledge_documents'),
+    ])
+    const hasSavedProviders = (await listProviderRows()).length > 0
     return {
       ok: true,
       connection: providerState.connection,
       connections: providerState.connections,
       models: providerState.models,
-      recommended_updates: recommendedUpdates(providerState.connection.connected),
+      recommended_updates: await recommendedUpdates(providerState.connection.connected, hasSavedProviders, conversationCount, knowledgeCount),
     }
+  }
+
+  async conversations(input: { limit?: number | string }) {
+    const database = getDatabase()
+    const limit = parseLimit(input.limit)
+    const rows = await database
+      .selectFrom('conversations')
+      .select(['id', 'uuid', 'title', 'status', 'metadata', 'created_at', 'updated_at'])
+      .where('status', '!=', 'cleared')
+      .orderBy('updated_at', 'desc')
+      .limit(limit)
+      .execute()
+
+    const counts = rows.length
+      ? await database
+        .selectFrom('agent_logs')
+        .select((eb) => [
+          'conversation_id',
+          eb.fn.count<number>('id').as('message_count'),
+        ])
+        .where('conversation_id', 'in', rows.map((row) => row.id))
+        .where('event_type', 'like', 'chat.%')
+        .groupBy('conversation_id')
+        .execute()
+      : []
+    const countMap = new Map(counts.map((row) => [Number(row.conversation_id), Number(row.message_count ?? 0)]))
+
+    return {
+      ok: true,
+      conversations: rows.map((row) => ({
+        uuid: row.uuid,
+        title: row.title,
+        status: row.status,
+        model: stringFromJson(row.metadata, 'selectedModel'),
+        provider: stringFromJson(row.metadata, 'provider'),
+        message_count: countMap.get(Number(row.id)) ?? 0,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      })),
+    }
+  }
+
+  async conversation(uuid: string) {
+    const database = getDatabase()
+    const conversation = await database
+      .selectFrom('conversations')
+      .select(['id', 'uuid', 'title', 'status', 'metadata', 'created_at', 'updated_at'])
+      .where('uuid', '=', uuid)
+      .where('status', '!=', 'cleared')
+      .executeTakeFirst()
+
+    if (!conversation) return { ok: false, error: 'Conversation not found.' }
+
+    const logs = await database
+      .selectFrom('agent_logs')
+      .select(['id', 'event_type', 'model_id', 'input_summary', 'output_summary', 'metadata', 'status', 'error_message', 'created_at'])
+      .where('conversation_id', '=', conversation.id)
+      .where('event_type', 'like', 'chat.%')
+      .orderBy('created_at', 'asc')
+      .execute()
+
+    return {
+      ok: true,
+      conversation: {
+        uuid: conversation.uuid,
+        title: conversation.title,
+        status: conversation.status,
+        model: stringFromJson(conversation.metadata, 'selectedModel'),
+        provider: stringFromJson(conversation.metadata, 'provider'),
+        created_at: conversation.created_at,
+        updated_at: conversation.updated_at,
+      },
+      messages: logs.flatMap((log) => {
+        const metadata = parseJsonRecord(log.metadata)
+        const input = typeof metadata.fullInput === 'string' ? metadata.fullInput : log.input_summary ?? ''
+        const output = typeof metadata.fullReply === 'string' ? metadata.fullReply : log.output_summary ?? log.error_message ?? ''
+        const model = log.model_id ?? undefined
+        return [
+          ...(input ? [{
+            id: `user-${log.id}`,
+            role: 'user' as const,
+            body: input,
+            model,
+            created_at: log.created_at,
+          }] : []),
+          ...(output ? [{
+            id: `assistant-${log.id}`,
+            role: 'assistant' as const,
+            body: output,
+            model,
+            created_at: log.created_at,
+          }] : []),
+        ]
+      }),
+    }
+  }
+
+  async clearConversation(uuid: string) {
+    const database = getDatabase()
+    const result = await database
+      .updateTable('conversations')
+      .set({ status: 'cleared', updated_at: sql`CURRENT_TIMESTAMP` })
+      .where('uuid', '=', uuid)
+      .executeTakeFirst()
+
+    return { ok: true, cleared: Number(result.numUpdatedRows ?? 0) }
+  }
+
+  async clearConversations() {
+    const database = getDatabase()
+    const result = await database
+      .updateTable('conversations')
+      .set({ status: 'cleared', updated_at: sql`CURRENT_TIMESTAMP` })
+      .where('status', '!=', 'cleared')
+      .executeTakeFirst()
+
+    return { ok: true, cleared: Number(result.numUpdatedRows ?? 0) }
   }
 
   async testApiConnection(input: ZetroApiConnectionInput) {
@@ -127,6 +261,7 @@ export class AgentOsService {
     const apiKey = input.apiKey?.trim() || providerConfig.apiKey
     const model = normalizeModel(input.model, providerConfig.models, providerConfig.defaultModel)
     const startedAt = Date.now()
+    const testedAgainstSavedKey = Boolean(input.apiKey?.trim() && providerConfig.apiKey && input.apiKey.trim() !== providerConfig.apiKey)
 
     if (!apiKey) {
       return {
@@ -137,64 +272,94 @@ export class AgentOsService {
       }
     }
 
-    try {
-      const result = await testProviderConnection({ ...providerConfig, apiKey, defaultModel: model.id })
+    const fallbackModelIds = [
+      model.id,
+      ...providerConfig.models
+        .filter((m) => m.tier === 'free' && m.id !== model.id)
+        .map((m) => m.id),
+    ]
+
+    let lastError: Error | null = null
+    let lastResult: Awaited<ReturnType<typeof testProviderConnection>> | null = null
+    let usedModelId = model.id
+
+    for (const candidateId of fallbackModelIds) {
+      try {
+        lastResult = await testProviderConnection({ ...providerConfig, apiKey, defaultModel: candidateId })
+        usedModelId = candidateId
+        break
+      } catch (err) {
+        lastError = err as Error
+      }
+    }
+
+    const usedModel = normalizeModel(usedModelId, providerConfig.models)
+
+    if (lastResult) {
       await writeAgentLog({
         conversationId: null,
         eventType: 'provider.test',
         message: `test ${providerConfig.providerKey} connection`,
-        model,
-        reply: result.message,
+        model: usedModel,
+        reply: lastResult.message,
         latencyMs: Date.now() - startedAt,
         status: 'ok',
         metadata: {
           provider: providerConfig.providerKey,
-          modelTier: model.tier,
+          modelTier: usedModel.tier,
           usedConfiguredKey: apiKey === providerConfig.apiKey,
-          modelCount: result.modelCount,
+          modelCount: lastResult.modelCount,
         },
       })
 
       if (providerConfig.savedRowId) {
-        await updateProviderTestState(providerConfig.providerKey, 'ok', result.message)
+        await updateProviderTestState(providerConfig.providerKey, 'ok', lastResult.message)
       }
+
+      const warning = testedAgainstSavedKey
+        ? 'Test passed with the pasted key, but your saved key is different. Click "Save & test" to update the saved key before using chat.'
+        : !providerConfig.apiKey && !providerConfig.savedRowId
+          ? 'Test passed. Click "Save & test" to persist this key so chat can use it.'
+          : undefined
 
       return {
         ok: true,
         connected: true,
-        model,
-        message: result.message,
-        model_count: result.modelCount,
+        model: usedModel,
+        message: lastResult.message,
+        model_count: lastResult.modelCount,
+        warning,
+        needs_save: !providerConfig.savedRowId || testedAgainstSavedKey,
         connection: (await zetroProviderState()).connection,
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'OpenRouter connection test failed.'
-      if (providerConfig.savedRowId) {
-        await updateProviderTestState(providerConfig.providerKey, 'failed', errorMessage)
-      }
-      await writeAgentLog({
-        conversationId: null,
-        eventType: 'provider.test',
-        message: `test ${providerConfig.providerKey} connection`,
-        model,
-        reply: '',
-        latencyMs: Date.now() - startedAt,
-        status: 'failed',
-        errorMessage,
-        metadata: {
-          provider: providerConfig.providerKey,
-          modelTier: model.tier,
-          usedConfiguredKey: apiKey === providerConfig.apiKey,
-        },
-      })
+    }
 
-      return {
-        ok: false,
-        connected: false,
-        model,
-        error: errorMessage,
-        connection: (await zetroProviderState()).connection,
-      }
+    const errorMessage = lastError instanceof Error ? lastError.message : 'All models failed.'
+    if (providerConfig.savedRowId) {
+      await updateProviderTestState(providerConfig.providerKey, 'failed', errorMessage)
+    }
+    await writeAgentLog({
+      conversationId: null,
+      eventType: 'provider.test',
+      message: `test ${providerConfig.providerKey} connection`,
+      model,
+      reply: '',
+      latencyMs: Date.now() - startedAt,
+      status: 'failed',
+      errorMessage,
+      metadata: {
+        provider: providerConfig.providerKey,
+        modelTier: model.tier,
+        usedConfiguredKey: apiKey === providerConfig.apiKey,
+      },
+    })
+
+    return {
+      ok: false,
+      connected: false,
+      model,
+      error: errorMessage,
+      connection: (await zetroProviderState()).connection,
     }
   }
 
@@ -218,6 +383,9 @@ export class AgentOsService {
       iv: existing?.api_key_iv ?? '',
       tag: existing?.api_key_tag ?? '',
     }
+    const nextFreeModels = await effectiveFreeModels(providerKey, optionalTrim(input.freeModels) ?? existing?.free_models ?? defaults.freeModels)
+    const nextPremiumModels = optionalTrim(input.premiumModels) ?? existing?.premium_models ?? defaults.premiumModels
+    const nextDefaultModel = effectiveDefaultModel(providerKey, input.defaultModel?.trim() || existing?.default_model || defaults.defaultModel, nextFreeModels, nextPremiumModels)
     const values = {
       provider_name: input.providerName?.trim() || defaults.providerName,
       provider_kind: normalizeProviderKind(input.providerKind, defaults.providerKind),
@@ -225,9 +393,9 @@ export class AgentOsService {
       api_key_ciphertext: encrypted.ciphertext,
       api_key_iv: encrypted.iv,
       api_key_tag: encrypted.tag,
-      default_model: input.defaultModel?.trim() || existing?.default_model || defaults.defaultModel,
-      free_models: optionalTrim(input.freeModels) ?? existing?.free_models ?? defaults.freeModels,
-      premium_models: optionalTrim(input.premiumModels) ?? existing?.premium_models ?? defaults.premiumModels,
+      default_model: nextDefaultModel,
+      free_models: nextFreeModels,
+      premium_models: nextPremiumModels,
       is_active: input.isActive === false ? 0 : 1,
       status: 'configured',
       metadata: JSON.stringify({ savedFrom: 'zetro-panel' }),
@@ -260,15 +428,20 @@ export class AgentOsService {
       testResult = await this.testApiConnection({ providerKey, model: savedConfig.defaultModel })
     }
 
+    if (testResult?.ok && testResult.model?.id && testResult.model.id !== values.default_model) {
+      await database
+        .updateTable('agent_provider_connections')
+        .set({ default_model: testResult.model.id })
+        .where('provider_key', '=', providerKey)
+        .execute()
+    }
+
     const connectionState = await this.apiConnection()
     return {
       ok: true,
-      saved: true,
+      existing: Boolean(existing),
       test: testResult,
       connection: connectionState.connection,
-      connections: connectionState.connections,
-      models: connectionState.models,
-      recommended_updates: connectionState.recommended_updates,
     }
   }
 
@@ -358,7 +531,7 @@ export class AgentOsService {
       return { ok: false, error: 'Message is required.' }
     }
 
-    const providerConfig = await resolveProviderForInput({ model: input.model })
+    const providerConfig = await resolveProviderForInput({ providerKey: input.providerKey, model: input.model })
     const model = normalizeModel(input.model, providerConfig.models, providerConfig.defaultModel)
     const database = getDatabase()
     const conversationUuid = input.conversationUuid?.trim() || dispatchPublicUuid()
@@ -367,7 +540,7 @@ export class AgentOsService {
       ? await database.selectFrom('conversations').select(['id', 'uuid']).where('uuid', '=', input.conversationUuid).executeTakeFirst()
       : null
 
-    const conversationId = existingConversation?.id ?? await createConversation(database, conversationUuid, title, model)
+    const conversationId = existingConversation?.id ?? await createConversation(database, conversationUuid, title, model, providerConfig.providerKey)
     const startedAt = Date.now()
     const localContext = searchZetroMarkdownDocuments(message, 4)
 
@@ -398,41 +571,62 @@ export class AgentOsService {
       }
     }
 
-    try {
-      const completion = await callProviderChat(providerConfig, model, message, localContext)
-      await writeAgentLog({
-        conversationId: Number(conversationId),
-        eventType: 'chat.openrouter',
-        message,
-        model,
-        reply: completion.content,
-        latencyMs: Date.now() - startedAt,
-        status: 'ok',
-        metadata: {
-          provider: settings.zetro.provider,
-          providerKey: providerConfig.providerKey,
-          source: 'universal-chat',
-          apiConnected: true,
-          modelTier: model.tier,
-          rawModel: completion.model,
-          usage: completion.usage,
-          localContext,
-        },
-      })
+    const candidateModels = candidateModelsForChat(model, providerConfig.models)
+    let lastChatError: Error | null = null
+    let lastAttemptedModel = model
 
-      return {
-        ok: true,
-        conversation_uuid: conversationUuid,
-        model,
-        message: completion.content,
+    for (const candidateModel of candidateModels) {
+      try {
+        const completion = await callProviderChat(providerConfig, candidateModel, message, localContext)
+        await writeAgentLog({
+          conversationId: Number(conversationId),
+          eventType: 'chat.openrouter',
+          message,
+          model: candidateModel,
+          reply: completion.content,
+          latencyMs: Date.now() - startedAt,
+          status: 'ok',
+          metadata: {
+            provider: settings.zetro.provider,
+            providerKey: providerConfig.providerKey,
+            source: 'universal-chat',
+            apiConnected: true,
+            modelTier: candidateModel.tier,
+            requestedModel: model.id,
+            fallbackUsed: candidateModel.id !== model.id,
+            attemptedModels: candidateModels.slice(0, candidateModels.findIndex((item) => item.id === candidateModel.id) + 1).map((item) => item.id),
+            rawModel: completion.model,
+            usage: completion.usage,
+            localContext,
+          },
+        })
+
+        return {
+          ok: true,
+          conversation_uuid: conversationUuid,
+          model: candidateModel,
+          message: completion.content,
+        }
+      } catch (error) {
+        lastChatError = error as Error
+        lastAttemptedModel = candidateModel
+        if (!shouldTryNextChatModel(error)) break
       }
+    }
+
+    try {
+      throw lastChatError ?? new Error('OpenRouter request failed.')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'OpenRouter request failed.'
+      const rawMessage = error instanceof Error ? error.message : 'OpenRouter request failed.'
+      const isAuthError = /401|403|unauthorized|unauthenticated|missing auth/i.test(rawMessage)
+      const errorMessage = isAuthError
+        ? `${providerConfig.providerName} rejected the request (401). The saved API key may be expired or invalid. Open the ZETRO API panel, paste a fresh key, and click "Save & test".`
+        : rawMessage
       await writeAgentLog({
         conversationId: Number(conversationId),
         eventType: 'chat.openrouter',
         message,
-        model,
+        model: lastAttemptedModel,
         reply: '',
         latencyMs: Date.now() - startedAt,
         status: 'failed',
@@ -441,14 +635,16 @@ export class AgentOsService {
           provider: settings.zetro.provider,
           source: 'universal-chat',
           apiConnected: true,
-          modelTier: model.tier,
+          modelTier: lastAttemptedModel.tier,
+          requestedModel: model.id,
+          attemptedModels: candidateModels.map((item) => item.id),
         },
       })
 
       return {
         ok: false,
         conversation_uuid: conversationUuid,
-        model,
+        model: lastAttemptedModel,
         error: errorMessage,
       }
     }
@@ -458,6 +654,21 @@ export class AgentOsService {
 function parseLimit(value: number | string | undefined) {
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed > 0 ? Math.min(parsed, 20) : 8
+}
+
+function parseJsonRecord(value: string | null | undefined): Record<string, unknown> {
+  if (!value) return {}
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {}
+  } catch {
+    return {}
+  }
+}
+
+function stringFromJson(value: string | null | undefined, key: string) {
+  const parsed = parseJsonRecord(value)
+  return typeof parsed[key] === 'string' ? parsed[key] : null
 }
 
 async function countTable(database: ReturnType<typeof getDatabase>, table: 'conversations' | 'agent_logs' | 'knowledge_documents') {
@@ -474,6 +685,7 @@ async function createConversation(
   uuid: string,
   title: string,
   model: ZetroModel,
+  providerKey: ZetroProviderKey,
 ) {
   await database.insertInto('conversations').values({
     uuid,
@@ -482,7 +694,7 @@ async function createConversation(
     surface: 'tenant',
     title,
     status: 'open',
-    metadata: JSON.stringify({ selectedModel: model.id, provider: settings.zetro.provider }),
+    metadata: JSON.stringify({ selectedModel: model.id, provider: providerKey }),
   }).execute()
 
   const created = await database.selectFrom('conversations').select('id').where('uuid', '=', uuid).executeTakeFirstOrThrow()
@@ -533,6 +745,151 @@ interface ProviderConnectionRow {
   last_tested_at: string | null
 }
 
+interface ZetroCountSnapshot {
+  conversations: number
+  logs: number
+  knowledge: number
+}
+
+function zetroPhase(apiConnected: boolean, knowledgeCount: number) {
+  if (apiConnected && knowledgeCount > 0) return 'P1 Helper Agent'
+  if (apiConnected) return 'P1 Helper Agent setup'
+  return 'P1 Provider setup'
+}
+
+function zetroMode(apiConnected: boolean, knowledgeCount: number) {
+  if (apiConnected && knowledgeCount > 0) return 'helper-ready'
+  if (apiConnected) return 'provider-ready'
+  return 'setup'
+}
+
+function zetroCapabilities(apiConnected: boolean, counts: ZetroCountSnapshot) {
+  return [
+    {
+      key: 'phase',
+      label: 'Phase',
+      value: zetroPhase(apiConnected, counts.knowledge),
+      state: apiConnected ? 'active' : 'setup',
+      detail: 'Read-only helper first. Tool execution comes later.',
+    },
+    {
+      key: 'api',
+      label: 'API',
+      value: apiConnected ? 'Connected' : 'Needs key',
+      state: apiConnected ? 'active' : 'blocked',
+      detail: apiConnected ? 'Saved provider is ready for chat calls.' : 'Save and test a provider key.',
+    },
+    {
+      key: 'knowledge',
+      label: 'Knowledge',
+      value: counts.knowledge > 0 ? `${counts.knowledge} chunks` : 'Not indexed',
+      state: counts.knowledge > 0 ? 'active' : 'setup',
+      detail: counts.knowledge > 0 ? 'ZRO and assist docs are available for retrieval.' : 'Run Learn docs from the dashboard.',
+    },
+    {
+      key: 'router',
+      label: 'Router',
+      value: 'Queued',
+      state: 'planned',
+      detail: 'Will choose Helper, Planner, Workflow, Operator, or Analytics.',
+    },
+    {
+      key: 'automation',
+      label: 'Automation',
+      value: 'Parked',
+      state: 'planned',
+      detail: 'Disabled until registered tools and confirmations exist.',
+    },
+  ]
+}
+
+function zetroAgents(apiConnected: boolean, knowledgeCount: number) {
+  const helperReady = apiConnected
+  const knowledgeReady = knowledgeCount > 0
+  return [
+    {
+      key: 'helper',
+      name: 'Helper Agent',
+      role: 'Answers platform, architecture, docs, FAQ, and roadmap questions.',
+      status: helperReady ? 'active' : 'blocked',
+      stage: 'MVP v1',
+      model_policy: 'Uses the active saved provider with free models first.',
+      next_action: helperReady
+        ? knowledgeReady ? 'Keep answers grounded with indexed ZRO and assist context.' : 'Run Learn docs to ground answers in project context.'
+        : 'Connect and test an API provider key.',
+    },
+    {
+      key: 'operator',
+      name: 'Operator Agent',
+      role: 'Will run safe CRUD through registered backend tools.',
+      status: 'planned',
+      stage: 'MVP v2',
+      model_policy: 'Provider selected by router after tool registry exists.',
+      next_action: 'Add typed tool registry, permission checks, and confirmation contract.',
+    },
+    {
+      key: 'workflow',
+      name: 'Workflow Agent',
+      role: 'Will chain tool calls into multi-step workflows.',
+      status: 'planned',
+      stage: 'MVP v3',
+      model_policy: 'Reasoning-capable model when configured.',
+      next_action: 'Add workflow execution records and partial-failure summaries.',
+    },
+    {
+      key: 'planner',
+      name: 'Planner Agent',
+      role: 'Will break goals into roadmap, milestones, and tasks.',
+      status: 'planned',
+      stage: 'MVP v4',
+      model_policy: 'Planning model from saved provider settings.',
+      next_action: 'Define planner prompt and roadmap/task output schema.',
+    },
+    {
+      key: 'analytics',
+      name: 'Analytics Agent',
+      role: 'Will read platform data and explain revenue, usage, tasks, and productivity.',
+      status: 'planned',
+      stage: 'MVP v4',
+      model_policy: 'Fast analytical model from saved provider settings.',
+      next_action: 'Add read-only analytics views after data contracts are stable.',
+    },
+    {
+      key: 'router',
+      name: 'Agent Router',
+      role: 'Will route one user message to the right specialized agent chain.',
+      status: 'planned',
+      stage: 'MVP v5',
+      model_policy: 'Small/fast model or deterministic rules first.',
+      next_action: 'Add canHandle scoring and router decision logs.',
+    },
+  ]
+}
+
+function zetroNextSteps(apiConnected: boolean, knowledgeCount: number) {
+  if (!apiConnected) {
+    return [
+      'Connect and test an API provider key',
+      'Run Learn docs after provider setup',
+      'Verify one Helper Agent answer',
+    ]
+  }
+
+  if (knowledgeCount === 0) {
+    return [
+      'Run Learn docs for ZRO and assist markdown',
+      'Verify Helper Agent answers with citations',
+      'Prepare Operator tool registry',
+    ]
+  }
+
+  return [
+    'Polish Helper Agent answer quality',
+    'Add Operator tool registry and confirmation contract',
+    'Add Router decision logging after tools exist',
+  ]
+}
+
 function zetroModels(providerKey: string = settings.zetro.provider, freeModels = settings.zetro.freeModels, premiumModels = settings.zetro.premiumModels, defaultModelId = settings.zetro.defaultModel): ZetroModel[] {
   const freeIds = freeModels
     .split(',')
@@ -573,51 +930,77 @@ function normalizeModel(modelId?: string, models = zetroModels(), defaultModelId
   return models.find((model) => model.id === modelId) ?? defaultModel(models, defaultModelId)
 }
 
+function candidateModelsForChat(selected: ZetroModel, models: ZetroModel[]) {
+  const freeFallbacks = models.filter((model) => model.tier === 'free' && model.id !== selected.id)
+  return [selected, ...freeFallbacks]
+}
+
+function shouldTryNextChatModel(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error)
+  return /429|rate|provider returned error|unavailable|overloaded|timeout|timed out|no assistant message content/i.test(message)
+}
+
 async function zetroProviderState() {
   const savedRows = await listProviderRows()
-  const connections = providerCatalog().map((defaults) => {
+  const connections = []
+  for (const defaults of providerCatalog()) {
     const row = savedRows.find((item) => item.provider_key === defaults.providerKey)
-    const freeModels = row?.free_models ?? defaults.freeModels
+    const freeModels = await effectiveFreeModels(defaults.providerKey, row?.free_models ?? defaults.freeModels)
     const premiumModels = row?.premium_models ?? defaults.premiumModels
-    const models = zetroModels(defaults.providerKey, freeModels, premiumModels, row?.default_model ?? defaults.defaultModel)
-    const envConnected = defaults.providerKey === 'openrouter' && Boolean(settings.zetro.openRouterApiKey)
+    const defaultModelId = effectiveDefaultModel(defaults.providerKey, row?.default_model ?? defaults.defaultModel, freeModels, premiumModels)
+    const models = zetroModels(defaults.providerKey, freeModels, premiumModels, defaultModelId)
+    const envKey = envApiKeyForProvider(defaults.providerKey)
+    const envConnected = Boolean(envKey)
     const connected = Boolean(row) || envConnected
-    return {
+    const staleModelFailure = defaults.providerKey === 'openrouter'
+      && row?.last_test_status === 'failed'
+      && isStaleOpenRouterModelFailure(row.last_test_message)
+    const connectionStatus = row?.last_test_status === 'failed' && !staleModelFailure
+      ? 'failed'
+      : connected
+        ? row?.status === 'failed' ? 'connected' : row?.status ?? 'env'
+        : 'not_configured'
+    connections.push({
       provider: defaults.providerKey,
       provider_name: row?.provider_name ?? defaults.providerName,
       provider_kind: row?.provider_kind ?? defaults.providerKind,
       connected,
-      configured_by: row ? 'database' : envConnected ? 'OPENROUTER_API_KEY' : null,
+      configured_by: row ? 'database' : envConnected ? envNameForProvider(defaults.providerKey) : null,
       base_url: row?.base_url ?? defaults.baseUrl,
       app_title: settings.zetro.appTitle,
-      default_model: row?.default_model ?? defaults.defaultModel,
+      default_model: defaultModelId,
       free_models: freeModels,
       premium_models: premiumModels,
       free_model_count: models.filter((model) => model.tier === 'free').length,
       premium_model_count: models.filter((model) => model.tier === 'premium').length,
       required_env: defaults.requiredEnv,
       is_active: Boolean(row?.is_active) || (!savedRows.some((item) => item.is_active) && envConnected && defaults.providerKey === 'openrouter'),
-      status: row?.status ?? (envConnected ? 'env' : 'not_configured'),
-      last_test_status: row?.last_test_status ?? null,
-      last_test_message: row?.last_test_message ?? null,
+      status: connectionStatus,
+      last_test_status: staleModelFailure ? null : row?.last_test_status ?? null,
+      last_test_message: staleModelFailure ? null : row?.last_test_message ?? null,
       last_tested_at: row?.last_tested_at ?? null,
-    }
-  })
+    })
+  }
   const activeConnection = connections.find((connection) => connection.is_active && connection.connected)
     ?? connections.find((connection) => connection.connected)
     ?? connections[0]
+  const activeDefaults = providerDefaults(activeConnection.provider)
+  const activeRow = savedRows.find((row) => row.provider_key === activeConnection.provider)
+  const activeFreeModels = await effectiveFreeModels(activeConnection.provider, activeRow?.free_models ?? activeDefaults.freeModels)
+  const activePremiumModels = activeRow?.premium_models ?? activeDefaults.premiumModels
+  const activeDefaultModel = effectiveDefaultModel(activeConnection.provider, activeConnection.default_model, activeFreeModels, activePremiumModels)
   const models = zetroModels(
     activeConnection.provider,
-    savedRows.find((row) => row.provider_key === activeConnection.provider)?.free_models ?? providerDefaults(activeConnection.provider).freeModels,
-    savedRows.find((row) => row.provider_key === activeConnection.provider)?.premium_models ?? providerDefaults(activeConnection.provider).premiumModels,
-    activeConnection.default_model,
+    activeFreeModels,
+    activePremiumModels,
+    activeDefaultModel,
   )
 
   return {
-    connection: activeConnection,
+    connection: { ...activeConnection, default_model: activeDefaultModel, free_models: activeFreeModels, premium_models: activePremiumModels },
     connections,
     models,
-    defaultModel: defaultModel(models, activeConnection.default_model),
+    defaultModel: defaultModel(models, activeDefaultModel),
   }
 }
 
@@ -635,8 +1018,9 @@ async function resolveProviderForInput(input: ZetroApiConnectionInput): Promise<
   if (activeRow) {
     const providerKey = normalizeProviderKey(activeRow.provider_key)
     const defaults = providerDefaults(providerKey)
-    const freeModels = activeRow.free_models ?? defaults.freeModels
+    const freeModels = await effectiveFreeModels(providerKey, activeRow.free_models ?? defaults.freeModels)
     const premiumModels = activeRow.premium_models ?? defaults.premiumModels
+    const defaultModelId = effectiveDefaultModel(providerKey, activeRow.default_model, freeModels, premiumModels)
     return {
       providerKey,
       providerName: activeRow.provider_name,
@@ -644,17 +1028,19 @@ async function resolveProviderForInput(input: ZetroApiConnectionInput): Promise<
       baseUrl: activeRow.base_url,
       apiKey: decryptSecret(activeRow.api_key_ciphertext, activeRow.api_key_iv, activeRow.api_key_tag),
       requiredKeyName: defaults.requiredEnv[0] ?? 'API_KEY',
-      defaultModel: activeRow.default_model,
+      defaultModel: defaultModelId,
       freeModels,
       premiumModels,
-      models: zetroModels(providerKey, freeModels, premiumModels, activeRow.default_model),
+      models: zetroModels(providerKey, freeModels, premiumModels, defaultModelId),
       savedRowId: activeRow.id,
     }
   }
 
   const providerKey = explicitProviderKey ?? 'openrouter'
   const defaults = providerDefaults(providerKey)
-  const envKey = providerKey === 'openrouter' ? settings.zetro.openRouterApiKey : undefined
+  const envKey = envApiKeyForProvider(providerKey)
+  const freeModels = await effectiveFreeModels(providerKey, defaults.freeModels)
+  const defaultModelId = effectiveDefaultModel(providerKey, defaults.defaultModel, freeModels, defaults.premiumModels)
   return {
     providerKey,
     providerName: defaults.providerName,
@@ -662,10 +1048,10 @@ async function resolveProviderForInput(input: ZetroApiConnectionInput): Promise<
     baseUrl: defaults.baseUrl,
     apiKey: envKey,
     requiredKeyName: defaults.requiredEnv[0] ?? 'API_KEY',
-    defaultModel: defaults.defaultModel,
-    freeModels: defaults.freeModels,
+    defaultModel: defaultModelId,
+    freeModels,
     premiumModels: defaults.premiumModels,
-    models: zetroModels(providerKey, defaults.freeModels, defaults.premiumModels, defaults.defaultModel),
+    models: zetroModels(providerKey, freeModels, defaults.premiumModels, defaultModelId),
   }
 }
 
@@ -742,7 +1128,7 @@ function providerDefaults(providerKey: string) {
     },
     openai: {
       providerKey: 'openai',
-      providerName: 'OpenAI',
+      providerName: 'OpenAI / GPT',
       providerKind: 'openai-compatible',
       baseUrl: 'https://api.openai.com/v1',
       defaultModel: 'gpt-4.1-mini',
@@ -752,7 +1138,7 @@ function providerDefaults(providerKey: string) {
     },
     gemini: {
       providerKey: 'gemini',
-      providerName: 'Gemini',
+      providerName: 'Google Gemini',
       providerKind: 'gemini',
       baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
       defaultModel: 'gemini-2.5-flash',
@@ -774,6 +1160,109 @@ function providerDefaults(providerKey: string) {
   return defaults[key]
 }
 
+function envApiKeyForProvider(providerKey: ZetroProviderKey) {
+  if (providerKey === 'openai') return settings.zetro.openAiApiKey
+  if (providerKey === 'gemini') return settings.zetro.geminiApiKey
+  if (providerKey === 'custom') return settings.zetro.customAiApiKey
+  return settings.zetro.openRouterApiKey
+}
+
+function envNameForProvider(providerKey: ZetroProviderKey) {
+  if (providerKey === 'openai') return 'OPENAI_API_KEY'
+  if (providerKey === 'gemini') return 'GEMINI_API_KEY'
+  if (providerKey === 'custom') return 'CUSTOM_AI_API_KEY'
+  return 'OPENROUTER_API_KEY'
+}
+
+let openRouterFreeModelsCache: { value: string; expiresAt: number } | null = null
+
+async function effectiveFreeModels(providerKey: ZetroProviderKey, fallback: string) {
+  if (providerKey !== 'openrouter') return fallback
+  return await fetchOpenRouterFreeModels().catch(() => fallback)
+}
+
+function effectiveDefaultModel(providerKey: ZetroProviderKey, current: string, freeModels: string, premiumModels: string) {
+  const freeIds = splitModelIds(freeModels)
+  const premiumIds = splitModelIds(premiumModels)
+  const allIds = [...freeIds, ...premiumIds]
+  if (allIds.includes(current) && !isKnownUnavailableOpenRouterFree(current)) return current
+  if (providerKey !== 'openrouter') return freeIds[0] ?? premiumIds[0] ?? current
+
+  return freeIds.find((id) => !isUtilityModel(id)) ?? freeIds[0] ?? premiumIds[0] ?? current
+}
+
+async function fetchOpenRouterFreeModels() {
+  const now = Date.now()
+  if (openRouterFreeModelsCache && openRouterFreeModelsCache.expiresAt > now) {
+    return openRouterFreeModelsCache.value
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 10_000)
+  try {
+    const response = await fetch(`${settings.zetro.openRouterBaseUrl.replace(/\/$/, '')}/models`, {
+      method: 'GET',
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new Error(`OpenRouter models request failed with status ${response.status}.`)
+    }
+
+    const payload = await response.json() as {
+      data?: Array<{
+        id?: string
+        created?: number
+        pricing?: { prompt?: string; completion?: string }
+        architecture?: { output_modalities?: string[] }
+      }>
+    }
+    const ids = (payload.data ?? [])
+      .filter((model) =>
+        typeof model.id === 'string'
+        && model.id.endsWith(':free')
+        && model.pricing?.prompt === '0'
+        && model.pricing?.completion === '0'
+        && model.architecture?.output_modalities?.includes('text')
+      )
+      .sort((left, right) => (right.created ?? 0) - (left.created ?? 0))
+      .map((model) => model.id as string)
+
+    if (!ids.length) throw new Error('OpenRouter returned no free text models.')
+
+    const ordered = [
+      ...ids.filter((id) => !isUtilityModel(id)),
+      ...ids.filter((id) => isUtilityModel(id)),
+    ]
+    const value = ordered.join(',')
+    openRouterFreeModelsCache = { value, expiresAt: now + 15 * 60_000 }
+    return value
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function splitModelIds(value: string) {
+  return value.split(',').map((item) => item.trim()).filter(Boolean)
+}
+
+function isUtilityModel(modelId: string) {
+  return /safety|moderation|guard/i.test(modelId)
+}
+
+function isKnownUnavailableOpenRouterFree(modelId: string) {
+  return [
+    'deepseek/deepseek-chat-v3-0324:free',
+    'qwen/qwen3-235b-a22b:free',
+    'deepseek/deepseek-r1:free',
+  ].includes(modelId)
+}
+
+function isStaleOpenRouterModelFailure(message?: string | null) {
+  if (!message) return false
+  return isKnownUnavailableOpenRouterFree(message)
+    || /unavailable for free|paid version is available/i.test(message)
+}
+
 function normalizeProviderKey(value?: string): ZetroProviderKey {
   if (value === 'openai' || value === 'gemini' || value === 'custom') return value
   return 'openrouter'
@@ -788,35 +1277,64 @@ function optionalTrim(value?: string) {
   return trimmed ? trimmed : undefined
 }
 
-function recommendedUpdates(apiConnected: boolean) {
-  return [
-    ...(!apiConnected
-      ? [{
-        title: 'Connect OpenRouter API',
-        detail: 'Save a provider key in the ZETRO API panel, then run Save & test so chat uses the active saved provider.',
-        priority: 'high' as const,
-      }]
-      : [{
-        title: 'Verify free and premium routing',
-        detail: 'Send one test prompt to a free model and one to a premium model before enabling users broadly.',
-        priority: 'medium' as const,
-      }]),
-    {
-      title: 'Index existing docs',
-      detail: 'Run adaptive learn for ZRO and assist docs before calling ZETRO a product helper.',
-      priority: 'high' as const,
-    },
-    {
-      title: 'Add encrypted secret storage',
-      detail: 'Move from env-only provider keys to encrypted database-backed provider connections when admin setup is ready.',
-      priority: 'medium' as const,
-    },
-    {
-      title: 'Add RAG citations',
-      detail: 'Return source file and heading with every grounded ZETRO answer.',
-      priority: 'medium' as const,
-    },
-  ]
+async function recommendedUpdates(apiConnected: boolean, hasSavedProviders: boolean, conversationCount: number, knowledgeCount: number) {
+  const updates: Array<{ title: string; detail: string; priority: 'high' | 'medium' | 'low' }> = []
+
+  if (!apiConnected) {
+    updates.push({
+      title: 'Connect OpenRouter API',
+      detail: hasSavedProviders
+        ? 'A provider is saved but not connected. Open the ZETRO API panel and run Save & test.'
+        : 'Save a provider key in the ZETRO API panel, then run Save & test so chat uses the active saved provider.',
+      priority: 'high',
+    })
+  } else {
+    updates.push({
+      title: 'API connected',
+      detail: 'Provider is active and connected. Free and premium models are available for chat.',
+      priority: 'low',
+    })
+  }
+
+  if (knowledgeCount === 0) {
+    updates.push({
+      title: 'Index project docs into knowledge base',
+      detail: 'Run Learn from the ZETRO dashboard to index ZRO and assist markdown docs. This grounds ZETRO answers in your project context.',
+      priority: 'high',
+    })
+  } else {
+    updates.push({
+      title: `Knowledge base indexed (${knowledgeCount} chunks)`,
+      detail: 'Project docs are indexed. ZETRO can search them for context-aware answers. Run Learn again after updating ZRO or assist docs.',
+      priority: 'low',
+    })
+  }
+
+  if (conversationCount === 0 && apiConnected) {
+    updates.push({
+      title: 'Send your first chat message',
+      detail: 'Open the ZETRO chat window and ask a question about the platform or project docs.',
+      priority: 'medium',
+    })
+  }
+
+  if (!apiConnected && !hasSavedProviders) {
+    updates.push({
+      title: 'Chat requires a provider key',
+      detail: 'No provider is configured. Save an API key in the ZETRO API panel before using the chat window.',
+      priority: 'medium',
+    })
+  }
+
+  if (apiConnected && conversationCount > 0 && knowledgeCount === 0) {
+    updates.push({
+      title: 'Index docs to improve chat answers',
+      detail: 'Chat is working but ZETRO lacks local project context. Run Learn to index ZRO and assist markdown for grounded answers.',
+      priority: 'medium',
+    })
+  }
+
+  return updates
 }
 
 function modelLabel(modelId: string) {
@@ -1081,11 +1599,23 @@ async function writeAgentLog(input: {
     model_id: input.model.id,
     input_summary: input.message.slice(0, 500),
     output_summary: input.reply.slice(0, 500),
-    metadata: JSON.stringify(input.metadata),
+    metadata: JSON.stringify({
+      ...input.metadata,
+      fullInput: input.message,
+      fullReply: input.reply,
+    }),
     latency_ms: input.latencyMs,
     status: input.status,
     error_message: input.errorMessage ?? null,
   }).execute()
+
+  if (input.conversationId) {
+    await database
+      .updateTable('conversations')
+      .set({ updated_at: sql`CURRENT_TIMESTAMP` })
+      .where('id', '=', input.conversationId)
+      .execute()
+  }
 }
 
 function zetroMessages(message: string, localContext: ReturnType<typeof searchZetroMarkdownDocuments>) {
@@ -1101,8 +1631,12 @@ function zetroMessages(message: string, localContext: ReturnType<typeof searchZe
 function zetroSystemPrompt(localContext: ReturnType<typeof searchZetroMarkdownDocuments>) {
   return [
     'You are ZETRO, the Versatile Agent OS assistant for this platform.',
-    'This phase is read-only helper chat. Answer clearly, avoid pretending you can execute actions, and say when knowledge ingestion is not available yet.',
-    'When users ask for platform automation, explain that Operator and Workflow agents are planned after the Helper Agent is grounded.',
+    'Current phase: read-only Helper Agent. You can explain, search provided project context, plan, and recommend next steps. You cannot execute platform actions or mutate records yet.',
+    'Write polished, compact answers. Prefer 2-5 short bullets or short paragraphs. Do not dump internal status unless the user asks for status.',
+    'Use markdown sparingly: bold labels, bullets, inline code, and source lines are fine. Avoid long tables unless the user asks.',
+    'If the user asks for automation or actions, explain that Operator, Workflow, Planner, Analytics, and Router agents are staged next, and name the nearest implementation step.',
+    'Do not say knowledge ingestion is unavailable when local project context is provided. If context is provided, use it naturally.',
+    'When you use provided project markdown context, end with one concise source line like: Source: path/to/file.md / Heading.',
     formatLocalContext(localContext),
   ].join(' ')
 }
