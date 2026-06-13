@@ -1,6 +1,4 @@
 import { Injectable } from '../../core/decorators/injectable.js'
-import { nowIso } from '../database/database-module.js'
-import { getDatabase } from '../database/connection.js'
 
 export interface QueueJobInput {
   type: string
@@ -11,6 +9,8 @@ export interface QueueJobInput {
 @Injectable()
 export class MasterQueueService {
   async enqueue(input: QueueJobInput) {
+    const { nowIso } = await import('../database/database-module.js')
+    const { getDatabase } = await import('../database/connection.js')
     const { enqueueHybridJob, queueNameForJobType } = await import('./hybrid-queue.runtime.js')
     const result = await getDatabase()
       .insertInto('queue_jobs')
@@ -37,6 +37,7 @@ export class MasterQueueService {
   }
 
   async listPending(limit = 20) {
+    const { getDatabase } = await import('../database/connection.js')
     return getDatabase()
       .selectFrom('queue_jobs')
       .selectAll()
