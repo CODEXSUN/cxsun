@@ -47,6 +47,28 @@ export const settings = {
     pop3Host: envString('MAIL_POP3_HOST', 'pop.hostinger.com'),
     pop3Port: envNumber('MAIL_POP3_PORT', 995),
   },
+  zetro: {
+    provider: envString('ZETRO_PROVIDER', 'openrouter'),
+    defaultModel: envString('ZETRO_DEFAULT_MODEL', 'nex-agi/nex-n2-pro:free'),
+    freeModels: envString(
+      'ZETRO_FREE_MODELS',
+      'nex-agi/nex-n2-pro:free,nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,poolside/laguna-xs.2:free,poolside/laguna-m.1:free,google/gemma-4-26b-a4b-it:free,google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free,liquid/lfm-2.5-1.2b-thinking:free,liquid/lfm-2.5-1.2b-instruct:free,nvidia/nemotron-3-nano-30b-a3b:free,nvidia/nemotron-nano-12b-v2-vl:free,qwen/qwen3-next-80b-a3b-instruct:free,nvidia/nemotron-nano-9b-v2:free,openai/gpt-oss-120b:free,openai/gpt-oss-20b:free,qwen/qwen3-coder:free,cognitivecomputations/dolphin-mistral-24b-venice-edition:free,meta-llama/llama-3.3-70b-instruct:free,meta-llama/llama-3.2-3b-instruct:free,nousresearch/hermes-3-llama-3.1-405b:free,nvidia/nemotron-3.5-content-safety:free',
+    ),
+    premiumModels: envString(
+      'ZETRO_PREMIUM_MODELS',
+      'openai/gpt-4.1,anthropic/claude-sonnet-4.5,google/gemini-2.5-pro',
+    ),
+    openRouterApiKey: envOptionalString('OPENROUTER_API_KEY'),
+    openRouterBaseUrl: envString('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+    httpReferer: envOptionalString('OPENROUTER_HTTP_REFERER') ?? envOptionalString('FRONTEND_URL'),
+    appTitle: envString('OPENROUTER_APP_TITLE', 'CXSun ZETRO'),
+    openAiApiKey: envOptionalString('OPENAI_API_KEY'),
+    geminiApiKey: envOptionalString('GEMINI_API_KEY'),
+    customAiApiKey: envOptionalString('CUSTOM_AI_API_KEY'),
+    requestTimeoutMs: envNumber('ZETRO_REQUEST_TIMEOUT_MS', 30000),
+    maxTokens: envNumber('ZETRO_MAX_TOKENS', 700),
+    temperature: envNumber('ZETRO_TEMPERATURE', 0.4),
+  },
   package: {
     version: envString('npm_package_version', '0.0.0'),
   },
