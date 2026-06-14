@@ -92,7 +92,7 @@ export function CompanyIndustryPage({ session }: { session: AuthSession }) {
             <AssignmentAutocomplete disabled={!selectedTenant} icon={Building2} label="Company" placeholder={companiesQuery.isFetching ? "Loading companies" : "Type company name"} value={companyId} onChange={setCompanyId} options={companies.map((company) => ({ label: company.name, meta: company.code, value: String(company.id) }))} />
             <AssignmentAutocomplete icon={Factory} label="Industry" placeholder={industriesQuery.isFetching ? "Loading industries" : "Type industry name"} value={industryId} onChange={setIndustryId} options={industries.map((industry) => ({ label: industry.name, meta: industry.code, value: String(industry.id) }))} />
           </div>
-          <div className="grid gap-3 rounded-md border border-border/70 bg-muted/20 p-4 sm:grid-cols-3">
+          <div className="grid gap-6 px-1 py-2 sm:grid-cols-3">
             <Summary label="Tenant" value={selectedTenant?.name ?? "Not selected"} />
             <Summary label="Company" value={selectedCompany?.name ?? "Not selected"} />
             <Summary label="Industry" value={selectedIndustry?.name ?? selectedCompany?.industryName ?? "Not selected"} />

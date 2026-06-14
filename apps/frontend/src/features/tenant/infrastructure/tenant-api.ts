@@ -175,6 +175,29 @@ export async function setupTenantClient(session: AuthSession, tenantId: number) 
   return result
 }
 
+export async function resetTenantDatabase(session: AuthSession, tenantId: number, confirmation: string) {
+  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/reset-database`, {
+    body: JSON.stringify({ confirmation }),
+    cache: "no-store",
+    headers: {
+      ...authHeaders(session),
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  })
+
+  if (!response.ok) {
+    throw new Error(`Tenant database reset request failed with status ${response.status}.`)
+  }
+
+  const result = (await response.json()) as TenantSetupResult
+  if (!result.ok) {
+    throw new Error(result.error ?? "Tenant database reset failed.")
+  }
+
+  return result
+}
+
 function toTenantRecord(record: TenantApiRecord): TenantRecord {
   return {
     id: record.id,

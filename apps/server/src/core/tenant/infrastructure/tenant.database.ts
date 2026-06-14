@@ -1,6 +1,10 @@
+import { createConnection } from 'mysql2/promise'
 import { sql } from 'kysely'
 import { nowIso, type PlatformDatabaseModule, type PlatformDatabase } from '../../../infrastructure/database/database-module.js'
 import { liveClientScopes, type LiveClientScope } from '../live-client-scope.js'
+import { dbConfig } from '../../../framework/config/index.js'
+
+const legacyCodexsunTenantName = ['CODEXSUN', 'Shared', 'Billing'].join(' ')
 
 export const tenantDatabaseModule: PlatformDatabaseModule = {
   name: 'tenant',
@@ -65,7 +69,7 @@ async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveCl
 
   const existing = await database
     .selectFrom('tenants')
-    .select('id')
+    .select(['id', 'slug', 'name', 'db_host', 'db_port', 'db_name', 'db_user', 'db_secret_ref'])
     .where((eb) => eb.or([
       eb('slug', '=', client.slug),
       eb('code', '=', client.code),
@@ -95,6 +99,17 @@ async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveCl
   }
 
   if (existing) {
+    if (await tenantDatabaseExists({
+      db_host: existing.db_host,
+      db_port: Number(existing.db_port),
+      db_name: existing.db_name,
+      db_user: existing.db_user,
+      db_secret_ref: existing.db_secret_ref,
+    })) {
+      await renameLegacyCodexsunTenant(database, existing)
+      return
+    }
+
     await database
       .updateTable('tenants')
       .set(row)
@@ -111,6 +126,51 @@ async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveCl
     .execute()
 }
 
+async function renameLegacyCodexsunTenant(
+  database: PlatformDatabase,
+  tenant: { id: number; slug: string; name: string },
+) {
+  if (tenant.slug !== 'codexsun' || tenant.name !== legacyCodexsunTenantName) {
+    return
+  }
+
+  await database
+    .updateTable('tenants')
+    .set({
+      name: 'CODEXSUN',
+      updated_at: nowIso(),
+    })
+    .where('id', '=', tenant.id)
+    .execute()
+}
+
+async function tenantDatabaseExists(tenant: {
+  db_host: string
+  db_port: number
+  db_name: string
+  db_user: string
+  db_secret_ref: string
+}): Promise<boolean> {
+  const connection = await createConnection({
+    host: tenant.db_host,
+    port: tenant.db_port,
+    user: tenant.db_user,
+    password: dbConfig.tenant.password(tenant.db_secret_ref),
+    multipleStatements: false,
+    connectTimeout: dbConfig.tenant.connectTimeoutMs,
+  })
+
+  try {
+    const [rows] = await connection.query(
+      'SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ? LIMIT 1',
+      [tenant.db_name],
+    )
+    return Array.isArray(rows) && rows.length > 0
+  } finally {
+    await connection.end()
+  }
+}
+
 async function seedTenantLoginIdentifiers(database: PlatformDatabase) {
   const tenants = await database
     .selectFrom('tenants')
@@ -123,6 +183,12 @@ async function seedTenantLoginIdentifiers(database: PlatformDatabase) {
     const isDefaultTenant = tenant.slug === 'codexsun'
     const corporateId = tenant.corporate_id?.trim() || (isDefaultTenant ? 'CODEXSUN' : tenant.slug.toUpperCase())
     const mobile = tenant.mobile?.trim() || (isDefaultTenant ? '9655227738' : null)
+    const corporateIdChanged = corporateId !== (tenant.corporate_id ?? null)
+    const mobileChanged = mobile !== (tenant.mobile ?? null)
+
+    if (!corporateIdChanged && !mobileChanged) {
+      continue
+    }
 
     await database
       .updateTable('tenants')

@@ -37,7 +37,7 @@ export interface TenantUpsertInput {
   db_name?: string | null
   db_user?: string | null
   db_secret_ref?: string | null
-  payload_settings?: string | null
+  payload_settings?: string | Record<string, unknown> | null
 }
 
 export interface TenantUpsertData {

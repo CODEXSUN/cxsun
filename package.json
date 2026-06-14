@@ -1,7 +1,7 @@
 {
   "name": "cxsun",
   "private": true,
-  "version": "1.0.101",
+  "version": "1.0.108",
   "type": "module",
   "workspaces": [
     "packages/*",

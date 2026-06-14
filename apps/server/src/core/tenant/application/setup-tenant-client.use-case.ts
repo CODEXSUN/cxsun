@@ -2,7 +2,7 @@ import { Injectable } from '../../decorators/injectable.js'
 import { Inject } from '../../decorators/inject.js'
 import { getDatabase } from '../../../infrastructure/database/connection.js'
 import { nowIso } from '../../../infrastructure/database/database-module.js'
-import { setupTenantClientDatabase, tenantDatabaseExists } from '../../../infrastructure/tenant-database/tenant-database.connection.js'
+import { dropTenantDatabase, setupTenantClientDatabase, tenantDatabaseExists } from '../../../infrastructure/tenant-database/tenant-database.connection.js'
 import { TenantRepository } from '../infrastructure/tenant.repository.js'
 
 @Injectable()
@@ -32,6 +32,21 @@ export class SetupTenantClientUseCase {
       return { ok: false, error: 'Tenant was not found.' }
     }
 
+    await ensureTenantPolicies(tenant.id)
+    return setupTenantClientDatabase(tenant)
+  }
+
+  async reset(id: number, confirmation: string) {
+    const tenant = await this.tenants.findActiveById(id)
+    if (!tenant) {
+      return { ok: false, error: 'Tenant was not found.' }
+    }
+
+    if (confirmation.trim().toLowerCase() !== tenant.slug) {
+      return { ok: false, error: `Type ${tenant.slug} to confirm tenant database reset.` }
+    }
+
+    await dropTenantDatabase(tenant)
     await ensureTenantPolicies(tenant.id)
     return setupTenantClientDatabase(tenant)
   }

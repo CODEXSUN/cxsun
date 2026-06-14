@@ -2,13 +2,81 @@
 
 ## Version State
 
-- **Current version:** `1.0.101`
-- **Release tag:** `v-1.0.101`
-- **Changelog label:** `v 1.0.101`
+- **Current version:** `1.0.108`
+- **Release tag:** `v-1.0.108`
+- **Changelog label:** `v 1.0.108`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
 ---
+
+## v-1.0.108
+
+### [v 1.0.108] 2026-06-14 10:43 am - tenant domain visual settings
+
+- Bumped workspace version to 1.0.108
+- Replaced the New/Edit Tenant Domain Settings JSON textarea with visual controls for landing mode, landing app, industry, and company routing.
+- Kept tenant-domain settings persisted as JSON behind the form so the existing backend contract remains unchanged.
+- Preserved existing settings keys while updating only the visual settings fields, including tenant live-scope company options.
+
+## v-1.0.107
+
+### [v 1.0.107] 2026-06-14 10:38 am - company industry details cleanup
+
+- Bumped workspace version to 1.0.107
+- Removed the nested rounded detail card from the Company Industry assignment section.
+- Kept the selected tenant, company, and industry summary as plain inline details inside the main assignment card.
+
+## v-1.0.106
+
+### [v 1.0.106] 2026-06-14 10:33 am - tenant show domains
+
+- Bumped workspace version to 1.0.106
+- Added a Tenant domains card to the tenant show page.
+- Loaded tenant-domain mappings in the tenant show view and filtered the list to domains belonging only to the selected tenant.
+- Displayed each mapped domain with label, primary/alias type, status badge, empty state, and refresh action.
+
+## v-1.0.105
+
+### [v 1.0.105] 2026-06-14 10:03 am - preserve seeded tenants on reinstall
+
+- Bumped workspace version to 1.0.105
+- Stopped live tenant seeding from overwriting existing tenant rows when the tenant database already exists during cloud reinstall.
+- Preserved manually edited CODEXSUN and Aaran Associates tenant records across `GIT_PULL_ON_START=true bash .container/setup-cloud.sh --reinstall`.
+- Added a narrow legacy rename so an existing CODEXSUN tenant with the old seed display name is corrected to `CODEXSUN`.
+- Changed fresh seed, public tenant copy, and install/reference docs to use `CODEXSUN`.
+- Avoided unnecessary tenant login identifier updates when corporate ID and mobile values are already set.
+
+## v-1.0.104
+
+### [v 1.0.104] 2026-06-14 9:52 am - tenant list column cleanup
+
+- Bumped workspace version to 1.0.104
+- Hid Code, Mobile, Slug, Concepts, and Updated columns from the tenant list default view.
+- Kept Corporate ID, Database, Companies, Active, Status, and Action visible for a cleaner tenant overview.
+- Reduced the tenant table minimum width for the slimmer default column set.
+- Forced tenant names to stay on one row with truncation and title tooltip for long names.
+
+## v-1.0.103
+
+### [v 1.0.103] 2026-06-14 9:10 am - tenant settings app toggles
+
+- Bumped workspace version to 1.0.103
+- Replaced the tenant edit Settings tab raw payload JSON field with visual app access toggles.
+- Preserved existing tenant payload settings while updating the `apps.enabled` list from toggle state.
+- Changed tenant update requests to send structured payload settings so the backend normalizes and saves JSON.
+- Added backend payload normalization for both JSON strings and object payloads.
+
+## v-1.0.102
+
+### [v 1.0.102] 2026-06-14 9:06 am - tenant database reset
+
+- Bumped workspace version to 1.0.102
+- Added a super-admin tenant show-page database reset action below the Lifecycle card.
+- Added a confirmation popup that requires typing the tenant slug before reset can run.
+- Added a protected tenant reset API that only allows super-admin tokens.
+- Added backend reset flow to close the cached tenant connection, drop the tenant database, recreate it, run migrations, and seed default tenant records.
+- Wired reset success to refresh tenant list and setup-status queries after completion.
 
 ## v-1.0.101
 

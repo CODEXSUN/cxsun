@@ -14,7 +14,7 @@ export class TenantAggregate {
     const dbPort = Number(input.db_port ?? dbConfig.tenant.defaults.port)
     const dbUser = input.db_user?.trim() || dbConfig.tenant.defaults.user
     const dbSecretRef = input.db_secret_ref?.trim() || dbConfig.tenant.defaults.secretRef
-    const payloadSettings = input.payload_settings?.trim() || '{}'
+    const payloadSettings = normalizePayloadSettings(input.payload_settings)
 
     if (!Number.isInteger(code) || code < 100) {
       throw new TenantValidationError('Tenant code must be an integer starting from 100.')
@@ -104,6 +104,16 @@ function normalizeMobile(value: string) {
 function normalizeTenantDatabaseName(value: string) {
   const normalized = normalizeTenantSlug(value).replace(/_db$/, '')
   return normalized ? `${normalized}_db` : ''
+}
+
+function normalizePayloadSettings(value: TenantUpsertInput['payload_settings']) {
+  if (!value) return '{}'
+
+  if (typeof value === 'string') {
+    return value.trim() || '{}'
+  }
+
+  return JSON.stringify(value)
 }
 
 function isJsonObject(value: string) {

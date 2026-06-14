@@ -29,6 +29,9 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { dashboardApps } from "src/components/blocks/dashboard/dashboard-apps"
+import { listIndustries, type IndustryRecord } from "src/features/industry/industry-client"
+import type { TenantRecord } from "src/features/tenant/domain/tenant"
 import { listTenants } from "src/features/tenant/infrastructure/tenant-api"
 import { cn } from "src/lib/utils"
 import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
@@ -573,9 +576,13 @@ function TenantDomainUpsertPage({
 }) {
   const queryClient = useQueryClient()
   const tenantsQuery = useQuery({ queryKey: ["tenants", session.selectedTenant.slug], queryFn: () => listTenants(session) })
+  const industriesQuery = useQuery({ queryKey: ["industries", "tenant-domain-settings", session.selectedTenant.slug], queryFn: () => listIndustries(session) })
   const upsertMutation = useMutation({ mutationFn: (input: TenantDomainForm) => upsertDomain(session, input) })
   const tenants = tenantsQuery.data ?? []
+  const industries = (industriesQuery.data ?? []).filter((industry) => industry.status === "active")
   const [form, setForm] = useState<TenantDomainForm>(() => domain ? toForm(domain) : emptyForm(tenants[0]?.id))
+  const selectedTenant = tenants.find((tenant) => tenant.id === form.tenant_id) ?? null
+  const companyOptions = useMemo(() => tenantCompanyOptions(selectedTenant), [selectedTenant])
 
   useEffect(() => {
     setForm(domain ? toForm(domain) : emptyForm(tenants[0]?.id))
@@ -634,7 +641,7 @@ function TenantDomainUpsertPage({
               <select
                 className="h-11 rounded-xl border border-border/70 bg-background px-3 text-sm"
                 value={form.tenant_id || ""}
-                onChange={(event) => setFormField(setForm, "tenant_id", Number(event.target.value))}
+                onChange={(event) => setDomainTenant(setForm, Number(event.target.value), tenants)}
               >
                 <option value="" disabled>Select tenant</option>
                 {tenants.map((tenant) => (
@@ -669,13 +676,13 @@ function TenantDomainUpsertPage({
             </span>
             <Switch checked={form.is_primary} onCheckedChange={(checked) => setFormField(setForm, "is_primary", checked)} />
           </label>
-          <Field label="Settings JSON">
-            <textarea
-              className="min-h-36 rounded-xl border border-border/70 bg-background p-3 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={form.settings}
-              onChange={(event) => setFormField(setForm, "settings", event.target.value)}
-            />
-          </Field>
+          <DomainSettingsControls
+            companies={companyOptions}
+            industries={industries}
+            isLoadingIndustries={industriesQuery.isFetching}
+            settings={form.settings}
+            onChange={(updater) => setDomainSettings(setForm, updater)}
+          />
           <div className="flex flex-wrap justify-between gap-2">
             <p className="text-xs text-muted-foreground">
               Existing domains in master list: {domains.length}
@@ -698,6 +705,98 @@ function TenantDomainUpsertPage({
   )
 }
 
+type DomainSettingsState = {
+  landingApp: string
+  landingMode: string
+  industry: string
+  companies: string[]
+}
+
+function DomainSettingsControls({
+  companies,
+  industries,
+  isLoadingIndustries,
+  settings,
+  onChange,
+}: {
+  companies: string[]
+  industries: IndustryRecord[]
+  isLoadingIndustries: boolean
+  settings: string
+  onChange(updater: (current: DomainSettingsState) => DomainSettingsState): void
+}) {
+  const state = domainSettingsState(settings)
+
+  return (
+    <div className="grid gap-4 border-t border-border/70 pt-5">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Field label="Landing mode">
+          <select
+            className="h-11 rounded-xl border border-border/70 bg-background px-3 text-sm"
+            value={state.landingMode}
+            onChange={(event) => onChange((current) => ({ ...current, landingMode: event.target.value }))}
+          >
+            <option value="tenant">Tenant</option>
+            <option value="site">Site</option>
+            <option value="app">App</option>
+          </select>
+        </Field>
+        <Field label="Landing app">
+          <select
+            className="h-11 rounded-xl border border-border/70 bg-background px-3 text-sm"
+            value={state.landingApp}
+            onChange={(event) => onChange((current) => ({ ...current, landingApp: event.target.value }))}
+          >
+            {dashboardApps.map((app) => (
+              <option key={app.id} value={app.id}>{app.name}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Industry">
+          <select
+            className="h-11 rounded-xl border border-border/70 bg-background px-3 text-sm"
+            value={state.industry}
+            onChange={(event) => onChange((current) => ({ ...current, industry: event.target.value }))}
+          >
+            <option value="">{isLoadingIndustries ? "Loading industries" : "Select industry"}</option>
+            {industries.map((industry) => (
+              <option key={industry.id} value={industry.code}>{industry.name}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <div className="grid gap-2">
+        <Label className="text-sm font-medium">Companies</Label>
+        {companies.length ? (
+          <div className="grid gap-2 md:grid-cols-2">
+            {companies.map((company) => {
+              const checked = state.companies.includes(company)
+              return (
+                <label key={company} className={cn("flex cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2", checked ? "border-primary/30 bg-primary/5" : "border-border/70")}>
+                  <span className="min-w-0 truncate text-sm font-medium">{company}</span>
+                  <Switch
+                    checked={checked}
+                    onCheckedChange={(nextChecked) => onChange((current) => ({
+                      ...current,
+                      companies: nextChecked
+                        ? uniqueStrings([...current.companies, company])
+                        : current.companies.filter((item) => item !== company),
+                    }))}
+                  />
+                </label>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="rounded-md border border-dashed border-border/70 px-3 py-3 text-sm text-muted-foreground">
+            Select a tenant with live scope companies to map company routing.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function BackButton({ onBack }: { onBack(): void }) {
   return (
     <Button onClick={onBack} type="button" variant="outline" className="h-9 rounded-md">
@@ -714,7 +813,7 @@ function emptyForm(tenantId = 0): TenantDomainForm {
     label: "",
     is_primary: false,
     status: "active",
-    settings: JSON.stringify({ landing: { mode: "tenant" } }, null, 2),
+    settings: JSON.stringify({ landing: { mode: "tenant", app: "billing" }, companies: [] }, null, 2),
   }
 }
 
@@ -835,6 +934,97 @@ function isJsonObject(value: string) {
   } catch {
     return false
   }
+}
+
+function domainSettingsState(value: string): DomainSettingsState {
+  const settings = parseJsonRecord(value)
+  const landing = isRecord(settings.landing) ? settings.landing : {}
+  const landingMode = typeof landing.mode === "string" && landing.mode.trim() ? landing.mode : "tenant"
+  const landingApp = typeof landing.app === "string" && landing.app.trim() ? landing.app : "billing"
+  const industry = typeof settings.industry === "string" ? settings.industry : ""
+  const companies = Array.isArray(settings.companies) ? settings.companies.map(String).map((company) => company.trim()).filter(Boolean) : []
+
+  return {
+    landingApp,
+    landingMode,
+    industry,
+    companies: uniqueStrings(companies),
+  }
+}
+
+function setDomainSettings(
+  setForm: Dispatch<SetStateAction<TenantDomainForm>>,
+  updater: (current: DomainSettingsState) => DomainSettingsState,
+) {
+  setForm((current) => {
+    const settings = parseJsonRecord(current.settings)
+    const landing = isRecord(settings.landing) ? settings.landing : {}
+    const nextState = updater(domainSettingsState(current.settings))
+
+    return {
+      ...current,
+      settings: JSON.stringify({
+        ...settings,
+        landing: {
+          ...landing,
+          mode: nextState.landingMode,
+          app: nextState.landingApp,
+        },
+        industry: nextState.industry || undefined,
+        companies: uniqueStrings(nextState.companies),
+      }, null, 2),
+    }
+  })
+}
+
+function setDomainTenant(
+  setForm: Dispatch<SetStateAction<TenantDomainForm>>,
+  tenantId: number,
+  tenants: TenantRecord[],
+) {
+  const tenant = tenants.find((record) => record.id === tenantId) ?? null
+  const companies = tenantCompanyOptions(tenant)
+
+  setForm((current) => {
+    const state = domainSettingsState(current.settings)
+    const nextCompanies = state.companies.length
+      ? state.companies.filter((company) => companies.includes(company))
+      : companies
+
+    return {
+      ...current,
+      tenant_id: tenantId,
+      settings: JSON.stringify({
+        ...parseJsonRecord(current.settings),
+        companies: nextCompanies,
+      }, null, 2),
+    }
+  })
+}
+
+function tenantCompanyOptions(tenant: TenantRecord | null) {
+  if (!tenant) return []
+  const settings = parseJsonRecord(tenant.payloadSettings)
+  const liveScope = isRecord(settings.liveScope) ? settings.liveScope : {}
+  const companies = Array.isArray(liveScope.companies) ? liveScope.companies : []
+  return uniqueStrings(companies.map(String).map((company) => company.trim()).filter(Boolean))
+}
+
+function parseJsonRecord(value: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value || "{}") as unknown
+    return isRecord(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value))
+}
+
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))]
 }
 
 function setFormField<K extends keyof TenantDomainForm>(

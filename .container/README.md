@@ -94,7 +94,7 @@ First startup will:
 - Wait for Redis to answer `PONG` before starting the app
 - Run `npm ci` or `npm install`
 - Run ordered database setup with master migrate, master seed, and active tenant provisioning
-- Seed only the first live install tenants: CODEXSUN Shared Billing and Aaran Associates
+- Seed only the first live install tenants: CODEXSUN and Aaran Associates
 - Skip install-time tenant tests by default; set `INSTALL_RUN_TESTS=true` to run them during container startup
 - Remove previous build output before building
 - Run `npm run build:active`

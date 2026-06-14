@@ -41,7 +41,7 @@ export interface TenantUpsertInput {
   db_name?: string | null
   db_user?: string | null
   db_secret_ref?: string | null
-  payload_settings?: string | null
+  payload_settings?: string | Record<string, unknown> | null
 }
 
 export interface TenantFormState {
@@ -87,15 +87,15 @@ export const tenantColumnCatalog = [
 
 export const defaultTenantColumnVisibility: Record<TenantColumnId, boolean> = {
   name: true,
-  code: true,
+  code: false,
   corporateId: true,
-  mobile: true,
-  slug: true,
+  mobile: false,
+  slug: false,
   database: true,
   companies: true,
   activeCompanies: true,
-  concepts: true,
-  updated: true,
+  concepts: false,
+  updated: false,
   status: true,
 }
 

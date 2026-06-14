@@ -8,7 +8,7 @@ import type {
 } from "../domain/tenant"
 import { tenantColumnCatalog } from "../domain/tenant"
 export { listTenants, upsertTenant } from "../infrastructure/tenant-api"
-export { getTenantSetupStatus, restoreTenant, setupTenantClient, softDeleteTenant } from "../infrastructure/tenant-api"
+export { getTenantSetupStatus, resetTenantDatabase, restoreTenant, setupTenantClient, softDeleteTenant } from "../infrastructure/tenant-api"
 
 export function toTenantForm(tenant: TenantRecord): TenantFormState {
   return {
@@ -44,7 +44,16 @@ export function toTenantUpsertInput(form: TenantFormState): TenantUpsertInput {
     db_name: form.dbName.trim(),
     db_user: form.dbUser.trim(),
     db_secret_ref: form.dbSecretRef.trim(),
-    payload_settings: form.payloadSettings.trim() || "{}",
+    payload_settings: parsePayloadSettings(form.payloadSettings),
+  }
+}
+
+function parsePayloadSettings(value: string): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value || "{}")
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : {}
+  } catch {
+    return {}
   }
 }
 

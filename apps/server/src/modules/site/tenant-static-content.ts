@@ -168,10 +168,10 @@ const stablePublishedDate = '2026-05-26'
 
 const tenantHomeProfiles: Record<string, TenantHomeProfile> = {
   codexsun: {
-    eyebrow: 'CODEXSUN Shared Billing',
-    title: 'CODEXSUN Shared Billing and business workspace',
-    summary: 'A shared billing tenant for Codexsun operations, customer accounts, invoices, receipts, mail, and public support entry points.',
-    body: 'This domain is the Codexsun operating tenant. It keeps shared billing, mail, account follow-up, and future client migration support under one strict tenant boundary.',
+    eyebrow: 'CODEXSUN',
+    title: 'CODEXSUN business workspace',
+    summary: 'A CODEXSUN tenant for operations, customer accounts, invoices, receipts, mail, and public support entry points.',
+    body: 'This domain is the Codexsun operating tenant. It keeps billing, mail, account follow-up, and future client migration support under one strict tenant boundary.',
   },
   aaran_associates: {
     eyebrow: 'Aaran Associates',
@@ -216,13 +216,13 @@ const industryProfiles: Record<string, IndustryProfile> = {
     post: 'Auditor-office public pages are connected to the tenant boundary and ready for client service workflows.',
   },
   shared_billing: {
-    eyebrow: 'Billing Platform',
+    eyebrow: 'CODEXSUN Platform',
     homeTitle: 'billing workspace',
     summary: () => 'Billing, receipts, statements, and customer account entry points are available from this tenant domain.',
-    body: 'This tenant is the CODEXSUN billing workspace for shared billing operations and future subdomain migration.',
+    body: 'This tenant is the CODEXSUN billing workspace for operations and future subdomain migration.',
     about: 'The billing workspace keeps invoicing, receipts, payments, and customer balances in a domain-bound tenant.',
     contact: 'Use this page for billing support, invoice questions, and account follow-up.',
-    post: 'Shared billing pages are connected with strict tenant resolution.',
+    post: 'CODEXSUN billing pages are connected with strict tenant resolution.',
   },
   offset_printing: {
     eyebrow: 'Offset Printing',

@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { ArrowLeft, CheckCircle2, Database, Eye, Loader2, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Database, Eye, Globe2, Loader2, MoreHorizontal, Pencil, Plus, RefreshCw, RotateCcw, Save, Trash2, X } from "lucide-react"
 import { AnimatedTabs } from "src/components/ui/animated-tabs"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "src/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "src/components/ui/dropdown-menu"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
@@ -23,7 +31,7 @@ import {
 } from "src/components/blocks/lists/master-list"
 import { dashboardApps, type DashboardAppId } from "src/components/blocks/dashboard/dashboard-apps"
 import { cn } from "src/lib/utils"
-import type { AuthSession } from "src/features/auth/auth-client"
+import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import {
   buildTenantColumnOptions,
   compareTenantRecords,
@@ -31,6 +39,7 @@ import {
   formatTenantDate,
   getTenantSetupStatus,
   listTenants,
+  resetTenantDatabase,
   restoreTenant,
   setupTenantClient,
   softDeleteTenant,
@@ -51,6 +60,32 @@ import {
 type TenantSortDirection = "asc" | "desc"
 type TenantUpsertState = { tenant: TenantRecord | null; returnTo: "list" | "show" }
 type TenantTab = "identity" | "database" | "settings"
+type TenantDomainStatus = "active" | "not_active" | "suspend"
+
+interface TenantDomainRecord {
+  id: number
+  tenant_id: number
+  tenant_slug: string
+  tenant_name: string
+  domain: string
+  label: string
+  is_primary: number
+  status: TenantDomainStatus
+  updated_at: string
+}
+
+async function listTenantDomains(session: AuthSession) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Tenant domain list failed with status ${response.status}.`)
+  }
+
+  return (await response.json()) as TenantDomainRecord[]
+}
 
 export function TenantListPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
@@ -200,11 +235,11 @@ export function TenantListPage({ session }: { session: AuthSession }) {
       />
       <MasterListTableCard>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] border-collapse text-sm">
+          <table className="w-full min-w-[760px] border-collapse text-sm">
             <thead className="bg-muted/50">
               <tr>
                 <ListHeader>#</ListHeader>
-                {visibleColumns.name ? <SortableHeader label="Tenant" column="name" sortState={sortState} onSort={toggleSort} /> : null}
+                {visibleColumns.name ? <SortableHeader className="min-w-56 whitespace-nowrap" label="Tenant" column="name" sortState={sortState} onSort={toggleSort} /> : null}
                 {visibleColumns.code ? <SortableHeader label="Code" column="code" sortState={sortState} onSort={toggleSort} /> : null}
                 {visibleColumns.corporateId ? <SortableHeader label="Corporate ID" column="corporateId" sortState={sortState} onSort={toggleSort} /> : null}
                 {visibleColumns.mobile ? <SortableHeader label="Mobile" column="mobile" sortState={sortState} onSort={toggleSort} /> : null}
@@ -223,8 +258,8 @@ export function TenantListPage({ session }: { session: AuthSession }) {
                 <tr key={tenant.id} className={cn("border-b border-border/70", tenant.deletedAt && "bg-muted/20 text-muted-foreground")}>
                   <td className="px-4 py-2 text-muted-foreground">{(currentPage - 1) * rowsPerPage + index + 1}</td>
                   {visibleColumns.name ? (
-                    <td className="px-4 py-2">
-                      <button className="cursor-pointer font-medium hover:underline" type="button" onClick={() => setSelectedTenant(tenant)}>
+                    <td className="max-w-80 px-4 py-2">
+                      <button className="block max-w-full cursor-pointer truncate whitespace-nowrap font-medium hover:underline" title={tenant.name} type="button" onClick={() => setSelectedTenant(tenant)}>
                         {tenant.name}
                       </button>
                     </td>
@@ -298,18 +333,36 @@ function TenantShowPage({
   const queryClient = useQueryClient()
   const [showTab, setShowTab] = useState("details")
   const [enabledAppDraft, setEnabledAppDraft] = useState<Record<DashboardAppId, boolean>>(() => tenantEnabledAppMap(tenant))
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
+  const [resetConfirmation, setResetConfirmation] = useState("")
   const setupStatusQuery = useQuery({
     queryKey: ["tenant-setup-status", tenant.id],
     queryFn: ({ signal }) => getTenantSetupStatus(session, tenant.id, { signal }),
   })
+  const domainsQuery = useQuery({
+    queryKey: ["tenant-domains", session.selectedTenant.slug, "tenant-show", tenant.id],
+    queryFn: () => listTenantDomains(session),
+  })
   const setupMutation = useMutation({ mutationFn: () => setupTenantClient(session, tenant.id) })
+  const resetMutation = useMutation({ mutationFn: () => resetTenantDatabase(session, tenant.id, resetConfirmation) })
   const appsMutation = useMutation({ mutationFn: (enabledApps: Record<DashboardAppId, boolean>) => upsertTenant(session, toTenantFeatureInput(tenant, enabledApps)) })
   const setupStatus = setupStatusQuery.data
   const canSetupClient = setupStatus ? !setupStatus.databaseExists || !setupStatus.hasDefaultCompany : tenant.activeCompanyCount === 0
+  const canConfirmReset = resetConfirmation.trim().toLowerCase() === tenant.slug
+  const tenantDomains = useMemo(
+    () => (domainsQuery.data ?? []).filter((domain) => domain.tenant_id === tenant.id),
+    [domainsQuery.data, tenant.id],
+  )
 
   useEffect(() => {
     setEnabledAppDraft(tenantEnabledAppMap(tenant))
   }, [tenant])
+
+  useEffect(() => {
+    if (!resetDialogOpen) {
+      setResetConfirmation("")
+    }
+  }, [resetDialogOpen])
 
   async function setupClient() {
     try {
@@ -346,22 +399,41 @@ function TenantShowPage({
     }
   }
 
+  async function resetDatabase() {
+    try {
+      const result = await resetMutation.mutateAsync()
+      toast.success("Tenant database reset completed", {
+        description: `${result.database ?? tenant.dbName} was recreated, migrated, and seeded.`,
+      })
+      setResetDialogOpen(false)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tenants"] }),
+        queryClient.invalidateQueries({ queryKey: ["tenant-setup-status", tenant.id] }),
+      ])
+    } catch (error) {
+      toast.error("Tenant database reset failed", {
+        description: error instanceof Error ? error.message : "Unable to reset tenant database.",
+      })
+    }
+  }
+
   return (
-    <MasterListPageFrame
-      title={`${tenant.code} - ${tenant.name}`}
-      description="Tenant identity, database binding, and lifecycle details."
-      technicalName="page.tenant.show"
-      action={
-        <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={onBack} type="button" variant="outline" className="h-9 rounded-md"><ArrowLeft className="size-4" />Back</Button>
-          <Button onClick={onEdit} type="button" className="h-9 rounded-md"><Pencil className="size-4" />Edit</Button>
-        </div>
-      }
-    >
-      <AnimatedTabs
-        value={showTab}
-        onValueChange={setShowTab}
-        tabs={[
+    <>
+      <MasterListPageFrame
+        title={`${tenant.code} - ${tenant.name}`}
+        description="Tenant identity, database binding, and lifecycle details."
+        technicalName="page.tenant.show"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button onClick={onBack} type="button" variant="outline" className="h-9 rounded-md"><ArrowLeft className="size-4" />Back</Button>
+            <Button onClick={onEdit} type="button" className="h-9 rounded-md"><Pencil className="size-4" />Edit</Button>
+          </div>
+        }
+      >
+        <AnimatedTabs
+          value={showTab}
+          onValueChange={setShowTab}
+          tabs={[
           {
             value: "details",
             label: "Details",
@@ -438,6 +510,13 @@ function TenantShowPage({
                       ]}
                     />
                   </TenantShowCard>
+                  <TenantShowCard title="Tenant domains">
+                    <TenantDomainMiniList
+                      domains={tenantDomains}
+                      isLoading={domainsQuery.isFetching}
+                      onRefresh={() => void domainsQuery.refetch()}
+                    />
+                  </TenantShowCard>
                   <TenantShowCard title="Timestamps">
                     <DetailTable
                       rows={[
@@ -462,6 +541,26 @@ function TenantShowPage({
                       )}
                     </div>
                   </TenantShowCard>
+                  <TenantShowCard title="Database reset">
+                    <div className="space-y-4 p-4">
+                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                        <div className="text-sm font-medium text-destructive">Drop and recreate tenant database</div>
+                        <div className="mt-1 text-xs leading-5 text-muted-foreground">
+                          This removes all tenant data in {tenant.dbName}, recreates the database, runs migrations, and seeds default records.
+                        </div>
+                      </div>
+                      <Button
+                        className="h-9 rounded-md"
+                        disabled={resetMutation.isPending}
+                        onClick={() => setResetDialogOpen(true)}
+                        type="button"
+                        variant="destructive"
+                      >
+                        {resetMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                        Reset database
+                      </Button>
+                    </div>
+                  </TenantShowCard>
                 </div>
               </MasterListShowLayout>
             ),
@@ -478,9 +577,49 @@ function TenantShowPage({
               />
             ),
           },
-        ]}
-      />
-    </MasterListPageFrame>
+          ]}
+        />
+      </MasterListPageFrame>
+      <Dialog open={resetDialogOpen} onOpenChange={(open) => !resetMutation.isPending && setResetDialogOpen(open)}>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset tenant database</DialogTitle>
+            <DialogDescription>
+              This will drop {tenant.dbName}, recreate it, migrate tables, and seed default records for {tenant.name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              Existing tenant transactions, masters, users, files metadata, and settings stored in this database will be removed.
+            </div>
+            <FieldShell label={`Type ${tenant.slug} to confirm`}>
+              <Input
+                autoComplete="off"
+                className="h-11 rounded-xl font-mono"
+                disabled={resetMutation.isPending}
+                value={resetConfirmation}
+                onChange={(event) => setResetConfirmation(event.target.value)}
+              />
+            </FieldShell>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button className="rounded-md" disabled={resetMutation.isPending} onClick={() => setResetDialogOpen(false)} type="button" variant="outline">
+              Cancel
+            </Button>
+            <Button
+              className="rounded-md"
+              disabled={!canConfirmReset || resetMutation.isPending}
+              onClick={() => void resetDatabase()}
+              type="button"
+              variant="destructive"
+            >
+              {resetMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+              Reset database
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
@@ -506,11 +645,6 @@ function TenantUpsertPage({
   async function submit() {
     if (!form.name.trim()) {
       toast.error("Tenant name is required")
-      return
-    }
-
-    if (!isValidJsonObject(form.payloadSettings)) {
-      toast.error("Payload settings must be a JSON object")
       return
     }
 
@@ -622,6 +756,64 @@ function TenantAppsTab({
   )
 }
 
+function TenantDomainMiniList({
+  domains,
+  isLoading,
+  onRefresh,
+}: {
+  domains: TenantDomainRecord[]
+  isLoading: boolean
+  onRefresh(): void
+}) {
+  return (
+    <div className="space-y-3 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          {isLoading ? "Loading domains..." : `${domains.length} domain${domains.length === 1 ? "" : "s"}`}
+        </div>
+        <Button className="h-8 rounded-md" disabled={isLoading} onClick={onRefresh} type="button" variant="outline">
+          <RefreshCw className={cn("size-3.5", isLoading && "animate-spin")} />
+          Refresh
+        </Button>
+      </div>
+      {domains.length === 0 ? (
+        <div className="rounded-md border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+          {isLoading ? "Checking mapped domains." : "No domains are mapped to this tenant."}
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-md border border-border/70">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-muted/40">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">Domain</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">Type</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-muted-foreground">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {domains.map((domain) => (
+                <tr className="border-t border-border/60" key={domain.id}>
+                  <td className="min-w-0 px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Globe2 className="size-4 shrink-0 text-primary" />
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-xs font-medium" title={domain.domain}>{domain.domain}</div>
+                        <div className="truncate text-xs text-muted-foreground" title={domain.label}>{domain.label}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-xs">{domain.is_primary ? "Primary" : "Alias"}</td>
+                  <td className="px-3 py-2"><DomainStatusBadge status={domain.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function buildTenantTabs({
   form,
   isEdit,
@@ -686,7 +878,10 @@ function buildTenantTabs({
       label: "Settings",
       content: (
         <div className="space-y-6 rounded-2xl border border-border/70 bg-card/80 p-4 shadow-sm md:p-6">
-          <TextField label="Payload settings JSON" value={form.payloadSettings} onChange={(value) => setField(setForm, "payloadSettings", value)} />
+          <TenantSettingsTab
+            enabledApps={tenantFormEnabledAppMap(form)}
+            onToggle={(appId, enabled) => setTenantPayloadApp(setForm, appId, enabled)}
+          />
           <TenantStepActions
             isSaving={isSaving}
             onBack={onBack}
@@ -697,6 +892,60 @@ function buildTenantTabs({
       ),
     },
   ] as const
+}
+
+function TenantSettingsTab({
+  enabledApps,
+  onToggle,
+}: {
+  enabledApps: Record<DashboardAppId, boolean>
+  onToggle(appId: DashboardAppId, enabled: boolean): void
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border/70 bg-card/95 p-4">
+        <div>
+          <h2 className="text-base font-semibold">Tenant app access</h2>
+          <p className="text-sm text-muted-foreground">Choose the app areas available to this tenant workspace.</p>
+        </div>
+        <Badge variant="outline" className="h-7 rounded-md">
+          {Object.values(enabledApps).filter(Boolean).length} enabled
+        </Badge>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {dashboardApps.map((app) => {
+          const AppIcon = app.icon
+          const enabled = enabledApps[app.id]
+          const isCore = app.id === "application"
+
+          return (
+            <label
+              key={app.id}
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-colors",
+                enabled ? "border-primary/30 bg-primary/5" : "border-border/70 bg-card",
+                isCore && "cursor-not-allowed",
+              )}
+            >
+              <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-md", app.accent)}>
+                <AppIcon className="size-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">{app.name}</span>
+                  <span className={cn("rounded-full px-2 py-0.5 text-[11px]", enabled ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
+                    {enabled ? "Enabled" : "Disabled"}
+                  </span>
+                </span>
+                <span className="mt-1 block text-sm leading-6 text-muted-foreground">{app.description}</span>
+              </span>
+              <Switch checked={enabled} disabled={isCore} onCheckedChange={(checked) => onToggle(app.id, checked)} />
+            </label>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 function TenantStepActions({
@@ -758,8 +1007,8 @@ function TenantActions({ tenant, onDestroy, onEdit, onRestore, onView }: {
   )
 }
 
-function SortableHeader({ column, label, onSort, sortState }: { column: TenantColumnId; label: string; onSort(column: TenantColumnId): void; sortState: { key: TenantColumnId; direction: TenantSortDirection } }) {
-  return <ListHeader><button type="button" className="inline-flex cursor-pointer items-center gap-2" onClick={() => onSort(column)}>{label}<span className="text-muted-foreground">{sortState.key === column ? (sortState.direction === "asc" ? "↑" : "↓") : "↕"}</span></button></ListHeader>
+function SortableHeader({ className, column, label, onSort, sortState }: { className?: string; column: TenantColumnId; label: string; onSort(column: TenantColumnId): void; sortState: { key: TenantColumnId; direction: TenantSortDirection } }) {
+  return <ListHeader className={className}><button type="button" className="inline-flex cursor-pointer items-center gap-2 whitespace-nowrap" onClick={() => onSort(column)}>{label}<span className="text-muted-foreground">{sortState.key === column ? (sortState.direction === "asc" ? "↑" : "↓") : "↕"}</span></button></ListHeader>
 }
 
 function ListHeader({ children, className }: { children: ReactNode; className?: string }) {
@@ -780,6 +1029,23 @@ function StatusBadge({ status }: { status: TenantRecord["status"] }) {
       )}
     >
       {active ? <CheckCircle2 className="size-3" /> : null}
+      {status.replace("_", " ")}
+    </Badge>
+  )
+}
+
+function DomainStatusBadge({ status }: { status: TenantDomainStatus }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-6 w-fit gap-1 rounded-md px-2 text-[11px]",
+        status === "active" && "border-emerald-200 bg-emerald-50 text-emerald-700",
+        status === "suspend" && "border-amber-200 bg-amber-50 text-amber-700",
+        status === "not_active" && "border-slate-200 bg-slate-50 text-slate-600",
+      )}
+    >
+      {status === "active" ? <CheckCircle2 className="size-3" /> : null}
       {status.replace("_", " ")}
     </Badge>
   )
@@ -975,15 +1241,6 @@ function formatJsonText(value: string) {
   }
 }
 
-function isValidJsonObject(value: string) {
-  try {
-    const parsed = JSON.parse(value)
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-  } catch {
-    return false
-  }
-}
-
 function tenantEnabledAppMap(tenant: TenantRecord): Record<DashboardAppId, boolean> {
   const settings = parseTenantPayloadSettings(tenant.payloadSettings)
   const enabledIds = Array.isArray(settings.apps?.enabled)
@@ -991,6 +1248,44 @@ function tenantEnabledAppMap(tenant: TenantRecord): Record<DashboardAppId, boole
     : dashboardApps.filter((app) => app.status !== "disabled").map((app) => app.id)
 
   return Object.fromEntries(dashboardApps.map((app) => [app.id, app.id === "application" || enabledIds.includes(app.id)])) as Record<DashboardAppId, boolean>
+}
+
+function tenantFormEnabledAppMap(form: TenantFormState): Record<DashboardAppId, boolean> {
+  const settings = parseTenantPayloadSettings(form.payloadSettings)
+  const enabledIds = Array.isArray(settings.apps?.enabled)
+    ? settings.apps.enabled.filter(isDashboardAppId)
+    : dashboardApps.filter((app) => app.status !== "disabled").map((app) => app.id)
+
+  return Object.fromEntries(dashboardApps.map((app) => [app.id, app.id === "application" || enabledIds.includes(app.id)])) as Record<DashboardAppId, boolean>
+}
+
+function setTenantPayloadApp(
+  setForm: Dispatch<SetStateAction<TenantFormState>>,
+  appId: DashboardAppId,
+  enabled: boolean,
+) {
+  if (appId === "application") return
+
+  setForm((current) => {
+    const settings = parseTenantPayloadSettings(current.payloadSettings)
+    const enabledApps = tenantFormEnabledAppMap(current)
+    enabledApps[appId] = enabled
+    const enabledIds = dashboardApps
+      .filter((app) => app.id !== "application" && enabledApps[app.id])
+      .map((app) => app.id)
+
+    return {
+      ...current,
+      payloadSettings: JSON.stringify({
+        ...settings,
+        apps: {
+          ...(settings.apps ?? {}),
+          enabled: enabledIds,
+          updatedAt: new Date().toISOString(),
+        },
+      }, null, 2),
+    }
+  })
 }
 
 function toTenantFeatureInput(tenant: TenantRecord, enabledApps: Record<DashboardAppId, boolean>): TenantUpsertInput {

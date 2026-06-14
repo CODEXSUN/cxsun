@@ -47,6 +47,10 @@ export class TenantService {
     return this.setupTenantClient.execute(id)
   }
 
+  resetDatabase(id: number, confirmation: string) {
+    return this.setupTenantClient.reset(id, confirmation)
+  }
+
   context(tenantCode?: string | string[], host?: string | string[]) {
     return this.resolveTenantContext.execute(tenantCode, host)
   }

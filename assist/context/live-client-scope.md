@@ -4,7 +4,7 @@ Updated: 2026-05-26
 
 This is the first real client map for CXSun. Each row is a tenant scope unless noted. Tenant databases can hold multiple companies, so Sathasivam stays one tenant with Sukraa Garments and Mathan Knitters as companies.
 
-For clean cloud installation, `db:seed` creates only CODEXSUN Shared Billing and Aaran Associates. All other planned clients stay in this reference list and should be created manually through Super Admin when each tenant is ready to onboard.
+For clean cloud installation, `db:seed` creates only CODEXSUN and Aaran Associates. All other planned clients stay in this reference list and should be created manually through Super Admin when each tenant is ready to onboard.
 
 ## Domain Strategy
 
@@ -34,7 +34,7 @@ npm run hosts:check
 | Code | Tenant | Domains | Industry | Apps / Scope |
 |---:|---|---|---|---|
 | 100 | Aaran Associates | `office.aaran.org`, `aaran.org`, `www.aaran.org`, `aaran.codexsun.com`, `office.codexsun.com`, `aaran.local` | Auditor office / software back office | Auditor, task manager, CRM, billing, mail |
-| 101 | CODEXSUN Shared Billing | `codexsun.com`, `www.codexsun.com`, `codexsun.local` | Shared billing platform | Billing and mail for shared-domain clients |
+| 101 | CODEXSUN | `codexsun.com`, `www.codexsun.com`, `codexsun.local` | CODEXSUN platform | Billing and mail for CODEXSUN clients |
 | 102 | Sri Ganapathi Printing Press | `sriganapathi.codexsun.com`, `ganapathi.local` | Offset printing | Simple billing + accounts |
 | 103 | Cotton Knits Fashion | `cotton.codexsun.com`, `cottonknits.codexsun.com`, `cotton.local` | Garment manufacturing | Billing + accounts + e-invoice + e-way |
 | 104 | Sathasivam Garment Group | `sukraa.codexsun.com`, `mathan.codexsun.com`, `sukraa.local` | Garment manufacturing | Sukraa Garments + Mathan Knitters |

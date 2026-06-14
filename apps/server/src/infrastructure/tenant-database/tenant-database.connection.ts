@@ -67,6 +67,33 @@ export function getTenantDatabase(tenant: Tenant): TenantDatabase {
   return database
 }
 
+export async function closeTenantDatabase(tenant: Tenant): Promise<void> {
+  const existing = connections.get(tenant.slug)
+  if (!existing) return
+
+  connections.delete(tenant.slug)
+  await existing.destroy()
+}
+
+export async function dropTenantDatabase(tenant: Tenant): Promise<void> {
+  await closeTenantDatabase(tenant)
+
+  const rootConnection = await createConnection({
+    host: tenant.db_host,
+    port: tenant.db_port,
+    user: tenant.db_user,
+    password: getTenantDatabasePassword(tenant.db_secret_ref),
+    multipleStatements: false,
+    connectTimeout: dbConfig.tenant.connectTimeoutMs,
+  })
+
+  try {
+    await rootConnection.query(`DROP DATABASE IF EXISTS \`${tenant.db_name}\``)
+  } finally {
+    await rootConnection.end()
+  }
+}
+
 export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   const rootConnection = await createConnection({
     host: tenant.db_host,
