@@ -1,7 +1,7 @@
 {
   "name": "cxsun",
   "private": true,
-  "version": "1.0.108",
+  "version": "1.0.115",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -9,9 +9,10 @@
     "apps/codeit/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n server,web \"npm -w apps/server run dev\" \"npm -w apps/frontend run dev\"",
+    "dev": "concurrently -k -n server,web,docs \"npm -w apps/server run dev\" \"npm -w apps/frontend run dev\" \"npm -w apps/docs run start\"",
     "dev:server": "npm -w apps/server run dev",
     "dev:frontend": "npm -w apps/frontend run dev",
+    "dev:docs": "npm -w apps/docs run start",
     "codeit:run": "concurrently -k -n backend,frontend \"npm -w apps/codeit/backend run dev\" \"npm -w apps/codeit/frontend run dev\"",
     "check": "bash assist/scripts/check.sh",
     "typecheck:active": "npm -w apps/server run typecheck && npm -w apps/frontend run typecheck && npm -w apps/web run typecheck && npm -w packages/shared run typecheck && npm -w packages/ui run typecheck && npm -w packages/web run typecheck && npm -w packages/desktop run typecheck && npm -w packages/mobile run typecheck",
@@ -21,6 +22,7 @@
     "restart:active": "node apps/cli/restart-active.mjs",
     "build:server": "npm -w apps/server run build",
     "build:frontend": "npm -w apps/frontend run build",
+    "build:docs": "npm -w apps/docs run build",
     "db:refresh": "npm -w apps/server run db:refresh --",
     "db:fresh": "npm -w apps/server run db:fresh --",
     "db:migrate": "npm -w apps/server run db:migrate --",

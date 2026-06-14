@@ -3,6 +3,7 @@ import { createPool, type PoolOptions } from 'mysql2'
 import { createConnection } from 'mysql2/promise'
 import type { DatabaseSchema } from './schema.js'
 import { dbConfig } from '../../framework/config/index.js'
+import { settings } from '../../framework/config/settings.js'
 
 let db: Kysely<DatabaseSchema> | null = null
 
@@ -41,9 +42,11 @@ export async function migratePlatformDatabase() {
   const database = getDatabase()
   const { platformDatabaseModules } = await import('./platform-modules.js')
 
+  await ensurePlatformVersionTable(database)
   for (const databaseModule of platformDatabaseModules) {
     await databaseModule.migrate(database)
   }
+  await recordPlatformDatabaseVersion(database)
 }
 
 export async function seedPlatformDatabase() {
@@ -97,6 +100,7 @@ export async function dropPlatformTables() {
   const database = getDatabase()
   await sql`SET FOREIGN_KEY_CHECKS = 0`.execute(database)
   for (const table of [
+    'db_versions',
     'queue_jobs',
     'gst_provider_global_settings',
     'tenant_rbac_policies',
@@ -113,4 +117,47 @@ export async function dropPlatformTables() {
     await sql.raw(`DROP TABLE IF EXISTS \`${table}\``).execute(database)
   }
   await sql`SET FOREIGN_KEY_CHECKS = 1`.execute(database)
+}
+
+async function ensurePlatformVersionTable(database: Kysely<DatabaseSchema>) {
+  await database.schema
+    .createTable('db_versions')
+    .ifNotExists()
+    .addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
+    .addColumn('scope', 'varchar(32)', (col) => col.notNull())
+    .addColumn('target_key', 'varchar(191)', (col) => col.notNull())
+    .addColumn('version', 'varchar(64)', (col) => col.notNull())
+    .addColumn('source', 'varchar(64)', (col) => col.notNull())
+    .addColumn('metadata', 'json')
+    .addColumn('installed_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addColumn('updated_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addUniqueConstraint('uq_db_versions_scope_target', ['scope', 'target_key'])
+    .execute()
+}
+
+async function recordPlatformDatabaseVersion(database: Kysely<DatabaseSchema>) {
+  await database
+    .insertInto('db_versions')
+    .values({
+      scope: 'master',
+      target_key: dbConfig.master.database,
+      version: settings.package.version,
+      source: 'platform-migration',
+      metadata: JSON.stringify({
+        database: dbConfig.master.database,
+        host: dbConfig.master.host,
+        recordedAt: new Date().toISOString(),
+      }),
+    })
+    .onDuplicateKeyUpdate({
+      version: settings.package.version,
+      source: 'platform-migration',
+      metadata: JSON.stringify({
+        database: dbConfig.master.database,
+        host: dbConfig.master.host,
+        recordedAt: new Date().toISOString(),
+      }),
+      updated_at: sql`CURRENT_TIMESTAMP`,
+    })
+    .execute()
 }

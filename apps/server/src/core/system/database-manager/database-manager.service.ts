@@ -1,6 +1,7 @@
 import { spawn } from 'child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { resolve } from 'path'
+import { createConnection } from 'mysql2/promise'
 
 import { Injectable } from '../../decorators/injectable.js'
 import { Inject } from '../../decorators/inject.js'
@@ -9,6 +10,15 @@ import { getDatabase } from '../../../infrastructure/database/connection.js'
 import { MasterQueueService } from '../../../infrastructure/queue/master-queue.service.js'
 
 type DatabaseOperation = 'backup' | 'restore'
+
+export interface DatabaseVersionSnapshot {
+  version: string | null
+  source: string | null
+  installedAt: string | null
+  updatedAt: string | null
+  status: 'recorded' | 'not_recorded' | 'unreachable'
+  error?: string
+}
 
 export interface DatabaseOperationState {
   type: DatabaseOperation
@@ -26,11 +36,15 @@ export class DatabaseManagerService {
   ) {}
 
   async overview() {
-    const tenants = await getDatabase()
+    const tenantRows = await getDatabase()
       .selectFrom('tenants')
-      .select(['slug', 'name', 'status', 'db_host', 'db_port', 'db_name', 'db_user'])
+      .select(['slug', 'name', 'status', 'db_host', 'db_port', 'db_name', 'db_user', 'db_secret_ref'])
       .orderBy('slug', 'asc')
       .execute()
+    const [masterVersion, tenantVersions] = await Promise.all([
+      this.readMasterVersion(),
+      Promise.all(tenantRows.map((tenant) => this.readTenantVersion(tenant))),
+    ])
 
     return {
       master: {
@@ -38,8 +52,18 @@ export class DatabaseManagerService {
         port: dbConfig.master.port,
         database: dbConfig.master.database,
         user: dbConfig.master.user,
+        version: masterVersion,
       },
-      tenants,
+      tenants: tenantRows.map((tenant, index) => ({
+        slug: tenant.slug,
+        name: tenant.name,
+        status: tenant.status,
+        db_host: tenant.db_host,
+        db_port: tenant.db_port,
+        db_name: tenant.db_name,
+        db_user: tenant.db_user,
+        version: tenantVersions[index],
+      })),
       backups: this.listBackups(),
       lastOperation: this.lastOperation,
     }
@@ -109,6 +133,100 @@ export class DatabaseManagerService {
 
     return { accepted: true, operation: this.lastOperation }
   }
+
+  private async readMasterVersion(): Promise<DatabaseVersionSnapshot> {
+    try {
+      const row = await getDatabase()
+        .selectFrom('db_versions')
+        .select(['version', 'source', 'installed_at', 'updated_at'])
+        .where('scope', '=', 'master')
+        .where('target_key', '=', dbConfig.master.database)
+        .executeTakeFirst()
+
+      return toVersionSnapshot(row)
+    } catch (error) {
+      return {
+        version: null,
+        source: null,
+        installedAt: null,
+        updatedAt: null,
+        status: 'unreachable',
+        error: error instanceof Error ? error.message : 'Master database version unavailable.',
+      }
+    }
+  }
+
+  private async readTenantVersion(tenant: {
+    slug: string
+    db_host: string
+    db_port: number
+    db_name: string
+    db_user: string
+    db_secret_ref: string
+  }): Promise<DatabaseVersionSnapshot> {
+    let connection: Awaited<ReturnType<typeof createConnection>> | null = null
+
+    try {
+      connection = await createConnection({
+        host: tenant.db_host,
+        port: tenant.db_port,
+        user: tenant.db_user,
+        password: dbConfig.tenant.password(tenant.db_secret_ref),
+        database: tenant.db_name,
+        multipleStatements: false,
+        connectTimeout: dbConfig.tenant.connectTimeoutMs,
+      })
+      const [rows] = await connection.query(
+        "SELECT version, source, installed_at, updated_at FROM db_versions WHERE scope = 'tenant' AND target_key = ? LIMIT 1",
+        [tenant.slug],
+      )
+      const row = Array.isArray(rows) ? rows[0] : undefined
+      return toVersionSnapshot(row as VersionRow | undefined)
+    } catch (error) {
+      return {
+        version: null,
+        source: null,
+        installedAt: null,
+        updatedAt: null,
+        status: 'unreachable',
+        error: error instanceof Error ? error.message : 'Tenant database version unavailable.',
+      }
+    } finally {
+      await connection?.end()
+    }
+  }
+}
+
+type VersionRow = {
+  version?: string | null
+  source?: string | null
+  installed_at?: string | Date | null
+  updated_at?: string | Date | null
+}
+
+function toVersionSnapshot(row: VersionRow | undefined): DatabaseVersionSnapshot {
+  if (!row?.version) {
+    return {
+      version: null,
+      source: null,
+      installedAt: null,
+      updatedAt: null,
+      status: 'not_recorded',
+    }
+  }
+
+  return {
+    version: row.version,
+    source: row.source ?? null,
+    installedAt: formatDatabaseDate(row.installed_at),
+    updatedAt: formatDatabaseDate(row.updated_at),
+    status: 'recorded',
+  }
+}
+
+function formatDatabaseDate(value: string | Date | null | undefined) {
+  if (!value) return null
+  return value instanceof Date ? value.toISOString() : String(value)
 }
 
 function readManifest(path: string) {

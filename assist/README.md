@@ -1,6 +1,6 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.108
+**Project version:** 1.0.115
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
@@ -17,6 +17,7 @@ cxsun/
 ├── apps/
 │   ├── server/      # Active Node.js/Fastify backend
 │   ├── frontend/    # Active React + Vite frontend
+│   ├── docs/        # Active Docusaurus project documentation
 │   └── cli/         # Local workflow helpers
 ├── packages/
 │   ├── shared/      # Shared types, constants, and pure utilities
@@ -28,12 +29,14 @@ cxsun/
 
 Root scripts use the active apps:
 
-- `npm run dev` starts `apps/server` and `apps/frontend`.
+- `npm run dev` starts `apps/server`, `apps/frontend`, and `apps/docs` together with concurrent logs.
 - `npm run dev:server` starts only the backend.
 - `npm run dev:frontend` starts only the frontend.
+- `npm run dev:docs` starts only the Docusaurus docs app.
 - `npm run check` runs the standard assist verification script.
 - `npm run typecheck:active` typechecks all current workspaces.
 - `npm run build:active` builds the active backend and frontend apps.
+- `npm run version:bump -- --title "<title>"` updates package/display versions and creates a changelog entry split into `Database Changes` and `App Codebase Changes`; use `--database-update` or `--no-database-update` when the automatic database check needs an override.
 
 ## Current Tenant Architecture
 

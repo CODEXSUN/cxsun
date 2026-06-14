@@ -36,6 +36,7 @@ import { migrateContactMasterTable } from '../../modules/master/contact/index.js
 import { migrateProductMasterTable } from '../../modules/master/product/index.js'
 import { migrateOrderMasterTable } from '../../modules/master/order/index.js'
 import { dbConfig } from '../../framework/config/index.js'
+import { settings } from '../../framework/config/settings.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
 
@@ -112,6 +113,7 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
 
   const database = getTenantDatabase(tenant)
 
+  await ensureTenantVersionTable(database)
   await database.schema
     .createTable('companies')
     .ifNotExists()
@@ -180,6 +182,7 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
   await migrateContactMasterTable(database)
   await migrateProductMasterTable(database)
   await migrateOrderMasterTable(database)
+  await recordTenantDatabaseVersion(database, tenant)
 
   await database.schema
     .createTable('rbac_roles')
@@ -578,6 +581,49 @@ async function ensureTenantDefaultCompany(database: TenantDatabase, tenant: Tena
     name: company.name,
     code: company.code,
   }
+}
+
+async function ensureTenantVersionTable(database: TenantDatabase) {
+  await database.schema
+    .createTable('db_versions')
+    .ifNotExists()
+    .addColumn('id', 'integer', (col) => col.primaryKey().autoIncrement())
+    .addColumn('scope', 'varchar(32)', (col) => col.notNull())
+    .addColumn('target_key', 'varchar(191)', (col) => col.notNull())
+    .addColumn('version', 'varchar(64)', (col) => col.notNull())
+    .addColumn('source', 'varchar(64)', (col) => col.notNull())
+    .addColumn('metadata', 'json')
+    .addColumn('installed_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addColumn('updated_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
+    .addUniqueConstraint('uq_db_versions_scope_target', ['scope', 'target_key'])
+    .execute()
+}
+
+async function recordTenantDatabaseVersion(database: TenantDatabase, tenant: Tenant) {
+  const metadata = JSON.stringify({
+    database: tenant.db_name,
+    tenantId: tenant.id,
+    tenantSlug: tenant.slug,
+    host: tenant.db_host,
+    recordedAt: new Date().toISOString(),
+  })
+
+  await database
+    .insertInto('db_versions')
+    .values({
+      scope: 'tenant',
+      target_key: tenant.slug,
+      version: settings.package.version,
+      source: 'tenant-provision',
+      metadata,
+    })
+    .onDuplicateKeyUpdate({
+      version: settings.package.version,
+      source: 'tenant-provision',
+      metadata,
+      updated_at: sql`CURRENT_TIMESTAMP`,
+    })
+    .execute()
 }
 
 async function createTenantUsersTable(database: TenantDatabase) {

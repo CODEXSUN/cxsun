@@ -726,7 +726,7 @@ function PurchaseUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
     >
       <MasterListUpsertLayout>
         <MasterListUpsertCard className="overflow-hidden p-0 [&>div]:p-0">
-          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void onSubmit(buildPurchaseSaveInput(draft)) }}>
+          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void onSubmit(buildPurchaseSaveInput(draft, softwareSettings)) }}>
             <div className="px-0 pb-4 pt-3 md:pb-5">
               <PurchaseVoucherTabs
                 contacts={supplierContacts}
@@ -745,7 +745,7 @@ function PurchaseUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6">
               <Button type="submit" disabled={isSaving} className="rounded-md"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button>
-              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void onSubmit(buildPurchaseSaveInput({ ...draft, status: "posted" }), true)} className="rounded-md"><Printer className="size-4" />Save & Print</Button>
+              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void onSubmit(buildPurchaseSaveInput({ ...draft, status: "posted" }, softwareSettings), true)} className="rounded-md"><Printer className="size-4" />Save & Print</Button>
               <Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>
             </div>
           </form>
@@ -984,22 +984,14 @@ function PurchaseDetailsTab({ addItem, addressLabels, contacts, deleteItem, edit
           <Field label="Entry no" value={form.entry_no ?? ""} onChange={(value) => setForm((current) => ({ ...current, entry_no: value }))} />
           <Field label="Entry date" type="date" value={String(form.entry_date ?? "")} onChange={(value) => setForm((current) => ({ ...current, entry_date: value }))} />
           <PurchaseTypeField value={form.place_of_supply ?? "cgst-sgst"} onChange={(value) => setForm((current) => ({ ...current, place_of_supply: value }))} />
-          <div className="grid items-start gap-3 sm:grid-cols-2">
-            <LookupSelectField
-              label="Posting"
-              value={form.accounting_posting_mode ?? "auto"}
-              options={[{ value: "auto", label: "Auto Post" }, { value: "none", label: "Do Not Post" }]}
-              onChange={(value) => setForm((current) => ({ ...current, accounting_posting_mode: value }))}
-            />
-            <LookupSelectField
-              createLabel="Create purchase ledger"
-              label="Purchase Ledger"
-              value={normalizePurchaseAccountTypeValue(form.accounting_category) || "purchase"}
-              options={purchaseTypeOptions}
-              onCreate={(value) => setForm((current) => ({ ...current, accounting_category: normalizePurchaseAccountTypeValue(value) || value.trim() }))}
-              onChange={(value) => setForm((current) => ({ ...current, accounting_category: value }))}
-            />
-          </div>
+          <LookupSelectField
+            createLabel="Create purchase ledger"
+            label="Purchase Ledger"
+            value={normalizePurchaseAccountTypeValue(form.accounting_category) || "purchase"}
+            options={purchaseTypeOptions}
+            onCreate={(value) => setForm((current) => ({ ...current, accounting_category: normalizePurchaseAccountTypeValue(value) || value.trim() }))}
+            onChange={(value) => setForm((current) => ({ ...current, accounting_category: value }))}
+          />
         </div>
       </div>
       <section className="space-y-5">
@@ -2168,14 +2160,16 @@ interface DraftTotals {
   grandTotal: number
 }
 
-function buildPurchaseSaveInput(input: PurchaseEntryInput): PurchaseEntryInput {
+function buildPurchaseSaveInput(input: PurchaseEntryInput, softwareSettings: SoftwareSettingsState): PurchaseEntryInput {
   const items = input.items.map((item, index) => normalizePurchaseItem(item, index, input.place_of_supply))
   const totals = calculateDraftTotals(items, input.round_off, input.place_of_supply)
   const subtotal = roundMoney(items.reduce((total, item) => total + roundMoney(Number(item.quantity || 0) * Number(item.rate || 0)), 0))
   const discountTotal = roundMoney(items.reduce((total, item) => total + Number(item.discount_amount || 0), 0))
+  const autoPostPurchase = isSoftwareSettingEnabled(softwareSettings, "purchase-auto-post-accounts")
 
   return {
     ...input,
+    accounting_posting_mode: autoPostPurchase ? "auto" : "none",
     balance_amount: roundMoney(totals.grandTotal - Number(input.paid_amount || 0)),
     discount_total: discountTotal,
     grand_total: totals.grandTotal,

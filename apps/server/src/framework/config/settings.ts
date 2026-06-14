@@ -13,6 +13,7 @@ export const settings = {
   urls: {
     frontend: envOptionalString('FRONTEND_URL'),
     electronDevServer: envOptionalString('ELECTRON_DEV_SERVER_URL'),
+    docs: envOptionalString('DOCS_URL'),
     vitePort: envNumber('VITE_PORT', 6010),
     backendHealth: envOptionalString('BACKEND_HEALTH_URL'),
   },

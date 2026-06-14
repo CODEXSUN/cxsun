@@ -1,5 +1,16 @@
 import type { Generated } from 'kysely'
 
+export interface TenantDbVersionsTable {
+  id: Generated<number>
+  scope: string
+  target_key: string
+  version: string
+  source: string
+  metadata: string | null
+  installed_at: Generated<Date>
+  updated_at: Generated<Date>
+}
+
 export interface TenantCompaniesTable {
   id: Generated<number>
   uuid: string
@@ -1155,6 +1166,7 @@ export interface TenantAuditorContactCredentialsTable {
 }
 
 export interface TenantDatabaseSchema {
+  db_versions: TenantDbVersionsTable
   companies: TenantCompaniesTable
   accounting_years: TenantAccountingYearsTable
   default_companies: TenantDefaultCompaniesTable

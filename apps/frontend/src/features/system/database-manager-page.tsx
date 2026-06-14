@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArchiveRestore, Database, DownloadCloud, RefreshCw, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
@@ -9,7 +9,7 @@ import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
 import { Spinner } from "src/components/ui/spinner"
 import type { AuthSession } from "src/features/auth/auth-client"
-import { getDatabaseOverview, startDatabaseBackup, startDatabaseRestore, type DatabaseBackup } from "./system-manager-client"
+import { getDatabaseOverview, startDatabaseBackup, startDatabaseRestore, type DatabaseBackup, type DatabaseVersionSnapshot } from "./system-manager-client"
 
 export default function DatabaseManagerPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
@@ -68,7 +68,12 @@ export default function DatabaseManagerPage({ session }: { session: AuthSession 
       ) : overview ? (
         <>
           <div className="grid gap-3 md:grid-cols-3">
-            <InfoCard label="Master database" value={overview.master.database} detail={`${overview.master.user}@${overview.master.host}:${overview.master.port}`} />
+            <InfoCard
+              label="Master database"
+              value={overview.master.database}
+              detail={`${overview.master.user}@${overview.master.host}:${overview.master.port}`}
+              footer={<VersionBadge version={overview.master.version} />}
+            />
             <InfoCard label="Tenant databases" value={String(overview.tenants.length)} detail="Active and inactive tenant targets from master" />
             <InfoCard label="Backups" value={String(overview.backups.length)} detail={overview.lastOperation ? `Last: ${overview.lastOperation.type}` : "No active operation recorded"} />
           </div>
@@ -84,6 +89,7 @@ export default function DatabaseManagerPage({ session }: { session: AuthSession 
                     <th className="px-3 py-2 text-left">Tenant</th>
                     <th className="px-3 py-2 text-left">Status</th>
                     <th className="px-3 py-2 text-left">Database</th>
+                    <th className="px-3 py-2 text-left">DB version</th>
                     <th className="px-3 py-2 text-left">Host</th>
                     <th className="px-3 py-2 text-left">User</th>
                   </tr>
@@ -94,6 +100,7 @@ export default function DatabaseManagerPage({ session }: { session: AuthSession 
                       <td className="px-3 py-2 font-medium">{tenant.name}<span className="ml-2 font-mono text-xs text-muted-foreground">{tenant.slug}</span></td>
                       <td className="px-3 py-2"><Badge variant="outline">{tenant.status}</Badge></td>
                       <td className="px-3 py-2 font-mono">{tenant.db_name}</td>
+                      <td className="px-3 py-2"><VersionBadge version={tenant.version} /></td>
                       <td className="px-3 py-2">{tenant.db_host}:{tenant.db_port}</td>
                       <td className="px-3 py-2">{tenant.db_user}</td>
                     </tr>
@@ -138,15 +145,33 @@ export default function DatabaseManagerPage({ session }: { session: AuthSession 
   )
 }
 
-function InfoCard({ label, value, detail }: { label: string; value: string; detail: string }) {
+function InfoCard({ label, value, detail, footer }: { label: string; value: string; detail: string; footer?: ReactNode }) {
   return (
     <Card className="rounded-md">
       <CardContent className="p-4">
         <p className="text-xs font-medium uppercase text-muted-foreground">{label}</p>
         <p className="mt-2 break-all text-2xl font-semibold">{value}</p>
         <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
+        {footer ? <div className="mt-3">{footer}</div> : null}
       </CardContent>
     </Card>
+  )
+}
+
+function VersionBadge({ version }: { version: DatabaseVersionSnapshot }) {
+  if (version.status === "unreachable") {
+    return <Badge className="rounded-md border-amber-200 bg-amber-50 text-amber-700" variant="outline" title={version.error ?? "Database version could not be read."}>unreachable</Badge>
+  }
+
+  if (version.status === "not_recorded") {
+    return <Badge className="rounded-md border-slate-200 bg-slate-50 text-slate-600" variant="outline">not recorded</Badge>
+  }
+
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <Badge className="w-fit rounded-md border-emerald-200 bg-emerald-50 font-mono text-emerald-700" variant="outline">v{version.version}</Badge>
+      {version.updatedAt ? <span className="text-xs text-muted-foreground">{formatDate(version.updatedAt)}</span> : null}
+    </span>
   )
 }
 

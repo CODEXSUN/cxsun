@@ -34,10 +34,19 @@ export interface QueueRuntimeStatus {
 }
 
 export interface DatabaseOverview {
-  master: { host: string; port: number; database: string; user: string }
-  tenants: { slug: string; name: string; status: string; db_host: string; db_port: number; db_name: string; db_user: string }[]
+  master: { host: string; port: number; database: string; user: string; version: DatabaseVersionSnapshot }
+  tenants: { slug: string; name: string; status: string; db_host: string; db_port: number; db_name: string; db_user: string; version: DatabaseVersionSnapshot }[]
   backups: DatabaseBackup[]
   lastOperation: null | { type: string; acceptedAt: string; target?: string; command: string }
+}
+
+export interface DatabaseVersionSnapshot {
+  version: string | null
+  source: string | null
+  installedAt: string | null
+  updatedAt: string | null
+  status: "recorded" | "not_recorded" | "unreachable"
+  error?: string
 }
 
 export interface DatabaseBackup {
@@ -46,6 +55,35 @@ export interface DatabaseBackup {
   createdAt: string
   databaseCount: number
   databases: { label?: string; database?: string }[]
+}
+
+export interface ProjectDocsOverview {
+  docsUrl: string
+  devDocsUrl: string
+  docsRoot: string
+  devDocsRoot: string
+  total: number
+  categories: { category: string; count: number }[]
+  userDocs: ProjectDocEntry[]
+  developerDocs: ProjectDocEntry[]
+  docs: ProjectDocEntry[]
+  readmes: ProjectReadmeSource[]
+}
+
+export interface ProjectDocEntry {
+  id: string
+  title: string
+  category: string
+  audience: "user" | "developer"
+  path: string
+  route: string
+  updatedAt: string
+}
+
+export interface ProjectReadmeSource {
+  title: string
+  path: string
+  updatedAt: string
 }
 
 export async function getQueueOverview(session: AuthSession) {
@@ -76,6 +114,10 @@ export async function setQueueRuntimeMode(session: AuthSession, mode: "database"
 
 export async function getDatabaseOverview(session: AuthSession) {
   return request<DatabaseOverview>(session, "/api/system/database-manager/overview")
+}
+
+export async function getProjectDocsOverview(session: AuthSession) {
+  return request<ProjectDocsOverview>(session, "/api/system/devdocs/overview")
 }
 
 export async function startDatabaseBackup(session: AuthSession) {

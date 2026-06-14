@@ -119,6 +119,8 @@ export const defaultSoftwareSettingsState: SoftwareSettingsState = {
     { id: "feature-billing", label: "Billing", description: "Sales, purchase, receipt, payment, and report modules for simple billing.", scope: "industry", enabled: true },
     { id: "feature-quotation", label: "Quotation", description: "Shows Quotation entries and enables quotation consolidation into draft Sales invoices.", scope: "client", enabled: true },
     { id: "feature-export-sales", label: "Export Sales", description: "Shows Export Sales entries, totals, shortcuts, and document settings across the Billing desk.", scope: "client", enabled: true },
+    { id: "sales-auto-post-accounts", label: "Auto post sales to accounts", description: "Posts saved sales invoices to accounting ledgers automatically. Turn off to save sales without ledger posting.", scope: "client", enabled: true },
+    { id: "purchase-auto-post-accounts", label: "Auto post purchase to accounts", description: "Posts saved purchase bills to accounting ledgers automatically. Turn off to save purchase without ledger posting.", scope: "client", enabled: true },
     { id: "feature-tconnect", label: "TConnect", description: "Shows the TConnect trade connection workspace in the client app menu and landing desk.", scope: "client", enabled: false },
   ],
 }

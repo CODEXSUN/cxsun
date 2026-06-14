@@ -49,6 +49,9 @@ const QueueManagerPage = lazy(() =>
 const DatabaseManagerPage = lazy(() =>
   import('src/features/system/database-manager-page').then((module) => ({ default: module.default })),
 )
+const ProjectDocsPage = lazy(() =>
+  import('src/features/system/project-docs-page').then((module) => ({ default: module.default })),
+)
 const TenantListPage = lazy(() =>
   import('src/features/tenant/interface/pages/tenant-list-page').then((module) => ({ default: module.TenantListPage })),
 )
@@ -256,7 +259,7 @@ function defaultPageForApp(appId: DashboardAppId): DashboardPage {
 const crossSurfaceAppPages: DashboardPage[] = ["app-agent-os-base"]
 
 const pageAccess: Record<DashboardMode, DashboardPage[]> = {
-  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "industry", "company-industry", "company", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "user-manager", ...agentOsPages],
+  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "industry", "company-industry", "company", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
   admin: ["overview", "company", "helpdesk", "bugs", "system-update", ...crossSurfaceAppPages],
   tenant: ["overview", "company", "tenant-roles", ...appModulePages],
 }
@@ -279,6 +282,7 @@ const pageLabels: Partial<Record<DashboardPage, string>> = {
   "gst-api-test": "GST API Test",
   "queue-manager": "Queue Manager",
   "database-manager": "Database Manager",
+  "devdocs": "Dev Docs",
   "user-manager": "Admin User Manager",
   "helpdesk": "Helpdesk",
   "bugs": "Bugs",
@@ -826,6 +830,8 @@ export function DashboardView({
             <QueueManagerPage session={session} />
           ) : visiblePage === "database-manager" ? (
             <DatabaseManagerPage session={session} />
+          ) : visiblePage === "devdocs" ? (
+            <ProjectDocsPage session={session} />
           ) : visiblePage === "user-manager" ? (
             <UserManagerPage session={session} mode="platform" />
           ) : visiblePage === "helpdesk" ? (

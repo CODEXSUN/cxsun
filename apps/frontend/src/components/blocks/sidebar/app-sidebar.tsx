@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   Bug,
   Bot,
+  BookOpenText,
   BriefcaseBusiness,
   Building2,
   Database,
@@ -61,6 +62,7 @@ export type DashboardPage =
   | "gst-api-test"
   | "queue-manager"
   | "database-manager"
+  | "devdocs"
   | "user-manager"
   | "helpdesk"
   | "bugs"
@@ -111,6 +113,7 @@ const superAdminNav = [
       { title: "System Update", url: "#", icon: RefreshCw },
       { title: "Queue Manager", url: "#", icon: ListRestart },
       { title: "Database Manager", url: "#", icon: Database },
+      { title: "Dev Docs", url: "#", icon: BookOpenText },
     ],
   },
 ] as const
@@ -149,6 +152,7 @@ function pageFromTitle(title: string): DashboardPage | undefined {
     "GST API Test": "gst-api-test",
     "Queue Manager": "queue-manager",
     "Database Manager": "database-manager",
+    "Dev Docs": "devdocs",
     Tenant: "tenant",
     "Admin User Manager": "user-manager",
   }

@@ -11,6 +11,17 @@ export interface SitePagesTable {
   sort_order: number
 }
 
+export interface DbVersionsTable {
+  id: Generated<number>
+  scope: string
+  target_key: string
+  version: string
+  source: string
+  metadata: string | null
+  installed_at: Generated<string>
+  updated_at: Generated<string>
+}
+
 export interface SiteServicesTable {
   id: Generated<number>
   title: string
@@ -277,6 +288,7 @@ export interface ZetroQueryLogsTable {
 }
 
 export interface DatabaseSchema {
+  db_versions: DbVersionsTable
   site_pages: SitePagesTable
   site_services: SiteServicesTable
   site_posts: SitePostsTable

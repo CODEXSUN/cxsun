@@ -23,9 +23,13 @@
 - Every changelog entry must live under a concrete `## v-<version>` section.
 - Do not use an `Unreleased` section.
 - Version bump automation may update the `Version State` block and add a concrete version section/entry.
+- Every new changelog entry must split notes into `#### Database Changes` and `#### App Codebase Changes`.
+- Database schema, migration, seed, tenant provisioning, and data compatibility notes go under `Database Changes`; UI, API, service logic, tooling, and documentation notes go under `App Codebase Changes`.
 - Changelog times use the workspace local timezone and lowercase `am` / `pm`.
 - `npm run github:now` reads the latest versioned changelog entry and must not include changelog dates or timestamps in the Git commit subject.
 - `npm run version:bump -- "<title>"` bumps the next patch version across package files, display files, and the changelog top section.
+- Version bump automation auto-checks changed database, schema, and migration files and writes `Database update: Yes/No` under `Database Changes`.
+- Use `--database-update` or `--no-database-update` to manually override the database update check when needed.
 
 ## Release Operation
 

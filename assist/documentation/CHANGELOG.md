@@ -2,13 +2,117 @@
 
 ## Version State
 
-- **Current version:** `1.0.108`
-- **Release tag:** `v-1.0.108`
-- **Changelog label:** `v 1.0.108`
+- **Current version:** `1.0.115`
+- **Release tag:** `v-1.0.115`
+- **Changelog label:** `v 1.0.115`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
+New changelog entries must keep database-facing work and application code work separate:
+
+- `#### Database Changes` records schema, migration, seed, tenant provisioning, and data compatibility changes.
+- `#### App Codebase Changes` records UI, API, service logic, tooling, and documentation changes.
+
 ---
+
+## v-1.0.115
+
+### [v 1.0.115] 2026-06-14 12:09 pm - purchase auto post settings
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.115
+- Added tenant feature switches for auto-posting Sales and Purchase documents to accounts from Billing settings.
+- Removed the Posting / Auto Post selector from Purchase entry forms so posting behavior is controlled centrally by settings.
+- Wired Purchase save and Save & Print flows to post or skip accounting entries based on the new purchase auto-post setting.
+
+## v-1.0.114
+
+### [v 1.0.114] 2026-06-14 11:36 am - split user and developer docs routes
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.114
+- Rebranded the Docusaurus documentation app as `Codexsun` and replaced the generated Docusaurus logo with the app logo asset.
+- Split documentation into client user guides at `/docs/*` and developer/super-admin guides at `/devdocs/*`.
+- Added client user guides for login, dashboard basics, master data, sales, quotation, purchase, receipts/payments, reports, and settings.
+- Moved project architecture and module documentation into the `/devdocs/*` documentation instance.
+- Changed the super-admin docs frontend route to `/sa/devdocs` and the backend manifest API to `/api/system/devdocs/overview`.
+- Updated the docs manifest and frontend page to show user docs and developer docs as separate indexes.
+
+## v-1.0.113
+
+### [v 1.0.113] 2026-06-14 11:22 am - docs in dev startup
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.113
+- Connected the Docusaurus docs app to the root `npm run dev` startup so backend, frontend, and docs run together under one concurrent command.
+- Updated the assist README startup guide to list `apps/docs`, the combined dev startup, and the dedicated `npm run dev:docs` command.
+
+## v-1.0.112
+
+### [v 1.0.112] 2026-06-14 11:12 am - docusaurus project docs app
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.112
+- Added a separate Docusaurus workspace at `apps/docs` with project, core architecture, database, frontend, release, and per-module Markdown documentation.
+- Added root docs scripts for `dev:docs` and `build:docs`, and included the docs workspace in lockstep version bump coverage.
+- Added a super-admin-only Project Docs API that indexes Docusaurus Markdown files and returns the docs app URL plus document manifest.
+- Added README/module guide source discovery to the Project Docs API so super-admin can see the underlying repo documentation sources from the frontend.
+- Added a super-admin Project Docs frontend route with docs counts, readme source counts, document index, readme source index, and links into the Docusaurus app.
+- Added Project Docs to the super-admin sidebar under Settings.
+
+## v-1.0.111
+
+### [v 1.0.111] 2026-06-14 10:56 am - split changelog database app logs
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.111
+- Updated `npm run version:bump` to generate separate `Database Changes` and `App Codebase Changes` sections for every new changelog entry.
+- Added release documentation rules for where database, schema, migration, seed, tenant provisioning, UI, API, service, tooling, and documentation notes must be recorded.
+- Added the split changelog rule to the main assist README and the changelog header guidance.
+
+## v-1.0.110
+
+### [v 1.0.110] 2026-06-14 10:53 am - version bump database check
+
+- Bumped workspace version to 1.0.110
+- Database update: No (manual).
+- Added database-update detection to `npm run version:bump` so changelog entries record whether database/schema/migration files changed.
+- Added `--database-update` and `--no-database-update` overrides for manual release classification.
+- Documented the new version bump database update check in the versioning rules.
+
+## v-1.0.109
+
+### [v 1.0.109] 2026-06-14 10:49 am - database version tracking
+
+- Bumped workspace version to 1.0.109
+- Added a `db_versions` table to both master and tenant databases for recording the installed application database version.
+- Updated master migrations and tenant provisioning to upsert version records after successful database migration/setup.
+- Wired Database Manager overview to show master and tenant database version status, including not recorded and unreachable states.
 
 ## v-1.0.108
 
