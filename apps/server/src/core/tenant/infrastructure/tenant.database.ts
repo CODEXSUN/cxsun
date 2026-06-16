@@ -45,7 +45,7 @@ export const tenantDatabaseModule: PlatformDatabaseModule = {
 
 async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveClientScope) {
   const now = nowIso()
-  const payloadSettings = JSON.stringify({
+  const defaultPayloadSettings = {
     ui: { density: 'comfortable' },
     industry: {
       code: client.industry,
@@ -65,11 +65,11 @@ async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveCl
       'company.manage',
       ...client.requirements.map((requirement) => `scope.${requirement}`),
     ],
-  })
+  }
 
   const existing = await database
     .selectFrom('tenants')
-    .select(['id', 'slug', 'name', 'db_host', 'db_port', 'db_name', 'db_user', 'db_secret_ref'])
+    .select(['id', 'slug', 'name', 'db_host', 'db_port', 'db_name', 'db_user', 'db_secret_ref', 'payload_settings'])
     .where((eb) => eb.or([
       eb('slug', '=', client.slug),
       eb('code', '=', client.code),
@@ -93,7 +93,7 @@ async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveCl
     company_count: client.companies.length,
     active_company_count: client.companies.length,
     company_concept_count: client.companies.length,
-    payload_settings: payloadSettings,
+    payload_settings: JSON.stringify(mergeLiveClientPayloadSettings(defaultPayloadSettings, existing?.payload_settings)),
     deleted_at: null,
     updated_at: now,
   }
@@ -124,6 +124,44 @@ async function ensureLiveClientTenant(database: PlatformDatabase, client: LiveCl
       ...row,
     })
     .execute()
+}
+
+function mergeLiveClientPayloadSettings(
+  defaults: Record<string, unknown> & { apps: { enabled: string[]; landing: string } },
+  existingValue: string | null | undefined,
+) {
+  const existing = parseJsonObject(existingValue)
+  const existingApps = isJsonRecord(existing.apps) ? existing.apps : {}
+  const existingEnabled = Array.isArray(existingApps.enabled)
+    ? existingApps.enabled.map(String).map((app) => app.trim()).filter(Boolean)
+    : null
+  const existingLanding = typeof existingApps.landing === 'string' && existingApps.landing.trim()
+    ? existingApps.landing.trim()
+    : null
+
+  return {
+    ...defaults,
+    ...existing,
+    apps: {
+      ...defaults.apps,
+      ...existingApps,
+      enabled: existingEnabled ?? defaults.apps.enabled,
+      landing: existingLanding ?? defaults.apps.landing,
+    },
+  }
+}
+
+function parseJsonObject(value: string | null | undefined): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value || '{}') as unknown
+    return isJsonRecord(parsed) ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function isJsonRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 async function renameLegacyCodexsunTenant(

@@ -59,17 +59,20 @@ export class TenantContextService {
 
     const requestedTenantCode = firstHeader(headers['x-tenant-code'])
     const userEmail = auth.email
-    const isElevatedToken = isElevatedRole(auth.role) || auth?.superAdmin === true
-    const tenantCode = isElevatedToken && requestedTenantCode ? requestedTenantCode : auth?.tenantCode
+    const isSuperAdminToken = auth?.superAdmin === true || auth?.role === 'super-admin'
+    const tenantCode = isSuperAdminToken && requestedTenantCode && !isPlatformDeskTenantCode(requestedTenantCode)
+      ? requestedTenantCode
+      : !isPlatformDeskTenantCode(auth?.tenantCode)
+        ? auth?.tenantCode
+        : undefined
     const tenant = tenantCode
       ? await findTenant(tenantCode)
-      : await findTenantByDomain(firstHeader(headers.host) ?? '')
+      : await findTenantByDomain(loginDomainHeader(headers))
 
     if (!tenant) {
       throw new NotFoundException('Tenant was not found.')
     }
 
-    const isSuperAdminToken = auth?.superAdmin === true || auth?.role === 'super-admin'
     const requestDomain = loginDomainHeader(headers)
     const requestDomainTenant = await findTenantByDomain(requestDomain)
     if (auth.identitySource === 'tenant' && requestDomain && !isLocalDomain(requestDomain) && !requestDomainTenant) {
@@ -140,8 +143,8 @@ async function resolveTenantAccess(database: Kysely<TenantDatabaseSchema>, userE
   return user
 }
 
-function isElevatedRole(role: string) {
-  return ['super-admin', 'software-admin', 'support-admin', 'helpdesk-admin'].includes(role)
+function isPlatformDeskTenantCode(value?: string) {
+  return value === 'super-admin' || value === 'admin'
 }
 
 function firstHeader(value?: string | string[]) {

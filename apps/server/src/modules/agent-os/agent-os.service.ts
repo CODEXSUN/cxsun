@@ -803,7 +803,21 @@ export class AgentOsService {
     const restrictedReply = restrictedQuestionReply(message, audience)
     const boundaryReply = zetroBoundaryReply(message, audience)
     const businessQuery = await resolveZetroBusinessQuery(message)
-    const providerConfig = await resolveProviderForInput({ providerKey: input.providerKey, model: input.model })
+    let providerConfig: ProviderRuntimeConfig
+    try {
+      providerConfig = await resolveProviderForInput({ providerKey: input.providerKey, model: input.model })
+    } catch (error) {
+      const setupMessage = error instanceof Error ? error.message : 'Provider setup failed.'
+      const reply = adminAudience
+        ? `ZETRO provider setup failed before chat could start: ${setupMessage}. Open the API panel, select the active provider, paste a valid key, and run Save & test.`
+        : 'ZETRO setup is not ready for live answers. Please ask the super-admin to test the assistant provider.'
+      return {
+        ok: true,
+        conversation_uuid: input.conversationUuid?.trim() || dispatchPublicUuid(),
+        ...(adminAudience ? { model: publicZetroModel() } : {}),
+        message: reply,
+      }
+    }
     const model = normalizeModel(input.model, providerConfig.models, providerConfig.defaultModel)
     const database = getDatabase()
     const conversationUuid = input.conversationUuid?.trim() || dispatchPublicUuid()
@@ -1009,7 +1023,7 @@ export class AgentOsService {
       return {
         ok: false,
         error: 'tenant_context_unavailable',
-        reply: 'I can answer workspace business data only after tenant access is verified. Please sign in again or select the correct workspace.',
+        reply: 'I can answer workspace business data only after a tenant workspace is selected. Choose the workspace in ZETRO chat and ask again.',
         metadata: {
           ...query,
           tenantResolved: false,
@@ -2296,7 +2310,7 @@ export interface ZetroModel {
   requiresKey: boolean
 }
 
-type ZetroProviderKey = 'openrouter' | 'openai' | 'gemini' | 'opencode' | 'custom'
+type ZetroProviderKey = 'openrouter' | 'openai' | 'gemini' | 'deepseek' | 'opencode' | 'custom'
 type ZetroProviderKind = 'openai-compatible' | 'gemini'
 
 interface ProviderRuntimeConfig {
@@ -2592,14 +2606,17 @@ async function zetroProviderState() {
     const models = zetroModels(defaults.providerKey, freeModels, premiumModels, defaultModelId)
     const envKey = envApiKeyForProvider(defaults.providerKey)
     const envConnected = Boolean(envKey)
-    const connected = Boolean(row) || envConnected
     const staleModelFailure = defaults.providerKey === 'openrouter'
       && row?.last_test_status === 'failed'
       && isStaleOpenRouterModelFailure(row.last_test_message)
-    const connectionStatus = row?.last_test_status === 'failed' && !staleModelFailure
+    const testFailed = row?.last_test_status === 'failed' && !staleModelFailure
+    const testPassed = row?.last_test_status === 'ok' || row?.status === 'connected'
+    const configured = Boolean(row) || envConnected
+    const connected = row ? testPassed && !testFailed : envConnected
+    const connectionStatus = testFailed
       ? 'failed'
-      : connected
-        ? row?.status === 'failed' ? 'connected' : row?.status ?? 'env'
+      : configured
+        ? connected ? row?.status ?? 'env' : row?.status ?? 'configured'
         : 'not_configured'
     connections.push({
       provider: defaults.providerKey,
@@ -2654,7 +2671,11 @@ async function resolveProviderForInput(input: ZetroApiConnectionInput): Promise<
     : null
   const activeRow = explicitProviderKey
     ? savedRows.find((row) => row.provider_key === explicitProviderKey)
-    : rowByModel ?? savedRows.find((row) => row.is_active) ?? savedRows[0]
+    : rowByModel
+      ?? savedRows.find((row) => row.is_active && providerRowVerified(row))
+      ?? savedRows.find((row) => providerRowVerified(row))
+      ?? savedRows.find((row) => row.is_active)
+      ?? savedRows[0]
 
   if (activeRow) {
     const providerKey = normalizeProviderKey(activeRow.provider_key)
@@ -2722,6 +2743,10 @@ async function listProviderRows(): Promise<ProviderConnectionRow[]> {
     .execute()
 }
 
+function providerRowVerified(row: ProviderConnectionRow) {
+  return row.last_test_status === 'ok' || row.status === 'connected'
+}
+
 async function updateProviderTestState(providerKey: ZetroProviderKey, status: 'ok' | 'failed', message: string) {
   await getDatabase()
     .updateTable('agent_provider_connections')
@@ -2741,6 +2766,7 @@ function providerCatalog() {
     providerDefaults('openrouter'),
     providerDefaults('openai'),
     providerDefaults('gemini'),
+    providerDefaults('deepseek'),
     providerDefaults('opencode'),
     providerDefaults('custom'),
   ]
@@ -2788,6 +2814,16 @@ function providerDefaults(providerKey: string) {
       premiumModels: 'gemini-2.5-pro',
       requiredEnv: ['GEMINI_API_KEY'],
     },
+    deepseek: {
+      providerKey: 'deepseek',
+      providerName: 'DeepSeek',
+      providerKind: 'openai-compatible',
+      baseUrl: 'https://api.deepseek.com/v1',
+      defaultModel: 'deepseek-chat',
+      freeModels: 'deepseek-chat',
+      premiumModels: 'deepseek-reasoner',
+      requiredEnv: ['DEEPSEEK_API_KEY'],
+    },
     opencode: {
       providerKey: 'opencode',
       providerName: 'OpenCode Zen',
@@ -2815,6 +2851,7 @@ function providerDefaults(providerKey: string) {
 function envApiKeyForProvider(providerKey: ZetroProviderKey) {
   if (providerKey === 'openai') return settings.zetro.openAiApiKey
   if (providerKey === 'gemini') return settings.zetro.geminiApiKey
+  if (providerKey === 'deepseek') return process.env.DEEPSEEK_API_KEY
   if (providerKey === 'opencode') return settings.zetro.openCodeApiKey
   if (providerKey === 'custom') return settings.zetro.customAiApiKey
   return settings.zetro.openRouterApiKey
@@ -2823,6 +2860,7 @@ function envApiKeyForProvider(providerKey: ZetroProviderKey) {
 function envNameForProvider(providerKey: ZetroProviderKey) {
   if (providerKey === 'openai') return 'OPENAI_API_KEY'
   if (providerKey === 'gemini') return 'GEMINI_API_KEY'
+  if (providerKey === 'deepseek') return 'DEEPSEEK_API_KEY'
   if (providerKey === 'opencode') return 'OPENCODE_API_KEY'
   if (providerKey === 'custom') return 'CUSTOM_AI_API_KEY'
   return 'OPENROUTER_API_KEY'
@@ -2918,7 +2956,7 @@ function isStaleOpenRouterModelFailure(message?: string | null) {
 }
 
 function normalizeProviderKey(value?: string): ZetroProviderKey {
-  if (value === 'openai' || value === 'gemini' || value === 'opencode' || value === 'custom') return value
+  if (value === 'openai' || value === 'gemini' || value === 'deepseek' || value === 'opencode' || value === 'custom') return value
   return 'openrouter'
 }
 

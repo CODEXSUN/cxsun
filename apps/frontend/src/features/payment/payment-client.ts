@@ -1,5 +1,6 @@
 import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
+import { responseApiError } from "src/shared/api/api-error"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
 
 export interface PaymentAllocation {
@@ -118,7 +119,7 @@ export async function upsertPaymentEntry(session: AuthSession, input: PaymentEnt
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, "Payment save failed."))
+  if (!response.ok) throw await responseApiError(response, "Payment save failed.")
   const result = (await response.json()) as { ok: boolean; entry?: PaymentEntry; error?: string; warning?: string }
   if (!result.ok || !result.entry) throw new Error(result.error ?? "Payment save failed.")
   return { ...result.entry, document_number_warning: result.warning }
@@ -188,19 +189,10 @@ async function mutatePaymentEntry(session: AuthSession, idOrUuid: string, action
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, `Payment ${action} failed.`))
+  if (!response.ok) throw await responseApiError(response, `Payment ${action} failed.`)
   const result = (await response.json()) as { ok: boolean; entry?: PaymentEntry; error?: string }
   if (!result.ok) throw new Error(result.error ?? `Payment ${action} failed.`)
   return result.entry ?? null
-}
-
-async function responseErrorMessage(response: Response, fallback: string) {
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string }
-    return payload.error ?? payload.message ?? `${fallback} Status ${response.status}.`
-  } catch {
-    return `${fallback} Status ${response.status}.`
-  }
 }
 
 function readString(value: unknown) {

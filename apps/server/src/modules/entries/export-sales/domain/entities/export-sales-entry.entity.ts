@@ -48,6 +48,7 @@ export interface ExportSalesEntry {
   accounting_year_id: number
   currency_id: number | null
   currency_name: string | null
+  accounting_category: string | null
   invoice_no: string
   invoice_date: string
   customer_id: string | null

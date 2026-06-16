@@ -6,6 +6,7 @@ import { toast } from "sonner"
 
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
+import { Skeleton } from "src/components/ui/skeleton"
 import type { AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord, MasterDataUpsertInput } from "../../domain/master-data"
 import { listMasterDataRecords, upsertMasterDataRecord } from "../../infrastructure/master-data-client"
@@ -206,7 +207,7 @@ export function CommonRecordAutocompleteLookup({
           }
         }}
       />
-      {isOpen && optionCount > 0 && listStyle && typeof document !== "undefined" ? createPortal(
+      {isOpen && (optionCount > 0 || recordsQuery.isFetching) && listStyle && typeof document !== "undefined" ? createPortal(
         <div
           ref={listRef}
           role="listbox"
@@ -214,6 +215,7 @@ export function CommonRecordAutocompleteLookup({
           className="fixed z-[1200] overflow-y-auto overscroll-contain rounded-md border border-border bg-card p-1 shadow-2xl ring-1 ring-black/5"
           onMouseDown={(event) => event.preventDefault()}
         >
+          {recordsQuery.isFetching && !filteredOptions.length ? <LookupLoadingRows /> : null}
           {filteredOptions.map((option, index) => {
             const isSelected = isSelectedCommonRecord(option, selectedId)
             return (
@@ -251,6 +253,16 @@ export function CommonRecordAutocompleteLookup({
         </div>,
         document.body,
       ) : null}
+    </div>
+  )
+}
+
+function LookupLoadingRows() {
+  return (
+    <div className="grid gap-2 px-2 py-2">
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-4 w-5/6" />
+      <Skeleton className="h-4 w-2/3" />
     </div>
   )
 }

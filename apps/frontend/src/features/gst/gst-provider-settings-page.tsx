@@ -6,6 +6,7 @@ import { AnimatedTabs } from "src/components/ui/animated-tabs"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
 import { Switch } from "src/components/ui/switch"
@@ -130,6 +131,14 @@ function ProviderSettingsCard({ environment, purpose, session }: { environment: 
         </div>
       </CardHeader>
       <CardContent className="grid gap-4 p-4">
+        {settingsQuery.isError ? (
+          <ModuleErrorPanel
+            error={settingsQuery.error}
+            isRetrying={settingsQuery.isFetching}
+            title={`${environmentLabel(environment)} ${purpose.label} settings could not be loaded`}
+            onRetry={() => void settingsQuery.refetch()}
+          />
+        ) : null}
         <SettingsField label="Registered Email">
           <Input value={draft.email} onChange={(event) => setDraft((current) => ({ ...current, email: event.target.value }))} placeholder="email@example.com" />
         </SettingsField>

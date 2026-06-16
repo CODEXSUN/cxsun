@@ -22,11 +22,12 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
+import { ModuleListSkeleton } from "src/components/blocks/module-loading"
 import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { emptyAddress, emptyContact, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
-import { listCompanies } from "src/features/company/company-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { CityAutocompleteLookup } from "src/features/master-data/interface/components/city-autocomplete-lookup"
 import { CountryAutocompleteLookup } from "src/features/master-data/interface/components/country-autocomplete-lookup"
@@ -39,28 +40,19 @@ import { WorkOrderAutocomplete } from "src/features/master-data/interface/compon
 import { listMasterDataRecords, upsertMasterDataRecord } from "src/features/master-data/infrastructure/master-data-client"
 import { isSoftwareSettingEnabled } from "src/features/settings/software-settings"
 import type { SoftwareSettingsState } from "src/features/settings/software-settings"
-import { nextDocumentNumberSetting } from "src/features/settings/document-settings-client"
 import { useCompanySoftwareSettings } from "src/features/settings/use-company-software-settings"
 import { filterStockContactLookupOptions, stockContactTypeId } from "src/features/stock/contact-role-filter"
 import {
-  addPurchaseComment,
-  createPurchaseCorrection,
-  createPurchaseReversal,
-  downloadPurchasePdf,
-  destroyPurchaseEntry,
   emptyPurchaseEntry,
   emptyPurchaseItem,
-  listPurchaseContactLookups,
-  listPurchaseCommonLookups,
-  listPurchaseEntries,
-  restorePurchaseEntry,
-  runPurchaseTool,
-  upsertPurchaseEntry,
   type PurchaseLookupOption,
   type PurchaseEntry,
   type PurchaseEntryInput,
   type PurchaseEntryItem,
 } from "./purchase-client"
+import { purchaseActions } from "./purchase-actions"
+import { purchaseInvalidations } from "./purchase-invalidations"
+import { purchaseQueries } from "./purchase-queries"
 import { PurchaseEntryDocument, type PurchasePrintCopy, type PurchasePrintPartyDetails } from "./purchase-print-page"
 
 type PurchaseView = { mode: "list" } | { mode: "show"; entry: PurchaseEntry } | { mode: "upsert"; entry: PurchaseEntry | null }
@@ -134,15 +126,14 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
   const [listViewMode, setListViewMode] = useState<EntryListViewMode>("day")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(100)
-  const queryKey = ["purchase-entries", session.selectedTenant.slug]
-  const entriesQuery = useQuery({ queryKey, queryFn: () => listPurchaseEntries(session) })
-  const upsertMutation = useMutation({ mutationFn: (input: PurchaseEntryInput) => upsertPurchaseEntry(session, input) })
-  const destroyMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => destroyPurchaseEntry(session, entry) })
-  const restoreMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => restorePurchaseEntry(session, entry) })
-  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: PurchaseEntry; body: string }) => addPurchaseComment(session, entry, body) })
-  const correctionMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => createPurchaseCorrection(session, entry) })
-  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PurchaseEntry; printHtml?: string; tool: string }) => runPurchaseTool(session, entry, tool, printHtml) })
-  const reversalMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => createPurchaseReversal(session, entry) })
+  const entriesQuery = useQuery(purchaseQueries.entries(session))
+  const upsertMutation = useMutation({ mutationFn: (input: PurchaseEntryInput) => purchaseActions.saveDraft(session, input) })
+  const destroyMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => purchaseActions.suspend(session, entry) })
+  const restoreMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => purchaseActions.restore(session, entry) })
+  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: PurchaseEntry; body: string }) => purchaseActions.addComment(session, entry, body) })
+  const correctionMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => purchaseActions.createCorrection(session, entry) })
+  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PurchaseEntry; printHtml?: string; tool: string }) => purchaseActions.runTool(session, entry, tool, printHtml) })
+  const reversalMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => purchaseActions.createReversal(session, entry) })
   const entries = entriesQuery.data ?? []
   const filteredEntries = useMemo(() => filterPurchase(searchPurchase(entries, searchValue), statusFilter).sort((left, right) => compareDocumentNo(left.entry_no, right.entry_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizePurchaseByMonth(filteredEntries), [filteredEntries])
@@ -163,15 +154,13 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
   }, [entries, initialEntryUuid])
 
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey })
+    await purchaseInvalidations.invalidateEntries(queryClient, session)
   }
 
   async function save(input: PurchaseEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(input)
     toast.success(input.uuid ? "Purchase entry updated" : "Purchase entry created", { description: entry.document_number_warning ?? entry.entry_no })
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "purchase"] })
-    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
-    await refresh()
+    await purchaseInvalidations.afterSave(queryClient, session)
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
   }
@@ -194,7 +183,7 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
   }
 
   function openNewEntry() {
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "purchase"] })
+    purchaseInvalidations.clearNextEntryPreview(queryClient, session)
     setView({ mode: "upsert", entry: null })
   }
 
@@ -226,7 +215,7 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
         }}
         onDestroy={() => void destroy(entry)}
         onDownloadPdf={async (entry) => {
-          await downloadPurchasePdf(session, entry, capturePrintDocument(".purchase-print-page"))
+          await purchaseActions.downloadPdf(session, entry, capturePrintDocument(".purchase-print-page"))
           toast.success("PDF downloaded", { description: entry.entry_no })
         }}
         onEdit={() => setView({ mode: "upsert", entry })}
@@ -294,6 +283,14 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
           />
         }
       />
+      {entriesQuery.isError ? (
+        <ModuleErrorPanel
+          error={entriesQuery.error}
+          isRetrying={entriesQuery.isFetching}
+          title="Purchase could not be loaded"
+          onRetry={() => void entriesQuery.refetch()}
+        />
+      ) : null}
       <MasterListTableCard>
         <div className="overflow-x-auto">
           {listViewMode === "month" ? (
@@ -389,7 +386,8 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
           </table>
           )}
         </div>
-        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 ? <MasterListEmptyState>{entriesQuery.isFetching ? "Loading purchase entries." : "No purchase entries found."}</MasterListEmptyState> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && entriesQuery.isFetching ? <ModuleListSkeleton columns={listViewMode === "month" ? 6 : 10} rows={7} /> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && !entriesQuery.isFetching ? <MasterListEmptyState>No purchase entries found.</MasterListEmptyState> : null}
       </MasterListTableCard>
       <MasterListPaginationCard
         page={currentPage}
@@ -440,8 +438,8 @@ function PurchaseShowPage({ entry, isWorking, onBack, onComment, onCorrection, o
   const [toolActivities, setToolActivities] = useState<Array<{ id: string; message: string; created_at: string }>>([])
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const addressLabels = usePurchaseAddressLabels(session)
-  const companyQuery = useQuery({ queryKey: ["Purchase-print-company", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
-  const contactsQuery = useQuery({ queryKey: ["Purchase-print-contacts", session.selectedTenant.slug], queryFn: () => listPurchaseContactLookups(session) })
+  const companyQuery = useQuery(purchaseQueries.printCompany(session))
+  const contactsQuery = useQuery(purchaseQueries.printContacts(session))
   const printCompany = (companyQuery.data ?? []).find((company) => company.isPrimary) ?? companyQuery.data?.[0] ?? null
   const selectedContact = (contactsQuery.data ?? []).find((contact) => contact.id === entry.supplier_id) ?? null
   const billingParty = buildPurchasePrintPartyDetails(entry, selectedContact, entry.billing_address, addressLabels)
@@ -696,19 +694,15 @@ function PurchaseUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
 }) {
   const [draft, setDraft] = useState<PurchaseEntryInput>(() => entry ? { ...entry, items: entry.items.map((item) => ({ ...item })) } : emptyPurchaseEntry())
   const [contactCreateInitialName, setContactCreateInitialName] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<unknown>(null)
   const totals = useMemo(() => calculateDraftTotals(draft.items, draft.round_off, draft.place_of_supply), [draft.items, draft.place_of_supply, draft.round_off])
-  const contactsQuery = useQuery({ queryKey: ["Purchase-lookups", session.selectedTenant.slug, "contacts"], queryFn: () => listPurchaseContactLookups(session) })
-  const contactTypesQuery = useQuery({ queryKey: ["Purchase-lookups", session.selectedTenant.slug, "contactTypes"], queryFn: () => listMasterDataRecords(session, "contactTypes") })
-  const hsnCodesQuery = useQuery({ queryKey: ["Purchase-lookups", session.selectedTenant.slug, "hsnCodes"], queryFn: () => listPurchaseCommonLookups(session, "hsnCodes") })
-  const taxesQuery = useQuery({ queryKey: ["Purchase-lookups", session.selectedTenant.slug, "taxes"], queryFn: () => listPurchaseCommonLookups(session, "taxes") })
-  const unitsQuery = useQuery({ queryKey: ["Purchase-lookups", session.selectedTenant.slug, "units"], queryFn: () => listPurchaseCommonLookups(session, "units") })
-  const transportsQuery = useQuery({ queryKey: ["Purchase-lookups", session.selectedTenant.slug, "transports"], queryFn: () => listMasterDataRecords(session, "transports") })
-  const nextEntryQuery = useQuery({
-    enabled: !entry,
-    queryKey: ["document-number-next-preview", session.selectedTenant.slug, "purchase"],
-    queryFn: () => nextDocumentNumberSetting(session, "purchase"),
-    refetchOnMount: "always",
-  })
+  const contactsQuery = useQuery(purchaseQueries.contacts(session))
+  const contactTypesQuery = useQuery(purchaseQueries.contactTypes(session))
+  const hsnCodesQuery = useQuery(purchaseQueries.hsnCodes(session))
+  const taxesQuery = useQuery(purchaseQueries.taxes(session))
+  const unitsQuery = useQuery(purchaseQueries.units(session))
+  const transportsQuery = useQuery(purchaseQueries.transports(session))
+  const nextEntryQuery = useQuery(purchaseQueries.nextEntry(session, !entry))
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const supplierContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "supplier"), [contactsQuery.data, contactTypesQuery.data])
 
@@ -717,6 +711,16 @@ function PurchaseUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
     setDraft((current) => current.entry_no ? current : { ...current, entry_no: nextEntryQuery.data.preview })
   }, [draft.entry_no, entry, nextEntryQuery.data?.preview])
 
+  async function submitSave(input: PurchaseEntryInput, printAfterSave = false) {
+    setSaveError(null)
+    try {
+      await onSubmit(input, printAfterSave)
+    } catch (error) {
+      setSaveError(error)
+      toast.error("Purchase save failed", { description: error instanceof Error ? error.message : "Please try again." })
+    }
+  }
+
   return (
     <MasterListPageFrame
       title={entry ? `Edit ${entry.entry_no}` : "New Purchase"}
@@ -724,9 +728,10 @@ function PurchaseUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
       technicalName="page.entries.purchase.upsert"
       action={<Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>}
     >
+      {saveError ? <ModuleErrorPanel error={saveError} title="Purchase save blocked" onRetry={() => setSaveError(null)} retryLabel="Dismiss" /> : null}
       <MasterListUpsertLayout>
         <MasterListUpsertCard className="overflow-hidden p-0 [&>div]:p-0">
-          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void onSubmit(buildPurchaseSaveInput(draft, softwareSettings)) }}>
+          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void submitSave(buildPurchaseSaveInput(draft, softwareSettings)) }}>
             <div className="px-0 pb-4 pt-3 md:pb-5">
               <PurchaseVoucherTabs
                 contacts={supplierContacts}
@@ -745,7 +750,7 @@ function PurchaseUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6">
               <Button type="submit" disabled={isSaving} className="rounded-md"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button>
-              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void onSubmit(buildPurchaseSaveInput({ ...draft, status: "posted" }, softwareSettings), true)} className="rounded-md"><Printer className="size-4" />Save & Print</Button>
+              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void submitSave(buildPurchaseSaveInput({ ...draft, status: "posted" }, softwareSettings), true)} className="rounded-md"><Printer className="size-4" />Save & Print</Button>
               <Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>
             </div>
           </form>
@@ -1760,7 +1765,7 @@ function districtPrintLabel(value: string) {
 
 function usePurchaseAddressLabels(session: AuthSession): PurchaseAddressLabels {
   const modules = ["addressTypes", "countries", "states", "districts", "cities", "pincodes"] as const
-  const queries = modules.map((moduleKey) => useQuery({ queryKey: ["Purchase-address-labels", session.selectedTenant.slug, moduleKey], queryFn: () => listMasterDataRecords(session, moduleKey) }))
+  const queries = modules.map((moduleKey) => useQuery(purchaseQueries.addressLabels(session, moduleKey)))
   const maps = Object.fromEntries(modules.map((moduleKey, index) => [moduleKey, buildPurchaseLabelMap(queries[index].data ?? [])])) as Record<(typeof modules)[number], Map<string, string>>
 
   return {

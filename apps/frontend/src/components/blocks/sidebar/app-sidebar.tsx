@@ -7,6 +7,7 @@ import {
   BookOpenText,
   BriefcaseBusiness,
   Building2,
+  CreditCard,
   Database,
   Factory,
   Globe2,
@@ -54,6 +55,7 @@ export type DashboardPage =
   | "app-dashboard"
   | "tenant"
   | "tenant-domain"
+  | "subscription"
   | "industry"
   | "company-industry"
   | "company"
@@ -78,6 +80,7 @@ const superAdminNav = [
     items: [
       { title: "Tenant", url: "#", icon: Users },
       { title: "Domain", url: "#", icon: Globe2 },
+      { title: "Subscription", url: "#", icon: CreditCard },
       { title: "Industry", url: "#", icon: Factory },
       { title: "Company Industry", url: "#", icon: Building2 },
       { title: "Admin User Manager", url: "#", icon: UserRoundCog },
@@ -141,6 +144,7 @@ function pageFromTitle(title: string): DashboardPage | undefined {
     Bugs: "bugs",
     "Default Company": "app-application-default-company",
     Domain: "tenant-domain",
+    Subscription: "subscription",
     Helpdesk: "helpdesk",
     Industry: "industry",
     "Company Industry": "company-industry",
@@ -189,12 +193,12 @@ export function AppSidebar({
   hiddenPages?: DashboardPage[]
 }) {
   const selectedApp = getDashboardApp(activeApp)
-  const defaultCompanyLogo = companyLogoSet(defaultCompanyContext, { fallback: false })
+  const defaultCompanyLogo = companyLogoSet(defaultCompanyContext, { fallback: true })
   const TenantLogo = React.useCallback(
     ({ className }: { className?: string }) => (
       <BrandLogo
         className={className}
-        fallback={false}
+        fallback
         logoDarkUrl={defaultCompanyLogo.logoDarkUrl}
         logoUrl={defaultCompanyLogo.logoUrl}
         name={defaultCompanyContext?.companyName}

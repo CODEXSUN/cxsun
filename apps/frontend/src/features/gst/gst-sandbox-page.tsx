@@ -5,6 +5,7 @@ import { CheckCircle2, ListChecks, Play, RefreshCw, Server, XCircle } from "luci
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
 import { Label } from "src/components/ui/label"
 import { Input } from "src/components/ui/input"
 import { NativeSelect, NativeSelectOption } from "src/components/ui/native-select"
@@ -281,6 +282,19 @@ export function GstSandboxPage({ allowEnvironmentSelect = false, preferredEnviro
           )}
         </div>
       </div>
+
+      {tenantsQuery.isError ? (
+        <ModuleErrorPanel error={tenantsQuery.error} isRetrying={tenantsQuery.isFetching} title="Tenants could not be loaded" onRetry={() => void tenantsQuery.refetch()} />
+      ) : null}
+      {settingsQuery.isError ? (
+        <ModuleErrorPanel error={settingsQuery.error} isRetrying={settingsQuery.isFetching} title="GST provider settings could not be loaded" onRetry={() => void settingsQuery.refetch()} />
+      ) : null}
+      {tokenQuery.isError ? (
+        <ModuleErrorPanel error={tokenQuery.error} isRetrying={tokenQuery.isFetching} title="GST token status could not be loaded" onRetry={() => void tokenQuery.refetch()} />
+      ) : null}
+      {historyQuery.isError ? (
+        <ModuleErrorPanel error={historyQuery.error} isRetrying={historyQuery.isFetching} title="GST API history could not be loaded" onRetry={() => void historyQuery.refetch()} />
+      ) : null}
 
       <Card className="rounded-md border-border/70">
         <CardHeader className="border-b border-border/70 px-4 py-3">

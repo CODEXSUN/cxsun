@@ -192,7 +192,7 @@ export class CxApp {
             if (err instanceof HttpException) {
               return reply
                 .status(err.statusCode)
-                .send({ error: err.message, statusCode: err.statusCode })
+                .send({ ...err.details, error: err.message, statusCode: err.statusCode })
             }
 
             throw err

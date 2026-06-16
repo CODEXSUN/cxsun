@@ -48,6 +48,12 @@ export const settings = {
     pop3Host: envString('MAIL_POP3_HOST', 'pop.hostinger.com'),
     pop3Port: envNumber('MAIL_POP3_PORT', 995),
   },
+  razorpay: {
+    keyId: envOptionalString('RAZORPAY_KEY_ID'),
+    keySecret: envOptionalString('RAZORPAY_KEY_SECRET'),
+    webhookSecret: envOptionalString('RAZORPAY_WEBHOOK_SECRET'),
+    baseUrl: envString('RAZORPAY_BASE_URL', 'https://api.razorpay.com/v1'),
+  },
   zetro: {
     provider: envString('ZETRO_PROVIDER', 'openrouter'),
     defaultModel: envString('ZETRO_DEFAULT_MODEL', 'nex-agi/nex-n2-pro:free'),

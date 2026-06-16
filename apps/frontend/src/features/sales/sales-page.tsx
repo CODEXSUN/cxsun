@@ -22,11 +22,12 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
+import { ModuleListSkeleton } from "src/components/blocks/module-loading"
 import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { emptyAddress, emptyContact, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
-import { listCompanies } from "src/features/company/company-client"
 import { runGstComplianceOperation } from "src/features/gst/gst-compliance-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { CityAutocompleteLookup } from "src/features/master-data/interface/components/city-autocomplete-lookup"
@@ -40,28 +41,19 @@ import { WorkOrderAutocomplete } from "src/features/master-data/interface/compon
 import { listMasterDataRecords, upsertMasterDataRecord } from "src/features/master-data/infrastructure/master-data-client"
 import { isSoftwareSettingEnabled } from "src/features/settings/software-settings"
 import type { SoftwareSettingsState } from "src/features/settings/software-settings"
-import { nextDocumentNumberSetting } from "src/features/settings/document-settings-client"
 import { useCompanySoftwareSettings } from "src/features/settings/use-company-software-settings"
 import { filterStockContactLookupOptions, stockContactTypeId } from "src/features/stock/contact-role-filter"
 import {
-  addSalesComment,
-  createSalesCorrection,
-  createSalesReversal,
-  downloadSalesPdf,
-  destroySalesEntry,
   emptySalesEntry,
   emptySalesItem,
-  listSalesContactLookups,
-  listSalesCommonLookups,
-  listSalesEntries,
-  restoreSalesEntry,
-  runSalesTool,
-  upsertSalesEntry,
   type SalesLookupOption,
   type SalesEntry,
   type SalesEntryInput,
   type SalesEntryItem,
 } from "./sales-client"
+import { salesActions } from "./sales-actions"
+import { salesInvalidations } from "./sales-invalidations"
+import { salesQueries } from "./sales-queries"
 import { SalesInvoiceDocument, type SalesPrintCopy, type SalesPrintPartyDetails } from "./sales-print-page"
 
 type SalesView = { mode: "list" } | { mode: "show"; entry: SalesEntry } | { mode: "upsert"; entry: SalesEntry | null }
@@ -129,15 +121,14 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
   const [listViewMode, setListViewMode] = useState<EntryListViewMode>("day")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(100)
-  const queryKey = ["sales-entries", session.selectedTenant.slug]
-  const entriesQuery = useQuery({ queryKey, queryFn: () => listSalesEntries(session) })
-  const upsertMutation = useMutation({ mutationFn: (input: SalesEntryInput) => upsertSalesEntry(session, input) })
-  const destroyMutation = useMutation({ mutationFn: (entry: SalesEntry) => destroySalesEntry(session, entry) })
-  const restoreMutation = useMutation({ mutationFn: (entry: SalesEntry) => restoreSalesEntry(session, entry) })
-  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: SalesEntry; body: string }) => addSalesComment(session, entry, body) })
-  const correctionMutation = useMutation({ mutationFn: (entry: SalesEntry) => createSalesCorrection(session, entry) })
-  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: SalesEntry; printHtml?: string; tool: string }) => runSalesTool(session, entry, tool, printHtml) })
-  const reversalMutation = useMutation({ mutationFn: (entry: SalesEntry) => createSalesReversal(session, entry) })
+  const entriesQuery = useQuery(salesQueries.entries(session))
+  const upsertMutation = useMutation({ mutationFn: (input: SalesEntryInput) => salesActions.saveDraft(session, input) })
+  const destroyMutation = useMutation({ mutationFn: (entry: SalesEntry) => salesActions.suspend(session, entry) })
+  const restoreMutation = useMutation({ mutationFn: (entry: SalesEntry) => salesActions.restore(session, entry) })
+  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: SalesEntry; body: string }) => salesActions.addComment(session, entry, body) })
+  const correctionMutation = useMutation({ mutationFn: (entry: SalesEntry) => salesActions.createCorrection(session, entry) })
+  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: SalesEntry; printHtml?: string; tool: string }) => salesActions.runTool(session, entry, tool, printHtml) })
+  const reversalMutation = useMutation({ mutationFn: (entry: SalesEntry) => salesActions.createReversal(session, entry) })
   const entries = entriesQuery.data ?? []
   const filteredEntries = useMemo(() => filterSales(searchSales(entries, searchValue), statusFilter).sort((left, right) => compareDocumentNo(left.invoice_no, right.invoice_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizeSalesByMonth(filteredEntries), [filteredEntries])
@@ -158,15 +149,13 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
   }, [entries, initialEntryUuid])
 
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey })
+    await salesInvalidations.invalidateEntries(queryClient, session)
   }
 
   async function save(input: SalesEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(input)
     toast.success(input.uuid ? "Sales entry updated" : "Sales entry created", { description: entry.document_number_warning ?? entry.invoice_no })
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "sales"] })
-    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
-    await refresh()
+    await salesInvalidations.afterSave(queryClient, session)
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
   }
@@ -189,7 +178,7 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
   }
 
   function openNewEntry() {
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "sales"] })
+    salesInvalidations.clearNextInvoicePreview(queryClient, session)
     setView({ mode: "upsert", entry: null })
   }
 
@@ -221,7 +210,7 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
         }}
         onDestroy={() => void destroy(entry)}
         onDownloadPdf={async (entry) => {
-          await downloadSalesPdf(session, entry, capturePrintDocument(".sales-print-page"))
+          await salesActions.downloadPdf(session, entry, capturePrintDocument(".sales-print-page"))
           toast.success("PDF downloaded", { description: entry.invoice_no })
         }}
         onEdit={() => setView({ mode: "upsert", entry })}
@@ -289,6 +278,14 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
           />
         }
       />
+      {entriesQuery.isError ? (
+        <ModuleErrorPanel
+          error={entriesQuery.error}
+          isRetrying={entriesQuery.isFetching}
+          title="Sales could not be loaded"
+          onRetry={() => void entriesQuery.refetch()}
+        />
+      ) : null}
       <MasterListTableCard>
         <div className="overflow-x-auto">
           {listViewMode === "month" ? (
@@ -382,7 +379,8 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
           </table>
           )}
         </div>
-        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 ? <MasterListEmptyState>{entriesQuery.isFetching ? "Loading sales entries." : "No sales entries found."}</MasterListEmptyState> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && entriesQuery.isFetching ? <ModuleListSkeleton columns={listViewMode === "month" ? 6 : 9} rows={7} /> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && !entriesQuery.isFetching ? <MasterListEmptyState>No sales entries found.</MasterListEmptyState> : null}
       </MasterListTableCard>
       <MasterListPaginationCard
         page={currentPage}
@@ -433,8 +431,8 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onCorrection, onDe
   const [toolActivities, setToolActivities] = useState<Array<{ id: string; message: string; created_at: string }>>([])
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const addressLabels = useSalesAddressLabels(session)
-  const companyQuery = useQuery({ queryKey: ["sales-print-company", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
-  const contactsQuery = useQuery({ queryKey: ["sales-print-contacts", session.selectedTenant.slug], queryFn: () => listSalesContactLookups(session) })
+  const companyQuery = useQuery(salesQueries.printCompany(session))
+  const contactsQuery = useQuery(salesQueries.printContacts(session))
   const printCompany = (companyQuery.data ?? []).find((company) => company.isPrimary) ?? companyQuery.data?.[0] ?? null
   const selectedContact = (contactsQuery.data ?? []).find((contact) => contact.id === entry.customer_id) ?? null
   const billingParty = buildSalesPrintPartyDetails(entry, selectedContact, entry.billing_address, addressLabels)
@@ -694,21 +692,17 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
 }) {
   const [draft, setDraft] = useState<SalesEntryInput>(() => entry ? { ...entry, items: entry.items.map((item) => ({ ...item })) } : emptySalesEntry())
   const [contactCreateInitialName, setContactCreateInitialName] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<unknown>(null)
   const totals = useMemo(() => calculateDraftTotals(draft.items, draft.round_off, draft.place_of_supply), [draft.items, draft.place_of_supply, draft.round_off])
-  const contactsQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "contacts"], queryFn: () => listSalesContactLookups(session) })
-  const contactTypesQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "contactTypes"], queryFn: () => listMasterDataRecords(session, "contactTypes") })
-  const hsnCodesQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "hsnCodes"], queryFn: () => listSalesCommonLookups(session, "hsnCodes") })
-  const taxesQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "taxes"], queryFn: () => listSalesCommonLookups(session, "taxes") })
-  const unitsQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "units"], queryFn: () => listSalesCommonLookups(session, "units") })
-  const transportsQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "transports"], queryFn: () => listMasterDataRecords(session, "transports") })
-  const salesAccountTypesQuery = useQuery({ queryKey: ["sales-lookups", session.selectedTenant.slug, "salesAccountTypes"], queryFn: () => listMasterDataRecords(session, "salesAccountTypes") })
-  const salesAccountTypeMutation = useMutation({ mutationFn: (name: string) => upsertMasterDataRecord(session, "salesAccountTypes", { name, description: "", is_active: true }) })
-  const nextInvoiceQuery = useQuery({
-    enabled: !entry,
-    queryKey: ["document-number-next-preview", session.selectedTenant.slug, "sales"],
-    queryFn: () => nextDocumentNumberSetting(session, "sales"),
-    refetchOnMount: "always",
-  })
+  const contactsQuery = useQuery(salesQueries.contacts(session))
+  const contactTypesQuery = useQuery(salesQueries.contactTypes(session))
+  const hsnCodesQuery = useQuery(salesQueries.hsnCodes(session))
+  const taxesQuery = useQuery(salesQueries.taxes(session))
+  const unitsQuery = useQuery(salesQueries.units(session))
+  const transportsQuery = useQuery(salesQueries.transports(session))
+  const salesAccountTypesQuery = useQuery(salesQueries.salesAccountTypes(session))
+  const salesAccountTypeMutation = useMutation({ mutationFn: (name: string) => salesActions.createSalesAccountType(session, name) })
+  const nextInvoiceQuery = useQuery(salesQueries.nextInvoice(session, !entry))
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const customerContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "customer"), [contactsQuery.data, contactTypesQuery.data])
 
@@ -717,6 +711,16 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
     setDraft((current) => current.invoice_no ? current : { ...current, invoice_no: nextInvoiceQuery.data.preview })
   }, [draft.invoice_no, entry, nextInvoiceQuery.data?.preview])
 
+  async function submitSave(input: SalesEntryInput, printAfterSave = false) {
+    setSaveError(null)
+    try {
+      await onSubmit(input, printAfterSave)
+    } catch (error) {
+      setSaveError(error)
+      toast.error("Sales save failed", { description: error instanceof Error ? error.message : "Please try again." })
+    }
+  }
+
   return (
     <MasterListPageFrame
       title={entry ? `Edit ${entry.invoice_no}` : "New Sales"}
@@ -724,9 +728,10 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
       technicalName="page.entries.sales.upsert"
       action={<Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>}
     >
+      {saveError ? <ModuleErrorPanel error={saveError} title="Sales save blocked" onRetry={() => setSaveError(null)} retryLabel="Dismiss" /> : null}
       <MasterListUpsertLayout>
         <MasterListUpsertCard className="overflow-hidden p-0 [&>div]:p-0">
-          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void onSubmit(buildSalesSaveInput(draft, softwareSettings)) }}>
+          <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); void submitSave(buildSalesSaveInput(draft, softwareSettings)) }}>
             <div className="px-0 pb-4 pt-3 md:pb-5">
               <SalesVoucherTabs
                 contacts={customerContacts}
@@ -754,7 +759,7 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
             </div>
             <div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6">
               <Button type="submit" disabled={isSaving} className="rounded-md"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button>
-              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void onSubmit(buildSalesSaveInput({ ...draft, status: "posted" }, softwareSettings), true)} className="rounded-md"><Printer className="size-4" />Save & Print</Button>
+              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void submitSave(buildSalesSaveInput({ ...draft, status: "posted" }, softwareSettings), true)} className="rounded-md"><Printer className="size-4" />Save & Print</Button>
               <Button type="button" variant="outline" onClick={onBack} className="rounded-md"><X className="size-4" />Cancel</Button>
             </div>
           </form>
@@ -992,16 +997,14 @@ function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editIte
             onTextChange={(value) => setForm((current) => ({ ...current, customer_gstin: "", customer_id: null, customer_name: value, customer_state_code: "", customer_state_name: "" }))}
           />
           <WorkOrderAutocomplete session={session} value={form.reference_no ?? ""} onChange={(value) => setForm((current) => ({ ...current, reference_no: value }))} />
-          <div className="grid items-start gap-3 sm:grid-cols-2">
-            <LookupSelectField
-              createLabel="Create sales ledger"
-              label="Sales Ledger"
-              value={normalizeSalesAccountTypeValue(form.accounting_category) || defaultSalesAccountType}
-              options={salesTypeOptions}
-              onCreate={onCreateSalesType}
-              onChange={(value) => setForm((current) => ({ ...current, accounting_category: value }))}
-            />
-          </div>
+          <LookupSelectField
+            createLabel="Create sales ledger"
+            label="Sales Ledger"
+            value={normalizeSalesAccountTypeValue(form.accounting_category) || defaultSalesAccountType}
+            options={salesTypeOptions}
+            onCreate={onCreateSalesType}
+            onChange={(value) => setForm((current) => ({ ...current, accounting_category: value }))}
+          />
         </div>
         <div className="space-y-5">
           <Field label="Invoice no" value={form.invoice_no ?? ""} onChange={(value) => setForm((current) => ({ ...current, invoice_no: value }))} />
@@ -1286,8 +1289,8 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
   const setTransport = (nextTransport: SalesTransportDraft) => setForm((current) => ({ ...current, ...salesTransportDraftToForm(nextTransport) }))
 
   async function saveSalesDraft(input: SalesEntryInput) {
-    const saved = await upsertSalesEntry(session, buildSalesSaveInput(input, softwareSettings))
-    await queryClient.invalidateQueries({ queryKey: ["sales-entries", session.selectedTenant.slug] })
+    const saved = await salesActions.saveDraft(session, buildSalesSaveInput(input, softwareSettings))
+    await salesInvalidations.afterSave(queryClient, session)
     return saved
   }
 
@@ -1390,7 +1393,7 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
         sourceType: "sales",
         sourceUuid: savedEntry.uuid,
       })
-      void queryClient.invalidateQueries({ queryKey: ["gst-compliance"] })
+      void salesInvalidations.afterComplianceAction(queryClient, session)
       toast.success("E-invoice cancelled", { description: "Cancellation audit was recorded in GST compliance.", id: toastId })
     } catch (error) {
       toast.error("E-invoice cancellation failed", { description: error instanceof Error ? error.message : "Please try again.", id: toastId })
@@ -1416,7 +1419,7 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
         sourceType: "sales",
         sourceUuid: savedEntry.uuid,
       })
-      void queryClient.invalidateQueries({ queryKey: ["gst-compliance"] })
+      void salesInvalidations.afterComplianceAction(queryClient, session)
       toast.success("E-way bill cancelled", { description: "Cancellation audit was recorded in GST compliance.", id: toastId })
     } catch (error) {
       toast.error("E-way cancellation failed", { description: error instanceof Error ? error.message : "Please try again.", id: toastId })
@@ -1899,7 +1902,7 @@ function districtPrintLabel(value: string) {
 
 function useSalesAddressLabels(session: AuthSession): SalesAddressLabels {
   const modules = ["addressTypes", "countries", "states", "districts", "cities", "pincodes"] as const
-  const queries = modules.map((moduleKey) => useQuery({ queryKey: ["sales-address-labels", session.selectedTenant.slug, moduleKey], queryFn: () => listMasterDataRecords(session, moduleKey) }))
+  const queries = modules.map((moduleKey) => useQuery(salesQueries.addressLabels(session, moduleKey)))
   const maps = Object.fromEntries(modules.map((moduleKey, index) => [moduleKey, buildSalesLabelMap(queries[index].data ?? [])])) as Record<(typeof modules)[number], Map<string, string>>
 
   return {

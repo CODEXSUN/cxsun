@@ -1,5 +1,6 @@
 import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
+import { responseApiError } from "src/shared/api/api-error"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
 
 export type SalesCommonLookupKey = "hsnCodes" | "units" | "taxes"
@@ -213,7 +214,7 @@ export async function upsertSalesEntry(session: AuthSession, input: SalesEntryIn
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, "Sales save failed."))
+  if (!response.ok) throw await responseApiError(response, "Sales save failed.")
   const result = (await response.json()) as { ok: boolean; entry?: SalesEntry; error?: string; warning?: string }
   if (!result.ok || !result.entry) throw new Error(result.error ?? "Sales save failed.")
   return { ...result.entry, document_number_warning: result.warning }
@@ -272,19 +273,10 @@ async function mutateSalesEntry(session: AuthSession, idOrUuid: string, action: 
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, `Sales ${action} failed.`))
+  if (!response.ok) throw await responseApiError(response, `Sales ${action} failed.`)
   const result = (await response.json()) as { ok: boolean; entry?: SalesEntry; error?: string }
   if (!result.ok) throw new Error(result.error ?? `Sales ${action} failed.`)
   return result.entry ?? null
-}
-
-async function responseErrorMessage(response: Response, fallback: string) {
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string }
-    return payload.error ?? payload.message ?? `${fallback} Status ${response.status}.`
-  } catch {
-    return `${fallback} Status ${response.status}.`
-  }
 }
 
 async function listLookupRecords(session: AuthSession, endpoint: string) {

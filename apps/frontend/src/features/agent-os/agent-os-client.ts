@@ -409,7 +409,7 @@ export async function saveZetroApiConnection(
 
 export async function sendZetroChat(
   session: AuthSession,
-  input: { message: string; model: string; providerKey?: string; conversationUuid?: string | null },
+  input: { businessTenantSlug?: string; message: string; model: string; providerKey?: string; conversationUuid?: string | null },
 ) {
   const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/chat`, {
     body: JSON.stringify({
@@ -421,7 +421,12 @@ export async function sendZetroChat(
       userRole: session.selectedTenant.role,
     }),
     cache: "no-store",
-    headers: { ...authHeaders(session), ...zetroAudienceHeaders(session), "Content-Type": "application/json" },
+    headers: {
+      ...authHeaders(session),
+      ...(input.businessTenantSlug ? { "x-tenant-code": input.businessTenantSlug } : {}),
+      ...zetroAudienceHeaders(session),
+      "Content-Type": "application/json",
+    },
     method: "POST",
   })
 

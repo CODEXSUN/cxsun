@@ -73,6 +73,12 @@ const CompanyIndustryPage = lazy(() =>
 const TenantDomainPage = lazy(() =>
   import('src/features/tenant-domain/tenant-domain-page').then((module) => ({ default: module.TenantDomainPage })),
 )
+const SubscriptionPage = lazy(() =>
+  import('src/features/subscription/subscription-page').then((module) => ({ default: module.SubscriptionPage })),
+)
+const MySubscriptionPage = lazy(() =>
+  import('src/features/subscription/my-subscription-page').then((module) => ({ default: module.MySubscriptionPage })),
+)
 const UserManagerPage = lazy(() =>
   import('src/features/user-manager/user-manager-page').then((module) => ({ default: module.UserManagerPage })),
 )
@@ -224,6 +230,7 @@ function dashboardPageFromPath(basePath: string, pathname = window.location.path
     page === "tenant" ||
     page === "setup" ||
     page === "tenant-domain" ||
+    page === "subscription" ||
     page === "industry" ||
     page === "company-industry" ||
     page === "company" ||
@@ -259,7 +266,7 @@ function defaultPageForApp(appId: DashboardAppId): DashboardPage {
 const crossSurfaceAppPages: DashboardPage[] = ["app-agent-os-base"]
 
 const pageAccess: Record<DashboardMode, DashboardPage[]> = {
-  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "industry", "company-industry", "company", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
+  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "subscription", "industry", "company-industry", "company", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
   admin: ["overview", "company", "helpdesk", "bugs", "system-update", ...crossSurfaceAppPages],
   tenant: ["overview", "company", "tenant-roles", ...appModulePages],
 }
@@ -274,6 +281,7 @@ const pageLabels: Partial<Record<DashboardPage, string>> = {
   "tenant": "Tenants",
   "setup": "App Setup",
   "tenant-domain": "Tenant Domains",
+  "subscription": "Subscriptions",
   "industry": "Industries",
   "company-industry": "Company Industry",
   "company": "Companies",
@@ -420,7 +428,7 @@ export function DashboardView({
   const initialPage = dashboardPageFromPath(basePath)
   const storedSession = getStoredSession(authSurface)
   const initialEnabledApps = mode === "tenant" && storedSession ? enabledAppsForSession(storedSession) : readStoredEnabledApps()
-  const initialLandingApp = readStoredLandingApp(initialEnabledApps)
+  const initialLandingApp = mode === "tenant" && storedSession ? readSessionLandingApp(storedSession, initialEnabledApps) : readStoredLandingApp(initialEnabledApps)
   const [activePage, setActivePage] = useState<DashboardPage>(() => initialPage)
   const [session, setSession] = useState<AuthSession | null>(() => storedSession)
   const [authPage, setAuthPage] = useState<"login" | "forgot-password">("login")
@@ -433,7 +441,7 @@ export function DashboardView({
   useEffect(() => {
     if (mode !== "tenant" || !session) return
     const nextEnabledApps = enabledAppsForSession(session)
-    const nextLandingApp = readStoredLandingApp(nextEnabledApps)
+    const nextLandingApp = readSessionLandingApp(session, nextEnabledApps)
     setEnabledApps(nextEnabledApps)
     setLandingApp(nextLandingApp)
     if (!isAppAvailableFromAccess(nextEnabledApps, activeApp)) {
@@ -450,7 +458,7 @@ export function DashboardView({
       .then((nextSession) => {
         if (cancelled) return
         const nextEnabledApps = enabledAppsForSession(nextSession)
-        const nextLandingApp = readStoredLandingApp(nextEnabledApps)
+        const nextLandingApp = readSessionLandingApp(nextSession, nextEnabledApps)
         setSession(nextSession)
         setEnabledApps(nextEnabledApps)
         setLandingApp(nextLandingApp)
@@ -640,7 +648,7 @@ export function DashboardView({
   function authenticate(nextSession: AuthSession) {
     setSession(nextSession)
     const nextEnabledApps = mode === "tenant" ? enabledAppsForSession(nextSession) : enabledApps
-    const nextLandingApp = readStoredLandingApp(nextEnabledApps)
+    const nextLandingApp = mode === "tenant" ? readSessionLandingApp(nextSession, nextEnabledApps) : readStoredLandingApp(nextEnabledApps)
     const nextActiveApp = mode === "tenant" ? nextLandingApp : "application"
     const nextPage = mode === "tenant" ? "overview" : defaultPageForApp(nextActiveApp)
 
@@ -784,6 +792,8 @@ export function DashboardView({
             <TenantListPage session={session} />
           ) : visiblePage === "tenant-domain" ? (
             <TenantDomainPage session={session} />
+          ) : visiblePage === "subscription" ? (
+            <SubscriptionPage session={session} />
           ) : visiblePage === "industry" ? (
             <IndustryPage session={session} />
           ) : visiblePage === "company-industry" ? (
@@ -811,6 +821,8 @@ export function DashboardView({
             <DefaultCompanyPage session={session} />
           ) : visiblePage === "app-application-users" ? (
             <UserManagerPage session={session} mode="tenant" />
+          ) : visiblePage === "app-application-subscription" ? (
+            <MySubscriptionPage session={session} />
           ) : visiblePage === "app-application-landing-desk" ? (
             <LandingDeskSettingsPage
               activeApp={activeApp}
@@ -1297,14 +1309,14 @@ function enabledAppsForSession(session: AuthSession): Record<DashboardAppId, boo
     : null
 
   if (!enabledIds) {
-    return applicationOnlyApps()
+    return { ...defaultEnabledApps, application: true, "agent-os": true }
   }
 
   const enabled = Object.fromEntries(dashboardApps.map((app) => [app.id, app.id === "application" || app.id === "agent-os" || enabledIds.includes(app.id)])) as Record<DashboardAppId, boolean>
   return { ...enabled, application: true, "agent-os": true }
 }
 
-function parseTenantPayloadSettings(value?: string): { apps?: { enabled?: unknown[] } } {
+function parseTenantPayloadSettings(value?: string): { apps?: { enabled?: unknown[]; landing?: unknown } } {
   try {
     const parsed = value ? JSON.parse(value) : {}
     return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
@@ -1317,12 +1329,18 @@ function readStoredLandingApp(enabledApps: Record<DashboardAppId, boolean>): Das
   return fallbackLandingApp(enabledApps)
 }
 
-function fallbackLandingApp(enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
-  return dashboardApps.find((app) => enabledApps[app.id])?.id ?? "application"
+function readSessionLandingApp(session: AuthSession, enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
+  const tenantSettings = parseTenantPayloadSettings(session.selectedTenant.payload_settings)
+  const landing = tenantSettings.apps?.landing
+  if (typeof landing === "string" && isDashboardAppId(landing) && enabledApps[landing]) {
+    return landing
+  }
+
+  return fallbackLandingApp(enabledApps)
 }
 
-function applicationOnlyApps(): Record<DashboardAppId, boolean> {
-  return Object.fromEntries(dashboardApps.map((app) => [app.id, app.id === "application" || app.id === "agent-os"])) as Record<DashboardAppId, boolean>
+function fallbackLandingApp(enabledApps: Record<DashboardAppId, boolean>): DashboardAppId {
+  return dashboardApps.find((app) => enabledApps[app.id])?.id ?? "application"
 }
 
 function isAppAvailableFromAccess(enabledApps: Record<DashboardAppId, boolean>, appId: DashboardAppId) {

@@ -60,6 +60,8 @@
 - Keep `@cxsun/shared` limited to types, constants, and pure utilities.
 - Frontend module pages must be standalone feature pages routed explicitly from the dashboard/router.
 - Keep module-specific UI logic inside that module's feature folder. Do not add product/contact/company/sales-specific switches to generic master-data or common-data pages.
+- For transaction-heavy frontend modules, keep query keys/query functions, business actions, and mutation invalidation maps in explicit module files such as `<module>-queries.ts`, `<module>-actions.ts`, and `<module>-invalidations.ts`. Page components should compose these contracts instead of owning scattered API calls and cache keys directly.
+- Mutations that affect posting, dashboard totals, reports, document numbers, or compliance state must call a module invalidation helper so dependent screens revalidate together.
 - When wiring a company feature toggle, centralize the enabled decision at the dashboard shell and pass it into navigation, overview, routing, and settings surfaces. Avoid separate unsynchronized local checks.
 - Keep copied transaction modules independent after creation. Export Sales may reuse Sales patterns, but changes must preserve its separate routes, persistence tables, document numbering, currency fields, and feature visibility.
 

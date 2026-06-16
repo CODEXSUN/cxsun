@@ -2583,3 +2583,35 @@ User prompt:
 ```text
 also add web customer portal and customer dashboard for ecommerce
 ```
+
+## 2026-06-16 - Sales module query action invalidation pattern
+
+User prompt:
+
+```text
+ok make this without spoiling our flow and make complete of this and test e2e and also write in our rules not to forgot later and check our code base properly
+```
+
+## 2026-06-16 - Continue module query action invalidation pattern
+
+User prompt:
+
+```text
+ok next
+```
+
+## 2026-06-16 - Continue Receipt Payment module pattern
+
+User prompt:
+
+```text
+ok next
+```
+
+## 2026-06-16 - Continue Accounts report helper pattern
+
+User prompt:
+
+```text
+ok next with log in changelog with version
+```

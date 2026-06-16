@@ -287,6 +287,97 @@ export interface ZetroQueryLogsTable {
   created_at: Generated<string>
 }
 
+export interface SubscriptionAppsTable {
+  id: Generated<number>
+  uuid: string
+  app_key: string
+  name: string
+  summary: string
+  feature_summary: string
+  base_price_paise: number
+  currency: string
+  status: string
+  sort_order: number
+  metadata: string | null
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+export interface SubscriptionPlansTable {
+  id: Generated<number>
+  uuid: string
+  plan_key: string
+  name: string
+  summary: string
+  billing_cycle: string
+  currency: string
+  base_price_paise: number
+  status: string
+  sort_order: number
+  metadata: string | null
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+export interface SubscriptionPlanAppsTable {
+  id: Generated<number>
+  plan_id: number
+  app_id: number
+  price_override_paise: number | null
+  is_enabled: number
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+export interface TenantSubscriptionsTable {
+  id: Generated<number>
+  uuid: string
+  tenant_id: number
+  plan_id: number | null
+  status: string
+  billing_cycle: string
+  currency: string
+  amount_paise: number
+  started_at: string | null
+  current_period_start: string | null
+  current_period_end: string | null
+  cancelled_at: string | null
+  razorpay_customer_id: string | null
+  razorpay_subscription_id: string | null
+  metadata: string | null
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+export interface TenantSubscriptionAppsTable {
+  id: Generated<number>
+  subscription_id: number
+  app_id: number
+  app_key: string
+  is_enabled: number
+  unit_price_paise: number
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
+export interface SubscriptionPaymentsTable {
+  id: Generated<number>
+  uuid: string
+  tenant_id: number
+  subscription_id: number | null
+  amount_paise: number
+  currency: string
+  status: string
+  provider: string
+  provider_order_id: string | null
+  provider_payment_id: string | null
+  provider_signature: string | null
+  receipt: string | null
+  payload: string | null
+  created_at: Generated<string>
+  updated_at: Generated<string>
+}
+
 export interface DatabaseSchema {
   db_versions: DbVersionsTable
   site_pages: SitePagesTable
@@ -309,4 +400,10 @@ export interface DatabaseSchema {
   zetro_query_tools: ZetroQueryToolsTable
   zetro_query_mappings: ZetroQueryMappingsTable
   zetro_query_logs: ZetroQueryLogsTable
+  subscription_apps: SubscriptionAppsTable
+  subscription_plans: SubscriptionPlansTable
+  subscription_plan_apps: SubscriptionPlanAppsTable
+  tenant_subscriptions: TenantSubscriptionsTable
+  tenant_subscription_apps: TenantSubscriptionAppsTable
+  subscription_payments: SubscriptionPaymentsTable
 }

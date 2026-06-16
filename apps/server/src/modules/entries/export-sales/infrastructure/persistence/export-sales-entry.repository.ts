@@ -33,6 +33,7 @@ export interface ExportSalesEntryInput {
   accounting_year_id?: number
   currency_id?: number | null
   currency_name?: string | null
+  accounting_category?: string | null
   invoice_no?: string
   invoice_date?: string
   customer_id?: string | null
@@ -206,6 +207,7 @@ export class ExportSalesEntryRepository {
         accounting_year_id: accountingYearId,
         currency_id: nullablePositiveNumber(input.currency_id),
         currency_name: emptyAsNull(input.currency_name),
+        accounting_category: emptyAsNull(input.accounting_category) ?? 'Export Sales',
         invoice_no: invoiceNo,
         invoice_date: input.invoice_date || today(),
         customer_id: input.customer_id ?? null,
@@ -274,6 +276,7 @@ export class ExportSalesEntryRepository {
       accounting_year_id: Number(row.accounting_year_id),
       currency_id: nullablePositiveNumber(row.currency_id),
       currency_name: stringOrNull(row.currency_name),
+      accounting_category: stringOrNull(row.accounting_category),
       invoice_no: String(row.invoice_no),
       invoice_date: String(row.invoice_date),
       customer_id: stringOrNull(row.customer_id),

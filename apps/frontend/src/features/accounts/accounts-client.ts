@@ -1,4 +1,5 @@
 import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { responseApiError } from "src/shared/api/api-error"
 
 export type AccountBookType = "cash" | "bank"
 export type AccountLedgerType = "cash" | "bank" | "fixed_asset" | "customer" | "supplier" | "sales" | "purchase" | "gst" | "tds" | "round_off" | "discount"
@@ -310,7 +311,7 @@ export async function upsertAccountVoucher(session: AuthSession, input: AccountV
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(`Account voucher save failed with status ${response.status}.`)
+  if (!response.ok) throw await responseApiError(response, "Account voucher save failed.")
   const result = (await response.json()) as { ok: boolean; voucher?: AccountVoucher; error?: string }
   if (!result.ok || !result.voucher) throw new Error(result.error ?? "Account voucher save failed.")
   return result.voucher
@@ -387,7 +388,7 @@ export async function listAccountingPeriodLocks(session: AuthSession) {
     cache: "no-store",
     headers: authHeaders(session),
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, "Period lock list failed."))
+  if (!response.ok) throw await responseApiError(response, "Period lock list failed.")
   return (await response.json()) as AccountingPeriodLock[]
 }
 
@@ -398,7 +399,7 @@ export async function createAccountingPeriodLock(session: AuthSession, input: Ac
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, "Period lock save failed."))
+  if (!response.ok) throw await responseApiError(response, "Period lock save failed.")
   const result = (await response.json()) as { ok: boolean; lock?: AccountingPeriodLock; error?: string }
   if (!result.ok || !result.lock) throw new Error(result.error ?? "Period lock save failed.")
   return result.lock
@@ -411,7 +412,7 @@ export async function releaseAccountingPeriodLock(session: AuthSession, lock: Ac
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(await responseErrorMessage(response, "Period lock release failed."))
+  if (!response.ok) throw await responseApiError(response, "Period lock release failed.")
   const result = (await response.json()) as { ok: boolean; lock?: AccountingPeriodLock; error?: string }
   if (!result.ok || !result.lock) throw new Error(result.error ?? "Period lock release failed.")
   return result.lock
@@ -424,7 +425,7 @@ async function accountVoucherAction(session: AuthSession, voucher: AccountVouche
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(`Account voucher ${action} failed with status ${response.status}.`)
+  if (!response.ok) throw await responseApiError(response, `Account voucher ${action} failed.`)
   const result = (await response.json()) as { ok: boolean; voucher?: AccountVoucher; error?: string }
   if (!result.ok || !result.voucher) throw new Error(result.error ?? `Account voucher ${action} failed.`)
   return result.voucher
@@ -512,13 +513,4 @@ async function accountBookAction(session: AuthSession, bookType: AccountBookType
 
 function bookPath(bookType: AccountBookType) {
   return bookType === "bank" ? "bank-book" : "cash-book"
-}
-
-async function responseErrorMessage(response: Response, fallback: string) {
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string }
-    return payload.error ?? payload.message ?? `${fallback} Status ${response.status}.`
-  } catch {
-    return `${fallback} Status ${response.status}.`
-  }
 }

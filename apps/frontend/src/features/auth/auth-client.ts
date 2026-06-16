@@ -96,23 +96,11 @@ export function switchTenant(
   return nextSession
 }
 
-function apiBaseUrlIsSameOrigin() {
-  if (typeof window === "undefined" || !apiBaseUrl) {
-    return true
-  }
-
-  try {
-    return new URL(apiBaseUrl, window.location.href).origin === window.location.origin
-  } catch {
-    return false
-  }
-}
-
 export function authHeaders(session: AuthSession) {
   return {
     Accept: "application/json",
     Authorization: `Bearer ${session.token}`,
-    ...(!apiBaseUrlIsSameOrigin() ? { "x-login-domain": window.location.host } : {}),
+    ...(typeof window !== "undefined" ? { "x-login-domain": window.location.host } : {}),
     "x-tenant-code": session.selectedTenant.slug,
   }
 }

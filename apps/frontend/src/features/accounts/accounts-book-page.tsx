@@ -21,6 +21,7 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { ModuleListSkeleton } from "src/components/blocks/module-loading"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { listCompanies, type CompanyRecord } from "src/features/company/company-client"
 import { LetterheadBuilder } from "src/features/company/letterhead-builder"
@@ -202,7 +203,8 @@ function AccountBookPage({ bookType, description, session, title }: { bookType: 
             </tbody>
           </table>
         </div>
-        {pageEntries.length === 0 ? <MasterListEmptyState>{entriesQuery.isFetching ? `Loading ${title.toLowerCase()}.` : `No ${title.toLowerCase()} entries found.`}</MasterListEmptyState> : null}
+        {pageEntries.length === 0 && entriesQuery.isFetching ? <ModuleListSkeleton columns={8} rows={7} /> : null}
+        {pageEntries.length === 0 && !entriesQuery.isFetching ? <MasterListEmptyState>{`No ${title.toLowerCase()} entries found.`}</MasterListEmptyState> : null}
       </MasterListTableCard>
       <MasterListPaginationCard
         page={currentPage}

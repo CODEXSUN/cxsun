@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.115`
-- **Release tag:** `v-1.0.115`
-- **Changelog label:** `v 1.0.115`
+- **Current version:** `1.0.116`
+- **Release tag:** `v-1.0.116`
+- **Changelog label:** `v 1.0.116`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -14,6 +14,38 @@ New changelog entries must keep database-facing work and application code work s
 - `#### App Codebase Changes` records UI, API, service logic, tooling, and documentation changes.
 
 ---
+
+## v-1.0.116
+
+### [v 1.0.116] 2026-06-16 9:37 am - Accounts report query helpers
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.116
+- Added shared Accounts report query keys and query factories for Day Book, cash/bank posting books, Trial Balance, Profit & Loss, Balance Sheet, and vouchers.
+- Added a shared Accounts report invalidation helper for report recalculation and posting-dependent refreshes.
+- Wired Sales, Purchase, Receipt, and Payment invalidations through the shared Accounts report invalidation path so downstream accounting reports refresh consistently after entry changes.
+
+## Unreleased
+
+### [unreleased] 2026-06-16 - subscription plans and tenant billing
+
+#### Database Changes
+
+- Added platform subscription tables for app catalog, plans, plan-app mapping, tenant subscriptions, tenant subscription apps, and Razorpay payment records.
+- Added seeded subscription apps and Starter, Business, and Enterprise plan defaults.
+
+#### App Codebase Changes
+
+- Added a Super Admin subscription desk with tenant list, per-tenant show/upsert flow, plan editing, app connection, app-level price overrides, and Razorpay collection.
+- Added tenant workspace subscription view and Razorpay payment flow for self-service activation.
+- Published enabled subscription apps back into tenant app settings so existing dashboard app access respects paid/assigned subscriptions.
+- Converted subscription plan and billing-cycle selectors to autocomplete lookup fields.
+- Split the Super Admin subscription desk into tenant-list, tenant-show, tenant-upsert, and plan-manager pages with tenant-list-style table, pagination, filters, and row actions.
 
 ## v-1.0.115
 

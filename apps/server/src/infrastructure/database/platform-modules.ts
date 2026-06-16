@@ -6,6 +6,7 @@ import { tenantDomainDatabaseModule } from '../../core/tenant-domain/infrastruct
 import { queueDatabaseModule } from '../queue/queue.database.js'
 import { gstPlatformDatabaseModule } from '../../modules/gst/gst-compliance/database/gst-platform.migration.js'
 import { agentOsDatabaseModule } from '../../modules/agent-os/index.js'
+import { subscriptionDatabaseModule } from '../../modules/subscription/index.js'
 import type { PlatformDatabaseModule } from './database-module.js'
 
 export const platformDatabaseModules: PlatformDatabaseModule[] = [
@@ -17,4 +18,5 @@ export const platformDatabaseModules: PlatformDatabaseModule[] = [
   queueDatabaseModule,
   gstPlatformDatabaseModule,
   agentOsDatabaseModule,
+  subscriptionDatabaseModule,
 ]

@@ -29,6 +29,7 @@ import { FrappeModule } from './frappe/index.js'
 import { TConnectModule } from './tconnect/index.js'
 import { EcommerceModule } from './ecommerce/index.js'
 import { AgentOsModule } from './agent-os/index.js'
+import { SubscriptionModule } from './subscription/index.js'
 import { AuditorContactCredentialModule } from './auditor/contact-credential/index.js'
 import { AuditorGstFilingModule } from './auditor/gst-filing/index.js'
 import { BlogModule } from './blog/index.js'
@@ -86,6 +87,7 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     TConnectModule,
     EcommerceModule,
     AgentOsModule,
+    SubscriptionModule,
     AuditorContactCredentialModule,
     AuditorGstFilingModule,
     BlogModule,

@@ -16,9 +16,13 @@ export function useCompanySoftwareSettings(session: AuthSession) {
   const [companyName, setCompanyName] = useState("Active company")
   const [company, setCompany] = useState<CompanyRecord | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
+  const [loadError, setLoadError] = useState<unknown>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
+    setIsLoaded(false)
+    setLoadError(null)
     void Promise.all([listCompanies(session), getDefaultCompanyContext(session)])
       .then(([companies, defaultContext]) => {
         const company = companies.find((item) => item.id === defaultContext?.companyId) ?? companies.find((item) => item.isPrimary) ?? companies[0] ?? null
@@ -33,6 +37,7 @@ export function useCompanySoftwareSettings(session: AuthSession) {
       })
       .catch((error) => {
         if (!isAbortError(error)) {
+          setLoadError(error)
           toast.error("Could not load company settings", { description: error instanceof Error ? error.message : "Using local settings for now." })
         }
       })
@@ -41,7 +46,7 @@ export function useCompanySoftwareSettings(session: AuthSession) {
       })
 
     return () => controller.abort()
-  }, [session])
+  }, [reloadKey, session])
 
   async function saveNow(nextState = state) {
     saveCompanySoftwareSettings(companyId, nextState)
@@ -51,7 +56,15 @@ export function useCompanySoftwareSettings(session: AuthSession) {
     toast.success("Company settings saved", { description: `${companyName} settings are now shared across devices.` })
   }
 
-  return [state, setState as Dispatch<SetStateAction<SoftwareSettingsState>>, { company, companyId, companyName, isLoaded, saveNow }] as const
+  function clearLoadError() {
+    setLoadError(null)
+  }
+
+  function reload() {
+    setReloadKey((current) => current + 1)
+  }
+
+  return [state, setState as Dispatch<SetStateAction<SoftwareSettingsState>>, { clearLoadError, company, companyId, companyName, isLoaded, loadError, reload, saveNow }] as const
 }
 
 function isAbortError(error: unknown) {

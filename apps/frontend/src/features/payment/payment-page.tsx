@@ -20,39 +20,32 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
+import { ModuleListSkeleton } from "src/components/blocks/module-loading"
 import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
-import { listCompanies, type CompanyRecord } from "src/features/company/company-client"
+import type { CompanyRecord } from "src/features/company/company-client"
 import { LetterheadBuilder } from "src/features/company/letterhead-builder"
 import { emptyContact, upsertContact, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
 import { LedgerAutocompleteLookup } from "src/features/accounts/accounts-book-page"
-import { listAllAccountLedgers, type AccountLedger } from "src/features/accounts/accounts-client"
+import type { AccountLedger } from "src/features/accounts/accounts-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { WorkOrderAutocomplete } from "src/features/master-data/interface/components/work-order-autocomplete"
-import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
-import { nextDocumentNumberSetting } from "src/features/settings/document-settings-client"
 import { useCompanySoftwareSettings } from "src/features/settings/use-company-software-settings"
 import { filterStockContactLookupOptions, stockContactTypeId } from "src/features/stock/contact-role-filter"
-import { listPurchaseEntries, type PurchaseEntry } from "src/features/purchase/purchase-client"
+import type { PurchaseEntry } from "src/features/purchase/purchase-client"
 import {
-  addPaymentComment,
-  createPaymentCorrection,
-  createPaymentReversal,
-  downloadPaymentPdf,
-  destroyPaymentEntry,
   emptyPaymentAllocation,
   emptyPaymentEntry,
-  listPaymentContactLookups,
-  listPaymentEntries,
-  restorePaymentEntry,
-  runPaymentTool,
-  upsertPaymentEntry,
   type PaymentAllocation,
   type PaymentEntry,
   type PaymentEntryInput,
   type PaymentLookupOption,
 } from "./payment-client"
+import { paymentActions } from "./payment-actions"
+import { paymentInvalidations } from "./payment-invalidations"
+import { paymentQueries } from "./payment-queries"
 
 type PaymentView = { mode: "list" } | { mode: "show"; entry: PaymentEntry } | { mode: "upsert"; entry: PaymentEntry | null }
 type PaymentColumnId = "amount" | "date" | "ledger" | "mode" | "party" | "payment" | "status" | "unallocated" | "updated"
@@ -107,15 +100,14 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   const [listViewMode, setListViewMode] = useState<EntryListViewMode>("day")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(100)
-  const queryKey = ["payment-entries", session.selectedTenant.slug]
-  const entriesQuery = useQuery({ queryKey, queryFn: () => listPaymentEntries(session) })
-  const upsertMutation = useMutation({ mutationFn: (input: PaymentEntryInput) => upsertPaymentEntry(session, input) })
-  const destroyMutation = useMutation({ mutationFn: (entry: PaymentEntry) => destroyPaymentEntry(session, entry) })
-  const restoreMutation = useMutation({ mutationFn: (entry: PaymentEntry) => restorePaymentEntry(session, entry) })
-  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: PaymentEntry; body: string }) => addPaymentComment(session, entry, body) })
-  const correctionMutation = useMutation({ mutationFn: (entry: PaymentEntry) => createPaymentCorrection(session, entry) })
-  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PaymentEntry; printHtml?: string; tool: string }) => runPaymentTool(session, entry, tool, printHtml) })
-  const reversalMutation = useMutation({ mutationFn: (entry: PaymentEntry) => createPaymentReversal(session, entry) })
+  const entriesQuery = useQuery(paymentQueries.entries(session))
+  const upsertMutation = useMutation({ mutationFn: (input: PaymentEntryInput) => paymentActions.saveDraft(session, input) })
+  const destroyMutation = useMutation({ mutationFn: (entry: PaymentEntry) => paymentActions.suspend(session, entry) })
+  const restoreMutation = useMutation({ mutationFn: (entry: PaymentEntry) => paymentActions.restore(session, entry) })
+  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: PaymentEntry; body: string }) => paymentActions.addComment(session, entry, body) })
+  const correctionMutation = useMutation({ mutationFn: (entry: PaymentEntry) => paymentActions.createCorrection(session, entry) })
+  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PaymentEntry; printHtml?: string; tool: string }) => paymentActions.runTool(session, entry, tool, printHtml) })
+  const reversalMutation = useMutation({ mutationFn: (entry: PaymentEntry) => paymentActions.createReversal(session, entry) })
   const entries = entriesQuery.data ?? []
   const filteredEntries = useMemo(() => filterPayments(searchPayments(entries, searchValue), statusFilter).sort((left, right) => left.payment_no.localeCompare(right.payment_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizePaymentsByMonth(filteredEntries), [filteredEntries])
@@ -136,15 +128,13 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   }, [entries, initialEntryUuid])
 
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey })
+    await paymentInvalidations.invalidateEntries(queryClient, session)
   }
 
   async function save(input: PaymentEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(preparePaymentInput(input))
     toast.success(input.uuid ? "Payment updated" : "Payment created", { description: entry.document_number_warning ?? entry.payment_no })
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"] })
-    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
-    await refresh()
+    await paymentInvalidations.afterSave(queryClient, session)
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
   }
@@ -162,7 +152,7 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   }
 
   function openNewEntry() {
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"] })
+    paymentInvalidations.clearNextPaymentPreview(queryClient, session)
     setView({ mode: "upsert", entry: null })
   }
 
@@ -194,7 +184,7 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
         }}
         onDestroy={() => void destroy(entry)}
         onDownloadPdf={async (entryValue) => {
-          await downloadPaymentPdf(session, entryValue, capturePrintDocument(".payment-print-page"))
+          await paymentActions.downloadPdf(session, entryValue, capturePrintDocument(".payment-print-page"))
           toast.success("PDF downloaded", { description: entryValue.payment_no })
         }}
         onEdit={() => setView({ mode: "upsert", entry })}
@@ -256,6 +246,14 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
           />
         }
       />
+      {entriesQuery.isError ? (
+        <ModuleErrorPanel
+          error={entriesQuery.error}
+          isRetrying={entriesQuery.isFetching}
+          title="Payments could not be loaded"
+          onRetry={() => void entriesQuery.refetch()}
+        />
+      ) : null}
       <MasterListTableCard className="rounded-md">
         <div className="overflow-x-auto">
           {listViewMode === "month" ? (
@@ -339,7 +337,8 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
           </table>
           )}
         </div>
-        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 ? <MasterListEmptyState>{entriesQuery.isFetching ? "Loading payments." : "No payments found."}</MasterListEmptyState> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && entriesQuery.isFetching ? <ModuleListSkeleton columns={listViewMode === "month" ? 9 : 8} rows={7} /> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && !entriesQuery.isFetching ? <MasterListEmptyState>No payments found.</MasterListEmptyState> : null}
       </MasterListTableCard>
       <MasterListPaginationCard
         page={currentPage}
@@ -387,7 +386,7 @@ function PaymentShowPage({ entry, isWorking, onBack, onComment, onCorrection, on
   const [attachments, setAttachments] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [toolActivities, setToolActivities] = useState<Array<{ id: string; message: string; created_at: string }>>([])
-  const companyQuery = useQuery({ queryKey: ["payment-print-company", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
+  const companyQuery = useQuery(paymentQueries.printCompany(session))
   const company = (companyQuery.data ?? []).find((item) => item.isPrimary) ?? companyQuery.data?.[0] ?? null
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const entryTools: Array<{ icon: typeof Mail; id: PaymentToolId; label: string }> = [
@@ -520,10 +519,11 @@ function PaymentUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
 }) {
   const [draft, setDraft] = useState<PaymentEntryInput>(() => entry ? { ...entry, allocations: entry.allocations.map((item) => ({ ...item })) } : emptyPaymentEntry())
   const [contactCreateInitialName, setContactCreateInitialName] = useState<string | null>(null)
-  const contactsQuery = useQuery({ queryKey: ["payment-contact-lookups", session.selectedTenant.slug], queryFn: () => listPaymentContactLookups(session) })
-  const contactTypesQuery = useQuery({ queryKey: ["payment-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
-  const ledgersQuery = useQuery({ queryKey: ["payment-money-ledgers", session.selectedTenant.slug], queryFn: () => listAllAccountLedgers(session) })
-  const nextPaymentQuery = useQuery({ enabled: !entry, queryKey: ["document-number-next-preview", session.selectedTenant.slug, "payment"], queryFn: () => nextDocumentNumberSetting(session, "payment"), refetchOnMount: "always" })
+  const [saveError, setSaveError] = useState<unknown>(null)
+  const contactsQuery = useQuery(paymentQueries.contacts(session))
+  const contactTypesQuery = useQuery(paymentQueries.contactTypes(session))
+  const ledgersQuery = useQuery(paymentQueries.ledgers(session))
+  const nextPaymentQuery = useQuery(paymentQueries.nextPayment(session, !entry))
   const ledgers = ledgersQuery.data ?? []
   const supplierContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "supplier"), [contactsQuery.data, contactTypesQuery.data])
 
@@ -537,6 +537,16 @@ function PaymentUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
     { value: "allocations", label: "Allocations", content: <PaymentAllocationsTab form={draft} session={session} setForm={setDraft} /> },
   ]
 
+  async function submitSave(input: PaymentEntryInput, printAfterSave = false) {
+    setSaveError(null)
+    try {
+      await onSubmit(input, printAfterSave)
+    } catch (error) {
+      setSaveError(error)
+      toast.error("Payment save failed", { description: error instanceof Error ? error.message : "Please try again." })
+    }
+  }
+
   return (
     <MasterListPageFrame
       title={entry ? "Edit payment" : "New payment"}
@@ -545,9 +555,10 @@ function PaymentUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
       action={<Button type="button" variant="outline" className="rounded-xl" onClick={onBack}><X className="size-4" />Cancel</Button>}
       className="w-[calc(100%-2rem)] max-w-[1500px] sm:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]"
     >
+      {saveError ? <ModuleErrorPanel error={saveError} title="Payment save blocked" onRetry={() => setSaveError(null)} retryLabel="Dismiss" /> : null}
       <MasterListUpsertLayout>
         <MasterListUpsertCard className="overflow-hidden p-0 [&>div]:p-0">
-          <form onSubmit={(event) => { event.preventDefault(); void onSubmit(draft) }}>
+          <form onSubmit={(event) => { event.preventDefault(); void submitSave(draft) }}>
             <div className="px-0 pb-4 pt-3 md:pb-5">
               <AnimatedTabs
                 className="[&>div:first-child]:rounded-none [&>div:first-child]:border-x-0 [&>div:first-child]:border-t-0 [&>div:first-child]:border-b [&>div:first-child]:border-border/70 [&>div:first-child]:bg-card [&>div:first-child]:px-4 [&>div:first-child]:py-0.5 [&>div:first-child]:shadow-none md:[&>div:first-child]:px-6 [&>div:first-child_button]:min-h-8 [&>div:first-child_button]:py-1 [&>div:last-child]:mx-auto [&>div:last-child]:mt-3 [&>div:last-child]:w-full [&>div:last-child]:px-4 [&>div:last-child]:pb-3 md:[&>div:last-child]:px-6 md:[&>div:last-child]:pb-4"
@@ -556,7 +567,7 @@ function PaymentUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
             </div>
             <div className="flex flex-wrap justify-start gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6">
               <Button type="submit" disabled={isSaving} className="rounded-xl"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button>
-              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void onSubmit({ ...draft, status: "posted" }, true)} className="rounded-xl"><Printer className="size-4" />Save & Print</Button>
+              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void submitSave({ ...draft, status: "posted" }, true)} className="rounded-xl"><Printer className="size-4" />Save & Print</Button>
               <Button type="button" variant="outline" onClick={onBack} className="rounded-xl"><ArrowLeft className="size-4" />Cancel</Button>
             </div>
           </form>
@@ -627,7 +638,7 @@ function PaymentDetailsTab({ contacts, form, ledgers, onCreateContact, session, 
 }
 
 function PaymentAllocationsTab({ form, session, setForm }: { form: PaymentEntryInput; session: AuthSession; setForm: Dispatch<SetStateAction<PaymentEntryInput>> }) {
-  const purchaseQuery = useQuery({ queryKey: ["payment-open-purchases", session.selectedTenant.slug], queryFn: () => listPurchaseEntries(session) })
+  const purchaseQuery = useQuery(paymentQueries.openPurchases(session))
   const allocations = form.allocations?.length ? form.allocations : [emptyPaymentAllocation()]
   const openBills = useMemo(() => openPurchaseBillOptions(purchaseQuery.data ?? [], allocations), [allocations, purchaseQuery.data])
   return (
@@ -737,7 +748,7 @@ function preparePaymentInput(input: PaymentEntryInput): PaymentEntryInput {
 function PaymentContactCreateDialog({ contacts, initialName, onClose, onCreated, session }: { contacts: PaymentLookupOption[]; initialName: string; onClose(): void; onCreated(contact: PaymentLookupOption): void; session: AuthSession }) {
   const [draft, setDraft] = useState<ContactInput>(() => ({ ...emptyContact(), code: normalizeContactCode(initialName), contactTypeId: "contact-type:supplier", ledgerId: "ledger:sundry-creditors", ledgerName: "Supplier", legalName: initialName, name: initialName }))
   const [error, setError] = useState<string | null>(null)
-  const contactTypesQuery = useQuery({ queryKey: ["Payment-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
+  const contactTypesQuery = useQuery(paymentQueries.contactTypesDialog(session))
   const createMutation = useMutation({
     mutationFn: (input: ContactInput) => upsertContact(session, input),
     onSuccess: (contact) => {

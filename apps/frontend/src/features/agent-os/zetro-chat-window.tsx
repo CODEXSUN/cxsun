@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Bot,
+  Check,
   Clock3,
+  Copy,
   KeyRound,
   Loader2,
   Maximize2,
@@ -24,6 +26,7 @@ import {
 } from "src/components/ui/select";
 import { Textarea } from "src/components/ui/textarea";
 import type { AuthSession } from "src/features/auth/auth-client";
+import { listTenants } from "src/features/tenant/infrastructure/tenant-api";
 import { cn } from "src/lib/utils";
 import {
   clearZetroConversation,
@@ -60,16 +63,43 @@ export function ZetroChatWindow({
     queryFn: () => getAgentOsStatus(session),
   });
   const adminMode = isZetroAdminRole(session.selectedTenant.role);
+  const platformDeskMode =
+    adminMode && isPlatformDeskTenantSlug(session.selectedTenant.slug);
   const status = statusQuery.data;
   const models = useMemo(() => status?.models ?? [], [status?.models]);
   const [selectedModel, setSelectedModel] = useState("");
+  const [businessTenantSlug, setBusinessTenantSlug] = useState("");
   const [conversationUuid, setConversationUuid] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const [emptyPromptIndex] = useState(() => Math.floor(Math.random() * 5));
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   const defaultModelId = status?.default_model?.id;
+  const tenantsQuery = useQuery({
+    enabled: open && platformDeskMode,
+    queryKey: ["zetro-business-tenants"],
+    queryFn: () => listTenants(session),
+  });
+  const businessTenants = useMemo(
+    () => (tenantsQuery.data ?? []).filter((tenant) => tenant.status === "active"),
+    [tenantsQuery.data],
+  );
+
+  useEffect(() => {
+    if (!platformDeskMode) {
+      setBusinessTenantSlug(session.selectedTenant.slug);
+      return;
+    }
+    if (businessTenantSlug || !businessTenants.length) return;
+    setBusinessTenantSlug((current) =>
+      current && businessTenants.some((tenant) => tenant.slug === current)
+        ? current
+        : "",
+    );
+  }, [businessTenantSlug, businessTenants, platformDeskMode, session.selectedTenant.slug]);
+
   useEffect(() => {
     if (defaultModelId) {
       setSelectedModel((current) =>
@@ -162,6 +192,9 @@ export function ZetroChatWindow({
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
       sendZetroChat(session, {
+        businessTenantSlug: platformDeskMode
+          ? businessTenantSlug || undefined
+          : session.selectedTenant.slug,
         conversationUuid,
         message,
         model: adminMode ? selectedModel || defaultModelId || "" : defaultModelId || "zetro-assistant",
@@ -213,6 +246,23 @@ export function ZetroChatWindow({
     ]);
     setDraft("");
     chatMutation.mutate(message);
+  }
+
+  async function copyMessage(message: ChatMessage) {
+    try {
+      await writeToClipboard(message.body);
+      setCopiedMessageId(message.id);
+      toast.success("Message copied");
+      window.setTimeout(() => {
+        setCopiedMessageId((current) =>
+          current === message.id ? null : current,
+        );
+      }, 1400);
+    } catch {
+      toast.error("Copy failed", {
+        description: "Please select the message and copy it manually.",
+      });
+    }
   }
 
   if (!open) return null;
@@ -442,12 +492,32 @@ export function ZetroChatWindow({
                 ) : null}
                 <div
                   className={cn(
-                    "max-w-[88%] break-words rounded-[18px] border px-4 py-3 text-sm leading-6 shadow-[0_16px_42px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition duration-200 dark:shadow-[0_12px_34px_rgba(0,0,0,0.18)]",
+                    "relative max-w-[88%] break-words rounded-[18px] border px-4 py-3 pr-11 text-sm leading-6 shadow-[0_16px_42px_rgba(15,23,42,0.10)] backdrop-blur-2xl transition duration-200 dark:shadow-[0_12px_34px_rgba(0,0,0,0.18)]",
                     message.role === "user"
                       ? "border-zinc-950/10 bg-zinc-950/90 text-white dark:border-white/30 dark:bg-white/90 dark:text-zinc-950"
                       : "border-black/10 bg-white/50 text-zinc-900 dark:border-white/20 dark:bg-white/10 dark:text-white",
                   )}
                 >
+                  <Button
+                    aria-label="Copy message"
+                    className={cn(
+                      "absolute right-2 top-2 size-7 rounded-full opacity-0 transition duration-200 group-hover/message:opacity-100 focus-visible:opacity-100",
+                      message.role === "user"
+                        ? "text-white/70 hover:bg-white/15 hover:text-white dark:text-zinc-950/60 dark:hover:bg-zinc-950/10 dark:hover:text-zinc-950"
+                        : "text-zinc-500 hover:bg-black/5 hover:text-zinc-950 dark:text-white/55 dark:hover:bg-white/10 dark:hover:text-white",
+                      copiedMessageId === message.id && "opacity-100",
+                    )}
+                    size="icon-sm"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => copyMessage(message)}
+                  >
+                    {copiedMessageId === message.id ? (
+                      <Check className="size-3.5" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
+                  </Button>
                   <MessageBody body={message.body} role={message.role} />
                 </div>
                 {message.role === "user" ? (
@@ -485,35 +555,69 @@ export function ZetroChatWindow({
             value={draft}
           />
           <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
-            {adminMode ? (
-              <Select
-                value={selectedModel}
-                onValueChange={(value) => {
-                  setSelectedModel(value);
-                  resetChat();
-                }}
-              >
-                <SelectTrigger className="h-8 w-[min(260px,100%)] rounded-full border-black/10 bg-white/60 text-xs text-zinc-800 shadow-none backdrop-blur-xl hover:bg-white/80 dark:border-white/20 dark:bg-black/20 dark:text-white dark:hover:bg-white/10 [&>span]:truncate">
-                  <SelectValue
-                    placeholder={
-                      statusQuery.isFetching
-                        ? "Loading models..."
-                        : "Select model"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent
-                  align="start"
-                  className="z-[80] max-h-[320px] w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-[18px] border-black/10 bg-white/95 text-zinc-950 shadow-2xl backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-950/95 dark:text-white"
-                  position="popper"
+            {platformDeskMode ? (
+              <>
+                <Select
+                  value={businessTenantSlug}
+                  onValueChange={(value) => {
+                    setBusinessTenantSlug(value);
+                    resetChat();
+                  }}
                 >
-                  {(models.length ? models : fallbackModels).map((model) => (
-                    <SelectItem key={model.id} value={model.id}>
-                      {modelSelectLabel(model)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger className="h-8 w-[min(210px,100%)] rounded-full border-black/10 bg-white/60 text-xs text-zinc-800 shadow-none backdrop-blur-xl hover:bg-white/80 dark:border-white/20 dark:bg-black/20 dark:text-white dark:hover:bg-white/10 [&>span]:truncate">
+                    <SelectValue
+                      placeholder={
+                        tenantsQuery.isFetching
+                          ? "Loading workspace..."
+                          : "Select workspace"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent
+                    align="start"
+                    className="z-[80] max-h-[320px] w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-[18px] border-black/10 bg-white/95 text-zinc-950 shadow-2xl backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-950/95 dark:text-white"
+                    position="popper"
+                  >
+                    {businessTenants.map((tenant) => (
+                      <SelectItem key={tenant.slug} value={tenant.slug}>
+                        {tenant.code} - {tenant.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            ) : null}
+            {adminMode ? (
+              <>
+                <Select
+                  value={selectedModel}
+                  onValueChange={(value) => {
+                    setSelectedModel(value);
+                    resetChat();
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[min(260px,100%)] rounded-full border-black/10 bg-white/60 text-xs text-zinc-800 shadow-none backdrop-blur-xl hover:bg-white/80 dark:border-white/20 dark:bg-black/20 dark:text-white dark:hover:bg-white/10 [&>span]:truncate">
+                    <SelectValue
+                      placeholder={
+                        statusQuery.isFetching
+                          ? "Loading models..."
+                          : "Select model"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent
+                    align="start"
+                    className="z-[80] max-h-[320px] w-[var(--radix-select-trigger-width)] overflow-y-auto rounded-[18px] border-black/10 bg-white/95 text-zinc-950 shadow-2xl backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-950/95 dark:text-white"
+                    position="popper"
+                  >
+                    {(models.length ? models : fallbackModels).map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        {modelSelectLabel(model)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
             ) : null}
             <div className="flex min-w-0 flex-1 items-center gap-2 text-[11px] text-zinc-500 dark:text-white/55">
               <span
@@ -602,6 +706,10 @@ function firstName(name: string) {
   return name.trim().split(/\s+/)[0] || "there";
 }
 
+function isPlatformDeskTenantSlug(slug: string) {
+  return slug === "super-admin" || slug === "admin";
+}
+
 function EmptyChatPrompt({ index, name }: { index: number; name: string }) {
   const prompts = [
     "Where should we start?",
@@ -646,6 +754,29 @@ function formatChatTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+async function writeToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    if (!document.execCommand("copy")) {
+      throw new Error("Copy command failed");
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function MessageBody({ body, role }: { body: string; role: ChatRole }) {

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Button } from "src/components/ui/button"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
+import { Skeleton } from "src/components/ui/skeleton"
 import { Switch } from "src/components/ui/switch"
 import { cn } from "src/lib/utils"
 import type { AuthSession } from "src/features/auth/auth-client"
@@ -113,6 +114,7 @@ export function ProductAutocomplete({ className, inputRef, label = "Product name
       />
       {isOpen ? (
         <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-[100] max-h-72 overflow-y-auto rounded-md border border-border bg-card p-1 shadow-2xl" onMouseDown={(event) => event.preventDefault()}>
+          {recordsQuery.isFetching && !filteredRecords.length ? <LookupLoadingRows /> : null}
           {filteredRecords.map((record, index) => {
             const isSelected = productRecordName(record) === value || productRecordLabel(record) === value
             return (
@@ -148,6 +150,10 @@ export function ProductAutocomplete({ className, inputRef, label = "Product name
       ) : null}
     </div>
   )
+}
+
+function LookupLoadingRows() {
+  return <div className="grid gap-2 px-2 py-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-4 w-5/6" /><Skeleton className="h-4 w-2/3" /></div>
 }
 
 function ProductCreateDialog({ initialValue, onClose, onCreated, session }: {

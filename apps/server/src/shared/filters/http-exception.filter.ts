@@ -8,6 +8,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, _request: FastifyRequest, reply: FastifyReply): void {
     if (exception instanceof HttpException) {
       reply.status(exception.statusCode).send({
+        ...exception.details,
         error: exception.message,
         statusCode: exception.statusCode,
       })

@@ -61,7 +61,20 @@ export class EntryPostingControlService {
       .orderBy('id', 'desc')
       .executeTakeFirst()
     if (!lock) return
-    throw new BadRequestException(`Period is locked for ${entry.module} ${entry.documentNo ?? 'document'} (${documentDate}). Use reversal/correction flow. Reason: ${stringValue(lock.reason) || stringValue(lock.lock_type) || stringValue(lock.source) || 'period locked'}.`)
+    const reason = stringValue(lock.reason) || stringValue(lock.lock_type) || stringValue(lock.source) || 'period locked'
+    const source = stringValue(lock.source) || stringValue(lock.lock_type) || 'period_lock'
+    throw new BadRequestException(`Period is locked for ${entry.module} ${entry.documentNo ?? 'document'} (${documentDate}). Use reversal/correction flow. Reason: ${reason}.`, {
+      code: 'PERIOD_LOCKED',
+      documentDate,
+      documentNo: entry.documentNo ?? null,
+      lockReason: reason,
+      lockSource: source,
+      lockType: stringValue(lock.lock_type) || null,
+      module: entry.module,
+      reason,
+      source,
+      title: 'Period locked',
+    })
   }
 
   async recordCorrectionActivity(context: TenantRuntimeContext, input: { action: 'correction' | 'reversal'; correctedUuid?: string | null; module: string; originalUuid: string; reversalUuid?: string | null }) {

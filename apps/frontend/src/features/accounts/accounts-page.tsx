@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useReducer, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ArrowLeft, Ban, LockKeyhole, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, Send, Trash2, UnlockKeyhole } from "lucide-react"
@@ -18,6 +18,8 @@ import {
   MasterListToolbarCard,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
+import { ModuleListSkeleton, ModuleReportSkeleton } from "src/components/blocks/module-loading"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { getDefaultCompanyContext } from "src/features/company/company-client"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
@@ -27,12 +29,7 @@ import { nextDocumentNumberSetting } from "src/features/settings/document-settin
 import {
   cancelAccountVoucher,
   createAccountingPeriodLock,
-  listAccountBalanceSheet,
-  listAccountDayBook,
   listAccountGroups,
-  listAccountPostingBook,
-  listAccountProfitLoss,
-  listAccountTrialBalance,
   listAccountVouchers,
   listAccountingPeriodLocks,
   listAllAccountLedgers,
@@ -55,10 +52,19 @@ import {
   type AccountVoucherLineInput,
   type AccountVoucherType,
 } from "./accounts-client"
+import { accountInvalidations } from "./accounts-invalidations"
+import { accountQueries, accountQueryKeys } from "./accounts-queries"
 
 type AccountsView = "overview" | "chart" | "vouchers" | "journal-vouchers" | "contra-vouchers" | "opening-vouchers" | "period-locks" | "cash-posting" | "bank-posting" | "day-book" | "monthly-movement" | "trial-balance" | "profit-loss" | "balance-sheet"
 type VoucherForm = AccountVoucherInput & { lines: AccountVoucherLineInput[] }
 type JournalPostingLine = { amount: number | string; ledger_id?: number; line_narration?: string; side: "debit" | "credit" }
+type JournalPostingState = { draft: JournalPostingLine; lines: JournalPostingLine[] }
+type JournalPostingAction =
+  | { type: "add" }
+  | { index: number; type: "edit" }
+  | { index: number; type: "remove" }
+  | { ledgerId: number; type: "set-ledger" }
+  | { patch: Partial<JournalPostingLine>; type: "update-draft" }
 type VoucherPageView = { mode: "list" } | { mode: "show"; voucher: AccountVoucher } | { mode: "upsert"; voucher: AccountVoucher | null }
 type VoucherListViewMode = "day" | "month"
 type VoucherColumnId = "voucher" | "date" | "type" | "reference" | "narration" | "debit" | "credit" | "status" | "updated"
@@ -126,13 +132,13 @@ export function AccountsPage({ session, view = "overview" }: { session: AuthSess
 function PostingBookPage({ bookType, session }: { bookType: "cash" | "bank"; session: AuthSession }) {
   const queryClient = useQueryClient()
   const title = bookType === "cash" ? "Cash Posting" : "Bank Posting"
-  const bookQuery = useQuery({ queryKey: ["account-posting-book", session.selectedTenant.slug, bookType], queryFn: () => listAccountPostingBook(session, bookType) })
+  const bookQuery = useQuery(accountQueries.postingBook(session, bookType))
   const recalculateMutation = useMutation({
     mutationFn: () => recalculateAccountReports(session),
     onSuccess: async () => {
       toast.success(`${title} recalculated`)
-      await invalidateReportQueries(queryClient, session)
-      await queryClient.invalidateQueries({ queryKey: ["account-posting-book", session.selectedTenant.slug, bookType] })
+      await accountInvalidations.afterReportRecalculate(queryClient, session)
+      await queryClient.invalidateQueries({ queryKey: accountQueryKeys.postingBook(session, bookType) })
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
@@ -145,6 +151,14 @@ function PostingBookPage({ bookType, session }: { bookType: "cash" | "bank"; ses
       technicalName={`page.accounts.${bookType}-posting-book`}
       action={<ReportActions isRecalculating={recalculateMutation.isPending} onPrint={() => window.print()} onRecalculate={() => recalculateMutation.mutate()} />}
     >
+      {bookQuery.isError ? (
+        <ModuleErrorPanel
+          error={bookQuery.error}
+          isRetrying={bookQuery.isFetching}
+          title={`${title} could not be loaded`}
+          onRetry={() => void bookQuery.refetch()}
+        />
+      ) : null}
       <div className="grid gap-3 md:grid-cols-3">
         <MetricCard title="Receipts" value={formatMoney(totals.debit)} />
         <MetricCard title="Payments" value={formatMoney(totals.credit)} />
@@ -200,7 +214,8 @@ function PostingBookTable({ isLoading, rows }: { isLoading: boolean; rows: Accou
           ) : null}
         </table>
       </div>
-      {rows.length === 0 ? <MasterListEmptyState>{isLoading ? "Loading postings." : "No posted cash or bank movements found."}</MasterListEmptyState> : null}
+      {rows.length === 0 && isLoading ? <ModuleListSkeleton columns={8} rows={6} /> : null}
+      {rows.length === 0 && !isLoading ? <MasterListEmptyState>No posted cash or bank movements found.</MasterListEmptyState> : null}
     </MasterListTableCard>
   )
 }
@@ -209,11 +224,15 @@ function AccountsOverviewPage({ session }: { session: AuthSession }) {
   const groupsQuery = useQuery({ queryKey: ["account-groups", session.selectedTenant.slug], queryFn: () => listAccountGroups(session) })
   const ledgersQuery = useQuery({ queryKey: ["account-ledgers-all", session.selectedTenant.slug], queryFn: () => listAllAccountLedgers(session) })
   const vouchersQuery = useQuery({ queryKey: ["account-vouchers", session.selectedTenant.slug], queryFn: () => listAccountVouchers(session) })
-  const trialQuery = useQuery({ queryKey: ["account-trial-balance", session.selectedTenant.slug], queryFn: () => listAccountTrialBalance(session) })
+  const trialQuery = useQuery(accountQueries.trialBalance(session))
   const totals = trialTotals(trialQuery.data ?? [])
 
   return (
     <MasterListPageFrame title="Accounts" description="Chart, vouchers, postings, and financial reports." technicalName="page.accounts.overview">
+      {groupsQuery.isError ? <ModuleErrorPanel error={groupsQuery.error} isRetrying={groupsQuery.isFetching} title="Account groups could not be loaded" onRetry={() => void groupsQuery.refetch()} /> : null}
+      {ledgersQuery.isError ? <ModuleErrorPanel error={ledgersQuery.error} isRetrying={ledgersQuery.isFetching} title="Account ledgers could not be loaded" onRetry={() => void ledgersQuery.refetch()} /> : null}
+      {vouchersQuery.isError ? <ModuleErrorPanel error={vouchersQuery.error} isRetrying={vouchersQuery.isFetching} title="Account vouchers could not be loaded" onRetry={() => void vouchersQuery.refetch()} /> : null}
+      {trialQuery.isError ? <ModuleErrorPanel error={trialQuery.error} isRetrying={trialQuery.isFetching} title="Trial Balance could not be loaded" onRetry={() => void trialQuery.refetch()} /> : null}
       <div className="grid gap-3 md:grid-cols-4">
         <MetricCard title="Groups" value={groupsQuery.data?.length ?? 0} />
         <MetricCard title="Ledgers" value={ledgersQuery.data?.length ?? 0} />
@@ -449,8 +468,8 @@ function AccountingVoucherPage({ focusedVoucherType = null, session }: { focused
   async function refresh() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: vouchersKey }),
-      queryClient.invalidateQueries({ queryKey: ["account-trial-balance", session.selectedTenant.slug] }),
-      queryClient.invalidateQueries({ queryKey: ["account-day-book", session.selectedTenant.slug] }),
+      queryClient.invalidateQueries({ queryKey: accountQueryKeys.trialBalance(session) }),
+      queryClient.invalidateQueries({ queryKey: accountQueryKeys.dayBook(session) }),
     ])
   }
 
@@ -588,8 +607,6 @@ function AccountingVoucherPage({ focusedVoucherType = null, session }: { focused
 function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack, onCreateLedger, onSubmit, session, voucher, voucherType }: { groups: AccountGroup[]; isCreatingLedger: boolean; isSaving: boolean; ledgers: AccountLedger[]; onBack(): void; onCreateLedger(input: AccountLedgerInput): Promise<AccountLedger>; onSubmit: (input: AccountVoucherInput) => Promise<void>; session: AuthSession; voucher: AccountVoucher | null; voucherType: AccountVoucherType }) {
   const isAccountingTableVoucher = voucherType === "journal" || voucherType === "contra"
   const documentKind = isAccountingTableVoucher ? voucherType : null
-  const existingDebitLines = voucher?.lines.filter((line) => Number(line.debit_amount ?? 0) > 0) ?? []
-  const existingCreditLines = voucher?.lines.filter((line) => Number(line.credit_amount ?? 0) > 0) ?? []
   const [form, setForm] = useState<VoucherForm>(() => ({
     id: voucher?.id,
     uuid: voucher?.uuid,
@@ -610,16 +627,15 @@ function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack
       { ledger_id: undefined, debit_amount: "", credit_amount: "", line_narration: "", sort_order: 2 },
     ],
   }))
-  const [journalLines, setJournalLines] = useState<JournalPostingLine[]>(() => [
-    ...existingDebitLines.map((line) => ({ amount: line.debit_amount || "", ledger_id: line.ledger_id, line_narration: line.line_narration ?? "", side: "debit" as const })),
-    ...existingCreditLines.map((line) => ({ amount: line.credit_amount || "", ledger_id: line.ledger_id, line_narration: line.line_narration ?? "", side: "credit" as const })),
-  ])
-  const [journalDraft, setJournalDraft] = useState<JournalPostingLine>({ amount: "", ledger_id: undefined, line_narration: "", side: "debit" })
+  const [journalPosting, dispatchJournalPosting] = useReducer(journalPostingReducer, voucher, createJournalPostingState)
   const [ledgerCreateDraft, setLedgerCreateDraft] = useState<{ group_id: number | null; name: string } | null>(null)
   const nextVoucherNumberQuery = useQuery({ enabled: Boolean(documentKind && !voucher), queryKey: ["document-number-next-preview", session.selectedTenant.slug, documentKind], queryFn: () => nextDocumentNumberSetting(session, documentKind ?? "journal"), refetchOnMount: "always" })
+  const journalLines = journalPosting.lines
+  const journalDraft = journalPosting.draft
   const totals = voucherLineTotals(form.lines)
-  const journalDebitTotal = journalLines.filter((line) => line.side === "debit").reduce((sum, line) => roundMoney(sum + numberValue(line.amount)), 0)
-  const journalCreditTotal = journalLines.filter((line) => line.side === "credit").reduce((sum, line) => roundMoney(sum + numberValue(line.amount)), 0)
+  const journalTotals = useMemo(() => journalPostingTotals(journalLines), [journalLines])
+  const journalDebitTotal = journalTotals.debit
+  const journalCreditTotal = journalTotals.credit
   const postingLedgerOptions = voucherType === "contra" ? ledgers.filter((ledger) => ledger.account_type === "cash" || ledger.account_type === "bank") : ledgers
   const ledgerName = (ledgerId?: number) => ledgers.find((ledger) => Number(ledger.id) === Number(ledgerId))?.name ?? "-"
 
@@ -654,8 +670,7 @@ function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack
       toast.error("Select ledger and amount.")
       return
     }
-    setJournalLines((current) => [...current, { ...journalDraft, amount: roundMoney(journalDraft.amount) }])
-    setJournalDraft({ amount: "", ledger_id: undefined, line_narration: "", side: journalDraft.side })
+    dispatchJournalPosting({ type: "add" })
   }
 
   async function createJournalLedger() {
@@ -673,25 +688,22 @@ function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack
       group_id: ledgerCreateDraft.group_id,
       name: ledgerCreateDraft.name.trim(),
     })
-    setJournalDraft((current) => ({ ...current, ledger_id: ledger.id }))
+    dispatchJournalPosting({ ledgerId: ledger.id, type: "set-ledger" })
     setLedgerCreateDraft(null)
   }
 
   function editJournalLine(index: number) {
-    const line = journalLines[index]
-    if (!line) return
-    setJournalDraft(line)
-    setJournalLines((current) => current.filter((_, lineIndex) => lineIndex !== index))
+    dispatchJournalPosting({ index, type: "edit" })
   }
 
   function removeJournalLine(index: number) {
-    setJournalLines((current) => current.filter((_, lineIndex) => lineIndex !== index))
+    dispatchJournalPosting({ index, type: "remove" })
   }
 
   async function submit() {
     if (isAccountingTableVoucher) {
-      const debitLines = journalLines.filter((line) => line.side === "debit" && (Boolean(line.ledger_id) || numberValue(line.amount) > 0))
-      const creditLines = journalLines.filter((line) => line.side === "credit" && (Boolean(line.ledger_id) || numberValue(line.amount) > 0))
+      const debitLines = validJournalSideLines(journalLines, "debit")
+      const creditLines = validJournalSideLines(journalLines, "credit")
       const incompleteDebit = debitLines.some((line) => !line.ledger_id || numberValue(line.amount) <= 0)
       const incompleteCredit = creditLines.some((line) => !line.ledger_id || numberValue(line.amount) <= 0)
 
@@ -711,10 +723,7 @@ function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack
       await onSubmit({
         ...form,
         voucher_type: voucherType,
-        lines: [
-          ...debitLines.map((line, index) => ({ ledger_id: line.ledger_id, debit_amount: roundMoney(line.amount), credit_amount: "", line_narration: line.line_narration || form.narration || "", sort_order: index + 1 })),
-          ...creditLines.map((line, index) => ({ ledger_id: line.ledger_id, debit_amount: "", credit_amount: roundMoney(line.amount), line_narration: line.line_narration || form.narration || "", sort_order: debitLines.length + index + 1 })),
-        ] satisfies AccountVoucherLineInput[],
+        lines: buildJournalVoucherLines(journalLines, form.narration || ""),
       })
       return
     }
@@ -780,7 +789,7 @@ function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack
             <div className="grid items-end gap-2 md:grid-cols-[9rem_minmax(240px,1fr)_12rem_auto]">
               <div className="grid gap-2">
                 <Label className="invisible text-sm font-medium text-muted-foreground">Type</Label>
-                <Select value={journalDraft.side} onValueChange={(value) => setJournalDraft((current) => ({ ...current, side: value as JournalPostingLine["side"] }))}>
+                <Select value={journalDraft.side} onValueChange={(value) => dispatchJournalPosting({ patch: { side: value as JournalPostingLine["side"] }, type: "update-draft" })}>
                   <SelectTrigger className="!h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-0"><SelectValue /></SelectTrigger>
                   <SelectContent align="start" className="z-[120] w-36 min-w-36 rounded-md" position="popper">
                     <SelectItem className="h-8" value="debit">By / Debit</SelectItem>
@@ -798,12 +807,12 @@ function VoucherUpsertPage({ groups, isCreatingLedger, isSaving, ledgers, onBack
                 selectedId={journalDraft.ledger_id ? String(journalDraft.ledger_id) : null}
                 selectedLabel={journalDraft.ledger_id ? ledgerName(journalDraft.ledger_id) : ""}
                 onCreate={async (query) => setLedgerCreateDraft({ group_id: defaultJournalGroupId(groups, journalDraft.side), name: query })}
-                onPick={(ledger) => setJournalDraft((current) => ({ ...current, ledger_id: ledger.id }))}
-                onTextChange={() => setJournalDraft((current) => ({ ...current, ledger_id: undefined }))}
+                onPick={(ledger) => dispatchJournalPosting({ ledgerId: ledger.id, type: "set-ledger" })}
+                onTextChange={() => dispatchJournalPosting({ patch: { ledger_id: undefined }, type: "update-draft" })}
               />
               <div className="grid gap-2">
                 <Label className="text-sm font-medium text-muted-foreground">Amount</Label>
-                <Input className="h-11 rounded-md bg-background text-right" inputMode="decimal" value={String(journalDraft.amount ?? "")} onChange={(event) => setJournalDraft((current) => ({ ...current, amount: event.target.value }))} />
+                <Input className="h-11 rounded-md bg-background text-right" inputMode="decimal" value={String(journalDraft.amount ?? "")} onChange={(event) => dispatchJournalPosting({ patch: { amount: event.target.value }, type: "update-draft" })} />
               </div>
               <div>
                 <Button className="h-11 rounded-md" type="button" onClick={addJournalLine}><Plus className="size-4" />Add</Button>
@@ -1040,12 +1049,12 @@ function DayBookPage({ session }: { session: AuthSession }) {
   const [toDate, setToDate] = useState("")
   const [voucherType, setVoucherType] = useState("all")
   const [monthKey, setMonthKey] = useState("all")
-  const dayBookQuery = useQuery({ queryKey: ["account-day-book", session.selectedTenant.slug], queryFn: () => listAccountDayBook(session) })
+  const dayBookQuery = useQuery(accountQueries.dayBook(session))
   const recalculateMutation = useMutation({
     mutationFn: () => recalculateAccountReports(session),
     onSuccess: async () => {
       toast.success("Day Book recalculated")
-      await invalidateReportQueries(queryClient, session)
+      await accountInvalidations.afterReportRecalculate(queryClient, session)
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
@@ -1061,6 +1070,14 @@ function DayBookPage({ session }: { session: AuthSession }) {
       technicalName="page.accounts.day-book"
       action={<ReportActions isRecalculating={recalculateMutation.isPending} onPrint={() => window.print()} onRecalculate={() => recalculateMutation.mutate()} />}
     >
+      {dayBookQuery.isError ? (
+        <ModuleErrorPanel
+          error={dayBookQuery.error}
+          isRetrying={dayBookQuery.isFetching}
+          title="Day Book could not be loaded"
+          onRetry={() => void dayBookQuery.refetch()}
+        />
+      ) : null}
       <div className="grid gap-3 md:grid-cols-4">
         <MetricCard title="Vouchers" value={filteredVouchers.length} />
         <MetricCard title="Sales" value={formatMoney(dayBookTotals.sales)} />
@@ -1191,7 +1208,8 @@ function DayBookVoucherTable({ isLoading, vouchers }: { isLoading: boolean; vouc
           ) : null}
         </table>
       </div>
-      {vouchers.length === 0 ? <MasterListEmptyState>{isLoading ? "Loading vouchers." : "No vouchers found for this filter."}</MasterListEmptyState> : null}
+      {vouchers.length === 0 && isLoading ? <ModuleListSkeleton columns={6} rows={6} /> : null}
+      {vouchers.length === 0 && !isLoading ? <MasterListEmptyState>No vouchers found for this filter.</MasterListEmptyState> : null}
     </MasterListTableCard>
   )
 }
@@ -1265,14 +1283,14 @@ function MonthlyMovementPage({ session }: { session: AuthSession }) {
   const [selectedYearId, setSelectedYearId] = useState<number | null>(null)
   const effectiveYearId = selectedYearId ?? defaultContextQuery.data?.accountingYearId ?? null
   const selectedYear = accountingYearOption(yearsQuery.data ?? [], effectiveYearId) ?? accountingYearFromDefaultContext(defaultContextQuery.data)
-  const dayBookQuery = useQuery({ queryKey: ["account-day-book", session.selectedTenant.slug, effectiveYearId], queryFn: () => listAccountDayBook(session, effectiveYearId), enabled: Boolean(effectiveYearId) })
-  const cashBookQuery = useQuery({ queryKey: ["account-posting-book", session.selectedTenant.slug, "cash", effectiveYearId], queryFn: () => listAccountPostingBook(session, "cash", effectiveYearId), enabled: Boolean(effectiveYearId) })
-  const bankBookQuery = useQuery({ queryKey: ["account-posting-book", session.selectedTenant.slug, "bank", effectiveYearId], queryFn: () => listAccountPostingBook(session, "bank", effectiveYearId), enabled: Boolean(effectiveYearId) })
+  const dayBookQuery = useQuery({ ...accountQueries.dayBook(session, effectiveYearId), enabled: Boolean(effectiveYearId) })
+  const cashBookQuery = useQuery({ ...accountQueries.postingBook(session, "cash", effectiveYearId), enabled: Boolean(effectiveYearId) })
+  const bankBookQuery = useQuery({ ...accountQueries.postingBook(session, "bank", effectiveYearId), enabled: Boolean(effectiveYearId) })
   const recalculateMutation = useMutation({
     mutationFn: () => recalculateAccountReports(session),
     onSuccess: async () => {
       toast.success("Monthly Movement recalculated")
-      await invalidateReportQueries(queryClient, session)
+      await accountInvalidations.afterReportRecalculate(queryClient, session)
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
@@ -1305,6 +1323,11 @@ function MonthlyMovementPage({ session }: { session: AuthSession }) {
           </div>
         </div>
       </MasterListTableCard>
+      {defaultContextQuery.isError ? <ModuleErrorPanel error={defaultContextQuery.error} isRetrying={defaultContextQuery.isFetching} title="Accounting context could not be loaded" onRetry={() => void defaultContextQuery.refetch()} /> : null}
+      {yearsQuery.isError ? <ModuleErrorPanel error={yearsQuery.error} isRetrying={yearsQuery.isFetching} title="Accounting years could not be loaded" onRetry={() => void yearsQuery.refetch()} /> : null}
+      {dayBookQuery.isError ? <ModuleErrorPanel error={dayBookQuery.error} isRetrying={dayBookQuery.isFetching} title="Monthly vouchers could not be loaded" onRetry={() => void dayBookQuery.refetch()} /> : null}
+      {cashBookQuery.isError ? <ModuleErrorPanel error={cashBookQuery.error} isRetrying={cashBookQuery.isFetching} title="Monthly cash movements could not be loaded" onRetry={() => void cashBookQuery.refetch()} /> : null}
+      {bankBookQuery.isError ? <ModuleErrorPanel error={bankBookQuery.error} isRetrying={bankBookQuery.isFetching} title="Monthly bank movements could not be loaded" onRetry={() => void bankBookQuery.refetch()} /> : null}
       <div className="grid gap-3 md:grid-cols-4">
         <MetricCard title="Sales" value={formatMoney(totals.sales)} />
         <MetricCard title="Purchase" value={formatMoney(totals.purchase)} />
@@ -1312,19 +1335,19 @@ function MonthlyMovementPage({ session }: { session: AuthSession }) {
         <MetricCard title="Bank Net" value={formatMoney(totals.bankIn - totals.bankOut)} />
       </div>
       <MonthlyAccountReportTable rows={rows} />
-      {dayBookQuery.isFetching || cashBookQuery.isFetching || bankBookQuery.isFetching ? <MasterListEmptyState>Loading monthly movement.</MasterListEmptyState> : null}
+      {rows.length === 0 && (dayBookQuery.isFetching || cashBookQuery.isFetching || bankBookQuery.isFetching) ? <ModuleReportSkeleton rows={4} /> : null}
     </MasterListPageFrame>
   )
 }
 
 function TrialBalancePage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
-  const trialQuery = useQuery({ queryKey: ["account-trial-balance", session.selectedTenant.slug], queryFn: () => listAccountTrialBalance(session) })
+  const trialQuery = useQuery(accountQueries.trialBalance(session))
   const recalculateMutation = useMutation({
     mutationFn: () => recalculateAccountReports(session),
     onSuccess: async () => {
       toast.success("Accounts reports recalculated")
-      await invalidateReportQueries(queryClient, session)
+      await accountInvalidations.afterReportRecalculate(queryClient, session)
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
@@ -1335,22 +1358,27 @@ function TrialBalancePage({ session }: { session: AuthSession }) {
       technicalName="page.accounts.trial-balance"
       action={<ReportActions isRecalculating={recalculateMutation.isPending} onPrint={() => window.print()} onRecalculate={() => recalculateMutation.mutate()} />}
     >
-      <ReportTable title="Trial Balance" rows={trialQuery.data ?? []} showTotals />
+      {trialQuery.isError ? (
+        <ModuleErrorPanel
+          error={trialQuery.error}
+          isRetrying={trialQuery.isFetching}
+          title="Trial Balance could not be loaded"
+          onRetry={() => void trialQuery.refetch()}
+        />
+      ) : null}
+      {!trialQuery.data && trialQuery.isFetching ? <ModuleReportSkeleton /> : <ReportTable title="Trial Balance" rows={trialQuery.data ?? []} showTotals />}
     </MasterListPageFrame>
   )
 }
 
 function SummaryReportPage({ reportType, session }: { reportType: "profit-loss" | "balance-sheet"; session: AuthSession }) {
   const queryClient = useQueryClient()
-  const query = useQuery({
-    queryKey: [`account-${reportType}`, session.selectedTenant.slug],
-    queryFn: () => reportType === "profit-loss" ? listAccountProfitLoss(session) : listAccountBalanceSheet(session),
-  })
+  const query = useQuery(reportType === "profit-loss" ? accountQueries.profitLoss(session) : accountQueries.balanceSheet(session))
   const recalculateMutation = useMutation({
     mutationFn: () => recalculateAccountReports(session),
     onSuccess: async () => {
       toast.success("Accounts reports recalculated")
-      await invalidateReportQueries(queryClient, session)
+      await accountInvalidations.afterReportRecalculate(queryClient, session)
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
@@ -1362,7 +1390,15 @@ function SummaryReportPage({ reportType, session }: { reportType: "profit-loss" 
       technicalName={`page.accounts.${reportType}`}
       action={<ReportActions isRecalculating={recalculateMutation.isPending} onPrint={() => window.print()} onRecalculate={() => recalculateMutation.mutate()} />}
     >
-      <SummaryReport data={data} />
+      {query.isError ? (
+        <ModuleErrorPanel
+          error={query.error}
+          isRetrying={query.isFetching}
+          title={`${reportType === "profit-loss" ? "Profit & Loss" : "Balance Sheet"} could not be loaded`}
+          onRetry={() => void query.refetch()}
+        />
+      ) : null}
+      {!query.data && query.isFetching ? <ModuleReportSkeleton /> : <SummaryReport data={data} />}
     </MasterListPageFrame>
   )
 }
@@ -1517,7 +1553,8 @@ function VoucherTable({
           </table>
           )}
         </div>
-        {(listViewMode === "month" ? monthlyVouchers.length : vouchers.length) === 0 ? <MasterListEmptyState>{isLoading ? "Loading vouchers." : "No vouchers found."}</MasterListEmptyState> : null}
+        {(listViewMode === "month" ? monthlyVouchers.length : vouchers.length) === 0 && isLoading ? <ModuleListSkeleton columns={listViewMode === "month" ? 5 : 9} rows={7} /> : null}
+        {(listViewMode === "month" ? monthlyVouchers.length : vouchers.length) === 0 && !isLoading ? <MasterListEmptyState>No vouchers found.</MasterListEmptyState> : null}
       </MasterListTableCard>
       <MasterListPaginationCard
         page={currentPage}
@@ -1591,17 +1628,6 @@ function ReportTable({ rows, showTotals = false, title }: { rows: AccountTrialBa
       {rows.length === 0 ? <MasterListEmptyState>No report rows found.</MasterListEmptyState> : null}
     </MasterListTableCard>
   )
-}
-
-async function invalidateReportQueries(queryClient: ReturnType<typeof useQueryClient>, session: AuthSession) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ["account-trial-balance", session.selectedTenant.slug] }),
-    queryClient.invalidateQueries({ queryKey: ["account-profit-loss", session.selectedTenant.slug] }),
-    queryClient.invalidateQueries({ queryKey: ["account-balance-sheet", session.selectedTenant.slug] }),
-    queryClient.invalidateQueries({ queryKey: ["account-day-book", session.selectedTenant.slug] }),
-    queryClient.invalidateQueries({ queryKey: ["account-vouchers", session.selectedTenant.slug] }),
-    queryClient.invalidateQueries({ queryKey: ["account-posting-book", session.selectedTenant.slug] }),
-  ])
 }
 
 function Field({ children, label }: { children: React.ReactNode; label: string }) {
@@ -1685,6 +1711,63 @@ function accountLedgerTypeForGroup(group?: AccountGroup): AccountLedgerType {
   if (group?.nature === "income") return "sales"
   if (group?.nature === "expense") return "purchase"
   return "cash"
+}
+
+function createJournalPostingState(voucher: AccountVoucher | null): JournalPostingState {
+  const existingDebitLines = voucher?.lines.filter((line) => Number(line.debit_amount ?? 0) > 0) ?? []
+  const existingCreditLines = voucher?.lines.filter((line) => Number(line.credit_amount ?? 0) > 0) ?? []
+  return {
+    draft: emptyJournalPostingDraft(),
+    lines: [
+      ...existingDebitLines.map((line) => ({ amount: line.debit_amount || "", ledger_id: line.ledger_id, line_narration: line.line_narration ?? "", side: "debit" as const })),
+      ...existingCreditLines.map((line) => ({ amount: line.credit_amount || "", ledger_id: line.ledger_id, line_narration: line.line_narration ?? "", side: "credit" as const })),
+    ],
+  }
+}
+
+function journalPostingReducer(state: JournalPostingState, action: JournalPostingAction): JournalPostingState {
+  if (action.type === "update-draft") return { ...state, draft: { ...state.draft, ...action.patch } }
+  if (action.type === "set-ledger") return { ...state, draft: { ...state.draft, ledger_id: action.ledgerId } }
+  if (action.type === "add") {
+    if (!state.draft.ledger_id || numberValue(state.draft.amount) <= 0) return state
+    return {
+      draft: { ...emptyJournalPostingDraft(), side: state.draft.side },
+      lines: [...state.lines, { ...state.draft, amount: roundMoney(state.draft.amount) }],
+    }
+  }
+  if (action.type === "edit") {
+    const line = state.lines[action.index]
+    if (!line) return state
+    return { draft: line, lines: state.lines.filter((_, lineIndex) => lineIndex !== action.index) }
+  }
+  if (action.type === "remove") return { ...state, lines: state.lines.filter((_, lineIndex) => lineIndex !== action.index) }
+  return state
+}
+
+function emptyJournalPostingDraft(): JournalPostingLine {
+  return { amount: "", ledger_id: undefined, line_narration: "", side: "debit" }
+}
+
+function journalPostingTotals(lines: JournalPostingLine[]) {
+  return lines.reduce(
+    (sum, line) => line.side === "debit"
+      ? { ...sum, debit: roundMoney(sum.debit + numberValue(line.amount)) }
+      : { ...sum, credit: roundMoney(sum.credit + numberValue(line.amount)) },
+    { credit: 0, debit: 0 },
+  )
+}
+
+function buildJournalVoucherLines(lines: JournalPostingLine[], narration: string): AccountVoucherLineInput[] {
+  const debitLines = validJournalSideLines(lines, "debit")
+  const creditLines = validJournalSideLines(lines, "credit")
+  return [
+    ...debitLines.map((line, index) => ({ ledger_id: line.ledger_id, debit_amount: roundMoney(line.amount), credit_amount: "", line_narration: line.line_narration || narration || "", sort_order: index + 1 })),
+    ...creditLines.map((line, index) => ({ ledger_id: line.ledger_id, debit_amount: "", credit_amount: roundMoney(line.amount), line_narration: line.line_narration || narration || "", sort_order: debitLines.length + index + 1 })),
+  ]
+}
+
+function validJournalSideLines(lines: JournalPostingLine[], side: JournalPostingLine["side"]) {
+  return lines.filter((line) => line.side === side && (Boolean(line.ledger_id) || numberValue(line.amount) > 0))
 }
 
 function defaultJournalGroupId(groups: AccountGroup[], side: JournalPostingLine["side"]) {

@@ -127,6 +127,7 @@ export const dashboardApps: DashboardAppDefinition[] = [
           { ...item("application", "default-company", "Default Company", Building2) },
           { ...item("application", "users", "Users", UsersRound) },
           { title: "Roles", page: "tenant-roles", icon: Settings },
+          { ...item("application", "subscription", "Subscription", CreditCard) },
           { ...item("application", "landing-desk", "Landing Desk", Settings) },
         ],
       },

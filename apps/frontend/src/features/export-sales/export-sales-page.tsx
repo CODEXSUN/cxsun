@@ -65,6 +65,7 @@ import { ExportSalesInvoiceDocument, type ExportSalesPrintCopy, type ExportSales
 type ExportSalesView = { mode: "list" } | { mode: "show"; entry: ExportSalesEntry } | { mode: "upsert"; entry: ExportSalesEntry | null }
 type ExportSalesColumnId = "invoice" | "date" | "customer" | "currency" | "status" | "payment" | "totalQty" | "taxableTotal" | "gstTotal" | "grandTotal" | "balance" | "updated"
 type ExportSalesEntryToolId = "downloadPdf" | "email" | "assign" | "attachments" | "tags" | "whatsapp"
+type SalesTypeOption = { value: string; label: string }
 type ExportSalesAddressLabels = {
   addressTypes(value: unknown): string
   cities(value: unknown): string
@@ -80,6 +81,7 @@ const ExportSalesPrintCopyOptions: readonly { label: string; value: ExportSalesP
   { label: "Duplicate", value: "duplicate" },
   { label: "Office Copy", value: "triplicate" },
 ]
+const defaultSalesAccountType = "Export Sales"
 const exportSalesStatusFilters = [
   { id: "all", label: "All export sales" },
   { id: "draft", label: "draft" },
@@ -619,6 +621,8 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
   const taxesQuery = useQuery({ queryKey: ["export-sales-lookups", session.selectedTenant.slug, "taxes"], queryFn: () => listExportSalesCommonLookups(session, "taxes") })
   const unitsQuery = useQuery({ queryKey: ["export-sales-lookups", session.selectedTenant.slug, "units"], queryFn: () => listExportSalesCommonLookups(session, "units") })
   const transportsQuery = useQuery({ queryKey: ["export-sales-lookups", session.selectedTenant.slug, "transports"], queryFn: () => listMasterDataRecords(session, "transports") })
+  const salesAccountTypesQuery = useQuery({ queryKey: ["export-sales-lookups", session.selectedTenant.slug, "salesAccountTypes"], queryFn: () => listMasterDataRecords(session, "salesAccountTypes") })
+  const salesAccountTypeMutation = useMutation({ mutationFn: (name: string) => upsertMasterDataRecord(session, "salesAccountTypes", { name, description: "", is_active: true }) })
   const nextInvoiceQuery = useQuery({
     enabled: !entry,
     queryKey: ["document-number-next-preview", session.selectedTenant.slug, "exportSales"],
@@ -648,8 +652,17 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
                 contacts={customerContacts}
                 onContactsRefresh={() => void contactsQuery.refetch()}
                 onCreateContact={setContactCreateInitialName}
+                onCreateSalesType={async (name) => {
+                  const trimmed = name.trim()
+                  if (!trimmed) return
+                  const record = await salesAccountTypeMutation.mutateAsync(trimmed)
+                  await salesAccountTypesQuery.refetch()
+                  setDraft((current) => ({ ...current, accounting_category: normalizeSalesAccountTypeValue(getCommonRecordName(record)) }))
+                  toast.success("Sales type created", { description: getCommonRecordName(record) })
+                }}
                 form={draft}
                 hsnCodes={hsnCodesQuery.data ?? []}
+                salesAccountTypes={salesAccountTypesQuery.data ?? []}
                 session={session}
                 setForm={setDraft}
                 softwareSettings={softwareSettings}
@@ -691,12 +704,14 @@ function SalesUpsertPage({ entry, isSaving, session, onBack, onSubmit }: {
   )
 }
 
-function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreateContact, session, setForm, softwareSettings, taxes, totals, transports, units }: {
+function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreateContact, onCreateSalesType, salesAccountTypes, session, setForm, softwareSettings, taxes, totals, transports, units }: {
   contacts: ExportSalesLookupOption[]
   form: ExportSalesEntryInput
   hsnCodes: ExportSalesLookupOption[]
   onContactsRefresh(): void
   onCreateContact(name: string): void
+  onCreateSalesType(name: string): Promise<void>
+  salesAccountTypes: MasterDataRecord[]
   session: AuthSession
   setForm(updater: (current: ExportSalesEntryInput) => ExportSalesEntryInput): void
   softwareSettings: SoftwareSettingsState
@@ -708,6 +723,23 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
   const [itemDraft, setItemDraft] = useState<ExportSalesEntryItem>(() => emptyExportSalesItem())
   const addressLabels = useExportSalesAddressLabels(session)
+  const salesTypeOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const options: SalesTypeOption[] = []
+    for (const name of [
+      defaultSalesAccountType,
+      normalizeSalesAccountTypeValue(form.accounting_category),
+      ...salesAccountTypes
+        .filter((record) => record.is_active === true || record.is_active === 1)
+        .map((record) => getCommonRecordName(record)),
+    ]) {
+      const value = normalizeSalesAccountTypeValue(name)
+      if (!value || seen.has(value.toLowerCase())) continue
+      seen.add(value.toLowerCase())
+      options.push({ value, label: value === defaultSalesAccountType ? "Export Sales" : value })
+    }
+    return options
+  }, [form.accounting_category, salesAccountTypes])
 
   function addItem() {
     if (!itemDraft.product_name.trim()) return
@@ -756,6 +788,8 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
           itemDraft={itemDraft}
           addressLabels={addressLabels}
           onCreateContact={onCreateContact}
+          onCreateSalesType={onCreateSalesType}
+          salesTypeOptions={salesTypeOptions}
           session={session}
           setEditingItemIndex={setEditingItemIndex}
           setForm={setForm}
@@ -797,7 +831,7 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
   )
 }
 
-function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editItem, editingItemIndex, form, hsnCodes, itemDraft, onCreateContact, session, setEditingItemIndex, setForm, setItemDraft, softwareSettings, taxes, totals, units }: {
+function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editItem, editingItemIndex, form, hsnCodes, itemDraft, onCreateContact, onCreateSalesType, salesTypeOptions, session, setEditingItemIndex, setForm, setItemDraft, softwareSettings, taxes, totals, units }: {
   addItem(): void
   addressLabels: ExportSalesAddressLabels
   contacts: ExportSalesLookupOption[]
@@ -808,6 +842,8 @@ function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editIte
   hsnCodes: ExportSalesLookupOption[]
   itemDraft: ExportSalesEntryItem
   onCreateContact(name: string): void
+  onCreateSalesType(name: string): Promise<void>
+  salesTypeOptions: SalesTypeOption[]
   session: AuthSession
   setEditingItemIndex(value: number | null): void
   setForm(updater: (current: ExportSalesEntryInput) => ExportSalesEntryInput): void
@@ -876,6 +912,14 @@ function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editIte
             onTextChange={(value) => setForm((current) => ({ ...current, customer_gstin: "", customer_id: null, customer_name: value, customer_state_code: "", customer_state_name: "" }))}
           />
           <WorkOrderAutocomplete session={session} value={form.reference_no ?? ""} onChange={(value) => setForm((current) => ({ ...current, reference_no: value }))} />
+          <LookupSelectField
+            createLabel="Create sales ledger"
+            label="Sales Ledger"
+            value={normalizeSalesAccountTypeValue(form.accounting_category) || defaultSalesAccountType}
+            options={salesTypeOptions}
+            onCreate={onCreateSalesType}
+            onChange={(value) => setForm((current) => ({ ...current, accounting_category: value }))}
+          />
         </div>
         <div className="space-y-5">
           <Field label="Invoice no" value={form.invoice_no ?? ""} onChange={(value) => setForm((current) => ({ ...current, invoice_no: value }))} />
@@ -1866,6 +1910,28 @@ function Field({ centeredLabel = false, compact = false, decimalScale, label, nu
   )
 }
 
+function LookupSelectField({ createLabel, label, onChange, onCreate, options, value }: { createLabel?: string; label: string; onChange(value: string): void; onCreate?(query: string): Promise<void>; options: ReadonlyArray<SalesTypeOption>; value: string }) {
+  const selectedOption = options.find((option) => option.value === value)
+  const selectedLabel = selectedOption?.label ?? ""
+  const lookupOptions = options.map((option) => ({ id: option.value, label: option.label, code: option.value, record: lookupRecord(option.value, option.label) }))
+
+  return (
+    <MasterAutocompleteLookup
+      label={label}
+      options={lookupOptions}
+      placeholder=""
+      selectedId={value}
+      selectedLabel={selectedLabel}
+      createLabel={createLabel}
+      onPick={(option) => onChange(option.id)}
+      onTextChange={() => undefined}
+      onCreate={onCreate ? async (query) => {
+        await onCreate(query)
+      } : undefined}
+    />
+  )
+}
+
 function SignedDecimalInput({ className, decimalScale, onChange, value }: { className?: string; decimalScale?: number; onChange(value: string): void; value: string }) {
   const [displayValue, setDisplayValue] = useState(formatDecimalDisplay(value, decimalScale))
   const [isFocused, setIsFocused] = useState(false)
@@ -2160,6 +2226,7 @@ function buildExportSalesSaveInput(input: ExportSalesEntryInput): ExportSalesEnt
 
   return {
     ...input,
+    accounting_category: normalizeSalesAccountTypeValue(input.accounting_category) || defaultSalesAccountType,
     balance_amount: roundMoney(totals.grandTotal - Number(input.paid_amount || 0)),
     discount_total: discountTotal,
     grand_total: totals.grandTotal,
@@ -2169,6 +2236,12 @@ function buildExportSalesSaveInput(input: ExportSalesEntryInput): ExportSalesEnt
     tax_total: totals.gstTotal,
     taxable_total: totals.taxableAmount,
   }
+}
+
+function normalizeSalesAccountTypeValue(value: unknown) {
+  const text = String(value ?? "").trim()
+  if (!text || text === "sales" || text.toLowerCase() === "normal sales") return defaultSalesAccountType
+  return text
 }
 
 function buildExportSalesEinvoicePayload(input: ExportSalesEntryInput) {
@@ -2439,5 +2512,4 @@ function formatMoney(value: number) {
 function formatQuantity(value: number) {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(Number(value ?? 0))
 }
-
 

@@ -20,39 +20,32 @@ import {
   MasterListUpsertLayout,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
+import { ModuleListSkeleton } from "src/components/blocks/module-loading"
 import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
-import { listCompanies, type CompanyRecord } from "src/features/company/company-client"
+import type { CompanyRecord } from "src/features/company/company-client"
 import { LetterheadBuilder } from "src/features/company/letterhead-builder"
 import { emptyContact, upsertContact, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
 import { LedgerAutocompleteLookup } from "src/features/accounts/accounts-book-page"
-import { listAllAccountLedgers, type AccountLedger } from "src/features/accounts/accounts-client"
+import type { AccountLedger } from "src/features/accounts/accounts-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { WorkOrderAutocomplete } from "src/features/master-data/interface/components/work-order-autocomplete"
-import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
-import { nextDocumentNumberSetting } from "src/features/settings/document-settings-client"
 import { useCompanySoftwareSettings } from "src/features/settings/use-company-software-settings"
 import { filterStockContactLookupOptions, stockContactTypeId } from "src/features/stock/contact-role-filter"
-import { listSalesEntries, type SalesEntry } from "src/features/sales/sales-client"
+import type { SalesEntry } from "src/features/sales/sales-client"
 import {
-  addReceiptComment,
-  createReceiptCorrection,
-  createReceiptReversal,
-  downloadReceiptPdf,
-  destroyReceiptEntry,
   emptyReceiptAllocation,
   emptyReceiptEntry,
-  listReceiptContactLookups,
-  listReceiptEntries,
-  restoreReceiptEntry,
-  runReceiptTool,
-  upsertReceiptEntry,
   type ReceiptAllocation,
   type ReceiptEntry,
   type ReceiptEntryInput,
   type ReceiptLookupOption,
 } from "./receipt-client"
+import { receiptActions } from "./receipt-actions"
+import { receiptInvalidations } from "./receipt-invalidations"
+import { receiptQueries } from "./receipt-queries"
 
 type ReceiptView = { mode: "list" } | { mode: "show"; entry: ReceiptEntry } | { mode: "upsert"; entry: ReceiptEntry | null }
 type ReceiptColumnId = "amount" | "date" | "ledger" | "mode" | "party" | "receipt" | "status" | "unallocated" | "updated"
@@ -107,15 +100,14 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   const [listViewMode, setListViewMode] = useState<EntryListViewMode>("day")
   const [currentPage, setCurrentPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(100)
-  const queryKey = ["receipt-entries", session.selectedTenant.slug]
-  const entriesQuery = useQuery({ queryKey, queryFn: () => listReceiptEntries(session) })
-  const upsertMutation = useMutation({ mutationFn: (input: ReceiptEntryInput) => upsertReceiptEntry(session, input) })
-  const destroyMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => destroyReceiptEntry(session, entry) })
-  const restoreMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => restoreReceiptEntry(session, entry) })
-  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: ReceiptEntry; body: string }) => addReceiptComment(session, entry, body) })
-  const correctionMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => createReceiptCorrection(session, entry) })
-  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: ReceiptEntry; printHtml?: string; tool: string }) => runReceiptTool(session, entry, tool, printHtml) })
-  const reversalMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => createReceiptReversal(session, entry) })
+  const entriesQuery = useQuery(receiptQueries.entries(session))
+  const upsertMutation = useMutation({ mutationFn: (input: ReceiptEntryInput) => receiptActions.saveDraft(session, input) })
+  const destroyMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => receiptActions.suspend(session, entry) })
+  const restoreMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => receiptActions.restore(session, entry) })
+  const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: ReceiptEntry; body: string }) => receiptActions.addComment(session, entry, body) })
+  const correctionMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => receiptActions.createCorrection(session, entry) })
+  const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: ReceiptEntry; printHtml?: string; tool: string }) => receiptActions.runTool(session, entry, tool, printHtml) })
+  const reversalMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => receiptActions.createReversal(session, entry) })
   const entries = entriesQuery.data ?? []
   const filteredEntries = useMemo(() => filterReceipts(searchReceipts(entries, searchValue), statusFilter).sort((left, right) => left.receipt_no.localeCompare(right.receipt_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizeReceiptsByMonth(filteredEntries), [filteredEntries])
@@ -136,15 +128,13 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   }, [entries, initialEntryUuid])
 
   async function refresh() {
-    await queryClient.invalidateQueries({ queryKey })
+    await receiptInvalidations.invalidateEntries(queryClient, session)
   }
 
   async function save(input: ReceiptEntryInput, printAfterSave = false) {
     const entry = await upsertMutation.mutateAsync(prepareReceiptInput(input))
     toast.success(input.uuid ? "Receipt updated" : "Receipt created", { description: entry.document_number_warning ?? entry.receipt_no })
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"] })
-    await queryClient.invalidateQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug] })
-    await refresh()
+    await receiptInvalidations.afterSave(queryClient, session)
     setView({ mode: "show", entry })
     if (printAfterSave) window.setTimeout(() => window.print(), 300)
   }
@@ -162,7 +152,7 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   }
 
   function openNewEntry() {
-    queryClient.removeQueries({ queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"] })
+    receiptInvalidations.clearNextReceiptPreview(queryClient, session)
     setView({ mode: "upsert", entry: null })
   }
 
@@ -194,7 +184,7 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
         }}
         onDestroy={() => void destroy(entry)}
         onDownloadPdf={async (entryValue) => {
-          await downloadReceiptPdf(session, entryValue, capturePrintDocument(".receipt-print-page"))
+          await receiptActions.downloadPdf(session, entryValue, capturePrintDocument(".receipt-print-page"))
           toast.success("PDF downloaded", { description: entryValue.receipt_no })
         }}
         onEdit={() => setView({ mode: "upsert", entry })}
@@ -256,6 +246,14 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
           />
         }
       />
+      {entriesQuery.isError ? (
+        <ModuleErrorPanel
+          error={entriesQuery.error}
+          isRetrying={entriesQuery.isFetching}
+          title="Receipts could not be loaded"
+          onRetry={() => void entriesQuery.refetch()}
+        />
+      ) : null}
       <MasterListTableCard className="rounded-md">
         <div className="overflow-x-auto">
           {listViewMode === "month" ? (
@@ -339,7 +337,8 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
           </table>
           )}
         </div>
-        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 ? <MasterListEmptyState>{entriesQuery.isFetching ? "Loading receipts." : "No receipts found."}</MasterListEmptyState> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && entriesQuery.isFetching ? <ModuleListSkeleton columns={listViewMode === "month" ? 9 : 8} rows={7} /> : null}
+        {(listViewMode === "month" ? pageMonthlyEntries.length : pageEntries.length) === 0 && !entriesQuery.isFetching ? <MasterListEmptyState>No receipts found.</MasterListEmptyState> : null}
       </MasterListTableCard>
       <MasterListPaginationCard
         page={currentPage}
@@ -387,7 +386,7 @@ function ReceiptShowPage({ entry, isWorking, onBack, onComment, onCorrection, on
   const [attachments, setAttachments] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [toolActivities, setToolActivities] = useState<Array<{ id: string; message: string; created_at: string }>>([])
-  const companyQuery = useQuery({ queryKey: ["receipt-print-company", session.selectedTenant.slug], queryFn: () => listCompanies(session) })
+  const companyQuery = useQuery(receiptQueries.printCompany(session))
   const company = (companyQuery.data ?? []).find((item) => item.isPrimary) ?? companyQuery.data?.[0] ?? null
   const [softwareSettings] = useCompanySoftwareSettings(session)
   const entryTools: Array<{ icon: typeof Mail; id: ReceiptToolId; label: string }> = [
@@ -520,10 +519,11 @@ function ReceiptUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
 }) {
   const [draft, setDraft] = useState<ReceiptEntryInput>(() => entry ? { ...entry, allocations: entry.allocations.map((item) => ({ ...item })) } : emptyReceiptEntry())
   const [contactCreateInitialName, setContactCreateInitialName] = useState<string | null>(null)
-  const contactsQuery = useQuery({ queryKey: ["receipt-contact-lookups", session.selectedTenant.slug], queryFn: () => listReceiptContactLookups(session) })
-  const contactTypesQuery = useQuery({ queryKey: ["receipt-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
-  const ledgersQuery = useQuery({ queryKey: ["receipt-money-ledgers", session.selectedTenant.slug], queryFn: () => listAllAccountLedgers(session) })
-  const nextReceiptQuery = useQuery({ enabled: !entry, queryKey: ["document-number-next-preview", session.selectedTenant.slug, "receipt"], queryFn: () => nextDocumentNumberSetting(session, "receipt"), refetchOnMount: "always" })
+  const [saveError, setSaveError] = useState<unknown>(null)
+  const contactsQuery = useQuery(receiptQueries.contacts(session))
+  const contactTypesQuery = useQuery(receiptQueries.contactTypes(session))
+  const ledgersQuery = useQuery(receiptQueries.ledgers(session))
+  const nextReceiptQuery = useQuery(receiptQueries.nextReceipt(session, !entry))
   const ledgers = ledgersQuery.data ?? []
   const customerContacts = useMemo(() => filterStockContactLookupOptions(contactsQuery.data ?? [], contactTypesQuery.data ?? [], "customer"), [contactsQuery.data, contactTypesQuery.data])
 
@@ -537,6 +537,16 @@ function ReceiptUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
     { value: "allocations", label: "Allocations", content: <ReceiptAllocationsTab form={draft} session={session} setForm={setDraft} /> },
   ]
 
+  async function submitSave(input: ReceiptEntryInput, printAfterSave = false) {
+    setSaveError(null)
+    try {
+      await onSubmit(input, printAfterSave)
+    } catch (error) {
+      setSaveError(error)
+      toast.error("Receipt save failed", { description: error instanceof Error ? error.message : "Please try again." })
+    }
+  }
+
   return (
     <MasterListPageFrame
       title={entry ? "Edit receipt" : "New receipt"}
@@ -545,9 +555,10 @@ function ReceiptUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
       action={<Button type="button" variant="outline" className="rounded-xl" onClick={onBack}><X className="size-4" />Cancel</Button>}
       className="w-[calc(100%-2rem)] max-w-[1500px] sm:w-[calc(100%-3rem)] lg:w-[calc(100%-4rem)]"
     >
+      {saveError ? <ModuleErrorPanel error={saveError} title="Receipt save blocked" onRetry={() => setSaveError(null)} retryLabel="Dismiss" /> : null}
       <MasterListUpsertLayout>
         <MasterListUpsertCard className="overflow-hidden p-0 [&>div]:p-0">
-          <form onSubmit={(event) => { event.preventDefault(); void onSubmit(draft) }}>
+          <form onSubmit={(event) => { event.preventDefault(); void submitSave(draft) }}>
             <div className="px-0 pb-4 pt-3 md:pb-5">
               <AnimatedTabs
                 className="[&>div:first-child]:rounded-none [&>div:first-child]:border-x-0 [&>div:first-child]:border-t-0 [&>div:first-child]:border-b [&>div:first-child]:border-border/70 [&>div:first-child]:bg-card [&>div:first-child]:px-4 [&>div:first-child]:py-0.5 [&>div:first-child]:shadow-none md:[&>div:first-child]:px-6 [&>div:first-child_button]:min-h-8 [&>div:first-child_button]:py-1 [&>div:last-child]:mx-auto [&>div:last-child]:mt-3 [&>div:last-child]:w-full [&>div:last-child]:px-4 [&>div:last-child]:pb-3 md:[&>div:last-child]:px-6 md:[&>div:last-child]:pb-4"
@@ -556,7 +567,7 @@ function ReceiptUpsertPage({ entry, isSaving, onBack, onSubmit, session }: {
             </div>
             <div className="flex flex-wrap justify-start gap-3 border-t border-border/70 bg-muted/20 px-4 py-4 md:px-6">
               <Button type="submit" disabled={isSaving} className="rounded-xl"><Save className={cn("size-4", isSaving && "animate-spin")} />Save</Button>
-              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void onSubmit({ ...draft, status: "posted" }, true)} className="rounded-xl"><Printer className="size-4" />Save & Print</Button>
+              <Button type="button" disabled={isSaving} variant="secondary" onClick={() => void submitSave({ ...draft, status: "posted" }, true)} className="rounded-xl"><Printer className="size-4" />Save & Print</Button>
               <Button type="button" variant="outline" onClick={onBack} className="rounded-xl"><ArrowLeft className="size-4" />Cancel</Button>
             </div>
           </form>
@@ -627,7 +638,7 @@ function ReceiptDetailsTab({ contacts, form, ledgers, onCreateContact, session, 
 }
 
 function ReceiptAllocationsTab({ form, session, setForm }: { form: ReceiptEntryInput; session: AuthSession; setForm: Dispatch<SetStateAction<ReceiptEntryInput>> }) {
-  const salesQuery = useQuery({ queryKey: ["receipt-open-sales", session.selectedTenant.slug], queryFn: () => listSalesEntries(session) })
+  const salesQuery = useQuery(receiptQueries.openSales(session))
   const allocations = form.allocations?.length ? form.allocations : [emptyReceiptAllocation()]
   const openInvoices = useMemo(() => openSalesInvoiceOptions(salesQuery.data ?? [], allocations), [allocations, salesQuery.data])
   return (
@@ -737,7 +748,7 @@ function prepareReceiptInput(input: ReceiptEntryInput): ReceiptEntryInput {
 function ReceiptContactCreateDialog({ contacts, initialName, onClose, onCreated, session }: { contacts: ReceiptLookupOption[]; initialName: string; onClose(): void; onCreated(contact: ReceiptLookupOption): void; session: AuthSession }) {
   const [draft, setDraft] = useState<ContactInput>(() => ({ ...emptyContact(), code: normalizeContactCode(initialName), contactTypeId: "contact-type:customer", ledgerId: "ledger:sundry-debitors", ledgerName: "Customer", legalName: initialName, name: initialName }))
   const [error, setError] = useState<string | null>(null)
-  const contactTypesQuery = useQuery({ queryKey: ["Receipt-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
+  const contactTypesQuery = useQuery(receiptQueries.contactTypesDialog(session))
   const createMutation = useMutation({
     mutationFn: (input: ContactInput) => upsertContact(session, input),
     onSuccess: (contact) => {

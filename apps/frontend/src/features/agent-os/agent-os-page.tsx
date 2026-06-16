@@ -785,6 +785,26 @@ const fallbackProviders = [
     last_tested_at: null,
   },
   {
+    provider: "deepseek",
+    provider_name: "DeepSeek",
+    provider_kind: "openai-compatible",
+    connected: false,
+    configured_by: null,
+    base_url: "https://api.deepseek.com/v1",
+    app_title: "CXSun ZETRO",
+    default_model: "deepseek-chat",
+    free_models: "deepseek-chat",
+    premium_models: "deepseek-reasoner",
+    free_model_count: 1,
+    premium_model_count: 1,
+    required_env: ["DEEPSEEK_API_KEY"],
+    is_active: false,
+    status: "not_configured",
+    last_test_status: null,
+    last_test_message: null,
+    last_tested_at: null,
+  },
+  {
     provider: "opencode",
     provider_name: "OpenCode Zen",
     provider_kind: "openai-compatible",
@@ -918,13 +938,13 @@ function PlatformButton({
       onClick={onClick}
     >
       <div className="flex items-start gap-3">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", providerVerified(provider) ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : provider.connected ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-muted text-muted-foreground")}>
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-md", providerVerified(provider) ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : providerConfigured(provider) ? "bg-amber-500/10 text-amber-700 dark:text-amber-300" : "bg-muted text-muted-foreground")}>
           <Icon className="size-4" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center justify-between gap-2">
             <span className="truncate text-sm font-semibold">{platformDisplayName(provider)}</span>
-            <span className={cn("size-1.5 shrink-0 rounded-full", providerVerified(provider) ? "bg-emerald-500" : provider.connected ? "bg-amber-500" : "bg-muted-foreground")} />
+            <span className={cn("size-1.5 shrink-0 rounded-full", providerVerified(provider) ? "bg-emerald-500" : providerConfigured(provider) ? "bg-amber-500" : "bg-muted-foreground")} />
           </span>
           <span className="mt-1 block text-xs leading-5 text-muted-foreground">
             {providerStatusText(provider)}
@@ -1047,29 +1067,38 @@ function platformDisplayName(provider: ZetroProviderConnection | null | undefine
   if (!provider) return "OpenRouter"
   if (provider.provider === "openai") return "OpenAI / GPT"
   if (provider.provider === "gemini") return "Google Gemini"
+  if (provider.provider === "deepseek") return "DeepSeek"
   if (provider.provider === "opencode") return "OpenCode Zen"
   if (provider.provider === "custom") return "Custom API"
   return provider.provider_name
 }
 
 function providerVerified(provider: ZetroProviderConnection) {
-  return provider.last_test_status === "ok" || provider.status === "connected"
+  return provider.connected && (provider.last_test_status === "ok" || provider.status === "connected" || provider.status === "env")
+}
+
+function providerConfigured(provider: ZetroProviderConnection) {
+  return Boolean(provider.configured_by || provider.is_active || provider.status === "failed" || provider.status === "configured")
 }
 
 function providerStatusText(provider: ZetroProviderConnection) {
   if (providerVerified(provider)) {
     return provider.configured_by ? `Connected by ${provider.configured_by}` : "Connected"
   }
-  if (provider.connected && provider.configured_by) {
-    return `Configured by ${provider.configured_by}; test recommended`
+  if (provider.last_test_status === "failed" || provider.status === "failed") {
+    return provider.last_test_message ? `Test failed: ${provider.last_test_message}` : "Test failed; check provider settings"
   }
-  if (provider.connected) return "Configured; test recommended"
+  if (provider.configured_by) {
+    return `Configured by ${provider.configured_by}; test required`
+  }
+  if (providerConfigured(provider)) return "Configured; test required"
   return "Needs API key"
 }
 
 function platformIcon(providerKey: string): LucideIcon {
   if (providerKey === "openai") return BrainCircuit
   if (providerKey === "gemini") return Sparkles
+  if (providerKey === "deepseek") return BrainCircuit
   if (providerKey === "opencode") return Bot
   if (providerKey === "custom") return Cpu
   return Cloud
@@ -1078,6 +1107,7 @@ function platformIcon(providerKey: string): LucideIcon {
 function platformKeyUrl(providerKey: string) {
   if (providerKey === "openai") return "https://platform.openai.com/api-keys"
   if (providerKey === "gemini") return "https://aistudio.google.com/app/apikey"
+  if (providerKey === "deepseek") return "https://platform.deepseek.com/api_keys"
   if (providerKey === "opencode") return "https://opencode.ai/auth"
   if (providerKey === "custom") return "http://localhost:11434"
   return "https://openrouter.ai/keys"
@@ -1086,6 +1116,7 @@ function platformKeyUrl(providerKey: string) {
 function platformKeyLabel(providerKey: string) {
   if (providerKey === "openai") return "platform.openai.com/api-keys"
   if (providerKey === "gemini") return "aistudio.google.com/app/apikey"
+  if (providerKey === "deepseek") return "platform.deepseek.com/api_keys"
   if (providerKey === "opencode") return "opencode.ai/auth"
   if (providerKey === "custom") return "your custom provider"
   return "openrouter.ai/keys"

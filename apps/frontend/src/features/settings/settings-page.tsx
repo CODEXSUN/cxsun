@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "src/c
 import { Switch } from "src/components/ui/switch"
 import { NativeSelect, NativeSelectOption } from "src/components/ui/native-select"
 import { MasterListPageFrame } from "src/components/blocks/lists/master-list"
+import { ModuleErrorPanel } from "src/components/blocks/module-error-panel"
 import { LetterheadBuilder } from "src/features/company/letterhead-builder"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { cn } from "src/lib/utils"
@@ -58,6 +59,14 @@ export function SalesSettingsPage({ session }: { session: AuthSession }) {
       technicalName="page.settings.sales"
       title="Sales Settings"
     >
+      {context.loadError ? (
+        <ModuleErrorPanel
+          error={context.loadError}
+          isRetrying={!context.isLoaded}
+          title="Company settings could not be loaded"
+          onRetry={context.reload}
+        />
+      ) : null}
       <AnimatedTabs
         tabs={[
           {
@@ -217,19 +226,30 @@ function DocumentNumberSettingsPage({
 }) {
   const [records, setRecords] = useState<readonly DocumentNumberSetting[]>([])
   const [drafts, setDrafts] = useState<Record<string, DocumentNumberSettingInput>>({})
+  const [loadError, setLoadError] = useState<unknown>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
+    setIsLoading(true)
+    setLoadError(null)
     void listDocumentNumberSettings(session, { signal: controller.signal })
       .then((settings) => {
         setRecords(settings)
         setDrafts(Object.fromEntries(settings.map((setting) => [setting.kind, toInput(setting)])))
       })
       .catch((error) => {
-        if (!isAbortError(error)) toast.error("Could not load document settings", { description: error instanceof Error ? error.message : "Please try again." })
+        if (!isAbortError(error)) {
+          setLoadError(error)
+          toast.error("Could not load document settings", { description: error instanceof Error ? error.message : "Please try again." })
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false)
       })
     return () => controller.abort()
-  }, [session])
+  }, [reloadKey, session])
 
   const orderedDrafts = useMemo(() => kinds.map((kind) => drafts[kind]).filter(Boolean), [drafts, kinds])
 
@@ -251,6 +271,14 @@ function DocumentNumberSettingsPage({
       technicalName={technicalName}
       title={title}
     >
+      {loadError ? (
+        <ModuleErrorPanel
+          error={loadError}
+          isRetrying={isLoading}
+          title="Document settings could not be loaded"
+          onRetry={() => setReloadKey((current) => current + 1)}
+        />
+      ) : null}
       <div className="grid gap-4">
         {kinds.map((kind) => {
           const draft = drafts[kind]

@@ -48,6 +48,7 @@ export interface ExportSalesEntry {
   accounting_year_id: number
   currency_id: number | null
   currency_name: string | null
+  accounting_category: string | null
   invoice_no: string
   invoice_date: string
   customer_id: string | null
@@ -105,6 +106,7 @@ export function emptyExportSalesEntry(): ExportSalesEntryInput {
     invoice_date: new Date().toISOString().slice(0, 10),
     currency_id: null,
     currency_name: "",
+    accounting_category: "Export Sales",
     customer_name: "",
     customer_gstin: "",
     customer_state_code: "",
@@ -314,7 +316,6 @@ function readNumber(value: unknown) {
   }
   return undefined
 }
-
 
 
 

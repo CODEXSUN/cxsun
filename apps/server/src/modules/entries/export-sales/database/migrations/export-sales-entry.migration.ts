@@ -13,6 +13,7 @@ export async function migrateExportSalesEntryTables(database: TenantDatabase) {
       accounting_year_id INT NOT NULL,
       currency_id INT NULL,
       currency_name VARCHAR(191) NULL,
+      accounting_category VARCHAR(120) NULL,
       invoice_no VARCHAR(80) NOT NULL,
       invoice_date DATE NOT NULL,
       customer_id VARCHAR(80) NULL,
@@ -62,6 +63,7 @@ export async function migrateExportSalesEntryTables(database: TenantDatabase) {
 
   await sql.raw(`ALTER TABLE export_sales_entries ADD COLUMN IF NOT EXISTS currency_id INT NULL AFTER accounting_year_id`).execute(database)
   await sql.raw(`ALTER TABLE export_sales_entries ADD COLUMN IF NOT EXISTS currency_name VARCHAR(191) NULL AFTER currency_id`).execute(database)
+  await sql.raw(`ALTER TABLE export_sales_entries ADD COLUMN IF NOT EXISTS accounting_category VARCHAR(120) NULL AFTER currency_name`).execute(database)
 
   await sql.raw(`
     CREATE TABLE IF NOT EXISTS export_sales_entry_items (
