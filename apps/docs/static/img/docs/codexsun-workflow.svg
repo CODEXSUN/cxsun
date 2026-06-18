@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">Codexsun daily workflow</title>
+  <desc id="desc">A flow from setup to master records, billing entries, reports, and review.</desc>
+  <rect width="960" height="360" rx="18" fill="#f8fafc"/>
+  <rect x="32" y="34" width="896" height="292" rx="16" fill="#ffffff" stroke="#dbe3ea"/>
+  <text x="64" y="78" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" fill="#122033">Daily work path</text>
+  <text x="64" y="108" font-family="Inter, Arial, sans-serif" font-size="14" fill="#5d6b7a">Complete setup once, then use the same records for entries and reports.</text>
+  <g font-family="Inter, Arial, sans-serif">
+    <g transform="translate(64 152)">
+      <rect width="142" height="92" rx="12" fill="#e0f2fe" stroke="#7dd3fc"/>
+      <text x="20" y="34" font-size="15" font-weight="700" fill="#075985">1. Setup</text>
+      <text x="20" y="58" font-size="12" fill="#0f4660">Company</text>
+      <text x="20" y="76" font-size="12" fill="#0f4660">Accounting year</text>
+    </g>
+    <path d="M222 198h48" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+    <path d="m264 190 10 8-10 8" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(286 152)">
+      <rect width="142" height="92" rx="12" fill="#ecfdf5" stroke="#86efac"/>
+      <text x="20" y="34" font-size="15" font-weight="700" fill="#166534">2. Masters</text>
+      <text x="20" y="58" font-size="12" fill="#166534">Contacts</text>
+      <text x="20" y="76" font-size="12" fill="#166534">Products</text>
+    </g>
+    <path d="M444 198h48" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+    <path d="m486 190 10 8-10 8" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(508 152)">
+      <rect width="142" height="92" rx="12" fill="#fff7ed" stroke="#fdba74"/>
+      <text x="20" y="34" font-size="15" font-weight="700" fill="#9a3412">3. Entries</text>
+      <text x="20" y="58" font-size="12" fill="#9a3412">Sales, purchase</text>
+      <text x="20" y="76" font-size="12" fill="#9a3412">Receipts, payments</text>
+    </g>
+    <path d="M666 198h48" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+    <path d="m708 190 10 8-10 8" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(730 152)">
+      <rect width="142" height="92" rx="12" fill="#f5f3ff" stroke="#c4b5fd"/>
+      <text x="20" y="34" font-size="15" font-weight="700" fill="#5b21b6">4. Reports</text>
+      <text x="20" y="58" font-size="12" fill="#5b21b6">Statements</text>
+      <text x="20" y="76" font-size="12" fill="#5b21b6">Status review</text>
+    </g>
+  </g>
+</svg>

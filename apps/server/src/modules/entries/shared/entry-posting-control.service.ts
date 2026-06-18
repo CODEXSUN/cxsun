@@ -78,7 +78,7 @@ export class EntryPostingControlService {
   }
 
   async recordCorrectionActivity(context: TenantRuntimeContext, input: { action: 'correction' | 'reversal'; correctedUuid?: string | null; module: string; originalUuid: string; reversalUuid?: string | null }) {
-    await this.database(context)
+    const result = await this.database(context)
       .insertInto('entry_correction_audit')
       .values({
         uuid: publicUuid(),
@@ -91,7 +91,8 @@ export class EntryPostingControlService {
         actor_email: context.user.email,
         reason: input.action === 'reversal' ? 'Posted document reversal' : 'Posted document correction copy',
       })
-      .execute()
+      .executeTakeFirst()
+    return Number(result.insertId ?? 0)
   }
 
   async listPeriodLocks(context: TenantRuntimeContext) {

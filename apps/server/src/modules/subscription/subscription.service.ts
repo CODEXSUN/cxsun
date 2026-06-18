@@ -12,6 +12,7 @@ const coreAppKeys = ['application', 'agent-os']
 @Injectable()
 export class SubscriptionService {
   async catalog() {
+    await this.suspendTimeBarredSubscriptions()
     const database = getDatabase()
     const [apps, planRows, tenantRows] = await Promise.all([
       database.selectFrom('subscription_apps').selectAll().orderBy('sort_order', 'asc').orderBy('name', 'asc').execute(),
@@ -147,7 +148,6 @@ export class SubscriptionService {
       .selectFrom('tenant_subscriptions')
       .select(['id'])
       .where('tenant_id', '=', tenant.id)
-      .where('status', 'in', ['trialing', 'active', 'past_due'])
       .orderBy('id', 'desc')
       .executeTakeFirst()
 
@@ -174,6 +174,56 @@ export class SubscriptionService {
 
     await this.replaceTenantApps(subscriptionId, pricedApps)
     await this.publishTenantApps(tenant.id, tenant.payload_settings, appKeys)
+    return this.catalog()
+  }
+
+  async suspendTenantSubscription(uuid: string) {
+    const subscription = await this.findTenantSubscription(uuid)
+    const now = nowIso()
+    await getDatabase()
+      .updateTable('tenant_subscriptions')
+      .set({ status: 'suspended', cancelled_at: now, updated_at: now })
+      .where('id', '=', subscription.id)
+      .execute()
+
+    await this.publishTenantApps(subscription.tenant_id, subscription.payload_settings, [])
+    return this.catalog()
+  }
+
+  async restoreTenantSubscription(uuid: string) {
+    const subscription = await this.findTenantSubscription(uuid)
+    const now = nowIso()
+    const periodEnd = normalizeFutureEnd(subscription.current_period_end, null)
+    await getDatabase()
+      .updateTable('tenant_subscriptions')
+      .set({ status: 'active', cancelled_at: null, current_period_end: periodEnd, updated_at: now })
+      .where('id', '=', subscription.id)
+      .execute()
+
+    await this.publishTenantApps(subscription.tenant_id, subscription.payload_settings, await this.subscriptionAppKeys(subscription.id))
+    return this.catalog()
+  }
+
+  async extendTenantSubscription(uuid: string, days: unknown) {
+    const extensionDays = positiveDays(days)
+    const subscription = await this.findTenantSubscription(uuid)
+    const now = nowIso()
+    const currentEnd = Date.parse(subscription.current_period_end ?? '')
+    const start = Number.isFinite(currentEnd) && currentEnd > Date.now() ? new Date(currentEnd) : new Date()
+    start.setDate(start.getDate() + extensionDays)
+
+    await getDatabase()
+      .updateTable('tenant_subscriptions')
+      .set({
+        status: 'active',
+        cancelled_at: null,
+        current_period_end: start.toISOString(),
+        updated_at: now,
+      })
+      .where('id', '=', subscription.id)
+      .execute()
+
+    await this.publishTenantApps(subscription.tenant_id, subscription.payload_settings, await this.subscriptionAppKeys(subscription.id))
     return this.catalog()
   }
 
@@ -350,6 +400,62 @@ export class SubscriptionService {
     }
   }
 
+  private async suspendTimeBarredSubscriptions() {
+    const database = getDatabase()
+    const expiredRows = await database
+      .selectFrom('tenant_subscriptions')
+      .innerJoin('tenants', 'tenants.id', 'tenant_subscriptions.tenant_id')
+      .select([
+        'tenant_subscriptions.id',
+        'tenant_subscriptions.tenant_id',
+        'tenants.payload_settings',
+      ])
+      .where('tenant_subscriptions.status', 'in', ['pending_payment', 'trialing', 'active', 'past_due'])
+      .where('tenant_subscriptions.current_period_end', 'is not', null)
+      .where('tenant_subscriptions.current_period_end', '<', nowIso())
+      .execute()
+
+    if (!expiredRows.length) return
+
+    const now = nowIso()
+    for (const row of expiredRows) {
+      await database
+        .updateTable('tenant_subscriptions')
+        .set({ status: 'suspended', cancelled_at: now, updated_at: now })
+        .where('id', '=', row.id)
+        .execute()
+      await this.publishTenantApps(row.tenant_id, row.payload_settings, [])
+    }
+  }
+
+  private async findTenantSubscription(uuid: string) {
+    const subscription = await getDatabase()
+      .selectFrom('tenant_subscriptions')
+      .innerJoin('tenants', 'tenants.id', 'tenant_subscriptions.tenant_id')
+      .select([
+        'tenant_subscriptions.id',
+        'tenant_subscriptions.tenant_id',
+        'tenant_subscriptions.current_period_end',
+        'tenants.payload_settings',
+      ])
+      .where('tenant_subscriptions.uuid', '=', uuid)
+      .executeTakeFirst()
+
+    if (!subscription) throw new NotFoundException('Subscription not found.')
+    return subscription
+  }
+
+  private async subscriptionAppKeys(subscriptionId: number) {
+    const apps = await getDatabase()
+      .selectFrom('tenant_subscription_apps')
+      .select('app_key')
+      .where('subscription_id', '=', subscriptionId)
+      .where('is_enabled', '=', 1)
+      .execute()
+
+    return apps.map((app) => app.app_key)
+  }
+
   private async planAppKeys(planId: number) {
     const rows = await getDatabase()
       .selectFrom('subscription_plan_apps')
@@ -425,6 +531,17 @@ function nullableMoney(value: unknown) {
   if (value === null || value === undefined || value === '') return null
   const parsed = Number(value)
   return Number.isFinite(parsed) && parsed >= 0 ? Math.round(parsed) : null
+}
+
+function positiveDays(value: unknown) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.min(Math.round(parsed), 3650) : 1
+}
+
+function normalizeFutureEnd(value: string | null | undefined, fallback: string | null) {
+  if (!value) return fallback
+  const timestamp = Date.parse(value)
+  return Number.isFinite(timestamp) && timestamp >= Date.now() ? value : fallback
 }
 
 function parseJsonObject(value: string | null | undefined): Record<string, unknown> {

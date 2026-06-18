@@ -1,5 +1,16 @@
 # Tasks
 
+## 2026-06-18 - TConnect / Tirupur Connect boundary
+
+- [x] Read the corrected boundary supplied by the user.
+- [x] Audit the existing TConnect server module and Tirupur Connect app.
+- [x] Add the boundary to the architecture rulebook.
+- [x] Add canonical AI context documentation.
+- [x] Mark conflicting legacy execution guidance as superseded.
+- [x] Update developer-facing TConnect documentation.
+- [x] Prepare the implementation and data-migration plan.
+- [ ] Implement the first central marketplace foundation slice.
+
 ## Versatile Agent OS Documentation
 
 - [x] Inspect repository structure and current app boundaries.

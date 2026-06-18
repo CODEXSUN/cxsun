@@ -20,6 +20,8 @@ Read `assist/context/product-picture.md` alongside this file for the product-lev
 | 2026-05-22 | Route user-facing frontend modules to feature-owned standalone pages. | Product, contact, company, sales, and future modules should keep custom UI behavior inside their own feature pages instead of expanding generic master-data/common-data pages with module-specific branches. |
 | 2026-06-06 | Keep Export Sales separate from domestic Sales and gate its visibility with a company feature setting. | Export invoices need separate persistence, numbering, currency selection, print/mail workflows, and optional visibility without deleting stored records. |
 | 2026-06-11 | Build Versatile Agent as layered Agent OS. | Start with read-only Helper Agent and add Operator, Workflow, Planner, Analytics, Router, Memory, and ecosystem layers only after logs and typed tools exist. |
+| 2026-06-16 | Keep owned products and industry apps in one repo and one server-managed platform with separate app surfaces/ports/domains. | The current team is small, so one monorepo/server is easier to manage; clean app boundaries and shared engines/services keep ecommerce, B2B Connect, sports, learning, welfare, auditor, and industry apps extensible without duplicating billing/accounting/compliance logic. |
+| 2026-06-18 | Separate TConnect from Tirupur Connect as bounded systems. | TConnect is only the billing connector; Tirupur Connect is a tenant-independent central marketplace with its own identity, persistence, public/member APIs, and dedicated administration. |
 
 ## Active Workspaces
 
@@ -56,6 +58,7 @@ Run targeted checks during development, or `npm run check` before finalizing mea
 - Put standalone master modules under `apps/server/src/modules/master`.
 - Put business common modules under `apps/server/src/modules/common/<group>/<module>`.
 - Put tenant entries under `apps/server/src/modules/entries`; current billing entry modules include sales, export sales, purchase, receipt, and payment.
+- Put future owned-product and industry modules under clear app/module boundaries, but route shared transaction work through billing, accounting, compliance, inventory, mail, file, CRM, site/blog, tenant/company, subscription, and Agent OS service contracts.
 - Put infrastructure configuration and lifecycle code under `apps/server/src/infrastructure`.
 - Put platform database migration/seed modules beside the owning backend module and register them in `apps/server/src/infrastructure/database/platform-modules.ts`.
 - Put Agent OS backend work under `apps/server/src/modules/agent-os`; start platform-wide tables such as `conversations`, `agent_logs`, and `knowledge_documents` in the master database.
@@ -70,6 +73,8 @@ Run targeted checks during development, or `npm run check` before finalizing mea
 - Production build artifacts belong under the root `build/` folder.
 - The Docker deploy environment lives under `.container/` and is started with root `docker-compose.yml`.
 - Do not move active frontend work into `packages/web` unless the project intentionally reintroduces that package as a real app.
+- Do not split owned products into separate repositories by default. Use separate app surfaces, dev ports, and production domains inside the monorepo, backed by the same server core and tenant isolation model. See `assist/context/one-platform-multi-app.md`.
+- Keep `modules/tconnect` limited to billing connector responsibilities. Put the central marketplace under `modules/tirupur-connect`; it must not depend on a special marketplace billing tenant. See `assist/context/tirupur-connect-boundary.md`.
 
 ## Tenant Flow Notes
 

@@ -4,6 +4,7 @@ import { BadRequestException, NotFoundException } from '../../../core/exceptions
 import { TenantContextService, type TenantRequestHeaders } from '../../../core/tenant/tenant-context.service.js'
 import { EntryDocumentMailService } from '../shared/entry-document-mail.service.js'
 import { EntryDocumentPdfDownloadService } from '../shared/entry-document-pdf-download.service.js'
+import { commandId, commandReasonSuffix, type CreateCorrectionCommand, type ReverseDocumentCommand } from '../shared/entry-command.dto.js'
 import { EntryPostingControlService } from '../shared/entry-posting-control.service.js'
 import { ReceiptEntryRepository } from './receipt-entry.repository.js'
 import type { ReceiptEntryInput } from './receipt-entry.types.js'
@@ -69,26 +70,26 @@ export class ReceiptEntryService {
     return { ok: true, entry }
   }
 
-  async correction(headers: TenantRequestHeaders, idOrUuid: string) {
+  async correction(headers: TenantRequestHeaders, idOrUuid: string, command: CreateCorrectionCommand = {}) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     const existing = await this.receipts.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Receipt not found.')
     await this.postingControl.assertPeriodOpen(context, { accountingYearId: existing.accounting_year_id, companyId: existing.company_id, documentDate: new Date().toISOString().slice(0, 10), documentNo: existing.receipt_no, module: 'receipt' })
     const entry = await this.receipts.insert(context, receiptCorrectionInput(existing))
-    await this.receipts.addActivity(context, existing.uuid, 'correction', `Correction draft ${entry.receipt_no} created`)
-    await this.postingControl.recordCorrectionActivity(context, { action: 'correction', correctedUuid: entry.uuid, module: 'receipt', originalUuid: existing.uuid })
-    return { ok: true, entry }
+    await this.receipts.addActivity(context, existing.uuid, 'correction', `Correction draft ${entry.receipt_no} created.${commandReasonSuffix(command)}`)
+    const auditId = await this.postingControl.recordCorrectionActivity(context, { action: 'correction', correctedUuid: entry.uuid, module: 'receipt', originalUuid: existing.uuid })
+    return { affected_ids: [Number(entry.id), entry.uuid], audit_ids: auditId ? [auditId] : [], command_id: commandId(command), ok: true, entry }
   }
 
-  async reversal(headers: TenantRequestHeaders, idOrUuid: string) {
+  async reversal(headers: TenantRequestHeaders, idOrUuid: string, command: ReverseDocumentCommand = {}) {
     const context = await this.tenants.resolve(headers, 'company.manage')
     const existing = await this.receipts.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Receipt not found.')
     await this.postingControl.assertPeriodOpen(context, { accountingYearId: existing.accounting_year_id, companyId: existing.company_id, documentDate: new Date().toISOString().slice(0, 10), documentNo: existing.receipt_no, module: 'receipt' })
     const entry = await this.receipts.insert(context, receiptReversalInput(existing))
-    await this.receipts.addActivity(context, existing.uuid, 'reversal', `Reversal voucher ${entry.receipt_no} created`)
-    await this.postingControl.recordCorrectionActivity(context, { action: 'reversal', module: 'receipt', originalUuid: existing.uuid, reversalUuid: entry.uuid })
-    return { ok: true, entry }
+    await this.receipts.addActivity(context, existing.uuid, 'reversal', `Reversal voucher ${entry.receipt_no} created.${commandReasonSuffix(command)}`)
+    const auditId = await this.postingControl.recordCorrectionActivity(context, { action: 'reversal', module: 'receipt', originalUuid: existing.uuid, reversalUuid: entry.uuid })
+    return { affected_ids: [Number(entry.id), entry.uuid], audit_ids: auditId ? [auditId] : [], command_id: commandId(command), ok: true, entry }
   }
 
   async addComment(headers: TenantRequestHeaders, idOrUuid: string, body: string) {

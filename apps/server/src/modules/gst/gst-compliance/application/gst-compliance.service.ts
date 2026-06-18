@@ -317,7 +317,7 @@ function validateEinvoicePayload(payload: unknown, input: GstComplianceOperation
     !positiveNumber(values.AssVal ?? record.AssVal) ? 'Taxable value must be greater than zero.' : '',
     !positiveNumber(values.TotInvVal ?? record.TotInvVal) ? 'Invoice total must be greater than zero.' : '',
   ].filter(Boolean)
-  if (errors.length) throw new BadRequestException(errors.join(' '))
+  if (errors.length) throw new BadRequestException(errors.join(' '), { code: 'INVALID_GST_PAYLOAD', errors, source: 'gst_compliance', title: 'GST validation failed' })
 }
 
 function validateEinvoiceItem(itemInput: unknown, index: number) {
@@ -337,7 +337,7 @@ function validateEwayPayload(payload: unknown) {
     !stringOrNull(record.VehNo) && !stringOrNull(record.TransDocNo) ? 'Vehicle number or transport document number is required.' : '',
     !stringOrNull(record.VehType) && stringOrNull(record.VehNo) ? 'Vehicle type is required when vehicle number is entered.' : '',
   ].filter(Boolean)
-  if (errors.length) throw new BadRequestException(errors.join(' '))
+  if (errors.length) throw new BadRequestException(errors.join(' '), { code: 'INVALID_EWAY_PAYLOAD', errors, source: 'gst_compliance', title: 'E-way validation failed' })
 }
 
 function validateCancelIrnPayload(payload: unknown) {
@@ -347,7 +347,7 @@ function validateCancelIrnPayload(payload: unknown) {
     !stringOrNull(record.CnlRsn) ? 'Cancellation reason is required.' : '',
     !stringOrNull(record.CnlRem) ? 'Cancellation remarks are required.' : '',
   ].filter(Boolean)
-  if (errors.length) throw new BadRequestException(errors.join(' '))
+  if (errors.length) throw new BadRequestException(errors.join(' '), { code: 'INVALID_EINVOICE_CANCEL_PAYLOAD', errors, source: 'gst_compliance', title: 'E-invoice cancellation validation failed' })
 }
 
 function validateCancelEwayPayload(payload: unknown) {
@@ -357,7 +357,7 @@ function validateCancelEwayPayload(payload: unknown) {
     !stringOrNull(record.CancelRsnCode ?? record.cancelRsnCode ?? record.CnlRsn) ? 'E-way cancellation reason is required.' : '',
     !stringOrNull(record.CancelRmrk ?? record.cancelRmrk ?? record.CnlRem) ? 'E-way cancellation remarks are required.' : '',
   ].filter(Boolean)
-  if (errors.length) throw new BadRequestException(errors.join(' '))
+  if (errors.length) throw new BadRequestException(errors.join(' '), { code: 'INVALID_EWAY_CANCEL_PAYLOAD', errors, source: 'gst_compliance', title: 'E-way cancellation validation failed' })
 }
 
 function objectRecord(value: unknown): Record<string, unknown> {

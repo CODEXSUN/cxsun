@@ -4,6 +4,7 @@ import { Inject } from '../../core/decorators/inject.js'
 import type { TenantRequestHeaders } from '../../core/tenant/tenant-context.service.js'
 import { AccountsService } from './accounts.service.js'
 import type { AccountBookEntryInput, AccountBookType, AccountLedgerInput, AccountLedgerType, AccountVoucherInput } from './accounts.types.js'
+import type { PostVoucherCommand, RecalculatePostingCommand, RecalculateReportTablesCommand, ReverseDocumentCommand } from '../entries/shared/entry-command.dto.js'
 import type { PeriodLockInput } from '../entries/shared/entry-posting-control.service.js'
 
 @Controller('api/v1/accounts')
@@ -46,13 +47,13 @@ export class AccountsController {
   }
 
   @Post('vouchers/:idOrUuid/post')
-  postVoucher(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
-    return this.accounts.postVoucher(headers, idOrUuid)
+  postVoucher(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: PostVoucherCommand) {
+    return this.accounts.postVoucher(headers, idOrUuid, body ?? {})
   }
 
   @Post('vouchers/:idOrUuid/cancel')
-  cancelVoucher(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
-    return this.accounts.cancelVoucher(headers, idOrUuid)
+  cancelVoucher(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: ReverseDocumentCommand) {
+    return this.accounts.cancelVoucher(headers, idOrUuid, body ?? {})
   }
 
   @Get('reports/day-book')
@@ -91,13 +92,18 @@ export class AccountsController {
   }
 
   @Post('postings/rebuild')
-  rebuildPostingRollups(@Headers() headers: TenantRequestHeaders, @Body() body: { source_module?: string }) {
-    return this.accounts.rebuildPostingRollups(headers, body)
+  rebuildPostingRollups(@Headers() headers: TenantRequestHeaders, @Body() body: RecalculatePostingCommand) {
+    return this.accounts.rebuildPostingRollups(headers, body ?? {})
   }
 
   @Post('postings/repost-sources')
-  repostSourceEntries(@Headers() headers: TenantRequestHeaders, @Body() body: { source_module?: string }) {
-    return this.accounts.repostSourceEntries(headers, body)
+  repostSourceEntries(@Headers() headers: TenantRequestHeaders, @Body() body: RecalculatePostingCommand) {
+    return this.accounts.repostSourceEntries(headers, body ?? {})
+  }
+
+  @Post('reports/recalculate')
+  recalculateReportTables(@Headers() headers: TenantRequestHeaders, @Body() body: RecalculateReportTablesCommand) {
+    return this.accounts.recalculateReportTables(headers, body ?? {})
   }
 
   @Get('period-locks')

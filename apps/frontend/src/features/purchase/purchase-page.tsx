@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type Ref, type SetStateAction } from "react"
+import { useEffect, useMemo, useReducer, useRef, useState, type Dispatch, type ReactNode, type Ref, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ArrowLeft, Check, CheckCircle2, ChevronLeft, ChevronRight, Download, Mail, MessageCircle, Paperclip, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, Send, Settings2, Tag, Trash2, UserRound, X } from "lucide-react"
@@ -61,6 +61,12 @@ type PurchaseEntryToolId = "downloadPdf" | "email" | "assign" | "attachments" | 
 type PurchaseTypeOption = { value: string; label: string }
 type EntryListViewMode = "day" | "month"
 type MonthlyPurchaseSummary = { month: string; entryCount: number; totalQty: number; taxableTotal: number; gstTotal: number; grandTotal: number }
+type PurchaseItemEditorState = { draft: PurchaseEntryItem; editingIndex: number | null }
+type PurchaseItemEditorAction =
+  | { type: "adjust-after-delete"; deletedIndex: number }
+  | { type: "edit"; index: number; item: PurchaseEntryItem }
+  | { type: "reset" }
+  | { type: "update-draft"; value: SetStateAction<PurchaseEntryItem> }
 type PurchaseAddressLabels = {
   addressTypes(value: unknown): string
   cities(value: unknown): string
@@ -794,39 +800,28 @@ function PurchaseVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCr
   transports: MasterDataRecord[]
   units: PurchaseLookupOption[]
 }) {
-  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
-  const [itemDraft, setItemDraft] = useState<PurchaseEntryItem>(() => emptyPurchaseItem())
+  const [itemEditor, dispatchItemEditor] = useReducer(purchaseItemEditorReducer, undefined, createPurchaseItemEditorState)
   const addressLabels = usePurchaseAddressLabels(session)
+  const editingItemIndex = itemEditor.editingIndex
+  const itemDraft = itemEditor.draft
+  const setItemDraft = (value: SetStateAction<PurchaseEntryItem>) => dispatchItemEditor({ type: "update-draft", value })
+  const cancelItemEdit = () => dispatchItemEditor({ type: "reset" })
 
   function addItem() {
     if (!itemDraft.product_name.trim()) return
-    setForm((current) => {
-      const normalizedItem = normalizePurchaseItem(itemDraft, editingItemIndex ?? current.items.length, current.place_of_supply)
-      if (editingItemIndex === null) return { ...current, items: [...current.items, normalizedItem] }
-      return {
-        ...current,
-        items: current.items.map((item, index) => index === editingItemIndex ? normalizedItem : item),
-      }
-    })
-    setItemDraft(emptyPurchaseItem())
-    setEditingItemIndex(null)
+    setForm((current) => ({ ...current, items: upsertPurchaseItemRow(current.items, itemDraft, editingItemIndex, current.place_of_supply) }))
+    dispatchItemEditor({ type: "reset" })
   }
 
   function editItem(index: number) {
     const item = form.items[index]
     if (!item) return
-    setItemDraft({ ...item })
-    setEditingItemIndex(index)
+    dispatchItemEditor({ index, item, type: "edit" })
   }
 
   function deleteItem(index: number) {
-    setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }))
-    if (editingItemIndex === index) {
-      setItemDraft(emptyPurchaseItem())
-      setEditingItemIndex(null)
-      return
-    }
-    if (editingItemIndex !== null && editingItemIndex > index) setEditingItemIndex(editingItemIndex - 1)
+    setForm((current) => ({ ...current, items: deletePurchaseItemRow(current.items, index) }))
+    dispatchItemEditor({ deletedIndex: index, type: "adjust-after-delete" })
   }
 
   const tabs: AnimatedTab[] = [
@@ -846,7 +841,7 @@ function PurchaseVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCr
           addressLabels={addressLabels}
           onCreateContact={onCreateContact}
           session={session}
-          setEditingItemIndex={setEditingItemIndex}
+          cancelItemEdit={cancelItemEdit}
           setForm={setForm}
           setItemDraft={setItemDraft}
           softwareSettings={softwareSettings}
@@ -886,9 +881,10 @@ function PurchaseVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCr
   )
 }
 
-function PurchaseDetailsTab({ addItem, addressLabels, contacts, deleteItem, editItem, editingItemIndex, form, hsnCodes, itemDraft, onCreateContact, session, setEditingItemIndex, setForm, setItemDraft, softwareSettings, taxes, totals, units }: {
+function PurchaseDetailsTab({ addItem, addressLabels, cancelItemEdit, contacts, deleteItem, editItem, editingItemIndex, form, hsnCodes, itemDraft, onCreateContact, session, setForm, setItemDraft, softwareSettings, taxes, totals, units }: {
   addItem(): void
   addressLabels: PurchaseAddressLabels
+  cancelItemEdit(): void
   contacts: PurchaseLookupOption[]
   deleteItem(index: number): void
   editItem(index: number): void
@@ -898,7 +894,6 @@ function PurchaseDetailsTab({ addItem, addressLabels, contacts, deleteItem, edit
   itemDraft: PurchaseEntryItem
   onCreateContact(name: string): void
   session: AuthSession
-  setEditingItemIndex(value: number | null): void
   setForm(updater: (current: PurchaseEntryInput) => PurchaseEntryInput): void
   setItemDraft(value: PurchaseEntryItem | ((current: PurchaseEntryItem) => PurchaseEntryItem)): void
   softwareSettings: SoftwareSettingsState
@@ -939,11 +934,6 @@ function PurchaseDetailsTab({ addItem, addressLabels, contacts, deleteItem, edit
         ? "xl:grid-cols-[minmax(18rem,2.1fr)_minmax(11rem,1fr)_minmax(8rem,.72fr)_minmax(8rem,.72fr)_minmax(5rem,.45fr)_minmax(6rem,.55fr)_auto]"
         : "xl:grid-cols-[minmax(22rem,2.3fr)_minmax(14rem,1fr)_minmax(5rem,.45fr)_minmax(6rem,.55fr)_auto]",
   )
-
-  function cancelItemEdit() {
-    setItemDraft(() => emptyPurchaseItem())
-    setEditingItemIndex(null)
-  }
 
   function addItemAndFocus() {
     if (!itemDraft.product_name.trim()) return
@@ -2184,6 +2174,36 @@ function buildPurchaseSaveInput(input: PurchaseEntryInput, softwareSettings: Sof
     tax_total: totals.gstTotal,
     taxable_total: totals.taxableAmount,
   }
+}
+
+function createPurchaseItemEditorState(): PurchaseItemEditorState {
+  return { draft: emptyPurchaseItem(), editingIndex: null }
+}
+
+function purchaseItemEditorReducer(state: PurchaseItemEditorState, action: PurchaseItemEditorAction): PurchaseItemEditorState {
+  if (action.type === "update-draft") {
+    return {
+      ...state,
+      draft: typeof action.value === "function" ? action.value(state.draft) : action.value,
+    }
+  }
+  if (action.type === "edit") return { draft: { ...action.item }, editingIndex: action.index }
+  if (action.type === "reset") return createPurchaseItemEditorState()
+  if (action.type === "adjust-after-delete") {
+    if (state.editingIndex === action.deletedIndex) return createPurchaseItemEditorState()
+    if (state.editingIndex !== null && state.editingIndex > action.deletedIndex) return { ...state, editingIndex: state.editingIndex - 1 }
+  }
+  return state
+}
+
+function upsertPurchaseItemRow(items: PurchaseEntryItem[], draft: PurchaseEntryItem, editingIndex: number | null, placeOfSupply: unknown) {
+  const normalizedItem = normalizePurchaseItem(draft, editingIndex ?? items.length, placeOfSupply)
+  if (editingIndex === null) return [...items, normalizedItem]
+  return items.map((item, index) => index === editingIndex ? normalizedItem : item)
+}
+
+function deletePurchaseItemRow(items: PurchaseEntryItem[], index: number) {
+  return items.filter((_, itemIndex) => itemIndex !== index)
 }
 
 function normalizePurchaseItem(item: PurchaseEntryItem, index: number, placeOfSupply: unknown): PurchaseEntryItem {

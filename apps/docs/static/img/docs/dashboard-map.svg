@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">Dashboard map</title>
+  <desc id="desc">A dashboard with side menu, top bar, list toolbar, and work area.</desc>
+  <rect width="960" height="360" rx="18" fill="#f8fafc"/>
+  <rect x="44" y="38" width="872" height="284" rx="16" fill="#ffffff" stroke="#dbe3ea"/>
+  <rect x="44" y="38" width="190" height="284" rx="16" fill="#0f172a"/>
+  <text x="74" y="82" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Codexsun</text>
+  <g font-family="Inter, Arial, sans-serif" font-size="13">
+    <rect x="68" y="112" width="134" height="28" rx="8" fill="#1e293b"/><text x="84" y="131" fill="#e2e8f0">Application</text>
+    <rect x="68" y="152" width="134" height="28" rx="8" fill="#14b8a6"/><text x="84" y="171" fill="#ffffff">Billing</text>
+    <rect x="68" y="192" width="134" height="28" rx="8" fill="#1e293b"/><text x="84" y="211" fill="#e2e8f0">Reports</text>
+    <rect x="68" y="232" width="134" height="28" rx="8" fill="#1e293b"/><text x="84" y="251" fill="#e2e8f0">Settings</text>
+  </g>
+  <rect x="234" y="38" width="682" height="54" rx="0" fill="#ffffff"/>
+  <line x1="234" y1="92" x2="916" y2="92" stroke="#dbe3ea"/>
+  <text x="270" y="72" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#122033">Billing / Sales</text>
+  <rect x="270" y="122" width="600" height="54" rx="12" fill="#f8fafc" stroke="#dbe3ea"/>
+  <text x="294" y="155" font-family="Inter, Arial, sans-serif" font-size="14" fill="#334155">Search, filters, columns, refresh, and New action</text>
+  <rect x="270" y="198" width="600" height="88" rx="12" fill="#ffffff" stroke="#dbe3ea"/>
+  <line x1="270" y1="228" x2="870" y2="228" stroke="#e2e8f0"/>
+  <line x1="270" y1="258" x2="870" y2="258" stroke="#e2e8f0"/>
+  <g fill="#64748b" font-family="Inter, Arial, sans-serif" font-size="12">
+    <text x="294" y="218">Invoice</text><text x="420" y="218">Date</text><text x="540" y="218">Customer</text><text x="770" y="218">Action</text>
+    <text x="294" y="248">SAL-0001</text><text x="420" y="248">14-06-2026</text><text x="540" y="248">Sample Customer</text><text x="785" y="248">...</text>
+  </g>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">Quotation flow</title>
+  <desc id="desc">A quotation moves from customer request to quote, follow up, and invoice.</desc>
+  <rect width="960" height="360" rx="18" fill="#f8fafc"/>
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="70" y="76" font-size="24" font-weight="700" fill="#122033">Quotation follow-up path</text>
+    <rect x="82" y="126" width="170" height="112" rx="14" fill="#f0f9ff" stroke="#bae6fd"/><text x="112" y="166" font-size="16" font-weight="700" fill="#075985">Request</text><text x="112" y="194" font-size="13" fill="#075985">Customer asks price</text>
+    <rect x="300" y="126" width="170" height="112" rx="14" fill="#fefce8" stroke="#fde68a"/><text x="330" y="166" font-size="16" font-weight="700" fill="#854d0e">Quotation</text><text x="330" y="194" font-size="13" fill="#854d0e">Items and total</text>
+    <rect x="518" y="126" width="170" height="112" rx="14" fill="#f5f3ff" stroke="#ddd6fe"/><text x="548" y="166" font-size="16" font-weight="700" fill="#5b21b6">Follow up</text><text x="548" y="194" font-size="13" fill="#5b21b6">Billed or pending</text>
+    <rect x="736" y="126" width="170" height="112" rx="14" fill="#ecfdf5" stroke="#bbf7d0"/><text x="766" y="166" font-size="16" font-weight="700" fill="#166534">Sale</text><text x="766" y="194" font-size="13" fill="#166534">Invoice when approved</text>
+    <path d="M254 182h44M472 182h44M690 182h44" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -47,6 +47,7 @@ cxsun/
 - Active development targets `apps/server` and `apps/frontend` unless the user explicitly asks for a reserved package.
 - The server owns business logic and exposes APIs consumed by clients.
 - Client apps must not duplicate server-owned domain logic.
+- Keep the platform as one repo and one backend server unless a future ownership/security/scale decision explicitly changes it. Different owned products and industry products may run as separate app surfaces on separate dev ports/domains, but they share server-owned engines and services.
 - `@cxsun/shared` must stay framework-free: types, constants, and pure utilities only.
 - Keep apps deployable independently. Share through `@cxsun/shared`, APIs, and documented contracts.
 - Multi-tenant behavior belongs in server-side infrastructure and domain/application services.
@@ -110,6 +111,7 @@ Avoid direct cross-module imports. Use explicit public module exports, applicati
 - Put framework runtime, decorators, DI, guards, and platform/core modules under `apps/server/src/core`.
 - Put small backend-only shared helpers under `apps/server/src/shared`; do not use `src/common` for this because `modules/common` is a business module boundary.
 - Put reusable engines and compatibility registries under `apps/server/src/modules/foundation`.
+- Put stable cross-product business engines/services under clear server-owned module boundaries when they emerge. Billing, accounting, compliance, mail, files, CRM, sites/blog, tenant/company, subscription, and ZETRO capabilities should be reused by app modules instead of copied into ecommerce, auditor, sports, learning, welfare, B2B Connect, or industry modules.
 - Put every common business module under `apps/server/src/modules/common/<group>/<module>`.
 - Put standalone master modules under `apps/server/src/modules/master/<module>`.
 - Put tenant transaction/entry modules under `apps/server/src/modules/entries/<module>`.
@@ -243,6 +245,26 @@ database / infrastructure
 @cxsun/shared supplies shared types, constants, and pure utilities only.
 ```
 
+Cross-app transaction rule:
+
+- App modules and public app surfaces must not write another app's transaction tables directly.
+- Ecommerce, B2B Connect, auditor, sports, learning, welfare, brand storefront, and industry apps must call server-owned services/engines for billing, accounting, compliance, inventory, mail, files, and reporting.
+- Correct shape: `app use case -> shared service/engine -> tenant module tables/postings`.
+- Wrong shape: `app use case -> direct insert into another app's ledger/invoice/posting tables`.
+
+## TConnect and Tirupur Connect Boundary
+
+- `tconnect` is the billing/ERP connector only. It owns tenant-side publication selection, immutable submissions/revisions, signed synchronization state, and optional opportunity import into billing documents.
+- `tirupur-connect` is the central marketplace engine. It owns public listings, normalized marketplace records, web-only onboarding, buyers, RFQs, quotations, memberships, payments, verification, moderation, content, and marketplace analytics.
+- The marketplace must operate without a billing tenant and must not use a special billing tenant as its database owner.
+- Keep backend modules separate at `apps/server/src/modules/tconnect` and `apps/server/src/modules/tirupur-connect`.
+- Keep route families separate: `/api/v1/tconnect/*` for connector operations and `/api/v1/tirupur-connect/{public,member,admin,sync}/*` for marketplace operations.
+- `apps/b2b-connect` is the Tirupur Connect public/member product. Marketplace staff use a dedicated `apps/b2b-connect-admin` application.
+- Connected billing records and web-only marketplace records normalize into one marketplace model with explicit source provenance.
+- Connector synchronization never silently overwrites an approved public record. A source change creates a new reviewable revision.
+- Tirupur Connect may retain an opportunity/conversion reference, but imported quotations, sales orders, invoices, and accounting remain owned by the billing tenant.
+- Follow `assist/context/tirupur-connect-boundary.md` whenever older TConnect or B2B Connect documents conflict.
+
 ## Environment Variables
 
 Root `.env` feeds local development. Never commit real secrets.
@@ -256,6 +278,9 @@ Current default local ports:
 
 - Frontend: `6010`
 - Server: `6005`
+- Docs: `6020`
+- Product app shells: auditor `6030`, ecommerce `6031`, B2B Connect `6032`, sports `6033`, learning `6034`, welfare `6035`, CRM `6036`, sites `6037`, blog `6038`, ZETRO `6039`, textile lab `6040`, garment `6041`, UPVC `6042`.
+- Future public/product apps may run on separate local ports to avoid route/feature confusion while staying in one repo and one server-managed platform. See `assist/context/one-platform-multi-app.md` for the owned-domain/app port plan.
 
 GST and domain deployment rules:
 

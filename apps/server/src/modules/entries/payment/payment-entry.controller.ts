@@ -3,6 +3,7 @@ import { Body, Headers, Param, Res } from '../../../core/decorators/http-params.
 import { Controller, Get, Post } from '../../../core/decorators/controller.js'
 import { Inject } from '../../../core/decorators/inject.js'
 import type { TenantRequestHeaders } from '../../../core/tenant/tenant-context.service.js'
+import type { CreateCorrectionCommand, ReverseDocumentCommand } from '../shared/entry-command.dto.js'
 import { PaymentEntryService } from './payment-entry.service.js'
 import type { PaymentEntryInput } from './payment-entry.types.js'
 
@@ -36,13 +37,13 @@ export class PaymentEntryController {
   }
 
   @Post(':idOrUuid/correction')
-  correction(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
-    return this.payments.correction(headers, idOrUuid)
+  correction(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: CreateCorrectionCommand) {
+    return this.payments.correction(headers, idOrUuid, body ?? {})
   }
 
   @Post(':idOrUuid/reversal')
-  reversal(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
-    return this.payments.reversal(headers, idOrUuid)
+  reversal(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: ReverseDocumentCommand) {
+    return this.payments.reversal(headers, idOrUuid, body ?? {})
   }
 
   @Post(':idOrUuid/comments')

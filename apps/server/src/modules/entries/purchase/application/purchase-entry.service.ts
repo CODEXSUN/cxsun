@@ -7,6 +7,7 @@ import { PurchaseEntryEvent } from '../domain/events/purchase-entry.events.js'
 import { PurchaseEntryRepository, type PurchaseEntryInput } from '../infrastructure/persistence/purchase-entry.repository.js'
 import { EntryDocumentMailService } from '../../shared/entry-document-mail.service.js'
 import { EntryDocumentPdfDownloadService } from '../../shared/entry-document-pdf-download.service.js'
+import { commandId, commandReasonSuffix, type CreateCorrectionCommand, type ReverseDocumentCommand } from '../../shared/entry-command.dto.js'
 import { EntryPostingControlService } from '../../shared/entry-posting-control.service.js'
 import { PurchaseEntryEventBus } from './purchase-entry-event-bus.js'
 
@@ -104,7 +105,7 @@ export class PurchaseEntryService {
     return { ok: true }
   }
 
-  async correction(headers: TenantRequestHeaders, idOrUuid: string) {
+  async correction(headers: TenantRequestHeaders, idOrUuid: string, command: CreateCorrectionCommand = {}) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const existing = await this.purchaseEntries.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Purchase entry was not found.')
@@ -117,12 +118,12 @@ export class PurchaseEntryService {
     })
     const entry = await this.purchaseEntries.insert(context, purchaseCorrectionInput(existing))
     if (!entry) throw new BadRequestException('Purchase correction was not created.')
-    await this.purchaseEntries.addActivity(context, existing.uuid, 'correction', `Correction draft ${entry.entry_no} created`)
-    await this.postingControl.recordCorrectionActivity(context, { action: 'correction', correctedUuid: entry.uuid, module: 'purchase', originalUuid: existing.uuid })
-    return { ok: true, entry }
+    await this.purchaseEntries.addActivity(context, existing.uuid, 'correction', `Correction draft ${entry.entry_no} created.${commandReasonSuffix(command)}`)
+    const auditId = await this.postingControl.recordCorrectionActivity(context, { action: 'correction', correctedUuid: entry.uuid, module: 'purchase', originalUuid: existing.uuid })
+    return { affected_ids: [Number(entry.id), entry.uuid], audit_ids: auditId ? [auditId] : [], command_id: commandId(command), ok: true, entry }
   }
 
-  async reversal(headers: TenantRequestHeaders, idOrUuid: string) {
+  async reversal(headers: TenantRequestHeaders, idOrUuid: string, command: ReverseDocumentCommand = {}) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const existing = await this.purchaseEntries.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Purchase entry was not found.')
@@ -135,9 +136,9 @@ export class PurchaseEntryService {
     })
     const entry = await this.purchaseEntries.insert(context, purchaseReversalInput(existing))
     if (!entry) throw new BadRequestException('Purchase reversal was not created.')
-    await this.purchaseEntries.addActivity(context, existing.uuid, 'reversal', `Reversal voucher ${entry.entry_no} created`)
-    await this.postingControl.recordCorrectionActivity(context, { action: 'reversal', module: 'purchase', originalUuid: existing.uuid, reversalUuid: entry.uuid })
-    return { ok: true, entry }
+    await this.purchaseEntries.addActivity(context, existing.uuid, 'reversal', `Reversal voucher ${entry.entry_no} created.${commandReasonSuffix(command)}`)
+    const auditId = await this.postingControl.recordCorrectionActivity(context, { action: 'reversal', module: 'purchase', originalUuid: existing.uuid, reversalUuid: entry.uuid })
+    return { affected_ids: [Number(entry.id), entry.uuid], audit_ids: auditId ? [auditId] : [], command_id: commandId(command), ok: true, entry }
   }
 
   async comment(headers: TenantRequestHeaders, idOrUuid: string, body: { body?: unknown }) {

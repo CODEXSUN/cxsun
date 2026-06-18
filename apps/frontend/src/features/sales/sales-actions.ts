@@ -1,5 +1,7 @@
 import { upsertMasterDataRecord } from "src/features/master-data/infrastructure/master-data-client"
 import type { AuthSession } from "src/features/auth/auth-client"
+import { recalculateAccountReports } from "src/features/accounts/accounts-client"
+import { runGstComplianceOperation, type GstComplianceOperationInput } from "src/features/gst/gst-compliance-client"
 import {
   addSalesComment,
   createSalesCorrection,
@@ -15,12 +17,15 @@ import {
 
 export const salesActions = {
   addComment: (session: AuthSession, entry: SalesEntry, body: string) => addSalesComment(session, entry, body),
+  cancelEinvoice: (session: AuthSession, input: GstComplianceOperationInput) => runGstComplianceOperation(session, "cancelIrn", input),
+  cancelEway: (session: AuthSession, input: GstComplianceOperationInput) => runGstComplianceOperation(session, "cancelEwaybill", input),
   createCorrection: (session: AuthSession, entry: SalesEntry) => createSalesCorrection(session, entry),
   createReversal: (session: AuthSession, entry: SalesEntry) => createSalesReversal(session, entry),
   createSalesAccountType: (session: AuthSession, name: string) => upsertMasterDataRecord(session, "salesAccountTypes", { name, description: "", is_active: true }),
   downloadPdf: (session: AuthSession, entry: SalesEntry, printHtml: string) => downloadSalesPdf(session, entry, printHtml),
   restore: (session: AuthSession, entry: SalesEntry) => restoreSalesEntry(session, entry),
   runTool: (session: AuthSession, entry: SalesEntry, tool: string, printHtml?: string) => runSalesTool(session, entry, tool, printHtml),
+  recalculatePosting: (session: AuthSession) => recalculateAccountReports(session),
   saveDraft: (session: AuthSession, input: SalesEntryInput) => upsertSalesEntry(session, input),
   saveAndPost: (session: AuthSession, input: SalesEntryInput) => upsertSalesEntry(session, { ...input, status: "posted" }),
   suspend: (session: AuthSession, entry: SalesEntry) => destroySalesEntry(session, entry),

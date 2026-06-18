@@ -1,6 +1,9 @@
 # TConnect — Execution Prompt
 
-> **Module scope**: New top-level business module group inside the existing CXSun monorepo.
+> [!CAUTION]
+> **Superseded on 2026-06-18.** This document previously treated TConnect as both connector and marketplace. That architecture is no longer valid. TConnect is only the billing connector; Tirupur Connect owns the central marketplace. Read `assist/context/tirupur-connect-boundary.md` and `assist/execution/tirupur-connect-implementation-plan.md` before using any material below. Where this document conflicts with those files, the newer boundary wins.
+
+> **Module scope**: Historical mixed-module scope; do not implement it as written.
 > **Last updated**: 2026-06-09
 
 ---

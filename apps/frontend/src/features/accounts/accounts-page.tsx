@@ -27,17 +27,14 @@ import type { MasterDataRecord } from "src/features/master-data/domain/master-da
 import { LedgerAutocompleteLookup } from "./accounts-book-page"
 import { nextDocumentNumberSetting } from "src/features/settings/document-settings-client"
 import {
-  cancelAccountVoucher,
   createAccountingPeriodLock,
   listAccountGroups,
   listAccountVouchers,
   listAccountingPeriodLocks,
   listAllAccountLedgers,
-  postAccountVoucher,
   recalculateAccountReports,
   releaseAccountingPeriodLock,
   upsertAccountLedger,
-  upsertAccountVoucher,
   type AccountingPeriodLock,
   type AccountingPeriodLockInput,
   type AccountGroup,
@@ -52,6 +49,7 @@ import {
   type AccountVoucherLineInput,
   type AccountVoucherType,
 } from "./accounts-client"
+import { accountActions } from "./accounts-actions"
 import { accountInvalidations } from "./accounts-invalidations"
 import { accountQueries, accountQueryKeys } from "./accounts-queries"
 
@@ -449,9 +447,9 @@ function AccountingVoucherPage({ focusedVoucherType = null, session }: { focused
   const groupsQuery = useQuery({ queryKey: ["account-groups", session.selectedTenant.slug], queryFn: () => listAccountGroups(session) })
   const vouchersKey = ["account-vouchers", session.selectedTenant.slug]
   const vouchersQuery = useQuery({ queryKey: vouchersKey, queryFn: () => listAccountVouchers(session) })
-  const saveMutation = useMutation({ mutationFn: (input: AccountVoucherInput) => upsertAccountVoucher(session, input) })
-  const postMutation = useMutation({ mutationFn: (voucher: AccountVoucher) => postAccountVoucher(session, voucher) })
-  const cancelMutation = useMutation({ mutationFn: (voucher: AccountVoucher) => cancelAccountVoucher(session, voucher) })
+  const saveMutation = useMutation({ mutationFn: (input: AccountVoucherInput) => accountActions.saveVoucher(session, input) })
+  const postMutation = useMutation({ mutationFn: (voucher: AccountVoucher) => accountActions.postVoucher(session, voucher) })
+  const cancelMutation = useMutation({ mutationFn: (voucher: AccountVoucher) => accountActions.cancelVoucher(session, voucher) })
   const ledgerMutation = useMutation({ mutationFn: (input: AccountLedgerInput) => upsertAccountLedger(session, input.account_type ?? "cash", input) })
   const vouchers = useMemo(() => {
     const rows = focusedVoucherType ? (vouchersQuery.data ?? []).filter((voucher) => voucher.voucher_type === focusedVoucherType) : vouchersQuery.data ?? []
@@ -468,8 +466,7 @@ function AccountingVoucherPage({ focusedVoucherType = null, session }: { focused
   async function refresh() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: vouchersKey }),
-      queryClient.invalidateQueries({ queryKey: accountQueryKeys.trialBalance(session) }),
-      queryClient.invalidateQueries({ queryKey: accountQueryKeys.dayBook(session) }),
+      accountInvalidations.invalidateReportDependents(queryClient, session),
     ])
   }
 

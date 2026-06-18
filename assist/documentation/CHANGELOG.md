@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.116`
-- **Release tag:** `v-1.0.116`
-- **Changelog label:** `v 1.0.116`
+- **Current version:** `1.0.121`
+- **Release tag:** `v-1.0.121`
+- **Changelog label:** `v 1.0.121`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -14,6 +14,98 @@ New changelog entries must keep database-facing work and application code work s
 - `#### App Codebase Changes` records UI, API, service logic, tooling, and documentation changes.
 
 ---
+
+## v-1.0.121
+
+### [v 1.0.121] 2026-06-18 11:20 am - B2B Connect public marketplace experience
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.121
+- Expanded the Tirupur Connect public marketplace into a complete textile-focused experience with reusable hero, directory, supplier, RFQ, membership, association, events, blog, statistics, reports, and expansion sections.
+- Reworked navigation around visitor intent with Directory, Business, Network, and Insights menus and matching mobile navigation.
+- Added a fixed-size rotating company showcase with single-line names and SEDEX, ISO, sustainability, factory, certificate, contact, and shield verification signals.
+- Rebuilt verification with a factory banner, seven colorful shield levels, equal desktop cards, responsive wrapping, and visible shadows.
+- Added association logos, double-border cards, logo-matched Know more buttons, and smooth lift-and-tilt interactions.
+- Reworked RFQs into icon-led Post, Match, Quote, and Convert cards with distinct colors and double borders.
+- Added animated network statistics and a textile business journal with working section navigation.
+- Added lime marketplace and expansion depth, alternating light section tones, stronger spacing, and responsive layout safeguards.
+- Rebuilt Reports with KPI line charts, comparison values, grouped monthly RFQ/order bars, category bars, and an SVG membership donut.
+- Kept reporting charts dependency-free with responsive SVG and CSS and removed the temporary Recharts dependency.
+- Updated Tirupur Connect branding, tagline usage, dynamic logos, header chevrons, developer badges, and local association assets.
+
+## v-1.0.120
+
+### [v 1.0.120] 2026-06-18 10:02 am - B2B Connect association and expansion polish
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.120
+- Added restrained lime shadows and hover depth to the B2B Connect regional expansion cards while preserving their existing light surfaces.
+- Added locally stored association logo assets and wired them into the association cards.
+- Added light double borders, mild shadows, aligned logo holders, and subtle hover lift to the association card grid.
+
+## v-1.0.119
+
+### [v 1.0.119] 2026-06-17 8:38 am - Multi app workspace directory
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.119
+- Added scaffolded standalone product app workspaces for Auditor, Ecommerce, B2B Connect, Sports, Learning, Welfare, CRM, Sites, Blog, ZETRO, Textile Lab, Garment, and UPVC.
+- Added the shared `@cxsun/app-shell` package so standalone product apps use one intro shell, health check, route/port/domain display, and main-app links.
+- Added root dev/typecheck/build scripts for the standalone product apps, including `dev:product-apps`, `typecheck:product-apps`, and `build:product-apps`.
+- Renamed the initial app scaffolds from `ecommerce-admin` to `ecommerce`, `marketplace` to `b2b-connect`, and `teaching` to `learning`.
+- Added the main Application > Apps directory page at `/app/app-application-apps` with launch links, ports, routes, domains, and capability summaries for every standalone app.
+- Documented the one-repo, multi-app port/domain plan in the assist context, workspace, README, and architecture rule files.
+- Removed the unused placeholder `apps/web` workspace and cleaned it out of active typechecks, version bumping, and workspace lock metadata.
+- Updated the version bump flow so the shared app shell and standalone product app workspaces are versioned with the rest of the platform.
+## v-1.0.118
+
+### [v 1.0.118] 2026-06-16 4:46 pm - BetterNext command discipline completion
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.118
+- Completed the BetterNext execution checklist with no remaining BetterNext unchecked tasks.
+- Added Sales query factory coverage for detail records, open invoices, and monthly views, plus matching invalidation for Sales list/detail/monthly/open-invoice and accounting report dependents.
+- Added Sales action-layer commands for e-invoice cancellation, e-way bill cancellation, and account report/posting recalculation.
+- Added an Accounts action layer for voucher save, post, cancel, and report recalculation so Journal, Contra, and Opening Posting use named actions instead of direct component mutations.
+- Added typed posted-document command DTOs for posting, reversal, correction, compliance cancellation, posting recalculation, and report-table recalculation.
+- Added the Accounts report recalculation API endpoint and wired the frontend recalculate action to that server command.
+- Enforced accounting period-lock checks before manual accounting voucher post/cancel commands and returned command metadata with affected IDs, audit IDs, and command IDs.
+- Added structured backend error details for accounting voucher imbalance, missing ledger, immutable posted/cancelled vouchers, and GST/e-way validation failures.
+
+## v-1.0.117
+
+### [v 1.0.117] 2026-06-16 10:48 am - accounts voucher reducer state
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.117
+- Refactored Journal and Contra voucher posting form state to a reducer so draft row edits, add/edit/delete actions, and ledger selection are handled through one predictable flow.
+- Added pure helper paths for Journal/Contra posting totals and save payload construction while keeping debit and credit totals derived from voucher rows.
+- Updated the Better Next execution checklist to mark the accounting voucher reducer pilot and helper coverage as complete.
 
 ## v-1.0.116
 
@@ -46,6 +138,7 @@ New changelog entries must keep database-facing work and application code work s
 - Published enabled subscription apps back into tenant app settings so existing dashboard app access respects paid/assigned subscriptions.
 - Converted subscription plan and billing-cycle selectors to autocomplete lookup fields.
 - Split the Super Admin subscription desk into tenant-list, tenant-show, tenant-upsert, and plan-manager pages with tenant-list-style table, pagination, filters, and row actions.
+- Added time-barred subscription auto-suspend plus Super Admin suspend, restore, and day-extension controls from the tenant subscription list and show page.
 
 ## v-1.0.115
 

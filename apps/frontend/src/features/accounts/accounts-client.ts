@@ -371,8 +371,8 @@ export async function listAccountBalanceSheet(session: AuthSession, accountingYe
 }
 
 export async function recalculateAccountReports(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/postings/repost-sources`, {
-    body: "{}",
+  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/reports/recalculate`, {
+    body: JSON.stringify({ report: "all", source: "api" }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",

@@ -6,6 +6,7 @@ import { AccountsEngineRepository } from './accounts-engine.repository.js'
 import { AccountsEntryPostingService } from './accounts-entry-posting.service.js'
 import { AccountsRepository } from './accounts.repository.js'
 import type { AccountBookEntryInput, AccountBookType, AccountLedgerInput, AccountLedgerType, AccountVoucherInput } from './accounts.types.js'
+import { commandId, type PostVoucherCommand, type RecalculatePostingCommand, type RecalculateReportTablesCommand, type ReverseDocumentCommand } from '../entries/shared/entry-command.dto.js'
 import { EntryPostingControlService, type PeriodLockInput } from '../entries/shared/entry-posting-control.service.js'
 
 @Injectable()
@@ -44,12 +45,34 @@ export class AccountsService {
     return { ok: true, voucher: await this.engine.upsertVoucher(await this.context(headers), input) }
   }
 
-  async postVoucher(headers: TenantRequestHeaders, idOrUuid: string) {
-    return { ok: true, voucher: await this.engine.postVoucher(await this.context(headers), idOrUuid) }
+  async postVoucher(headers: TenantRequestHeaders, idOrUuid: string, command: PostVoucherCommand = {}) {
+    const context = await this.context(headers)
+    const existing = await this.engine.findVoucher(context, idOrUuid)
+    if (!existing) throw new NotFoundException('Accounting voucher not found.')
+    await this.postingControl.assertPeriodOpen(context, {
+      accountingYearId: existing.accounting_year_id,
+      companyId: existing.company_id,
+      documentDate: existing.voucher_date,
+      documentNo: existing.voucher_no,
+      module: 'accounts',
+    })
+    const voucher = await this.engine.postVoucher(context, idOrUuid)
+    return { affected_ids: [Number(voucher.id), voucher.uuid], audit_ids: [], command_id: commandId(command), ok: true, voucher }
   }
 
-  async cancelVoucher(headers: TenantRequestHeaders, idOrUuid: string) {
-    return { ok: true, voucher: await this.engine.cancelVoucher(await this.context(headers), idOrUuid) }
+  async cancelVoucher(headers: TenantRequestHeaders, idOrUuid: string, command: ReverseDocumentCommand = {}) {
+    const context = await this.context(headers)
+    const existing = await this.engine.findVoucher(context, idOrUuid)
+    if (!existing) throw new NotFoundException('Accounting voucher not found.')
+    await this.postingControl.assertPeriodOpen(context, {
+      accountingYearId: existing.accounting_year_id,
+      companyId: existing.company_id,
+      documentDate: existing.voucher_date,
+      documentNo: existing.voucher_no,
+      module: 'accounts',
+    })
+    const voucher = await this.engine.cancelVoucher(context, idOrUuid)
+    return { affected_ids: [Number(voucher.id), voucher.uuid], audit_ids: [], command_id: commandId(command), ok: true, voucher }
   }
 
   async dayBook(headers: TenantRequestHeaders, query: { accounting_year_id?: string }) {
@@ -76,14 +99,22 @@ export class AccountsService {
     return this.engine.balanceSheet(await this.context(headers), normalizeAccountingYearId(query.accounting_year_id))
   }
 
-  async rebuildPostingRollups(headers: TenantRequestHeaders, body: { source_module?: string }) {
+  async rebuildPostingRollups(headers: TenantRequestHeaders, body: RecalculatePostingCommand) {
     const sourceModule = normalizeSourceModule(body.source_module)
-    return this.entryPostings.rebuildPostingRollups(await this.context(headers), sourceModule)
+    return { command_id: commandId(body), ...await this.entryPostings.rebuildPostingRollups(await this.context(headers), sourceModule) }
   }
 
-  async repostSourceEntries(headers: TenantRequestHeaders, body: { source_module?: string }) {
+  async repostSourceEntries(headers: TenantRequestHeaders, body: RecalculatePostingCommand) {
     const sourceModule = normalizeSourceModule(body.source_module)
-    return this.entryPostings.repostSourceEntries(await this.context(headers), sourceModule)
+    return { command_id: commandId(body), ...await this.entryPostings.repostSourceEntries(await this.context(headers), sourceModule) }
+  }
+
+  async recalculateReportTables(headers: TenantRequestHeaders, body: RecalculateReportTablesCommand) {
+    return {
+      command_id: commandId(body),
+      report: body.report ?? 'all',
+      ...await this.entryPostings.rebuildPostingRollups(await this.context(headers), undefined),
+    }
   }
 
   async periodLocks(headers: TenantRequestHeaders) {

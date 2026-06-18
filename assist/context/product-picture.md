@@ -6,6 +6,8 @@ This document is the clear product picture for CXSun. It describes what we are b
 
 CXSun is a multi-tenant commerce and business operating platform. Each tenant gets an isolated workspace to run storefront, sales, inventory, finance, company, and day-to-day operations from one system. The platform team gets separate tools to operate the software, support users, manage tenants, and keep the system healthy.
 
+Owned products and industry products should remain in the same monorepo and server-managed platform. Different products may have separate app surfaces, ports, and domains, but shared billing, accounting, compliance, mail, CRM, sites/blog, payments, files, auth, tenant/company, ZETRO, and GST logic belongs in shared server-owned engines/services. See `assist/context/one-platform-multi-app.md`.
+
 The product should feel like one connected operating layer:
 
 ```text
@@ -26,6 +28,7 @@ The public site introduces the platform and tenant/storefront content. It should
 - Landing pages such as home, about, services, contact, and blog.
 - Tenant or brand-aware public pages through domain resolution.
 - Future storefront pages for catalog, product detail, cart, checkout, order tracking, and customer account access.
+- Separate domain-mapped public app surfaces for owned products such as ecommerce, B2B Connect, sports, learning, welfare, brand storefront, and auditor portal when their user experience differs.
 
 ### Tenant Workspace
 
@@ -194,6 +197,7 @@ Each route family has its own auth gate and browser session key.
 - Treat super-admin, admin, and tenant dashboards as separate products that share UI foundations, not as one mixed dashboard.
 - Add new features first to the correct surface, then wire shared UI only where it does not blur ownership.
 - Prefer simple, explicit module boundaries over clever cross-module imports.
+- Separate app for separate business experience; shared engine for shared business logic. Product apps must request invoices, receipts, vouchers, postings, mail, compliance, and reports through shared server services rather than duplicating billing/accounting code.
 
 ## Immediate Product Direction
 

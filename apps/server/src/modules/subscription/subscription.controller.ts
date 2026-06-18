@@ -1,5 +1,5 @@
 import type { FastifyRequest } from 'fastify'
-import { Body, Headers, Req } from '../../core/decorators/http-params.js'
+import { Body, Headers, Param, Req } from '../../core/decorators/http-params.js'
 import { Controller, Get, Post } from '../../core/decorators/controller.js'
 import { UseGuards } from '../../core/decorators/guards.js'
 import { Inject } from '../../core/decorators/inject.js'
@@ -36,6 +36,27 @@ export class SubscriptionController {
   applyTenantSubscription(@Body() body: TenantSubscriptionInput, @Req() request: FastifyRequest) {
     assertSuperAdmin(request)
     return this.subscriptions.applyTenantSubscription(body)
+  }
+
+  @Post('tenant-subscriptions/:uuid/suspend')
+  @UseGuards(AuthGuard)
+  suspendTenantSubscription(@Param('uuid') uuid: string, @Req() request: FastifyRequest) {
+    assertSuperAdmin(request)
+    return this.subscriptions.suspendTenantSubscription(uuid)
+  }
+
+  @Post('tenant-subscriptions/:uuid/restore')
+  @UseGuards(AuthGuard)
+  restoreTenantSubscription(@Param('uuid') uuid: string, @Req() request: FastifyRequest) {
+    assertSuperAdmin(request)
+    return this.subscriptions.restoreTenantSubscription(uuid)
+  }
+
+  @Post('tenant-subscriptions/:uuid/extend')
+  @UseGuards(AuthGuard)
+  extendTenantSubscription(@Param('uuid') uuid: string, @Body() body: { days?: number }, @Req() request: FastifyRequest) {
+    assertSuperAdmin(request)
+    return this.subscriptions.extendTenantSubscription(uuid, body.days)
   }
 
   @Post('razorpay/order')

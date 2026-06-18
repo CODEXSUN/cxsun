@@ -58,6 +58,9 @@ const TenantListPage = lazy(() =>
 const AppSetupPage = lazy(() =>
   import('src/features/app-setup/app-setup-page').then((module) => ({ default: module.AppSetupPage })),
 )
+const ProductAppDirectoryPage = lazy(() =>
+  import('src/features/app-directory/product-app-directory-page').then((module) => ({ default: module.ProductAppDirectoryPage })),
+)
 const CompanyPage = lazy(() =>
   import('src/features/company/company-page').then((module) => ({ default: module.CompanyPage })),
 )
@@ -225,6 +228,7 @@ function dashboardPageFromPath(basePath: string, pathname = window.location.path
   if (root !== expectedRoot) return "overview"
   if (agentOsPages.includes(page as DashboardPage)) return page as DashboardPage
   if (appModulePages.includes(page as DashboardPage)) return page as DashboardPage
+  if (page === "app-runtime") return page as DashboardPage
   if (page === "app-tally-settings") return page as DashboardPage
   if (
     page === "tenant" ||
@@ -266,7 +270,7 @@ function defaultPageForApp(appId: DashboardAppId): DashboardPage {
 const crossSurfaceAppPages: DashboardPage[] = ["app-agent-os-base"]
 
 const pageAccess: Record<DashboardMode, DashboardPage[]> = {
-  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "subscription", "industry", "company-industry", "company", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
+  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "subscription", "industry", "company-industry", "company", "app-runtime", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
   admin: ["overview", "company", "helpdesk", "bugs", "system-update", ...crossSurfaceAppPages],
   tenant: ["overview", "company", "tenant-roles", ...appModulePages],
 }
@@ -295,6 +299,7 @@ const pageLabels: Partial<Record<DashboardPage, string>> = {
   "helpdesk": "Helpdesk",
   "bugs": "Bugs",
   "tenant-roles": "Tenant Roles",
+  "app-runtime": "Apps",
   "app-agent-os-base": "Base",
   "app-agent-os-providers": "Providers",
   "app-agent-os-knowledge": "Knowledge",
@@ -802,6 +807,8 @@ export function DashboardView({
             <SupportPage type="helpdesk" />
           ) : visiblePage === "company" ? (
             <CompanyPage session={session} />
+          ) : visiblePage === "app-runtime" ? (
+            <ProductAppDirectoryPage session={session} />
           ) : visiblePage === "app-accounts-overview" ? (
             <AccountsPage session={session} view="overview" />
           ) : overviewApp ? (

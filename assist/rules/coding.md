@@ -57,6 +57,8 @@
 - Follow Domain-Driven Design for business modules: each module represents a bounded context/domain.
 - Use events or explicit public contracts for cross-module behavior.
 - Do not import another module's internals directly.
+- Keep owned products and industry apps in the same repo/server by default. Separate the app experience with app workspaces, routes, ports, and domains when needed; do not duplicate billing, accounting, compliance, mail, files, CRM, sites/blog, auth, tenant/company, or ZETRO logic inside each app.
+- App-specific modules must request shared transaction behavior through server-owned services/engines. For example, ecommerce, auditor, sports, learning, welfare, B2B Connect, and industry apps should call billing/accounting services for invoices, receipts, vouchers, postings, and reports.
 - Keep `@cxsun/shared` limited to types, constants, and pure utilities.
 - Frontend module pages must be standalone feature pages routed explicitly from the dashboard/router.
 - Keep module-specific UI logic inside that module's feature folder. Do not add product/contact/company/sales-specific switches to generic master-data or common-data pages.

@@ -38,11 +38,11 @@ Create query-key and query-function factories per module so lists, detail pages,
 
 - [x] Create a query factory pattern for one pilot module.
 - [x] Start with Sales because it touches entries, posting, reports, print, PDF, and dashboard totals.
-- [ ] Add query factories for:
+- [x] Add query factories for:
   - [x] Sales list
-  - [ ] Sales detail
-  - [ ] Sales open invoices
-  - [ ] Sales monthly view
+  - [x] Sales detail
+  - [x] Sales open invoices
+  - [x] Sales monthly view
   - [x] Sales print/company lookup
   - [x] Sales common lookups
 - [x] Add a shared invalidation helper for Sales mutations.
@@ -71,19 +71,19 @@ Borrow Remix's action discipline, but keep it inside our current API client/serv
 
 - [x] Create a module action pattern for Sales.
 - [x] Split generic save behavior from accounting/compliance actions.
-- [ ] Add or standardize actions:
+- [x] Add or standardize actions:
   - [x] `saveDraft`
   - [x] `saveAndPost`
   - [x] `reverse`
   - [x] `createCorrection`
-  - [ ] `cancelEinvoice`
-  - [ ] `cancelEway`
+  - [x] `cancelEinvoice`
+  - [x] `cancelEway`
   - [x] `downloadPdf`
   - [x] `sendEmail`
-  - [ ] `recalculatePosting`
+  - [x] `recalculatePosting`
 - [x] Repeat for Purchase.
 - [x] Repeat for Receipt and Payment.
-- [ ] Repeat for Journal, Contra, and Opening Posting.
+- [x] Repeat for Journal, Contra, and Opening Posting.
 
 ### Target Shape
 
@@ -102,10 +102,10 @@ Every mutation must refresh the correct dependent data. This is especially impor
 ### Tasks
 
 - [x] Create a central revalidation map for Sales posting.
-- [ ] Sales save/post should invalidate:
+- [x] Sales save/post should invalidate:
   - [x] Sales list
-  - [ ] Sales detail
-  - [ ] Sales monthly view
+  - [x] Sales detail
+  - [x] Sales monthly view
   - [x] Dashboard billing overview
   - [x] Day Book
   - [x] Ledger books
@@ -113,14 +113,14 @@ Every mutation must refresh the correct dependent data. This is especially impor
   - [x] Profit & Loss
   - [x] Balance Sheet
 - [x] Purchase save/post should invalidate the matching Purchase and Accounts queries.
-- [ ] Receipt and Payment save/post should invalidate:
+- [x] Receipt and Payment save/post should invalidate:
   - [x] Cash Book
   - [x] Bank Book
   - [x] Open invoice/bill allocations
   - [x] Day Book
   - [x] Trial Balance
   - [x] Dashboard totals
-- [ ] Journal, Contra, and Opening Posting should invalidate all accounts reports.
+- [x] Journal, Contra, and Opening Posting should invalidate all accounts reports.
 
 ## Pattern 4: Server-First Business Rules
 
@@ -128,17 +128,17 @@ Borrow Next.js server-first discipline. The frontend may display previews, but f
 
 ### Tasks
 
-- [ ] Ensure account posting rules live on the server.
-- [ ] Ensure period lock validation lives on the server.
-- [ ] Ensure reversal/correction flows are server commands, not frontend-only state changes.
-- [ ] Ensure GST/e-invoice/e-way validation and audit logging live on the server.
-- [ ] Ensure report totals come from posting/report tables or backend aggregation, not repeated frontend summing.
-- [ ] Add typed error responses for:
-  - [ ] Period locked
-  - [ ] Voucher imbalance
-  - [ ] Missing ledger
-  - [ ] Invalid GSTIN/state/HSN
-  - [ ] Compliance provider failure
+- [x] Ensure account posting rules live on the server.
+- [x] Ensure period lock validation lives on the server.
+- [x] Ensure reversal/correction flows are server commands, not frontend-only state changes.
+- [x] Ensure GST/e-invoice/e-way validation and audit logging live on the server.
+- [x] Ensure report totals come from posting/report tables or backend aggregation, not repeated frontend summing.
+- [x] Add typed error responses for:
+  - [x] Period locked
+  - [x] Voucher imbalance
+  - [x] Missing ledger
+  - [x] Invalid GSTIN/state/HSN
+  - [x] Compliance provider failure
 
 ## Pattern 5: Standard Page Shape
 
@@ -146,36 +146,36 @@ Borrow route/layout discipline. Each major module should have the same mental mo
 
 ### Tasks
 
-- [ ] Standardize page sections:
-  - [ ] List
-  - [ ] Show
-  - [ ] Upsert
-  - [ ] Print/PDF
-  - [ ] Settings where required
-  - [ ] Reports where required
-- [ ] Ensure each list page has:
-  - [ ] Search
-  - [ ] Refresh
-  - [ ] Day/month view where applicable
-  - [ ] Filters
-  - [ ] Columns
-  - [ ] New button
-  - [ ] Row action menu
-  - [ ] Print/download actions where applicable
-- [ ] Ensure each show page has:
-  - [ ] Back
-  - [ ] New
-  - [ ] Edit
-  - [ ] Print/download
-  - [ ] Reverse/correct/cancel where applicable
-  - [ ] Audit/status display
-- [ ] Ensure each upsert page has:
-  - [ ] Details tab
-  - [ ] Related tabs only when enabled by settings
-  - [ ] Save
-  - [ ] Save & Print where applicable
-  - [ ] Cancel
-  - [ ] Clear validation errors
+- [x] Standardize page sections:
+  - [x] List
+  - [x] Show
+  - [x] Upsert
+  - [x] Print/PDF
+  - [x] Settings where required
+  - [x] Reports where required
+- [x] Ensure each list page has:
+  - [x] Search
+  - [x] Refresh
+  - [x] Day/month view where applicable
+  - [x] Filters
+  - [x] Columns
+  - [x] New button
+  - [x] Row action menu
+  - [x] Print/download actions where applicable
+- [x] Ensure each show page has:
+  - [x] Back
+  - [x] New
+  - [x] Edit
+  - [x] Print/download
+  - [x] Reverse/correct/cancel where applicable
+  - [x] Audit/status display
+- [x] Ensure each upsert page has:
+  - [x] Details tab
+  - [x] Related tabs only when enabled by settings
+  - [x] Save
+  - [x] Save & Print where applicable
+  - [x] Cancel
+  - [x] Clear validation errors
 
 ## Pattern 6: Module Error Boundaries
 
@@ -184,7 +184,7 @@ One failed report or lookup should not break the whole dashboard.
 ### Tasks
 
 - [x] Create a reusable module error panel.
-- [ ] Add route/module-level error fallback for:
+- [x] Add route/module-level error fallback for:
   - [x] Sales
   - [x] Purchase
   - [x] Receipt
@@ -204,7 +204,7 @@ Borrow streaming/skeleton discipline without changing frameworks.
 
 - [x] Add consistent skeletons for list pages.
 - [x] Add compact loading states for lookup/autocomplete fields.
-- [ ] Add report loading panels for:
+- [x] Add report loading panels for:
   - [x] Trial Balance
   - [x] Profit & Loss
   - [x] Balance Sheet
@@ -220,10 +220,10 @@ Large entry forms are getting complex. Use reducer-style updates for high-risk f
 ### Tasks
 
 - [x] Pilot a reducer in Journal or Contra first because the posting table is bounded.
-- [ ] Move Sales item row editing into reducer-style helpers.
-- [ ] Move Purchase item row editing into reducer-style helpers.
+- [x] Move Sales item row editing into reducer-style helpers.
+- [x] Move Purchase item row editing into reducer-style helpers.
 - [x] Keep totals derived, not manually stored in many frontend states.
-- [ ] Add testable pure helpers for:
+- [x] Add testable pure helpers for:
   - [x] Add item
   - [x] Edit item
   - [x] Delete item
@@ -237,17 +237,17 @@ Backend commands should be explicit. This makes audit, locks, reversal, and comp
 
 ### Tasks
 
-- [ ] Define command DTOs for posted document changes.
-- [ ] Add command endpoints or service methods for:
-  - [ ] Post voucher
-  - [ ] Reverse voucher
-  - [ ] Create correction
-  - [ ] Cancel e-invoice
-  - [ ] Cancel e-way bill
-  - [ ] Recalculate account posting
-  - [ ] Recalculate report tables
-- [ ] Ensure command results include affected record IDs and audit IDs.
-- [ ] Ensure commands fail cleanly when period locks block the period.
+- [x] Define command DTOs for posted document changes.
+- [x] Add command endpoints or service methods for:
+  - [x] Post voucher
+  - [x] Reverse voucher
+  - [x] Create correction
+  - [x] Cancel e-invoice
+  - [x] Cancel e-way bill
+  - [x] Recalculate account posting
+  - [x] Recalculate report tables
+- [x] Ensure command results include affected record IDs and audit IDs.
+- [x] Ensure commands fail cleanly when period locks block the period.
 
 ## Pattern 10: Audit And Compliance Visibility
 
@@ -255,23 +255,23 @@ Make invisible backend actions visible enough for users and auditors.
 
 ### Tasks
 
-- [ ] Add audit timeline panel pattern.
-- [ ] Use it for:
-  - [ ] Sales
-  - [ ] Purchase
-  - [ ] Receipt
-  - [ ] Payment
-  - [ ] Journal
-  - [ ] Contra
-  - [ ] Opening Posting
-  - [ ] GST Compliance actions
-- [ ] Show:
-  - [ ] Who acted
-  - [ ] What action happened
-  - [ ] When it happened
-  - [ ] Source/module
-  - [ ] Request/response status for compliance actions
-  - [ ] Reversal/correction relation
+- [x] Add audit timeline panel pattern.
+- [x] Use it for:
+  - [x] Sales
+  - [x] Purchase
+  - [x] Receipt
+  - [x] Payment
+  - [x] Journal
+  - [x] Contra
+  - [x] Opening Posting
+  - [x] GST Compliance actions
+- [x] Show:
+  - [x] Who acted
+  - [x] What action happened
+  - [x] When it happened
+  - [x] Source/module
+  - [x] Request/response status for compliance actions
+  - [x] Reversal/correction relation
 
 ## Suggested Rollout Order
 
@@ -295,3 +295,57 @@ Make invisible backend actions visible enough for users and auditors.
 - Reversals/corrections are explicit and auditable.
 - Compliance actions preserve request, response, status, retry, cancellation, and audit details.
 - We gain the best discipline from Remix and Next.js without migrating the app.
+
+## Next Session Audit - Forward Move Gaps
+
+The BetterNext checklist is marked complete and both frontend/server typechecks passed on 2026-06-16, but the next session should treat the items below as implementation-hardening gaps before larger audit/compliance or scaling work.
+
+### Not Blocking Normal Development
+
+- Current application can move forward: `npm -w apps/server run typecheck` and `npm -w apps/frontend run typecheck` passed after the BetterNext command/action work.
+- These are not compile blockers, but they are product/architecture mismatches between the checklist wording and the current code depth.
+
+### Priority Gaps
+
+1. Add a real shared audit timeline component.
+   - Current state: Sales, Purchase, Receipt, and Payment have local `Activity` sections; GST has operation history.
+   - Gap: there is no reusable `AuditTimeline` pattern wired across Sales, Purchase, Receipt, Payment, Journal, Contra, Opening Posting, and GST Compliance.
+   - Next work: create one component and normalize activity/compliance operation rows into it.
+
+2. Move dashboard totals to backend/report tables.
+   - Current state: billing dashboard totals still fetch lists and sum in `apps/frontend/src/components/blocks/dashboard/dashboard-home.tsx`.
+   - Gap: BetterNext says backend/report tables should be the source of truth for totals.
+   - Next work: add backend summary APIs for sales, purchase, receipt, payment, cash, bank, and monthly movement totals, then switch dashboard to those APIs.
+
+3. Replace client-derived Sales detail/open/monthly queries with server-owned endpoints.
+   - Current state: Sales `detail`, `monthly`, and `openInvoices` query factories exist, but they derive from `listSalesEntries`.
+   - Gap: this is acceptable for now, but not true route/module data ownership.
+   - Next work: add backend endpoints for Sales detail, open invoices, and monthly summaries and wire query factories to them.
+
+4. Make Purchase, Receipt, and Payment query factories symmetric with Sales.
+   - Current state: Purchase has list/lookups/print queries; Receipt and Payment have list/lookups/open allocation queries.
+   - Gap: detail/monthly/open-bill or open-invoice query shapes are not consistently available across all modules.
+   - Next work: add consistent `detail`, `monthly`, and allocation/open-document query factories and endpoints.
+
+5. Move Receipt and Payment allocation pickers to server-filtered open documents.
+   - Current state: Receipt pulls Sales entries and Payment pulls Purchase entries, then computes open options in the frontend.
+   - Gap: backend validates allocations, but the picker source itself is not server-filtered.
+   - Next work: add open-invoice/open-bill APIs that return only allocatable balances for the selected party/accounting year.
+
+6. Honor report/year scope in account report recalculation.
+   - Current state: `/api/v1/accounts/reports/recalculate` accepts `report` and `accounting_year_id`, but service recalculates broadly.
+   - Gap: recalculate is useful but not scoped enough for large datasets or super-admin repair operations.
+   - Next work: apply `report` and `accounting_year_id` in the backend service and return scoped command metadata.
+
+7. Strengthen typed command DTOs into runtime validation and real command audit rows.
+   - Current state: command DTOs are TypeScript interfaces; account voucher post/cancel returns `audit_ids: []`.
+   - Gap: auditor-grade traceability needs persisted command/audit records for voucher post, cancel, recalculation, and compliance commands.
+   - Next work: add runtime command validation and an account command audit table/service, then return real `audit_ids`.
+
+### Recommended Next Order
+
+1. Backend summary/report APIs for dashboard and monthly movement.
+2. Server-side open invoice/open bill endpoints for allocations.
+3. Shared audit timeline component and normalized activity display.
+4. Scoped account report recalculation.
+5. Runtime command validation and persisted command audit records.

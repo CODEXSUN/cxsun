@@ -1,12 +1,39 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.116
+**Project version:** 1.0.121
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
 For the product north star, read `assist/context/product-picture.md`. It describes the software we are building: public storefront/content, tenant business workspace, admin support desk, super-admin platform orchestration, and the new Versatile Agent OS direction.
 
+For owned-product and industry-app expansion, read `assist/context/one-platform-multi-app.md`. It records the one-repo, one-server, multi-app rule: separate app surfaces and ports/domains for different business experiences, shared engines/services for billing, accounting, mail, CRM, sites/blog, payments, files, auth, tenant/company, ZETRO, and GST/compliance.
+
+For the marketplace boundary, read `assist/context/tirupur-connect-boundary.md`. It is the canonical rule that TConnect is the billing connector while Tirupur Connect is the standalone central marketplace.
+
 For the AI operating layer, read `assist/context/versatile-agent-os.md` and `ZRO/Vision/agent-os.md`. The agent direction is layered: Helper Agent first, then Operator, Workflow, Planner, Analytics, Router, Memory, and the full multi-agent ecosystem.
+
+## Mandatory Reading Before Work
+
+Before planning, coding, changing schemas, or editing product behavior, every AI agent must read:
+
+1. `assist/README.md`
+2. All files under `assist/rules/`
+3. All files under `assist/context/`
+4. `assist/execution/planning.md`
+5. `assist/execution/task.md`
+6. The execution document for the requested product or module
+7. The relevant module documentation under `apps/server`, `apps/frontend`, `apps/docs`, or the standalone product app
+
+For any TConnect or Tirupur Connect work, the following files are mandatory and must be read in this order:
+
+1. `assist/context/tirupur-connect-boundary.md` — canonical ownership and system boundary.
+2. `assist/execution/tirupur-connect-implementation-plan.md` — safe implementation and migration order.
+3. `assist/execution/b2b-connect.md` — Tirupur Connect product plan.
+4. `apps/b2b-connect/b2b-connect.md` — detailed product vision and feature scope.
+5. `apps/docs/devdocs/modules/tconnect.md` — connector-facing developer documentation.
+6. `assist/execution/tconnect.md` — legacy mixed-module plan for migration reference only; superseded wherever it conflicts with the canonical boundary.
+
+Agents must not begin TConnect or Tirupur Connect implementation from the legacy `assist/execution/tconnect.md` document alone.
 
 ## Current Application Shape
 
@@ -33,9 +60,13 @@ Root scripts use the active apps:
 - `npm run dev:server` starts only the backend.
 - `npm run dev:frontend` starts only the frontend.
 - `npm run dev:docs` starts only the Docusaurus docs app.
+- `npm run dev:<product-app>` starts one scaffolded product app, such as `dev:auditor`, `dev:ecommerce`, `dev:b2b-connect`, `dev:sports`, `dev:learning`, `dev:welfare`, `dev:crm`, `dev:sites`, `dev:blog`, `dev:zetro`, `dev:textile-lab`, `dev:garment`, or `dev:upvc`.
+- `npm run dev:product-apps` starts all scaffolded product app shells together.
 - `npm run check` runs the standard assist verification script.
 - `npm run typecheck:active` typechecks all current workspaces.
+- `npm run typecheck:product-apps` typechecks all scaffolded product app shells.
 - `npm run build:active` builds the active backend and frontend apps.
+- `npm run build:product-apps` builds all scaffolded product app shells.
 - `npm run version:bump -- --title "<title>"` updates package/display versions and creates a changelog entry split into `Database Changes` and `App Codebase Changes`; use `--database-update` or `--no-database-update` when the automatic database check needs an override.
 
 ## Current Tenant Architecture
@@ -55,6 +86,8 @@ Current backend boundary layout:
 - `apps/server/src/shared`: backend-only shared helpers such as filters, guards, and middleware.
 - `apps/server/src/infrastructure`: database, queue, tenant provisioning, auth helpers, and lifecycle adapters.
 - `apps/server/src/modules/foundation`: reusable engines and compatibility registries (`master-record`, `master-data`).
+- Future cross-product engines/services should stay server-owned and be reused by app modules. Ecommerce, auditor, sports, learning, welfare, B2B Connect, and industry apps must call shared billing/accounting/compliance services for invoices, receipts, vouchers, postings, mail, and reports instead of duplicating that logic.
+- `packages/app-shell`: shared frontend scaffold used by product app workspaces such as auditor, ecommerce, B2B Connect, sports, learning, welfare, CRM, sites, blog, ZETRO, textile lab, garment, and UPVC.
 - `apps/server/src/modules/common/<group>/<module>`: standalone common tenant modules.
 - `apps/server/src/modules/master/<module>`: standalone master modules (`company`, `contact`, `product`, `order`).
 - `apps/server/src/modules/entries/<module>`: tenant-isolated transaction modules including sales, export sales, purchase, receipt, and payment.
@@ -131,15 +164,24 @@ assist/
 At the start of each work session:
 
 1. Read this file.
-2. Read `assist/rules/`.
-3. Read `assist/context/`.
+2. Complete the mandatory reading list above.
+3. Read the relevant product/module execution and module documentation.
 4. Refresh `assist/execution/planning.md` and `assist/execution/task.md` for the current session.
 5. Copy the exact user prompt into `assist/documentation/prompt-review.md` before starting the requested work.
+6. Inspect the current implementation and Git worktree before making changes.
+7. Preserve unrelated user changes and follow the applicable verification rules.
 
 ## Key References
 
 - `assist/context/workspaces.md` maps each workspace to its role and commands.
 - `assist/context/product-picture.md` describes the product picture and implementation direction.
+- `assist/context/one-platform-multi-app.md` records the one-repo, one-server, many app surfaces, shared engine/service architecture for owned domains and industry products.
+- `assist/context/tirupur-connect-boundary.md` defines TConnect connector ownership, Tirupur Connect marketplace ownership, source provenance, identity, APIs, and migration constraints.
+- `assist/execution/tirupur-connect-implementation-plan.md` defines the phased extraction, central marketplace foundation, immutable sync contract, administration, and data migration.
+- `assist/execution/b2b-connect.md` records the Tirupur Connect product and revenue plan under the corrected boundary.
+- `apps/b2b-connect/b2b-connect.md` records the full Tirupur Connect ecosystem vision and feature scope.
+- `apps/docs/devdocs/modules/tconnect.md` documents the connector responsibilities and explicit non-responsibilities.
+- `assist/execution/tconnect.md` is retained only as legacy migration context and must never override the canonical boundary.
 - `assist/context/live-client-scope.md` records the first real tenant/client, industry, app, and domain scope.
 - `assist/rules/architecture.md` describes current app placement and module boundaries.
 - `assist/context/versatile-agent-os.md` describes how the Versatile Agent OS should be implemented inside the current monorepo.

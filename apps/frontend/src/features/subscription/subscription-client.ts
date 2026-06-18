@@ -106,6 +106,27 @@ export async function applyTenantSubscription(session: AuthSession, input: Tenan
   })
 }
 
+export async function suspendTenantSubscription(session: AuthSession, uuid: string) {
+  return request<SubscriptionCatalog>(session, `/api/v1/subscriptions/tenant-subscriptions/${uuid}/suspend`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  })
+}
+
+export async function restoreTenantSubscription(session: AuthSession, uuid: string) {
+  return request<SubscriptionCatalog>(session, `/api/v1/subscriptions/tenant-subscriptions/${uuid}/restore`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  })
+}
+
+export async function extendTenantSubscription(session: AuthSession, uuid: string, days: number) {
+  return request<SubscriptionCatalog>(session, `/api/v1/subscriptions/tenant-subscriptions/${uuid}/extend`, {
+    method: "POST",
+    body: JSON.stringify({ days }),
+  })
+}
+
 export async function createRazorpaySubscriptionOrder(session: AuthSession, input: { tenant_id: number; subscription_uuid?: string; plan_uuid?: string; app_keys?: string[]; amount_paise?: number }) {
   return request<{ order: Record<string, unknown>; key_id: string }>(session, "/api/v1/subscriptions/razorpay/order", {
     method: "POST",

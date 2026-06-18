@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="360" viewBox="0 0 960 360" role="img" aria-labelledby="title desc">
+  <title id="title">Purchase flow</title>
+  <desc id="desc">Supplier bill to purchase entry and payment review.</desc>
+  <rect width="960" height="360" rx="18" fill="#f8fafc"/>
+  <g font-family="Inter, Arial, sans-serif">
+    <text x="70" y="78" font-size="24" font-weight="700" fill="#122033">Purchase bill workflow</text>
+    <g transform="translate(86 128)"><rect width="180" height="110" rx="14" fill="#eff6ff" stroke="#bfdbfe"/><text x="24" y="40" font-size="16" font-weight="700" fill="#1d4ed8">Supplier bill</text><text x="24" y="68" font-size="13" fill="#1e40af">Bill no, date</text><text x="24" y="88" font-size="13" fill="#1e40af">GST and items</text></g>
+    <path d="M290 184h80" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><path d="m364 176 10 8-10 8" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(392 128)"><rect width="180" height="110" rx="14" fill="#ecfdf5" stroke="#bbf7d0"/><text x="24" y="40" font-size="16" font-weight="700" fill="#166534">Purchase entry</text><text x="24" y="68" font-size="13" fill="#166534">Supplier, ledger</text><text x="24" y="88" font-size="13" fill="#166534">Products and tax</text></g>
+    <path d="M596 184h80" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><path d="m670 176 10 8-10 8" fill="none" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <g transform="translate(698 128)"><rect width="180" height="110" rx="14" fill="#fff7ed" stroke="#fed7aa"/><text x="24" y="40" font-size="16" font-weight="700" fill="#9a3412">Review</text><text x="24" y="68" font-size="13" fill="#9a3412">Statement</text><text x="24" y="88" font-size="13" fill="#9a3412">Payment status</text></g>
+  </g>
+</svg>

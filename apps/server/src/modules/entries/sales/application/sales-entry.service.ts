@@ -7,6 +7,7 @@ import { salesEntryEvent } from '../domain/events/sales-entry.events.js'
 import { SalesEntryRepository, type SalesEntryInput } from '../infrastructure/persistence/sales-entry.repository.js'
 import { EntryDocumentMailService } from '../../shared/entry-document-mail.service.js'
 import { EntryDocumentPdfDownloadService } from '../../shared/entry-document-pdf-download.service.js'
+import { commandId, commandReasonSuffix, type CreateCorrectionCommand, type ReverseDocumentCommand } from '../../shared/entry-command.dto.js'
 import { EntryPostingControlService } from '../../shared/entry-posting-control.service.js'
 import { QuotationEntryRepository } from '../../quotation/infrastructure/persistence/quotation-entry.repository.js'
 import { SalesEntryEventBus } from './sales-entry-event-bus.js'
@@ -115,7 +116,7 @@ export class SalesEntryService {
     return { ok: true }
   }
 
-  async correction(headers: TenantRequestHeaders, idOrUuid: string) {
+  async correction(headers: TenantRequestHeaders, idOrUuid: string, command: CreateCorrectionCommand = {}) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const existing = await this.salesEntries.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Sales entry was not found.')
@@ -128,12 +129,12 @@ export class SalesEntryService {
     })
     const entry = await this.salesEntries.insert(context, salesCorrectionInput(existing))
     if (!entry) throw new NotFoundException('Sales correction was not created.')
-    await this.salesEntries.addActivity(context, existing.uuid, 'correction', `Correction draft ${entry.invoice_no} created`)
-    await this.postingControl.recordCorrectionActivity(context, { action: 'correction', correctedUuid: entry.uuid, module: 'sales', originalUuid: existing.uuid })
-    return { ok: true, entry }
+    await this.salesEntries.addActivity(context, existing.uuid, 'correction', `Correction draft ${entry.invoice_no} created.${commandReasonSuffix(command)}`)
+    const auditId = await this.postingControl.recordCorrectionActivity(context, { action: 'correction', correctedUuid: entry.uuid, module: 'sales', originalUuid: existing.uuid })
+    return { affected_ids: [Number(entry.id), entry.uuid], audit_ids: auditId ? [auditId] : [], command_id: commandId(command), ok: true, entry }
   }
 
-  async reversal(headers: TenantRequestHeaders, idOrUuid: string) {
+  async reversal(headers: TenantRequestHeaders, idOrUuid: string, command: ReverseDocumentCommand = {}) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
     const existing = await this.salesEntries.find(context, idOrUuid)
     if (!existing) throw new NotFoundException('Sales entry was not found.')
@@ -146,9 +147,9 @@ export class SalesEntryService {
     })
     const entry = await this.salesEntries.insert(context, salesReversalInput(existing))
     if (!entry) throw new NotFoundException('Sales reversal was not created.')
-    await this.salesEntries.addActivity(context, existing.uuid, 'reversal', `Reversal voucher ${entry.invoice_no} created`)
-    await this.postingControl.recordCorrectionActivity(context, { action: 'reversal', module: 'sales', originalUuid: existing.uuid, reversalUuid: entry.uuid })
-    return { ok: true, entry }
+    await this.salesEntries.addActivity(context, existing.uuid, 'reversal', `Reversal voucher ${entry.invoice_no} created.${commandReasonSuffix(command)}`)
+    const auditId = await this.postingControl.recordCorrectionActivity(context, { action: 'reversal', module: 'sales', originalUuid: existing.uuid, reversalUuid: entry.uuid })
+    return { affected_ids: [Number(entry.id), entry.uuid], audit_ids: auditId ? [auditId] : [], command_id: commandId(command), ok: true, entry }
   }
 
   async comment(headers: TenantRequestHeaders, idOrUuid: string, body: { body?: unknown }) {

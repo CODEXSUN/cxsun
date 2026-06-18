@@ -48,7 +48,7 @@ npm run hosts:check
 | 112 | Tenkasi Sports | `tenkasisports.com`, `www.tenkasisports.com`, `tenkasisports.codexsun.com`, `tenkasisports.local` | Sports club | Students, masters, subscriptions, attendance |
 | 113 | Altexlabs | `altexlabs.codexsun.com` | Garment testing lab | Testing reports and lab workflow |
 | 114 | Aaran Business Connect | `business.codexsun.com`, `connect.codexsun.com`, `aaranconnect.local` | Business connect | Business directory and lead connection |
-| 115 | TConnect | `tconnect.local`, `www.tconnect.local`, `tconnect.local` | TConnect marketplace | Central marketplace tenant for supplier/product publication review, RFQ, leads, messages, membership, analytics, events, and news |
+| 115 | TConnect legacy marketplace tenant | `tconnect.local`, `www.tconnect.local` | Migration source only | Existing mixed TConnect marketplace data must be migrated to the tenant-independent Tirupur Connect platform; do not add new marketplace ownership here |
 | 116 | The Tirupur Textiles | `thetirupurtextiles.com`, `www.thetirupurtextiles.com` | Garment manufacturing | Garment public catalog + billing + inventory |
 
 ## Implementation Notes
@@ -57,4 +57,4 @@ npm run hosts:check
 - `db:seed` upserts tenant rows, tenant app settings, domain mappings, industry records, and scoped company seed names for the active live-client catalog. Domain auto-seeding remains opt-in unless a catalog row has `seedDomains: true`.
 - Public pages resolve strictly through `GET /api/site/tenant-static`; an unmapped domain returns an unresolved tenant error.
 - Private tenant data must still use authenticated tenant APIs.
-- TConnect uses a central marketplace tenant. Client tenants keep only their own supplier and product profile source records, then publish to `tconnect.local` by API. RFQ, leads, messages, membership, analytics, events, and news are central marketplace-owned data.
+- Tenant 115 is legacy migration provenance, not the target marketplace owner. TConnect remains inside billing tenants as the connector. Tirupur Connect owns RFQs, quotations, leads, messages, memberships, verification, analytics, events, jobs, news, and public records in central tenant-independent persistence. See `assist/context/tirupur-connect-boundary.md`.

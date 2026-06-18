@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type Ref, type SetStateAction } from "react"
+import { useEffect, useMemo, useReducer, useRef, useState, type Dispatch, type ReactNode, type Ref, type SetStateAction } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import { ArrowLeft, Check, CheckCircle2, ChevronLeft, ChevronRight, Download, Mail, MessageCircle, Paperclip, Pencil, Plus, Printer, RefreshCw, RotateCcw, Save, Send, Settings2, Tag, Trash2, UserRound, X } from "lucide-react"
@@ -62,6 +62,12 @@ type SalesEntryToolId = "downloadPdf" | "email" | "assign" | "attachments" | "ta
 type SalesTypeOption = { value: string; label: string }
 type EntryListViewMode = "day" | "month"
 type MonthlySalesSummary = { month: string; entryCount: number; totalQty: number; taxableTotal: number; gstTotal: number; grandTotal: number }
+type SalesItemEditorState = { draft: SalesEntryItem; editingIndex: number | null }
+type SalesItemEditorAction =
+  | { type: "adjust-after-delete"; deletedIndex: number }
+  | { type: "edit"; index: number; item: SalesEntryItem }
+  | { type: "reset" }
+  | { type: "update-draft"; value: SetStateAction<SalesEntryItem> }
 type SalesAddressLabels = {
   addressTypes(value: unknown): string
   cities(value: unknown): string
@@ -805,9 +811,12 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
   transports: MasterDataRecord[]
   units: SalesLookupOption[]
 }) {
-  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null)
-  const [itemDraft, setItemDraft] = useState<SalesEntryItem>(() => emptySalesItem())
+  const [itemEditor, dispatchItemEditor] = useReducer(salesItemEditorReducer, undefined, createSalesItemEditorState)
   const addressLabels = useSalesAddressLabels(session)
+  const editingItemIndex = itemEditor.editingIndex
+  const itemDraft = itemEditor.draft
+  const setItemDraft = (value: SetStateAction<SalesEntryItem>) => dispatchItemEditor({ type: "update-draft", value })
+  const cancelItemEdit = () => dispatchItemEditor({ type: "reset" })
   const salesTypeOptions = useMemo(() => {
     const seen = new Set<string>()
     const options: Array<{ value: string; label: string }> = []
@@ -828,33 +837,19 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
 
   function addItem() {
     if (!itemDraft.product_name.trim()) return
-    setForm((current) => {
-      const normalizedItem = normalizeSalesItem(itemDraft, editingItemIndex ?? current.items.length, current.place_of_supply)
-      if (editingItemIndex === null) return { ...current, items: [...current.items, normalizedItem] }
-      return {
-        ...current,
-        items: current.items.map((item, index) => index === editingItemIndex ? normalizedItem : item),
-      }
-    })
-    setItemDraft(emptySalesItem())
-    setEditingItemIndex(null)
+    setForm((current) => ({ ...current, items: upsertSalesItemRow(current.items, itemDraft, editingItemIndex, current.place_of_supply) }))
+    dispatchItemEditor({ type: "reset" })
   }
 
   function editItem(index: number) {
     const item = form.items[index]
     if (!item) return
-    setItemDraft({ ...item })
-    setEditingItemIndex(index)
+    dispatchItemEditor({ index, item, type: "edit" })
   }
 
   function deleteItem(index: number) {
-    setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }))
-    if (editingItemIndex === index) {
-      setItemDraft(emptySalesItem())
-      setEditingItemIndex(null)
-      return
-    }
-    if (editingItemIndex !== null && editingItemIndex > index) setEditingItemIndex(editingItemIndex - 1)
+    setForm((current) => ({ ...current, items: deleteSalesItemRow(current.items, index) }))
+    dispatchItemEditor({ deletedIndex: index, type: "adjust-after-delete" })
   }
 
   const tabs: AnimatedTab[] = [
@@ -876,7 +871,7 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
           onCreateSalesType={onCreateSalesType}
           salesTypeOptions={salesTypeOptions}
           session={session}
-          setEditingItemIndex={setEditingItemIndex}
+          cancelItemEdit={cancelItemEdit}
           setForm={setForm}
           setItemDraft={setItemDraft}
           softwareSettings={softwareSettings}
@@ -916,9 +911,10 @@ function SalesVoucherTabs({ contacts, form, hsnCodes, onContactsRefresh, onCreat
   )
 }
 
-function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editItem, editingItemIndex, form, hsnCodes, itemDraft, onCreateContact, onCreateSalesType, salesTypeOptions, session, setEditingItemIndex, setForm, setItemDraft, softwareSettings, taxes, totals, units }: {
+function SalesDetailsTab({ addItem, addressLabels, cancelItemEdit, contacts, deleteItem, editItem, editingItemIndex, form, hsnCodes, itemDraft, onCreateContact, onCreateSalesType, salesTypeOptions, session, setForm, setItemDraft, softwareSettings, taxes, totals, units }: {
   addItem(): void
   addressLabels: SalesAddressLabels
+  cancelItemEdit(): void
   contacts: SalesLookupOption[]
   deleteItem(index: number): void
   editItem(index: number): void
@@ -930,7 +926,6 @@ function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editIte
   onCreateSalesType(name: string): Promise<void>
   salesTypeOptions: SalesTypeOption[]
   session: AuthSession
-  setEditingItemIndex(value: number | null): void
   setForm(updater: (current: SalesEntryInput) => SalesEntryInput): void
   setItemDraft(value: SalesEntryItem | ((current: SalesEntryItem) => SalesEntryItem)): void
   softwareSettings: SoftwareSettingsState
@@ -954,11 +949,6 @@ function SalesDetailsTab({ addItem, addressLabels, contacts, deleteItem, editIte
         ? "xl:grid-cols-[minmax(18rem,2.1fr)_minmax(11rem,1fr)_minmax(8rem,.72fr)_minmax(8rem,.72fr)_minmax(5rem,.45fr)_minmax(6rem,.55fr)_auto]"
         : "xl:grid-cols-[minmax(22rem,2.3fr)_minmax(14rem,1fr)_minmax(5rem,.45fr)_minmax(6rem,.55fr)_auto]",
   )
-
-  function cancelItemEdit() {
-    setItemDraft(() => emptySalesItem())
-    setEditingItemIndex(null)
-  }
 
   function addItemAndFocus() {
     if (!itemDraft.product_name.trim()) return
@@ -2396,6 +2386,36 @@ function activeGstEnvironment(session: AuthSession): "production" | "sandbox" {
 
 function activeGstPurpose(softwareSettings: SoftwareSettingsState) {
   return softwareSettings.salesGstApiMode === "eway_only" ? "eway_only" : "einvoice_eway"
+}
+
+function createSalesItemEditorState(): SalesItemEditorState {
+  return { draft: emptySalesItem(), editingIndex: null }
+}
+
+function salesItemEditorReducer(state: SalesItemEditorState, action: SalesItemEditorAction): SalesItemEditorState {
+  if (action.type === "update-draft") {
+    return {
+      ...state,
+      draft: typeof action.value === "function" ? action.value(state.draft) : action.value,
+    }
+  }
+  if (action.type === "edit") return { draft: { ...action.item }, editingIndex: action.index }
+  if (action.type === "reset") return createSalesItemEditorState()
+  if (action.type === "adjust-after-delete") {
+    if (state.editingIndex === action.deletedIndex) return createSalesItemEditorState()
+    if (state.editingIndex !== null && state.editingIndex > action.deletedIndex) return { ...state, editingIndex: state.editingIndex - 1 }
+  }
+  return state
+}
+
+function upsertSalesItemRow(items: SalesEntryItem[], draft: SalesEntryItem, editingIndex: number | null, placeOfSupply: unknown) {
+  const normalizedItem = normalizeSalesItem(draft, editingIndex ?? items.length, placeOfSupply)
+  if (editingIndex === null) return [...items, normalizedItem]
+  return items.map((item, index) => index === editingIndex ? normalizedItem : item)
+}
+
+function deleteSalesItemRow(items: SalesEntryItem[], index: number) {
+  return items.filter((_, itemIndex) => itemIndex !== index)
 }
 
 function normalizeSalesItem(item: SalesEntryItem, index: number, placeOfSupply: unknown): SalesEntryItem {

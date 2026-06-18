@@ -5,9 +5,11 @@
 # CXSun
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-**Version:** 1.0.116
+**Version:** 1.0.121
 
 CXSun is a comprehensive, enterprise-grade TypeScript monorepo designed for high-performance ERP, E-commerce, and Multi-tenant SaaS platforms. It provides a robust foundation for building scalable, AI-native applications with a focus on data isolation and modularity.
+
+CXSun is intentionally managed as one repo and one server-backed platform. Different owned products and industry products can run as separate app surfaces on separate local ports and production domains, while shared billing, accounting, compliance, mail, CRM, sites/blog, files, auth, tenant/company, and ZETRO capabilities remain server-owned services/engines.
 
 ## 🚀 Overview
 
@@ -67,8 +69,12 @@ CXSun can be used as a foundation for various business applications:
 | `npm run dev` | Start server and frontend concurrently |
 | `npm run dev:server` | Start Fastify backend in development mode |
 | `npm run dev:frontend` | Start React + Vite frontend in development mode |
+| `npm run dev:docs` | Start the Docusaurus docs app on port 6020 |
+| `npm run dev:auditor`, `npm run dev:ecommerce`, etc. | Start one scaffolded product app surface on its assigned port |
+| `npm run dev:product-apps` | Start all scaffolded product app shells together |
 | `npm run check` | Execute project-wide health checks |
 | `npm run build:active` | Compile production builds for apps |
+| `npm run build:product-apps` | Compile all scaffolded product app shells |
 
 ## 🏗️ Project Structure
 

@@ -64,6 +64,32 @@ interface PublicSitePageProps {
   onToggleMenu(): void
 }
 
+type PublicProductCardDefinition = {
+  chips: readonly string[]
+  description: string
+  eyebrow: string
+  icon: MenuIcon
+  page?: string
+  port: number
+  route: string
+  title: string
+}
+
+const publicProductCards: readonly PublicProductCardDefinition[] = [
+  { title: 'Billing', eyebrow: 'ERP Core', description: 'GST invoices, receipts, payments, cash book, bank book, and accounting-ready entry flow.', icon: ReceiptText, page: 'billing', port: 6010, route: '/billing', chips: ['GST billing', 'Receipts', 'Accounts'] },
+  { title: 'B2B Connect', eyebrow: 'Marketplace', description: 'Textile business directory, verified suppliers, RFQs, leads, memberships, and premium visibility.', icon: Handshake, port: 6032, route: '/app/b2b-connect', chips: ['Directory', 'RFQ', 'Leads'] },
+  { title: 'Ecommerce', eyebrow: 'Storefront', description: 'Catalog, orders, checkout handoff, customer portal, inventory handoff, and invoice generation.', icon: Store, port: 6031, route: '/app/ecommerce', chips: ['Catalog', 'Orders', 'Checkout'] },
+  { title: 'Auditor Portal', eyebrow: 'Client Office', description: 'Client filings, GST status, document requests, service billing, and auditor communication.', icon: ShieldCheck, port: 6030, route: '/app/auditor', chips: ['GST filing', 'Documents', 'Billing'] },
+  { title: 'Sports Club', eyebrow: 'Club OS', description: 'Members, coaching batches, events, fee receipts, attendance, and communication.', icon: Users, port: 6033, route: '/app/sports', chips: ['Members', 'Fees', 'Events'] },
+  { title: 'Learning Platform', eyebrow: 'Academy', description: 'Courses, batches, student fees, materials, notices, and learner communication.', icon: GraduationCap, port: 6034, route: '/app/learning', chips: ['Courses', 'Batches', 'Fees'] },
+  { title: 'Sites', eyebrow: 'Public Web', description: 'Public websites, pages, domains, media, lead forms, and publishing workflow.', icon: Building2, port: 6037, route: '/app/sites', chips: ['Pages', 'Domains', 'Forms'] },
+  { title: 'Blog', eyebrow: 'Content', description: 'Posts, categories, SEO content, media publishing, and customer education pages.', icon: Newspaper, port: 6038, route: '/app/blog', chips: ['Posts', 'SEO', 'Media'] },
+  { title: 'ZETRO', eyebrow: 'AI Workbench', description: 'Agent OS, approved tools, safe query actions, audit logs, and assistant workflows.', icon: Rocket, port: 6039, route: '/app/zetro', chips: ['Agents', 'Tools', 'Audit'] },
+  { title: 'Textile Lab', eyebrow: 'Industry', description: 'Test requests, certificates, service invoices, customer ledger, and lab reporting.', icon: FileText, port: 6040, route: '/app/textile-lab', chips: ['Tests', 'Certificates', 'Invoices'] },
+  { title: 'Garment Manufacturing', eyebrow: 'Industry', description: 'Production tracking, job work, inventory consumption, billing handoff, and reports.', icon: Boxes, port: 6041, route: '/app/garment', chips: ['Production', 'Job work', 'Stock'] },
+  { title: 'UPVC Manufacturing', eyebrow: 'Industry', description: 'Project quotation, inventory issue, receipts, customer ledger, and project reports.', icon: BriefcaseBusiness, port: 6042, route: '/app/upvc', chips: ['Projects', 'Quotes', 'Receipts'] },
+] as const
+
 export function PublicSitePage({
   activePage,
   content,
@@ -80,9 +106,17 @@ export function PublicSitePage({
   const developerMode = isSiteDeveloperMode()
   const orderedPages = orderHeaderPages(content.pages)
   const visiblePageSlugs = new Set(orderedPages.map((page) => page.slug))
+  visiblePageSlugs.add('services')
   const canNavigate = (page: string) => visiblePageSlugs.has(page)
   const navigateIfAvailable = (page: string) => {
     onNavigate(resolveAvailablePage(page, canNavigate))
+  }
+  const openProduct = (product: (typeof publicProductCards)[number]) => {
+    if (product.page) {
+      navigateIfAvailable(product.page)
+      return
+    }
+    window.open(localProductUrl(product.port, product.route), '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -138,43 +172,10 @@ export function PublicSitePage({
                         <ArrowRight className="size-4" />
                       </button>
                     </div>
-                    <div className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
-                      <MegaMenuCard
-                        description="Launch branded pages, sections, and lead capture without scattered handoff."
-                        icon={Building2}
-                        onClick={() => navigateIfAvailable('services')}
-                        title="Website builder"
-                      />
-                      <MegaMenuCard
-                        description="Keep receipts, GST data, invoices, and accountant review in one place."
-                        icon={ReceiptText}
-                        onClick={() => navigateIfAvailable('billing')}
-                        title="Billing workspace"
-                      />
-                      <MegaMenuCard
-                        description="Showcase products, collect interest, and prepare your online selling flow."
-                        icon={Store}
-                        onClick={() => navigateIfAvailable('shop')}
-                        title="Storefront tools"
-                      />
-                      <MegaMenuCard
-                        description="Track clients, apps, solved work, and operating status from one cockpit."
-                        icon={Boxes}
-                        onClick={() => navigateIfAvailable('services')}
-                        title="Operations cockpit"
-                      />
-                      <MegaMenuCard
-                        description="Turn visitor questions into routed enquiries and support follow-up."
-                        icon={LifeBuoy}
-                        onClick={() => navigateIfAvailable('contact')}
-                        title="Support desk"
-                      />
-                      <MegaMenuCard
-                        description="Prepare data for daily checks, reviews, and business-ready reporting."
-                        icon={ShieldCheck}
-                        onClick={() => navigateIfAvailable('billing')}
-                        title="Review controls"
-                      />
+                    <div className="grid max-h-[620px] gap-4 overflow-y-auto p-6 sm:grid-cols-2 xl:grid-cols-3">
+                      {publicProductCards.slice(0, 9).map((product) => (
+                        <ProductMenuCard key={product.title} product={product} onClick={() => openProduct(product)} />
+                      ))}
                     </div>
                   </div>
                 </NavigationMenuContent>
@@ -388,7 +389,7 @@ export function PublicSitePage({
         <PublicBlogPage content={content} tenantSite={tenantSite} />
       )}
       {activePage !== 'home' && activePage !== 'about' && activePage !== 'contact' && activePage !== 'blog' && (
-        <PublicSubPage activePage={activePage} content={content} tenantSite={tenantSite} />
+        <PublicSubPage activePage={activePage} content={content} tenantSite={tenantSite} onOpenProduct={openProduct} />
       )}
 
       <SiteSection as="footer" className="border-t border-slate-800 bg-slate-950 px-4 py-0 text-white" developerMode={developerMode} name="footer">
@@ -485,6 +486,15 @@ function resolveAvailablePage(page: string, canNavigate: (page: string) => boole
   return fallbacks[page]?.find(canNavigate) ?? 'home'
 }
 
+function localProductUrl(port: number, route: string) {
+  if (typeof window === 'undefined') return route
+  const { hostname, protocol } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.endsWith('.local')) {
+    return `${protocol}//${hostname}:${port}${route}`
+  }
+  return route
+}
+
 const topMenuTriggerClass =
   'rounded-md px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950 data-open:bg-slate-100 data-open:text-sky-700'
 
@@ -514,33 +524,86 @@ function MenuPanelIntro({
   )
 }
 
-function MegaMenuCard({
-  description,
-  icon: Icon,
+function ProductMenuCard({
   onClick,
-  title,
+  product,
 }: {
-  description: string
-  icon: MenuIcon
   onClick(): void
-  title: string
+  product: (typeof publicProductCards)[number]
 }) {
+  const Icon = product.icon
   return (
     <NavigationMenuLink asChild>
       <button
-        className="group grid min-h-40 gap-4 rounded-md border border-slate-200 bg-slate-50/80 p-5 text-left transition hover:border-sky-200 hover:bg-white hover:shadow-sm"
+        className="group grid min-h-52 gap-4 rounded-md border border-slate-200 bg-slate-50/80 p-4 text-left transition hover:border-sky-200 hover:bg-white hover:shadow-sm"
         onClick={onClick}
         type="button"
       >
+        <span className="rounded-md border border-slate-200 bg-white p-3 shadow-sm">
+          <span className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span className="text-[10px] font-black uppercase tracking-wide text-sky-700">{product.eyebrow}</span>
+            <span className="rounded-sm bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">Ready</span>
+          </span>
+          <span className="mt-3 grid gap-1.5">
+            {product.chips.map((chip) => (
+              <span className="flex items-center justify-between rounded-sm bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-600" key={chip}>
+                {chip}
+                <span className="text-sky-700">OK</span>
+              </span>
+            ))}
+          </span>
+        </span>
         <span className="grid size-10 place-items-center rounded-md bg-white text-sky-700 shadow-sm ring-1 ring-slate-200 transition group-hover:bg-sky-50">
           <Icon className="size-5" />
         </span>
         <span>
-          <strong className="block text-base font-black text-slate-950">{title}</strong>
-          <span className="mt-1 block text-sm leading-6 text-slate-600">{description}</span>
+          <strong className="block text-base font-black text-slate-950">{product.title}</strong>
+          <span className="mt-1 block text-sm leading-6 text-slate-600">{product.description}</span>
         </span>
       </button>
     </NavigationMenuLink>
+  )
+}
+
+function PublicProductCard({
+  onOpen,
+  product,
+}: {
+  onOpen(): void
+  product: (typeof publicProductCards)[number]
+}) {
+  const Icon = product.icon
+
+  return (
+    <article className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md">
+      <div className="border-b bg-slate-50 p-4">
+        <div className="rounded-md border border-slate-200 bg-white p-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <span className="text-xs font-black uppercase tracking-wide text-sky-700">{product.eyebrow}</span>
+            <span className="rounded-sm bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">Port {product.port}</span>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {product.chips.map((chip) => (
+              <div className="flex items-center justify-between rounded-sm bg-slate-50 px-2 py-1.5 text-xs text-slate-600" key={chip}>
+                <span>{chip}</span>
+                <span className="font-black text-sky-700">Ready</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="p-5">
+        <span className="grid size-11 place-items-center rounded-md bg-sky-50 text-sky-700 ring-1 ring-sky-100">
+          <Icon className="size-5" />
+        </span>
+        <h3 className="mt-4 text-xl font-black text-slate-950">{product.title}</h3>
+        <p className="mt-3 min-h-24 text-sm leading-7 text-slate-600">{product.description}</p>
+        <button className="mt-5 inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-slate-800" onClick={onOpen} type="button">
+          Open page
+          <ArrowRight className="size-4" />
+        </button>
+      </div>
+    </article>
   )
 }
 
@@ -643,15 +706,28 @@ function FooterColumn({ items, title }: { items: string[]; title: string }) {
 function PublicSubPage({
   activePage,
   content,
+  onOpenProduct,
   tenantSite,
 }: {
   activePage: string
   content: SiteContent
+  onOpenProduct(product: (typeof publicProductCards)[number]): void
   tenantSite: TenantStaticSiteContent | null
 }) {
   const page = content.pages.find((p) => p.slug === activePage)
 
-  if (!page) {
+  const builtInPage = activePage === 'services'
+    ? {
+      body: 'Explore the Codexsun product surfaces. Each app can run independently while sharing the same platform foundation.',
+      eyebrow: 'Products',
+      summary: 'Public products and industry apps connected through one shared business platform.',
+      title: 'Products',
+    }
+    : null
+
+  const displayPage = page ?? builtInPage
+
+  if (!displayPage) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center px-4 py-20 text-center">
         <h1 className="text-4xl font-black text-slate-900">404 - Page Not Found</h1>
@@ -665,17 +741,17 @@ function PublicSubPage({
       {/* Hero Header */}
       <section className="relative overflow-hidden bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.14),transparent_32%),linear-gradient(135deg,#0f172a,#111827_48%,#172554)] py-20 text-white md:py-28">
         <div className="cx-container relative z-10 max-w-4xl text-center">
-          {page.eyebrow ? (
+          {displayPage.eyebrow ? (
             <p className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-              {page.eyebrow}
+              {displayPage.eyebrow}
             </p>
           ) : null}
           <h1 className="mt-4 text-4xl font-black leading-tight tracking-normal sm:text-5xl md:text-6xl">
-            {page.title}
+            {displayPage.title}
           </h1>
-          {page.summary ? (
+          {displayPage.summary ? (
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-slate-200 md:text-xl">
-              {page.summary}
+              {displayPage.summary}
             </p>
           ) : null}
         </div>
@@ -686,19 +762,17 @@ function PublicSubPage({
         <div className="cx-container max-w-4xl">
           <div className="rounded-md border border-slate-200 bg-white p-8 shadow-sm md:p-12">
             <p className="text-lg leading-8 text-slate-700 whitespace-pre-line">
-              {page.body}
+              {displayPage.body}
             </p>
 
             {/* Custom Content based on slug */}
-            {activePage === 'services' && content.services && content.services.length > 0 ? (
+            {activePage === 'services' ? (
               <div className="mt-12 border-t border-slate-200 pt-12">
-                <h2 className="text-2xl font-black text-slate-950">Included Modules & Solutions</h2>
-                <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                  {content.services.map((service) => (
-                    <article className="rounded-md border border-slate-200 bg-slate-50 p-5 shadow-sm" key={service.id}>
-                      <h3 className="text-lg font-black text-slate-950">{service.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{service.description}</p>
-                    </article>
+                <h2 className="text-2xl font-black text-slate-950">Products</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">Public products and industry apps run as separate surfaces while sharing the same billing, accounting, CRM, mail, media, tenant, and platform engines.</p>
+                <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                  {publicProductCards.map((product) => (
+                    <PublicProductCard key={product.title} product={product} onOpen={() => onOpenProduct(product)} />
                   ))}
                 </div>
               </div>

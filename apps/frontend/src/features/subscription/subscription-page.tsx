@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { createPortal } from "react-dom"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, CreditCard, Pencil, Plus, RefreshCw, Save } from "lucide-react"
+import { CalendarPlus, Check, CreditCard, Eye, MoreHorizontal, PauseCircle, Pencil, Plus, RefreshCw, RotateCcw, Save } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
 import { Checkbox } from "src/components/ui/checkbox"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "src/components/ui/dropdown-menu"
 import { Input } from "src/components/ui/input"
 import { Label } from "src/components/ui/label"
 import { Textarea } from "src/components/ui/textarea"
@@ -14,7 +15,6 @@ import {
   MasterListEmptyState,
   MasterListPageFrame,
   MasterListPaginationCard,
-  MasterListRowActions,
   MasterListTableCard,
   MasterListToolbarCard,
   buildMasterListShowingLabel,
@@ -27,7 +27,10 @@ import {
   applyTenantSubscription,
   confirmRazorpaySubscriptionPayment,
   createRazorpaySubscriptionOrder,
+  extendTenantSubscription,
   getSubscriptionCatalog,
+  restoreTenantSubscription,
+  suspendTenantSubscription,
   upsertSubscriptionPlan,
   type SubscriptionApp,
   type SubscriptionPlan,
@@ -152,6 +155,36 @@ export function SubscriptionPage({ session }: { session: AuthSession }) {
     onError: (error) => toast.error("Subscription not updated", { description: message(error) }),
   })
 
+  const suspendMutation = useMutation({
+    mutationFn: (subscription: TenantSubscription) => suspendTenantSubscription(session, subscription.uuid),
+    onSuccess: async () => {
+      toast.success("Subscription suspended", { description: "Tenant app access was disabled." })
+      await queryClient.invalidateQueries({ queryKey: ["subscription-catalog"] })
+      if (selectedTenant) notifyTenantAppsPublished(selectedTenant)
+    },
+    onError: (error) => toast.error("Subscription not suspended", { description: message(error) }),
+  })
+
+  const restoreMutation = useMutation({
+    mutationFn: (subscription: TenantSubscription) => restoreTenantSubscription(session, subscription.uuid),
+    onSuccess: async () => {
+      toast.success("Subscription restored", { description: "Tenant app access was enabled again." })
+      await queryClient.invalidateQueries({ queryKey: ["subscription-catalog"] })
+      if (selectedTenant) notifyTenantAppsPublished(selectedTenant)
+    },
+    onError: (error) => toast.error("Subscription not restored", { description: message(error) }),
+  })
+
+  const extendMutation = useMutation({
+    mutationFn: ({ subscription, days }: { subscription: TenantSubscription; days: number }) => extendTenantSubscription(session, subscription.uuid, days),
+    onSuccess: async (_, variables) => {
+      toast.success("Subscription extended", { description: `${variables.days} day${variables.days === 1 ? "" : "s"} added.` })
+      await queryClient.invalidateQueries({ queryKey: ["subscription-catalog"] })
+      if (selectedTenant) notifyTenantAppsPublished(selectedTenant)
+    },
+    onError: (error) => toast.error("Subscription not extended", { description: message(error) }),
+  })
+
   const orderMutation = useMutation({
     mutationFn: () => {
       if (!selectedTenant) throw new Error("Select a tenant first.")
@@ -236,6 +269,7 @@ export function SubscriptionPage({ session }: { session: AuthSession }) {
           amount={tenantAmount}
           draft={tenantDraft}
           isCollecting={orderMutation.isPending}
+          isLifecycleBusy={suspendMutation.isPending || restoreMutation.isPending || extendMutation.isPending}
           isSaving={applyMutation.isPending}
           mode={pageMode}
           plans={plans}
@@ -245,7 +279,16 @@ export function SubscriptionPage({ session }: { session: AuthSession }) {
           onCollect={() => orderMutation.mutate()}
           onDraftChange={setTenantDraft}
           onEdit={() => setPageMode("upsert")}
+          onExtend={(days) => {
+            if (selectedSubscription) extendMutation.mutate({ subscription: selectedSubscription, days })
+          }}
+          onRestore={() => {
+            if (selectedSubscription) restoreMutation.mutate(selectedSubscription)
+          }}
           onSave={() => applyMutation.mutate()}
+          onSuspend={() => {
+            if (selectedSubscription) suspendMutation.mutate(selectedSubscription)
+          }}
           onCancel={() => setPageMode("show")}
         />
       </MasterListPageFrame>
@@ -331,12 +374,27 @@ export function SubscriptionPage({ session }: { session: AuthSession }) {
                       <SubscriptionStatusBadge subscription={subscription} />
                     </td>
                     <td className="px-4 py-1.5 text-right">
-                      <MasterListRowActions
-                        title={tenant.name}
-                        deleteLabel="End subscription"
+                      <SubscriptionRowActions
+                        subscription={subscription}
+                        tenant={tenant}
                         onEdit={() => {
                           setSelectedTenantId(tenant.id)
                           setPageMode("upsert")
+                        }}
+                        onExtend={(days) => {
+                          if (!subscription) return
+                          setSelectedTenantId(tenant.id)
+                          extendMutation.mutate({ subscription, days })
+                        }}
+                        onRestore={() => {
+                          if (!subscription) return
+                          setSelectedTenantId(tenant.id)
+                          restoreMutation.mutate(subscription)
+                        }}
+                        onSuspend={() => {
+                          if (!subscription) return
+                          setSelectedTenantId(tenant.id)
+                          suspendMutation.mutate(subscription)
                         }}
                         onView={() => {
                           setSelectedTenantId(tenant.id)
@@ -378,13 +436,17 @@ function TenantSubscriptionShow({
   apps,
   draft,
   isCollecting,
+  isLifecycleBusy,
   isSaving,
   mode,
   onCancel,
   onCollect,
   onDraftChange,
   onEdit,
+  onExtend,
+  onRestore,
   onSave,
+  onSuspend,
   plans,
   selectedPlan,
   subscription,
@@ -394,19 +456,26 @@ function TenantSubscriptionShow({
   apps: SubscriptionApp[]
   draft: TenantSubscriptionDraft
   isCollecting: boolean
+  isLifecycleBusy: boolean
   isSaving: boolean
   mode: "show" | "upsert"
   onCancel(): void
   onCollect(): void
   onDraftChange(value: TenantSubscriptionDraft): void
   onEdit(): void
+  onExtend(days: number): void
+  onRestore(): void
   onSave(): void
+  onSuspend(): void
   plans: SubscriptionPlan[]
   selectedPlan: SubscriptionPlan | null
   subscription: TenantSubscription | null
   tenant: TenantRecord
 }) {
   const activeApps = mode === "upsert" ? draft.app_keys : subscription?.apps.filter((app) => app.is_enabled).map((app) => app.app_key) ?? []
+  const [extendDays, setExtendDays] = useState("7")
+  const canLifecycle = Boolean(subscription)
+  const suspended = subscription ? isSubscriptionSuspended(subscription) : false
   return (
     <Card className="rounded-md border-border/70">
       <CardHeader>
@@ -424,6 +493,19 @@ function TenantSubscriptionShow({
               <CreditCard className="size-4" />
               Collect
             </Button>
+            {canLifecycle && mode === "show" ? (
+              suspended ? (
+                <Button disabled={isLifecycleBusy} variant="outline" type="button" onClick={onRestore}>
+                  <RotateCcw className="size-4" />
+                  Restore
+                </Button>
+              ) : (
+                <Button disabled={isLifecycleBusy} variant="destructive" type="button" onClick={onSuspend}>
+                  <PauseCircle className="size-4" />
+                  Suspend
+                </Button>
+              )
+            ) : null}
           </div>
         </div>
       </CardHeader>
@@ -467,6 +549,18 @@ function TenantSubscriptionShow({
           </div>
         ) : (
           <div className="grid gap-3">
+            {subscription ? (
+              <div className="flex flex-wrap items-end gap-3 rounded-md border bg-muted/30 p-3">
+                <Field label="Extend days">
+                  <Input className="h-9 w-28" inputMode="numeric" min={1} type="number" value={extendDays} onChange={(event) => setExtendDays(event.target.value)} />
+                </Field>
+                <Button disabled={isLifecycleBusy || positiveNumber(extendDays) <= 0} type="button" variant="outline" onClick={() => onExtend(positiveNumber(extendDays))}>
+                  <CalendarPlus className="size-4" />
+                  Extend
+                </Button>
+                <p className="pb-2 text-xs text-muted-foreground">Extending also restores tenant app access.</p>
+              </div>
+            ) : null}
             <h3 className="text-sm font-semibold">Enabled apps</h3>
             <div className="flex flex-wrap gap-2">
               {activeApps.length ? activeApps.map((appKey) => <Badge key={appKey} variant="outline">{appName(apps, appKey)}</Badge>) : <span className="text-sm text-muted-foreground">No apps enabled.</span>}
@@ -475,6 +569,66 @@ function TenantSubscriptionShow({
         )}
       </CardContent>
     </Card>
+  )
+}
+
+function SubscriptionRowActions({
+  onEdit,
+  onExtend,
+  onRestore,
+  onSuspend,
+  onView,
+  subscription,
+  tenant,
+}: {
+  onEdit(): void
+  onExtend(days: number): void
+  onRestore(): void
+  onSuspend(): void
+  onView(): void
+  subscription: TenantSubscription | null
+  tenant: TenantRecord
+}) {
+  const suspended = subscription ? isSubscriptionSuspended(subscription) : false
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button aria-label={`${tenant.name} subscription actions`} size="icon" variant="ghost" className="size-8 cursor-pointer rounded-md border border-border/70">
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44 rounded-md p-1">
+        <DropdownMenuItem className="cursor-pointer gap-2" onSelect={onView}>
+          <Eye className="size-4" />
+          View
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer gap-2" onSelect={onEdit}>
+          <Pencil className="size-4" />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="cursor-pointer gap-2" disabled={!subscription} onSelect={() => onExtend(7)}>
+          <CalendarPlus className="size-4" />
+          Extend 7 days
+        </DropdownMenuItem>
+        <DropdownMenuItem className="cursor-pointer gap-2" disabled={!subscription} onSelect={() => onExtend(30)}>
+          <CalendarPlus className="size-4" />
+          Extend 30 days
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {suspended ? (
+          <DropdownMenuItem className="cursor-pointer gap-2" onSelect={onRestore}>
+            <RotateCcw className="size-4" />
+            Restore
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive" disabled={!subscription} onSelect={onSuspend}>
+            <PauseCircle className="size-4" />
+            Suspend
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -772,6 +926,7 @@ function ListHeader({ children, className }: { children: ReactNode; className?: 
 
 function SubscriptionStatusBadge({ subscription }: { subscription: TenantSubscription | null }) {
   if (!subscription) return <Badge variant="secondary">Not assigned</Badge>
+  if (isSubscriptionSuspended(subscription)) return <Badge variant="secondary">Suspended</Badge>
   const live = isSubscriptionLive(subscription)
   return <Badge variant={live ? "default" : "secondary"}>{live ? "Live" : "Ended"}</Badge>
 }
@@ -864,6 +1019,11 @@ function rupeesToPaise(value: string) {
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0
 }
 
+function positiveNumber(value: string) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0
+}
+
 function formatMoney(value: number) {
   return new Intl.NumberFormat("en-IN", { currency: "INR", style: "currency", maximumFractionDigits: 0 }).format(value / 100)
 }
@@ -882,6 +1042,10 @@ function isSubscriptionLive(subscription: TenantSubscription | null) {
   if (!subscription.current_period_end) return subscription.status !== "cancelled" && subscription.status !== "expired"
   const timestamp = Date.parse(subscription.current_period_end)
   return Number.isFinite(timestamp) ? timestamp >= Date.now() : true
+}
+
+function isSubscriptionSuspended(subscription: TenantSubscription) {
+  return ["suspended", "expired", "cancelled"].includes(subscription.status) || !isSubscriptionLive(subscription)
 }
 
 function message(error: unknown) {

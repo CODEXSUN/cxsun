@@ -2615,3 +2615,20 @@ User prompt:
 ```text
 ok next with log in changelog with version
 ```
+
+## 2026-06-18 - Separate TConnect and Tirupur Connect
+
+User prompt:
+
+```text
+continue with this
+ok first write this in our rule book and ai documentation and prepare to implement
+```
+
+## 2026-06-18 - Add mandatory Tirupur Connect reading
+
+User prompt:
+
+```text
+add all to  assist/readme that to read before work
+```

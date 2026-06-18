@@ -14,6 +14,7 @@ export const salesInvalidations = {
     clearNextInvoicePreview(queryClient, session)
     await Promise.all([
       invalidateEntries(queryClient, session),
+      invalidateEntryDependents(queryClient, session),
       invalidateNextInvoicePreview(queryClient, session),
       invalidatePostingDependents(queryClient, session),
     ])
@@ -32,6 +33,14 @@ function clearNextInvoicePreview(queryClient: QueryClient, session: AuthSession)
 
 async function invalidateEntries(queryClient: QueryClient, session: AuthSession) {
   await queryClient.invalidateQueries({ queryKey: salesQueryKeys.entries(session) })
+}
+
+async function invalidateEntryDependents(queryClient: QueryClient, session: AuthSession) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["sales-entry-detail", session.selectedTenant.slug] }),
+    queryClient.invalidateQueries({ queryKey: salesQueryKeys.monthly(session) }),
+    queryClient.invalidateQueries({ queryKey: salesQueryKeys.openInvoices(session) }),
+  ])
 }
 
 async function invalidateNextInvoicePreview(queryClient: QueryClient, session: AuthSession) {

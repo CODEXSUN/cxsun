@@ -59,8 +59,8 @@ export class AccountsEngineRepository {
   async upsertVoucher(context: TenantRuntimeContext, input: AccountVoucherInput) {
     await this.ensureDefaultGroups(context)
     const existing = input.id || input.uuid ? await this.findVoucher(context, String(input.uuid ?? input.id)) : null
-    if (existing?.status === 'posted') throw new BadRequestException('Posted accounting vouchers cannot be edited. Cancel or reverse the voucher first.')
-    if (existing?.status === 'cancelled') throw new BadRequestException('Cancelled accounting vouchers cannot be edited.')
+    if (existing?.status === 'posted') throw new BadRequestException('Posted accounting vouchers cannot be edited. Cancel or reverse the voucher first.', { code: 'POSTED_DOCUMENT_IMMUTABLE', source: 'accounts' })
+    if (existing?.status === 'cancelled') throw new BadRequestException('Cancelled accounting vouchers cannot be edited.', { code: 'CANCELLED_DOCUMENT_IMMUTABLE', source: 'accounts' })
     const normalized = await this.normalizeVoucher(context, input)
 
     if (existing) {
@@ -94,9 +94,9 @@ export class AccountsEngineRepository {
 
   async postVoucher(context: TenantRuntimeContext, idOrUuid: string) {
     const voucher = await this.findVoucher(context, idOrUuid)
-    if (!voucher) throw new BadRequestException('Accounting voucher not found.')
+    if (!voucher) throw new BadRequestException('Accounting voucher not found.', { code: 'VOUCHER_NOT_FOUND', source: 'accounts' })
     if (voucher.status === 'posted') return voucher
-    if (voucher.status === 'cancelled') throw new BadRequestException('Cancelled accounting vouchers cannot be posted.')
+    if (voucher.status === 'cancelled') throw new BadRequestException('Cancelled accounting vouchers cannot be posted.', { code: 'CANCELLED_DOCUMENT_IMMUTABLE', source: 'accounts' })
     this.assertBalanced(voucher.lines)
     await this.database(context).deleteFrom('account_postings').where('voucher_id', '=', Number(voucher.id)).execute()
     for (const line of voucher.lines) {
@@ -129,7 +129,7 @@ export class AccountsEngineRepository {
 
   async cancelVoucher(context: TenantRuntimeContext, idOrUuid: string) {
     const voucher = await this.findVoucher(context, idOrUuid)
-    if (!voucher) throw new BadRequestException('Accounting voucher not found.')
+    if (!voucher) throw new BadRequestException('Accounting voucher not found.', { code: 'VOUCHER_NOT_FOUND', source: 'accounts' })
     await this.database(context)
       .updateTable('account_postings')
       .set({ is_active: false })
@@ -314,7 +314,7 @@ export class AccountsEngineRepository {
   }
 
   private async normalizeLines(context: TenantRuntimeContext, lines: AccountVoucherLineInput[]) {
-    if (lines.length < 2) throw new BadRequestException('Accounting voucher needs at least two ledger lines.')
+    if (lines.length < 2) throw new BadRequestException('Accounting voucher needs at least two ledger lines.', { code: 'VOUCHER_IMBALANCE', source: 'accounts' })
     const normalized = []
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index]
@@ -326,12 +326,12 @@ export class AccountsEngineRepository {
         .where('id', '=', ledgerId)
         .where('deleted_at', 'is', null)
         .executeTakeFirst()
-      if (!ledger) throw new BadRequestException('Every accounting voucher line needs an active ledger.')
+      if (!ledger) throw new BadRequestException('Every accounting voucher line needs an active ledger.', { code: 'MISSING_LEDGER', line: index + 1, source: 'accounts' })
       const debit = roundMoney(line.debit_amount)
       const credit = roundMoney(line.credit_amount)
-      if (debit < 0 || credit < 0) throw new BadRequestException('Debit and credit amounts cannot be negative.')
-      if (debit > 0 && credit > 0) throw new BadRequestException('A voucher line cannot contain both debit and credit.')
-      if (debit === 0 && credit === 0) throw new BadRequestException('Every voucher line needs a debit or credit amount.')
+      if (debit < 0 || credit < 0) throw new BadRequestException('Debit and credit amounts cannot be negative.', { code: 'VOUCHER_IMBALANCE', line: index + 1, source: 'accounts' })
+      if (debit > 0 && credit > 0) throw new BadRequestException('A voucher line cannot contain both debit and credit.', { code: 'VOUCHER_IMBALANCE', line: index + 1, source: 'accounts' })
+      if (debit === 0 && credit === 0) throw new BadRequestException('Every voucher line needs a debit or credit amount.', { code: 'VOUCHER_IMBALANCE', line: index + 1, source: 'accounts' })
       normalized.push({
         ledger_id: ledgerId,
         debit_amount: debit,
@@ -348,7 +348,13 @@ export class AccountsEngineRepository {
     const debit = roundMoney(lines.reduce((sum, line) => sum + numberValue(line.debit_amount), 0))
     const credit = roundMoney(lines.reduce((sum, line) => sum + numberValue(line.credit_amount), 0))
     if (debit <= 0 || credit <= 0 || debit !== credit) {
-      throw new BadRequestException(`Accounting voucher is not balanced. Debit ${debit.toFixed(2)} and credit ${credit.toFixed(2)} must match.`)
+      throw new BadRequestException(`Accounting voucher is not balanced. Debit ${debit.toFixed(2)} and credit ${credit.toFixed(2)} must match.`, {
+        code: 'VOUCHER_IMBALANCE',
+        credit,
+        debit,
+        source: 'accounts',
+        title: 'Voucher not balanced',
+      })
     }
   }
 

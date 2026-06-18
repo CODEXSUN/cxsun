@@ -1,10 +1,11 @@
 {
   "name": "@cxsun/docs",
-  "version": "1.0.116",
+  "version": "1.0.121",
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
-    "start": "docusaurus start --host 0.0.0.0 --port 6020",
+    "dev": "node preflight.mjs",
+    "start": "node preflight.mjs",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",

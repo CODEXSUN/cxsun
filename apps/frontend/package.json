@@ -1,10 +1,10 @@
 {
   "name": "@cxsun/frontend",
   "private": true,
-  "version": "1.0.116",
+  "version": "1.0.121",
   "type": "module",
   "scripts": {
-    "dev": "node ../../apps/cli/preflight.mjs frontend",
+    "dev": "node preflight.mjs",
     "build": "node ../../apps/cli/build-frontend.mjs",
     "preview": "vite preview",
     "lint": "eslint .",

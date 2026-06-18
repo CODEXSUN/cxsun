@@ -12,6 +12,7 @@ import {
   Factory,
   Globe2,
   Headset,
+  LayoutGrid,
   ListRestart,
   RefreshCw,
   Send,
@@ -81,6 +82,7 @@ const superAdminNav = [
       { title: "Tenant", url: "#", icon: Users },
       { title: "Domain", url: "#", icon: Globe2 },
       { title: "Subscription", url: "#", icon: CreditCard },
+      { title: "Apps", url: "#", icon: LayoutGrid },
       { title: "Industry", url: "#", icon: Factory },
       { title: "Company Industry", url: "#", icon: Building2 },
       { title: "Admin User Manager", url: "#", icon: UserRoundCog },
@@ -157,6 +159,7 @@ function pageFromTitle(title: string): DashboardPage | undefined {
     "Queue Manager": "queue-manager",
     "Database Manager": "database-manager",
     "Dev Docs": "devdocs",
+    Apps: "app-runtime",
     Tenant: "tenant",
     "Admin User Manager": "user-manager",
   }

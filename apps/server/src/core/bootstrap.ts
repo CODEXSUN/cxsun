@@ -18,6 +18,28 @@ import { HttpException } from './exceptions/http.exception.js'
 import { sanitizeRequestParts } from './security/request-sanitizer.js'
 import { settings } from '../framework/config/index.js'
 
+const corsAllowedHeaders = [
+  'Authorization',
+  'Content-Type',
+  'Accept',
+  'Origin',
+  'x-tenant-code',
+  'x-user-email',
+  'x-login-domain',
+  'x-user-role',
+  'x-zetro-audience',
+  'x-frappe-site-name',
+  'x-requested-with',
+]
+
+const corsExposedHeaders = [
+  'Content-Disposition',
+  'Content-Length',
+  'Content-Type',
+]
+
+const corsMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+
 export interface AppOptions {
   host?: string
   port?: number
@@ -56,17 +78,12 @@ export class CxApp {
     await app.register(cors, {
       origin: resolveCorsOrigin,
       credentials: true,
-      allowedHeaders: [
-        'Authorization',
-        'Content-Type',
-        'Accept',
-        'x-tenant-code',
-        'x-user-email',
-        'x-login-domain',
-        'x-user-role',
-        'x-zetro-audience',
-      ],
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: corsAllowedHeaders,
+      exposedHeaders: corsExposedHeaders,
+      maxAge: 86_400,
+      methods: corsMethods,
+      optionsSuccessStatus: 204,
+      strictPreflight: true,
     })
 
     app.addHook('onError', async (_req, _reply, error) => {

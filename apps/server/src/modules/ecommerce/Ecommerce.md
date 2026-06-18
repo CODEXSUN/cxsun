@@ -60,7 +60,7 @@ apps/server/src/modules/ecommerce/
 |       +-- seeders/
 +-- interface/
 |   +-- http/
-|       +-- ecommerce-admin-v1.controller.ts
+|       +-- ecommerce-v1.controller.ts
 |       +-- ecommerce-public-v1.controller.ts
 +-- ecommerce.module.ts
 +-- index.ts
