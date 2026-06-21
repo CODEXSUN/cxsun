@@ -31,7 +31,6 @@ export class ReceiptEntryService {
 
   async upsert(headers: TenantRequestHeaders, input: ReceiptEntryInput) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    const requestedReceiptNo = String(input.receipt_no ?? '').trim()
     const isUpdate = Boolean(input.id || input.uuid)
     if (isUpdate) {
       const existing = await this.receipts.find(context, String(input.uuid ?? input.id))
@@ -48,10 +47,7 @@ export class ReceiptEntryService {
       await this.postingControl.assertPeriodOpen(context, { accountingYearId: input.accounting_year_id, companyId: input.company_id, documentDate: input.receipt_date, documentNo: input.receipt_no, module: 'receipt' })
     }
     const entry = await this.receipts.upsert(context, input)
-    const warning = !isUpdate && requestedReceiptNo && requestedReceiptNo !== entry.receipt_no
-      ? `Receipt number ${requestedReceiptNo} was already used, so ${entry.receipt_no} was saved instead.`
-      : undefined
-    return { ok: true, entry, warning }
+    return { ok: true, entry }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {

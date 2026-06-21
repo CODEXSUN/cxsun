@@ -1,8 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../build/packages/desktop",
-    "rootDir": "./src"
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node"],
+    "erasableSyntaxOnly": false
   },
   "include": ["src"]
 }

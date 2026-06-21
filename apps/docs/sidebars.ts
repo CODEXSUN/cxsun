@@ -19,7 +19,10 @@ const sidebars: SidebarsConfig = {
         'entries/sales',
         'entries/quotation',
         'entries/purchase',
-        'entries/receipts-and-payments',
+        'entries/receipt',
+        'entries/payment',
+        'entries/cash-book',
+        'entries/bank-book',
       ],
     },
     {

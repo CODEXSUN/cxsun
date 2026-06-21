@@ -28,7 +28,8 @@ import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { emptyAddress, emptyContact, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
-import { runGstComplianceOperation } from "src/features/gst/gst-compliance-client"
+import { resolveCreatedContactAddress, type CreatedContactAddress } from "src/features/contact/contact-address-create"
+import { listGstComplianceDocuments, runGstComplianceOperation, type GstComplianceOperation, type GstComplianceOperationInput, type GstProviderEnvironment } from "src/features/gst/gst-compliance-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { CityAutocompleteLookup } from "src/features/master-data/interface/components/city-autocomplete-lookup"
 import { CountryAutocompleteLookup } from "src/features/master-data/interface/components/country-autocomplete-lookup"
@@ -54,6 +55,7 @@ import {
 import { salesActions } from "./sales-actions"
 import { salesInvalidations } from "./sales-invalidations"
 import { salesQueries } from "./sales-queries"
+import { SalesEwayBillDocument } from "./sales-eway-print-page"
 import { SalesInvoiceDocument, type SalesPrintCopy, type SalesPrintPartyDetails } from "./sales-print-page"
 
 type SalesView = { mode: "list" } | { mode: "show"; entry: SalesEntry } | { mode: "upsert"; entry: SalesEntry | null }
@@ -77,6 +79,7 @@ type SalesAddressLabels = {
   states(value: unknown): string
   stateCodes(value: unknown): string
 }
+type SalesPrintMode = "eway" | "invoice"
 
 const salesPrintCopyOptions: readonly { label: string; value: SalesPrintCopy }[] = [
   { label: "Original", value: "original" },
@@ -425,6 +428,7 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onCorrection, onDe
   session: AuthSession
 }) {
   const [comment, setComment] = useState("")
+  const [printMode, setPrintMode] = useState<SalesPrintMode>("invoice")
   const [printCopies, setPrintCopies] = useState<readonly SalesPrintCopy[]>(["original"])
   const [openTool, setOpenTool] = useState<SalesEntryToolId | null>(null)
   const [emailAddress, setEmailAddress] = useState("")
@@ -439,11 +443,18 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onCorrection, onDe
   const addressLabels = useSalesAddressLabels(session)
   const companyQuery = useQuery(salesQueries.printCompany(session))
   const contactsQuery = useQuery(salesQueries.printContacts(session))
+  const gstDocumentsQuery = useQuery({
+    enabled: Boolean(entry.eway_bill_no),
+    queryKey: ["sales-eway-print-document", session.selectedTenant.slug, entry.uuid, entry.company_id],
+    queryFn: () => listGstComplianceDocuments(session, { companyId: entry.company_id, sourceType: "sales" }),
+  })
   const printCompany = (companyQuery.data ?? []).find((company) => company.isPrimary) ?? companyQuery.data?.[0] ?? null
   const selectedContact = (contactsQuery.data ?? []).find((contact) => contact.id === entry.customer_id) ?? null
   const billingParty = buildSalesPrintPartyDetails(entry, selectedContact, entry.billing_address, addressLabels)
   const shippingParty = buildSalesPrintPartyDetails(entry, selectedContact, entry.shipping_address ?? entry.billing_address, addressLabels)
+  const ewayDocument = (gstDocumentsQuery.data ?? []).find((document) => document.sourceUuid === entry.uuid || document.documentNo === entry.invoice_no) ?? null
   const selectedPrintCopies = salesPrintCopyOptions.map((option) => option.value).filter((copy) => printCopies.includes(copy))
+  const canPrintEway = Boolean(entry.eway_bill_no?.trim())
   const customTerms = softwareSettings.salesPrintingOptions.customTerms
   const printItemSettings = {
     showColour: isSoftwareSettingEnabled(softwareSettings, "sales-use-colour"),
@@ -515,15 +526,24 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onCorrection, onDe
             <Button type="button" variant="outline" className="h-9 rounded-xl" disabled={!onNext} onClick={onNext}><ChevronRight className="size-4" />Next</Button>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-xl border border-border bg-card px-2 py-1 text-sm shadow-sm">
-              {salesPrintCopyOptions.map((option) => (
-                <label key={option.value} className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
-                  <input type="checkbox" className="size-3.5 accent-primary" checked={printCopies.includes(option.value)} onChange={() => togglePrintCopy(option.value)} />
-                  {option.label}
-                </label>
-              ))}
-            </div>
-            <Button className="rounded-xl" onClick={() => window.print()} type="button"><Printer className="size-4" />Print</Button>
+            {canPrintEway ? (
+              <div className="flex h-9 overflow-hidden rounded-xl border border-border bg-card p-1 text-sm shadow-sm">
+                <button className={cn("rounded-lg px-3 font-medium", printMode === "invoice" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")} onClick={() => setPrintMode("invoice")} type="button">Invoice</button>
+                <button className={cn("rounded-lg px-3 font-medium", printMode === "eway" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground")} onClick={() => setPrintMode("eway")} type="button">E-way</button>
+              </div>
+            ) : null}
+            {printMode === "invoice" ? (
+              <div className="flex min-h-9 flex-wrap items-center gap-1 rounded-xl border border-border bg-card px-2 py-1 text-sm shadow-sm">
+                {salesPrintCopyOptions.map((option) => (
+                  <label key={option.value} className="flex h-8 cursor-pointer items-center gap-1.5 rounded-md px-2 font-medium text-muted-foreground hover:bg-muted hover:text-foreground">
+                    <input type="checkbox" className="size-3.5 accent-primary" checked={printCopies.includes(option.value)} onChange={() => togglePrintCopy(option.value)} />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            ) : null}
+            <Button className="rounded-xl" onClick={() => window.print()} type="button"><Printer className="size-4" />Print {printMode === "eway" ? "E-way" : ""}</Button>
+            <Button type="button" variant="outline" className="rounded-xl" onClick={() => void onDownloadPdf(entry)}><Download className="size-4" />Download {printMode === "eway" ? "E-way" : "PDF"}</Button>
             <Button type="button" variant="outline" className="rounded-xl" onClick={onEdit}><Pencil className="size-4" />Edit</Button>
             {entry.status === "posted" ? <Button type="button" variant="outline" className="rounded-xl" onClick={() => void onCorrection(entry)}><Pencil className="size-4" />Correction</Button> : null}
             {entry.status === "posted" ? <Button type="button" variant="outline" className="rounded-xl" onClick={() => void onReversal(entry)}><RotateCcw className="size-4" />Reversal</Button> : null}
@@ -537,11 +557,15 @@ function SalesShowPage({ entry, isWorking, onBack, onComment, onCorrection, onDe
       </div>
       <section className="mx-auto w-fit max-w-full overflow-hidden rounded-md border border-border/70 bg-card shadow-sm print:block print:w-full print:max-w-none print:overflow-visible print:border-0 print:bg-white print:shadow-none">
         <div className="sales-print-pages grid gap-4 overflow-x-auto p-3 print:block print:overflow-visible print:p-0 sm:p-4">
-          {selectedPrintCopies.map((copy) => (
-            <div key={copy} className="sales-print-copy">
-              <SalesInvoiceDocument addressLabels={addressLabels} billingParty={billingParty} company={printCompany} copy={copy} customTerms={customTerms} letterheadSettings={softwareSettings.letterheadSettings} record={entry} shippingParty={shippingParty} {...printItemSettings} />
+          {printMode === "eway" && canPrintEway ? (
+            <div className="sales-print-copy">
+              <SalesEwayBillDocument billingParty={billingParty} company={printCompany} document={ewayDocument} record={entry} shippingParty={shippingParty} />
             </div>
-          ))}
+          ) : selectedPrintCopies.map((copy) => (
+              <div key={copy} className="sales-print-copy">
+                <SalesInvoiceDocument addressLabels={addressLabels} billingParty={billingParty} company={printCompany} copy={copy} customTerms={customTerms} letterheadSettings={softwareSettings.letterheadSettings} record={entry} shippingParty={shippingParty} {...printItemSettings} />
+              </div>
+            ))}
         </div>
       </section>
       <div className="mx-auto mt-4 grid w-full gap-4 xl:grid-cols-[minmax(0,1fr)_280px] print:hidden">
@@ -1182,11 +1206,10 @@ function SalesAddressTab({ addressLabels, contacts, form, onContactsRefresh, ses
           contact={selectedContact}
           initialText={createAddress.initialText}
           kind={createAddress.kind}
-          addressLabels={addressLabels}
           session={session}
           onClose={() => setCreateAddress(null)}
-          onCreated={(addressText) => {
-            pickAddress(createAddress.kind, { id: addressText, label: addressText, record: { id: 0, uuid: addressText, is_active: true, created_at: null, updated_at: null, deleted_at: null, name: addressText } })
+          onCreated={({ address, text }) => {
+            pickAddress(createAddress.kind, { id: address.id ?? text, label: text, record: { id: 0, uuid: address.id ?? text, is_active: true, created_at: null, updated_at: null, deleted_at: null, name: text, address } })
             onContactsRefresh()
             setCreateAddress(null)
           }}
@@ -1196,13 +1219,12 @@ function SalesAddressTab({ addressLabels, contacts, form, onContactsRefresh, ses
   )
 }
 
-function SalesAddressCreateDialog({ addressLabels, contact, initialText, kind, onClose, onCreated, session }: {
-  addressLabels: SalesAddressLabels
+function SalesAddressCreateDialog({ contact, initialText, kind, onClose, onCreated, session }: {
   contact: SalesLookupOption
   initialText: string
   kind: "billing" | "shipping"
   onClose(): void
-  onCreated(addressText: string): void
+  onCreated(result: CreatedContactAddress): void
   session: AuthSession
 }) {
   const [countryOptions, setCountryOptions] = useState<MasterDataRecord[]>([])
@@ -1220,12 +1242,12 @@ function SalesAddressCreateDialog({ addressLabels, contact, initialText, kind, o
         ...input,
         addresses: [...input.addresses.filter((address) => address.addressLine1.trim()), savedAddress],
       })
-      return addressText(savedAddress, addressLabels) || contactAddressPreview(saved) || savedAddress.addressLine1
+      return resolveCreatedContactAddress(session, saved, savedAddress)
     },
     onError: (error) => toast.error("Could not create address", { description: error instanceof Error ? error.message : "Please try again." }),
-    onSuccess: (text) => {
+    onSuccess: (result) => {
       toast.success("Address created")
-      onCreated(text)
+      onCreated(result)
     },
   })
 
@@ -1296,7 +1318,7 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
     const toastId = toast.loading("Sending e-invoice request...")
     try {
       const savedEntry = await saveSalesDraft({ ...form, status: "posted" })
-      const result = await runGstComplianceOperation(session, "generateIrn", {
+      const result = await runSalesGstComplianceOperation(session, "generateIrn", {
         companyId: savedEntry.company_id,
         documentDate: savedEntry.invoice_date,
         documentNo: savedEntry.invoice_no,
@@ -1338,7 +1360,7 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
         toast.error("IRN is required before generating E-way bill from e-invoice.", { id: toastId })
         return
       }
-      const result = await runGstComplianceOperation(session, "generateEwaybillByIrn", {
+      const result = await runSalesGstComplianceOperation(session, "generateEwaybillByIrn", {
         companyId: savedEntry.company_id,
         documentDate: savedEntry.invoice_date,
         documentNo: savedEntry.invoice_no,
@@ -1372,7 +1394,7 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
     const toastId = toast.loading("Sending e-invoice cancellation request...")
     try {
       const savedEntry = await saveSalesDraft({ ...form, status: "posted" })
-      await runGstComplianceOperation(session, "cancelIrn", {
+      await runSalesGstComplianceOperation(session, "cancelIrn", {
         companyId: savedEntry.company_id,
         documentDate: savedEntry.invoice_date,
         documentNo: savedEntry.invoice_no,
@@ -1398,7 +1420,7 @@ function SalesDocumentTab({ form, session, setForm, softwareSettings, transports
     const toastId = toast.loading("Sending E-way bill cancellation request...")
     try {
       const savedEntry = await saveSalesDraft({ ...form, status: "posted" })
-      await runGstComplianceOperation(session, "cancelEwaybill", {
+      await runSalesGstComplianceOperation(session, "cancelEwaybill", {
         companyId: savedEntry.company_id,
         documentDate: savedEntry.invoice_date,
         documentNo: savedEntry.invoice_no,
@@ -2382,6 +2404,33 @@ function buildSalesEwayPayload(input: SalesEntryInput) {
 function activeGstEnvironment(session: AuthSession): "production" | "sandbox" {
   const stored = localStorage.getItem(`gst-api-environment:${session.selectedTenant.slug}`)
   return stored === "sandbox" ? "sandbox" : "production"
+}
+
+async function runSalesGstComplianceOperation(session: AuthSession, operation: GstComplianceOperation, input: GstComplianceOperationInput) {
+  const environment = activeGstEnvironment(session)
+  try {
+    return await runGstComplianceOperation(session, operation, { ...input, environment })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ""
+    const nextEnvironment = alternateGstEnvironment(environment)
+    if (!isGstSettingsEnvironmentError(message)) throw error
+    const result = await runGstComplianceOperation(session, operation, { ...input, environment: nextEnvironment })
+    localStorage.setItem(`gst-api-environment:${session.selectedTenant.slug}`, nextEnvironment)
+    toast.info("GST API environment switched", { description: `Sales used ${gstEnvironmentLabel(nextEnvironment)} because ${gstEnvironmentLabel(environment)} settings are not enabled.` })
+    return result
+  }
+}
+
+function alternateGstEnvironment(environment: GstProviderEnvironment): GstProviderEnvironment {
+  return environment === "production" ? "sandbox" : "production"
+}
+
+function isGstSettingsEnvironmentError(message: string) {
+  return /GSP provider settings are not enabled|Tenant GST API settings are not enabled/i.test(message)
+}
+
+function gstEnvironmentLabel(environment: GstProviderEnvironment) {
+  return environment === "production" ? "Production" : "Sandbox"
 }
 
 function activeGstPurpose(softwareSettings: SoftwareSettingsState) {

@@ -140,6 +140,11 @@ export function ProductAutocomplete({ className, inputRef, label = "Product name
           onCreated={(record) => {
             queryClient.setQueryData<MasterDataRecord[]>(queryKey, (current = []) => [...current.filter((item) => item.id !== record.id), record])
             void queryClient.invalidateQueries({ queryKey })
+            for (const lookupKey of ["hsnCodes", "units", "taxes"]) {
+              void queryClient.invalidateQueries({
+                predicate: (queryEntry) => queryEntry.queryKey.includes(session.selectedTenant.slug) && queryEntry.queryKey.includes(lookupKey),
+              })
+            }
             const nextValue = productRecordName(record)
             setQuery(nextValue)
             onChange(nextValue, record)
@@ -162,6 +167,9 @@ function ProductCreateDialog({ initialValue, onClose, onCreated, session }: {
   onCreated(record: MasterDataRecord): void
   session: AuthSession
 }) {
+  const [selectedHsn, setSelectedHsn] = useState<MasterDataRecord | null>(null)
+  const [selectedTax, setSelectedTax] = useState<MasterDataRecord | null>(null)
+  const [selectedUnit, setSelectedUnit] = useState<MasterDataRecord | null>(null)
   const [draft, setDraft] = useState<ProductDraft>(() => ({
     code: normalizeProductCode(initialValue),
     hsn_code_id: null,
@@ -188,7 +196,7 @@ function ProductCreateDialog({ initialValue, onClose, onCreated, session }: {
       name,
     })
     toast.success("Product created", { description: productRecordLabel(record) })
-    onCreated(record)
+    onCreated(withProductLookupValues(record, selectedHsn, selectedUnit, selectedTax))
   }
 
   return (
@@ -203,9 +211,18 @@ function ProductCreateDialog({ initialValue, onClose, onCreated, session }: {
             <TextInput label="Name *" value={draft.name} autoFocus onChange={(value) => setDraft((current) => ({ ...current, name: value }))} />
             <TextInput label="Code" value={draft.code} onChange={(value) => setDraft((current) => ({ ...current, code: value }))} />
             <CommonRecordAutocompleteLookup allowCreate label="Product Type" moduleKey="productTypes" session={session} value={draft.product_type_id} onChange={(value) => setDraft((current) => ({ ...current, product_type_id: value }))} />
-            <CommonRecordAutocompleteLookup allowCreate label="HSN Code" moduleKey="hsnCodes" session={session} value={draft.hsn_code_id} createInput={createHsnInput} onChange={(value) => setDraft((current) => ({ ...current, hsn_code_id: value }))} />
-            <CommonRecordAutocompleteLookup allowCreate label="Unit" moduleKey="units" session={session} value={draft.unit_id} onChange={(value) => setDraft((current) => ({ ...current, unit_id: value }))} />
-            <CommonRecordAutocompleteLookup allowCreate label="GST %" createLabel="GST %" moduleKey="taxes" session={session} value={draft.tax_id} createInput={createTaxInput} onChange={(value) => setDraft((current) => ({ ...current, tax_id: value }))} />
+            <CommonRecordAutocompleteLookup allowCreate label="HSN Code" moduleKey="hsnCodes" session={session} value={draft.hsn_code_id} createInput={createHsnInput} onChange={(value, record) => {
+              setSelectedHsn(record)
+              setDraft((current) => ({ ...current, hsn_code_id: value }))
+            }} />
+            <CommonRecordAutocompleteLookup allowCreate label="Unit" moduleKey="units" session={session} value={draft.unit_id} onChange={(value, record) => {
+              setSelectedUnit(record)
+              setDraft((current) => ({ ...current, unit_id: value }))
+            }} />
+            <CommonRecordAutocompleteLookup allowCreate label="GST %" createLabel="GST %" moduleKey="taxes" session={session} value={draft.tax_id} createInput={createTaxInput} onChange={(value, record) => {
+              setSelectedTax(record)
+              setDraft((current) => ({ ...current, tax_id: value }))
+            }} />
             <label className={cn("flex cursor-pointer items-center justify-between gap-4 rounded-md border px-4 py-3", draft.is_active ? "border-emerald-200 bg-emerald-50 text-emerald-950" : "border-border/70 bg-muted/10")}>
               <span className="text-sm font-medium">Active</span>
               <Switch checked={draft.is_active} onCheckedChange={(checked) => setDraft((current) => ({ ...current, is_active: checked }))} />
@@ -248,14 +265,15 @@ export function productRecordLabel(record: MasterDataRecord) {
 export function productRecordCommonValue(record: MasterDataRecord, key: "hsn_code_id" | "unit_id", options: ProductCommonLookup[], fallback = "") {
   const selectedId = record[key]
   const option = options.find((item) => String(item.record.id) === String(selectedId) || String(item.id) === String(selectedId))
-  if (!option) return fallback
-  return option.hsnCode ?? option.unit ?? option.code ?? option.label
+  if (option) return option.hsnCode ?? option.unit ?? option.code ?? option.label
+  const embeddedValue = key === "hsn_code_id" ? record.hsn_code : record.unit
+  return String(embeddedValue ?? fallback).trim()
 }
 
 export function productRecordTaxRate(record: MasterDataRecord, taxes: ProductCommonLookup[]) {
   const taxId = record.tax_id
   const tax = taxes.find((option) => String(option.record.id) === String(taxId) || String(option.id) === String(taxId))
-  return tax?.taxRate ?? readNumber(record.rate_percent) ?? 0
+  return tax?.taxRate ?? readNumber(record.tax_rate) ?? readNumber(record.rate_percent) ?? 0
 }
 
 export function productRecordId(record: MasterDataRecord) {
@@ -274,6 +292,15 @@ function createHsnInput(name: string): MasterDataUpsertInput {
 function createTaxInput(name: string): MasterDataUpsertInput {
   const rate = readNumber(name.replace("%", "")) ?? 0
   return { description: `GST ${rate}%`, is_active: true, rate_percent: rate }
+}
+
+function withProductLookupValues(record: MasterDataRecord, hsn: MasterDataRecord | null, unit: MasterDataRecord | null, tax: MasterDataRecord | null): MasterDataRecord {
+  return {
+    ...record,
+    hsn_code: hsn ? String(hsn.code ?? hsn.description ?? hsn.name ?? "").trim() : "",
+    tax_rate: tax ? readNumber(tax.rate_percent) ?? 0 : 0,
+    unit: unit ? String(unit.code ?? unit.name ?? unit.description ?? "").trim() : "",
+  }
 }
 
 function readNumber(value: unknown) {

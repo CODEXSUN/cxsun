@@ -50,6 +50,27 @@ export class AppRuntimeService {
     return { app: await this.statusFor(app), message: `${app.name} stop requested.` }
   }
 
+  async restart(appId: string): Promise<{ app: RuntimeAppStatus; message: string }> {
+    const app = runtimeApps.find((item) => item.id === appId)
+    if (!app) throw new BadRequestException(`Unknown app: ${appId}`)
+    if (!app.script) throw new BadRequestException(`${app.name} cannot be restarted from this desk.`)
+
+    const tracked = startedProcesses.get(app.id)
+    if (tracked?.pid) {
+      await stopProcessTree(tracked.pid)
+    } else {
+      await stopPortListeners(app.port)
+    }
+    startedProcesses.delete(app.id)
+    await waitForPortToClose(app.port)
+
+    const child = await startDetachedNpmScript(app.script)
+    const startedAt = new Date().toISOString()
+    startedProcesses.set(app.id, { pid: child.pid, startedAt })
+
+    return { app: await this.statusFor(app), message: `${app.name} restart requested.` }
+  }
+
   private async statusFor(app: RuntimeAppDefinition): Promise<RuntimeAppStatus> {
     const running = await isPortOpen(app.port)
     return {
@@ -139,4 +160,47 @@ function stopProcessTree(pid: number) {
       rejectStop(error)
     }
   })
+}
+
+async function stopPortListeners(port: number) {
+  const pids = await listeningPids(port)
+  await Promise.all([...new Set(pids)].map((pid) => stopProcessTree(pid).catch(() => undefined)))
+}
+
+function listeningPids(port: number) {
+  if (process.platform === 'win32') {
+    const command = [
+      `$connections = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue;`,
+      '$connections | Select-Object -ExpandProperty OwningProcess -Unique',
+    ].join(' ')
+    return execFileText('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command]).then(parsePidLines)
+  }
+
+  return execFileText('sh', ['-c', `lsof -ti tcp:${port} -sTCP:LISTEN 2>/dev/null || true`]).then(parsePidLines)
+}
+
+function parsePidLines(output: string) {
+  return output
+    .split(/\r?\n/)
+    .map((line) => Number(line.trim()))
+    .filter((pid) => Number.isInteger(pid) && pid > 0)
+}
+
+function execFileText(command: string, args: string[]) {
+  return new Promise<string>((resolveExec) => {
+    execFile(command, args, { windowsHide: true }, (error, stdout) => {
+      if (error) {
+        resolveExec('')
+        return
+      }
+      resolveExec(String(stdout ?? ''))
+    })
+  })
+}
+
+async function waitForPortToClose(port: number) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (!(await isPortOpen(port))) return
+    await new Promise((resolveWait) => setTimeout(resolveWait, 250))
+  }
 }

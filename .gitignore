@@ -32,3 +32,5 @@ storage/
 .idea/
 .junie/
 /temp/
+/.tmp/
+/tmp/

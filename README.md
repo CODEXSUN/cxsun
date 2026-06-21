@@ -5,7 +5,7 @@
 # CXSun
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-**Version:** 1.0.121
+**Version:** 1.0.124
 
 CXSun is a comprehensive, enterprise-grade TypeScript monorepo designed for high-performance ERP, E-commerce, and Multi-tenant SaaS platforms. It provides a robust foundation for building scalable, AI-native applications with a focus on data isolation and modularity.
 
@@ -69,11 +69,14 @@ CXSun can be used as a foundation for various business applications:
 | `npm run dev` | Start server and frontend concurrently |
 | `npm run dev:server` | Start Fastify backend in development mode |
 | `npm run dev:frontend` | Start React + Vite frontend in development mode |
+| `npm run dev:desktop` | Start the Electron desktop shell |
 | `npm run dev:docs` | Start the Docusaurus docs app on port 6020 |
 | `npm run dev:auditor`, `npm run dev:ecommerce`, etc. | Start one scaffolded product app surface on its assigned port |
 | `npm run dev:product-apps` | Start all scaffolded product app shells together |
 | `npm run check` | Execute project-wide health checks |
 | `npm run build:active` | Compile production builds for apps |
+| `npm run build:desktop` | Build the Windows desktop installer in `build/desktop` |
+| `npm run e2e:desktop` | Build and smoke-test the Electron desktop shell against `codexsun.local:6005` |
 | `npm run build:product-apps` | Compile all scaffolded product app shells |
 
 ## 🏗️ Project Structure
@@ -86,7 +89,8 @@ cxsun/
 │   └── cli/             # Internal developer experience tools
 ├── packages/
 │   ├── shared/          # Universal types and utilities
-│   └── ui/              # Component library (Tailwind + shadcn/ui)
+│   ├── ui/              # Component library (Tailwind + shadcn/ui)
+│   └── desktop/         # Electron desktop application
 ├── assist/              # AI-native agent context and rules
 └── storage/             # Persistent data and database storage
 ```

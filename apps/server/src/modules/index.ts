@@ -27,6 +27,7 @@ import { CrmModule } from './crm/index.js'
 import { TallyModule } from './tally/index.js'
 import { FrappeModule } from './frappe/index.js'
 import { TConnectModule } from './tconnect/index.js'
+import { TirupurConnectModule } from './tirupur-connect/index.js'
 import { EcommerceModule } from './ecommerce/index.js'
 import { AgentOsModule } from './agent-os/index.js'
 import { SubscriptionModule } from './subscription/index.js'
@@ -87,6 +88,7 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     TallyModule,
     FrappeModule,
     TConnectModule,
+    TirupurConnectModule,
     EcommerceModule,
     AgentOsModule,
     SubscriptionModule,

@@ -66,6 +66,7 @@ export default defineConfig(({ command, mode }) => {
 
   const env = loadEnv(mode, envDir, '')
   const apiTarget = apiProxyTarget(env)
+  const enableReactCompiler = (process.env.VITE_REACT_COMPILER ?? env.VITE_REACT_COMPILER ?? 'false') === 'true'
 
   return {
     envDir,
@@ -75,12 +76,12 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       tailwindcss(),
       react(),
-      babel({
+      enableReactCompiler && babel({
         include: /apps[\\/]frontend[\\/]src[\\/].*\.[jt]sx?$/,
         presets: [reactCompilerPreset()],
         sourceMap: false,
       }),
-    ],
+    ].filter(Boolean),
     build: {
       outDir: '../../build/frontend',
       emptyOutDir: true,

@@ -257,6 +257,7 @@ Cross-app transaction rule:
 - `tconnect` is the billing/ERP connector only. It owns tenant-side publication selection, immutable submissions/revisions, signed synchronization state, and optional opportunity import into billing documents.
 - `tirupur-connect` is the central marketplace engine. It owns public listings, normalized marketplace records, web-only onboarding, buyers, RFQs, quotations, memberships, payments, verification, moderation, content, and marketplace analytics.
 - The marketplace must operate without a billing tenant and must not use a special billing tenant as its database owner.
+- Tirupur Connect owns the dedicated `tirupur_connect_db` database. Do not register Tirupur Connect tables in platform/master migrations or tenant provisioning.
 - Keep backend modules separate at `apps/server/src/modules/tconnect` and `apps/server/src/modules/tirupur-connect`.
 - Keep route families separate: `/api/v1/tconnect/*` for connector operations and `/api/v1/tirupur-connect/{public,member,admin,sync}/*` for marketplace operations.
 - `apps/b2b-connect` is the Tirupur Connect public/member product. Marketplace staff use a dedicated `apps/b2b-connect-admin` application.

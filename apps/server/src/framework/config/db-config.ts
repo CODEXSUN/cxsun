@@ -15,6 +15,10 @@ export interface TenantDatabaseDefaults {
   secretRef: string
 }
 
+export interface ProductDatabaseConfig extends MasterDatabaseConfig {
+  connectionLimit: number
+}
+
 const MASTER_CONNECTION_LIMIT = 10
 const TENANT_CONNECTION_LIMIT = 5
 const TENANT_CONNECT_TIMEOUT_MS = 2_000
@@ -28,6 +32,14 @@ export const dbConfig = {
     password: envString('DB_PASSWORD'),
     connectionLimit: MASTER_CONNECTION_LIMIT,
   } satisfies MasterDatabaseConfig & { connectionLimit: number },
+  tirupurConnect: {
+    host: envString('TIRUPUR_CONNECT_DB_HOST', envString('DB_HOST', 'localhost')),
+    port: envNumber('TIRUPUR_CONNECT_DB_PORT', envNumber('DB_PORT', 3306)),
+    database: envString('TIRUPUR_CONNECT_DB_NAME', 'tirupur_connect_db'),
+    user: envString('TIRUPUR_CONNECT_DB_USER', envString('DB_USER', 'root')),
+    password: envSecret('TIRUPUR_CONNECT_DB_PASSWORD', 'DB_PASSWORD') ?? '',
+    connectionLimit: envNumber('TIRUPUR_CONNECT_DB_CONNECTION_LIMIT', 10),
+  } satisfies ProductDatabaseConfig,
   tenant: {
     defaults: {
       host: envString('DB_HOST', 'localhost'),

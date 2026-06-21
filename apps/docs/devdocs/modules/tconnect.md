@@ -24,3 +24,7 @@ TConnect is the billing-to-marketplace connector. It is not the Tirupur Connect 
 Those capabilities belong to `apps/server/src/modules/tirupur-connect` and the `apps/b2b-connect` / `apps/b2b-connect-admin` applications.
 
 See `assist/context/tirupur-connect-boundary.md`.
+
+The central marketplace backend route and table reference is documented in:
+
+`apps/server/src/modules/tirupur-connect/TIRUPURCONNECT.md`

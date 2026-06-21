@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.121`
-- **Release tag:** `v-1.0.121`
-- **Changelog label:** `v 1.0.121`
+- **Current version:** `1.0.124`
+- **Release tag:** `v-1.0.124`
+- **Changelog label:** `v 1.0.124`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -14,6 +14,114 @@ New changelog entries must keep database-facing work and application code work s
 - `#### App Codebase Changes` records UI, API, service logic, tooling, and documentation changes.
 
 ---
+
+## v-1.0.124
+
+### [v 1.0.124] 2026-06-21 10:42 am - Tirupur Connect Blog publishing polish
+
+#### Database Changes
+
+- Database update: No schema change.
+- Reused existing Blog article metadata for manual related-article ordering, autosave-safe public placement, and frontend display preferences.
+- Reused existing Tirupur Connect media asset columns for editable Blog image alt text and captions.
+
+#### App Codebase Changes
+
+- Split the B2B admin Blog rich editor into a lazy-loaded Tiptap chunk so Blog list/show pages load without editor code, and New/Edit loads the editor on demand.
+- Added Blog Post admin improvements: public article open/copy link actions, comment status filters, comment count badges, local autosave draft copies, and related article selection.
+- Added dedicated Blog Category and Tag list pages with searchable filters and popup create/edit forms for names, slugs, category color, sort order, status, and descriptions.
+- Added Blog media metadata editing in the media picker and a protected admin API endpoint to update image alt text and caption.
+- Updated public related-article selection to prefer manually selected article slugs, with same-category fallback when no manual related posts are configured.
+- Cleaned old duplicate Blog Desk code from the admin shell so the active Billing-style Blog Post module is the only admin implementation.
+- Lazy-loaded every Frontend editor from its navigation boundary, reducing the production admin entry chunk from about 554 kB to 434 kB and removing Vite's large admin shell chunk warning.
+- Replaced the generic B2B company status table with a lazy-loaded company moderation desk featuring search, source/status filters, a complete read-only company review page, and audited publication decisions with review notes.
+- Added a protected Tirupur Connect admin company-detail API combining profile, categories, products, verification requests, account summary, and billing-connector submission provenance without duplicating or mutating supplier-owned records.
+- Replaced the generic B2B RFQ status table with a lazy-loaded moderation desk featuring server-backed search/status/privacy filters, complete buyer requirement review, attachment access, supplier quotation comparison, lead activity, and audited lifecycle decisions.
+- Added a protected Tirupur Connect admin RFQ-detail API combining buyer account/company context, category data, supplier quotations, and related inquiries while preserving buyer ownership of requirement content.
+- Fixed CXSync codebase schema-baseline capture by launching the scratch schema builder with the server's decorator-enabled TypeScript configuration, preventing esbuild parameter-decorator transform failures.
+
+### [v 1.0.124] 2026-06-21 10:13 am - Tirupur Connect dynamic Why section
+
+#### Database Changes
+
+- Database update: Yes (manual).
+- Seeded a new `why-section` frontend designer section in `tirupur_connect_db` for the public home page.
+- Added four managed Why story records for supplier search, factory capacity, product catalog, and QR profile with editable badge, label, title, body, image, tone, order, and status.
+- Seeded `directory-section`, `profile-section`, `stats-section`, and `ecosystem-section` frontend designer sections for the live marketplace directory, public company profile, network momentum, and core ecosystem module areas.
+- Added managed `ecosystem-section` card records for business directory, digital profile, verified supplier, RFQ marketplace, capacity exchange, and networking modules.
+- Seeded `marketplace-section` and managed catalog card records for fabric, yarn, accessories, surplus, garments, and machinery marketplace content.
+- Seeded `rfq-section` and managed RFQ flow records for buyer requirement, supplier discovery, commercial response, and business conversion steps.
+- Seeded `broadcast-section` and managed buyer requirement broadcast records for requirement capture, supplier matching, instant broadcast, and response tracking.
+- Seeded `capacity-section` with editable image story settings for capacity exchange copy, image, story label, chip list, layout direction, and tone.
+- Seeded `networking-section` and managed business networking card records for follow, post, discuss, and engage public content.
+- Seeded the remaining public homepage sections except Blog: QR profile, verification, membership, associations, events, reports, export intelligence, finance, AI assistant, advertising, mobile app, CRM Lite, multilingual, and expansion.
+- Added managed card records for QR profile, export intelligence, finance, advertising, mobile app, CRM Lite, and multilingual sections.
+- Added Blog schema extensions for article excerpt, SEO fields, reading time, comments toggle, featured flag, view count, blog categories, blog tags, article-tag links, and threaded comment moderation.
+- Added standalone Tirupur Connect media asset storage in `tirupur_connect_db` for public Blog featured images, separate from tenant Billing media records.
+- Added a relational Blog article-category table with idempotent backfill from existing primary categories, allowing articles to belong to multiple categories without breaking the legacy primary-category field.
+- Seeded starter Blog categories and tags for sourcing, manufacturing, export, compliance, RFQ, Tirupur, factory capacity, GST, and related textile topics.
+- Kept the Why section seed idempotent so admin-edited content is not overwritten by future seed runs.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.124
+- Connected the public B2B Connect Why section to backend frontend-designer content with the existing static section as fallback.
+- Added the Tirupur Connect Admin Frontend Designer `Why Section` page with list, search, status filter, show preview, section header editor, and story upsert flow.
+- Added admin preview styling for the Why image-story layout, tone pills, and section summary cards.
+- Connected the public Business Directory, Public Company Profile, Network Momentum, and Core Ecosystem module sections to backend frontend-designer content using the shared cached home-page request.
+- Added Tirupur Connect Admin Frontend Designer pages for `Directory Section`, `Profile Section`, `Stats Section`, and `Ecosystem Section` with preview, tone, status, helper text, section copy editing, and module card management.
+- Connected the public Textile Marketplace section to backend frontend-designer content and added an admin `Marketplace Section` designer with catalog card list, show, and upsert flows.
+- Connected the public RFQ and Business Leads section to backend frontend-designer content and added an admin `RFQ Section` designer with flow-step icon, tone, list, show, and upsert controls.
+- Connected the public Buyer Requirement Broadcast section to backend frontend-designer content and added an admin `Broadcast Section` designer with flow-step icon, tone, list, show, and upsert controls.
+- Connected the public Capacity Exchange section to backend frontend-designer settings and added an admin `Capacity Section` designer with preview and section upsert controls.
+- Connected the public Business Networking section to backend frontend-designer content and added an admin `Networking Section` designer with card list, show, and upsert controls.
+- Connected the remaining public homepage sections except Blog to backend frontend-designer section headers, with managed card content for card-based sections and existing live/showcase widgets preserved.
+- Reworked Blog into a dedicated admin Blog Desk with Tiptap rich editor, article list, category/tag creation, SEO fields, comment moderation, and publishing controls.
+- Refactored the Tirupur Connect Blog back office into Billing-style list, show, and upsert pages with article search/status filters, pagination, row actions, public preview, publish controls, SEO preview, WordPress-style editor panels, and threaded comment/reply moderation.
+- Hardened Blog visibility rules so only approved comments are public, replies require an approved parent before approval, and orphaned replies are excluded when a parent is pending, spam, or archived.
+- Connected the Blog Featured Image field to a Billing-inspired Media Manager picker with search, preview, selection, image upload, and the dedicated `blog/featured-images` public folder.
+- Replaced Blog category and tag controls with Billing-style searchable autocomplete lookups supporting multiple selections, removable chips, keyboard interaction, and inline category/tag creation.
+- Added Blog public-home placement controls for show/hide, display order, and room 1-3 assignment with deterministic random fallback for unassigned articles.
+- Tightened the Blog rich editor line spacing and changed Magic Intro and Magic SEO actions to icon-only buttons with accessible labels/tooltips.
+- Upgraded public Blog list/detail pages with left article list, right filters, category/tag loading, related articles, approved comments, and reply/comment submission.
+- Added public/admin Blog API endpoints for categories, tags, comments, comment status updates, related articles, and article tag decoration.
+
+## v-1.0.123
+
+### [v 1.0.123] 2026-06-20 9:59 am - Tirupur Connect frontend designer foundation
+
+#### Database Changes
+
+- Database update: Yes (auto-check).
+- Added dedicated Tirupur Connect frontend page, section, and section-item storage in `tirupur_connect_db`.
+- Seeded the public home slider with ten structured slides and the platform strip with managed brand, association, category, logo, link, order, and status records.
+- Kept designer seeds idempotent so later admin-managed content is not silently overwritten.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.123
+- Added the Tirupur Connect Frontend Designer admin group with tenant-style Slider and Platform Strip list, show, preview, and upsert pages.
+- Connected the public home slider and platform marquee to database content with stable static fallbacks when the API is unavailable.
+- Added logo-aware platform cards using existing local association assets, text-mark fallbacks, search, status filtering, ordering, and visibility controls.
+- Reused the shared Tirupur Connect loader and branding across the public, member, and admin surfaces.
+
+## v-1.0.122
+
+### [v 1.0.122] 2026-06-18 9:31 pm - Tirupur Connect marketplace backend and portal polish
+
+#### Database Changes
+
+- Database update: Yes (auto-check).
+- Added Tirupur Connect company contact-person fields to `tc_companies` for name, designation, email, phone, and WhatsApp, with idempotent migration coverage.
+- Updated Tirupur Connect company input/schema typing and member company upsert persistence for contact-person profile data.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.122
+- Built the standalone Tirupur Connect member portal shell toward the Billing app layout with matching top bar, collapsible sidebar, logo rail, smaller active menu radius, theme switch, and global loader.
+- Reworked Company Profile into animated Billing-style tabs for Details, Contact, Person, Trade, Media, and Categories while preserving whole-profile save behavior.
+- Reworked Add Product into animated tabs for Details, Pricing, Delivery, and Description, aligned its form height with Company Profile, and removed the product form left accent border.
+- Added a complete Tirupur Connect backend/module surface for public, member, admin, and signed sync APIs, with tests and documentation for the standalone marketplace boundary.
 
 ## v-1.0.121
 

@@ -38,7 +38,6 @@ export class SalesEntryService {
 
   async upsert(headers: TenantRequestHeaders, input: SalesEntryInput) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
-    const requestedInvoiceNo = String(input.invoice_no ?? '').trim()
     const isUpdate = Boolean(input.id || input.uuid)
     if (isUpdate) {
       const existing = await this.salesEntries.find(context, String(input.uuid ?? input.id))
@@ -66,10 +65,7 @@ export class SalesEntryService {
     if (!entry) throw new NotFoundException('Sales entry was not found.')
     const aggregate = SalesEntryAggregate.fromEntry(entry, context.tenant.id, context.user.email)
     await this.events.publish(input.id || input.uuid ? aggregate.updatedEvent() : aggregate.createdEvent())
-    const warning = !isUpdate && requestedInvoiceNo && requestedInvoiceNo !== entry.invoice_no
-      ? `Invoice number ${requestedInvoiceNo} was already used, so ${entry.invoice_no} was saved instead.`
-      : undefined
-    return { ok: true, entry, warning }
+    return { ok: true, entry }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {

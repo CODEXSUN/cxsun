@@ -19,6 +19,7 @@ const APP_CONFIG = {
   auditor: { cwd: 'apps/auditor', envKey: 'VITE_PORT', port: 6030, kind: 'vite' },
   ecommerce: { cwd: 'apps/ecommerce', envKey: 'VITE_PORT', port: 6031, kind: 'vite' },
   'b2b-connect': { cwd: 'apps/b2b-connect', envKey: 'VITE_PORT', port: 6032, kind: 'vite' },
+  'b2b-connect-admin': { cwd: 'apps/b2b-connect-admin', envKey: 'VITE_PORT', port: 6043, kind: 'vite' },
   sports: { cwd: 'apps/sports', envKey: 'VITE_PORT', port: 6033, kind: 'vite' },
   learning: { cwd: 'apps/learning', envKey: 'VITE_PORT', port: 6034, kind: 'vite' },
   welfare: { cwd: 'apps/welfare', envKey: 'VITE_PORT', port: 6035, kind: 'vite' },

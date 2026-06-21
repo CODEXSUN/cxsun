@@ -1,7 +1,7 @@
 # Tirupur Connect Boundary Implementation Plan
 
 **Prepared:** 2026-06-18  
-**Status:** Ready for implementation; no product behavior changed by this document
+**Status:** Central backend implemented on 2026-06-18; legacy data migration and connector cutover remain controlled follow-up work
 
 ## Current-State Findings
 
@@ -100,3 +100,31 @@ apps/
 - Signed sync rejects replayed or tampered requests.
 - Existing central marketplace data has a documented, count-verified migration path before old tables are retired.
 - Public/member/admin/sync route families enforce separate authorization policies.
+
+## Implementation Result - 2026-06-18
+
+Completed:
+
+- Central platform/master MariaDB schema with 18 `tc_*` tables.
+- Seeded 17 Tirupur textile categories and Free/Silver/Gold/Platinum plans.
+- Marketplace registration, login, member JWT, and role-aware guards.
+- Public directory, product, RFQ, event, job, article, advertisement, plan, and inquiry APIs.
+- Member company, product, RFQ, quotation, verification, membership, and Razorpay payment APIs.
+- Admin dashboards, connector review, company/RFQ/inquiry moderation, verification decisions, content management, plan management, and audit APIs.
+- Signed timestamp-bounded idempotent connector submissions with immutable revisions.
+- Real server smoke test proving the public status endpoint works without tenant context.
+
+Verification:
+
+- Server typecheck passed.
+- Server build passed.
+- Tirupur Connect contract test passed.
+- Master migration completed and central tables/seeds were verified directly.
+- The full migration command later timed out while provisioning the unrelated `aaran_associates` tenant; the Tirupur Connect master migration had already completed successfully.
+
+Still separate:
+
+- Legacy tenant 115 data migration.
+- Adapting the existing TConnect publish command to call the signed sync endpoint.
+- Building `apps/b2b-connect-admin`.
+- Wiring the public/member app to these APIs.

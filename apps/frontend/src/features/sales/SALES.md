@@ -20,6 +20,7 @@ Sales invoice management system for recording domestic sales transactions with l
 - E-invoice generation enabled through the GST compliance client using the WhiteBooks GSP provider
 - E-way bill generation enabled from saved IRN details, with the generated E-way bill number saved back to the sales invoice
 - Printed sales invoice shows saved IRN, acknowledgement, E-way details, signed QR payload, and E-way barcode when available
+- Dedicated E-Way Bill print view matching the government-style PDF format with top QR, Part A details, Part B vehicle table, and footer barcode
 - Extended sales invoice print template auto-switches when item rows exceed the 12-line standard invoice budget
 - Extended print item-only pages carry up to 24 item rows, show `To be continued...`, and move totals/signature/footer to the final continuation page with `Carry forward from previous page`
 - Sales invoices generated from quotations store source metadata (`source_type`, source quotation references, and source quotation UUIDs)
@@ -28,6 +29,8 @@ Sales invoice management system for recording domestic sales transactions with l
 
 ## Print Notes
 - Standard print remains unchanged for invoices with 12 or fewer item rows.
+- Sales show page exposes an Invoice/E-way print switch after an E-Way Bill number is available.
+- E-Way print hydrates validity details from the saved GST compliance document when the provider response stored them.
 - Extended print is used automatically for invoices with more than 12 item rows.
 - The first extended item page is reserved for item rows and can hold up to 24 compact rows before the totals page.
 - The final extended page keeps totals, amount in words, declaration, bank/footer details, jurisdiction, and signature together.

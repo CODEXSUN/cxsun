@@ -113,7 +113,7 @@ export class PurchaseReceiptRepository {
   async update(context: TenantRuntimeContext, idOrUuid: string, input: PurchaseReceiptInput) {
     const existing = await this.find(context, idOrUuid)
     if (!existing) return null
-    const normalized = await this.normalize(context, input)
+    const normalized = await this.normalize(context, input, existing.id)
 
     await this.database(context)
       .updateTable('stock_purchase_receipts')
@@ -178,7 +178,7 @@ export class PurchaseReceiptRepository {
     return this.find(context, String(existing.id))
   }
 
-  private async normalize(context: TenantRuntimeContext, input: PurchaseReceiptInput) {
+  private async normalize(context: TenantRuntimeContext, input: PurchaseReceiptInput, existingId?: number) {
     const companyId = input.company_id ?? await this.defaultCompanyId(context)
     const accountingYearId = input.accounting_year_id ?? await this.defaultAccountingYearId(context)
     const items = (input.items?.length ? input.items : [defaultItem()]).map(normalizeItem)
@@ -193,7 +193,7 @@ export class PurchaseReceiptRepository {
     const paidAmount = roundMoney(input.paid_amount ?? 0)
 
     if (!input.supplier_name?.trim()) throw new BadRequestException('Supplier name is required.')
-    const entryNo = await this.resolveEntryNo(context, input.entry_no, companyId, accountingYearId)
+    const entryNo = await this.resolveEntryNo(context, input.entry_no, companyId, accountingYearId, existingId)
 
     return {
       entry: {
@@ -368,19 +368,18 @@ export class PurchaseReceiptRepository {
   }
 
   private async nextEntryNo(context: TenantRuntimeContext, companyId: number, accountingYearId: number) {
-    const documentNumber = await this.documentNumbers.consumeNext(context, 'purchaseReceipt', {
-      accountingYearId: String(accountingYearId),
-      companyId: String(companyId),
-    })
-
-    if (!documentNumber) {
-      throw new BadRequestException('Entry number is required when automatic purchase receipt numbering is disabled.')
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const documentNumber = await this.documentNumbers.consumeNext(context, 'purchaseReceipt', {
+        accountingYearId: String(accountingYearId),
+        companyId: String(companyId),
+      })
+      if (!documentNumber) throw new BadRequestException('Entry number is required when automatic purchase receipt numbering is disabled.')
+      if (!await this.entryNoExists(context, documentNumber, companyId, accountingYearId)) return documentNumber
     }
-
-    return documentNumber
+    throw new BadRequestException('Unable to find an available purchase receipt number. Please check document number settings.')
   }
 
-  private async resolveEntryNo(context: TenantRuntimeContext, entryNo: string | undefined, companyId: number, accountingYearId: number) {
+  private async resolveEntryNo(context: TenantRuntimeContext, entryNo: string | undefined, companyId: number, accountingYearId: number, existingId?: number) {
     const trimmedEntryNo = entryNo?.trim()
 
     if (!trimmedEntryNo) {
@@ -396,7 +395,23 @@ export class PurchaseReceiptRepository {
       return this.nextEntryNo(context, companyId, accountingYearId)
     }
 
+    if (await this.entryNoExists(context, trimmedEntryNo, companyId, accountingYearId, existingId)) {
+      throw new BadRequestException(`Entry number ${trimmedEntryNo} already exists.`)
+    }
+
     return trimmedEntryNo
+  }
+
+  private async entryNoExists(context: TenantRuntimeContext, entryNo: string, companyId: number, accountingYearId: number, existingId?: number) {
+    let query = this.database(context)
+      .selectFrom('stock_purchase_receipts')
+      .select('id')
+      .where('tenant_id', '=', context.tenant.id)
+      .where('company_id', '=', companyId)
+      .where('accounting_year_id', '=', accountingYearId)
+      .where('entry_no', '=', entryNo)
+    if (existingId) query = query.where('id', '!=', existingId)
+    return Boolean(await query.executeTakeFirst())
   }
 
   private idColumn(idOrUuid: string) {

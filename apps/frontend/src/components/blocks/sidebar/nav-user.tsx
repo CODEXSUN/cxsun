@@ -2,6 +2,7 @@ import {
   BadgeCheck,
   Bell,
   ChevronsUpDown,
+  Crown,
   CreditCard,
   LogOut,
   Sparkles,
@@ -101,6 +102,10 @@ export function NavUser({
                 <Bell className="size-4" />
                 Notifications
               </DropdownMenuItem>
+              <DropdownMenuItem className="h-9 cursor-pointer gap-2" onSelect={openSuperAdminLogin}>
+                <Crown className="size-4" />
+                Super Admin login
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="m-0" />
             <DropdownMenuGroup className="p-1">
@@ -114,6 +119,10 @@ export function NavUser({
       </SidebarMenuItem>
     </SidebarMenu>
   )
+}
+
+function openSuperAdminLogin() {
+  window.open("/sg/login", "_blank", "popup,width=1120,height=780,noopener,noreferrer")
 }
 
 function getInitials(name: string) {

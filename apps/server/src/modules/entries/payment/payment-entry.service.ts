@@ -31,7 +31,6 @@ export class PaymentEntryService {
 
   async upsert(headers: TenantRequestHeaders, input: PaymentEntryInput) {
     const context = await this.tenants.resolve(headers, 'company.manage')
-    const requestedPaymentNo = String(input.payment_no ?? '').trim()
     const isUpdate = Boolean(input.id || input.uuid)
     if (isUpdate) {
       const existing = await this.payments.find(context, String(input.uuid ?? input.id))
@@ -48,10 +47,7 @@ export class PaymentEntryService {
       await this.postingControl.assertPeriodOpen(context, { accountingYearId: input.accounting_year_id, companyId: input.company_id, documentDate: input.payment_date, documentNo: input.payment_no, module: 'payment' })
     }
     const entry = await this.payments.upsert(context, input)
-    const warning = !isUpdate && requestedPaymentNo && requestedPaymentNo !== entry.payment_no
-      ? `Payment number ${requestedPaymentNo} was already used, so ${entry.payment_no} was saved instead.`
-      : undefined
-    return { ok: true, entry, warning }
+    return { ok: true, entry }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {

@@ -36,18 +36,13 @@ export class QuotationEntryService {
 
   async upsert(headers: TenantRequestHeaders, input: QuotationEntryInput) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
-    const requestedInvoiceNo = String(input.invoice_no ?? '').trim()
-    const isUpdate = Boolean(input.id || input.uuid)
     const entry = input.id || input.uuid
       ? await this.quotationEntries.update(context, String(input.uuid ?? input.id), input)
       : await this.quotationEntries.insert(context, input)
     if (!entry) throw new NotFoundException('Quotation entry was not found.')
     const aggregate = QuotationEntryAggregate.fromEntry(entry, context.tenant.id, context.user.email)
     await this.events.publish(input.id || input.uuid ? aggregate.updatedEvent() : aggregate.createdEvent())
-    const warning = !isUpdate && requestedInvoiceNo && requestedInvoiceNo !== entry.invoice_no
-      ? `Invoice number ${requestedInvoiceNo} was already used, so ${entry.invoice_no} was saved instead.`
-      : undefined
-    return { ok: true, entry, warning }
+    return { ok: true, entry }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {
@@ -213,4 +208,3 @@ function consolidateQuotationItems(entries: QuotationEntry[]): SalesEntryInput['
   }
   return Array.from(byKey.values())
 }
-

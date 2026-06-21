@@ -354,7 +354,7 @@ function App() {
     return (
       <TooltipProvider>
         <div className="grid min-h-screen place-items-center bg-background px-4 py-10 text-foreground">
-          <Card className="w-full max-w-[620px]">
+          <Card className="w-full max-w-[720px]">
             <CardHeader>
               <CardTitle>Tenant domain not available</CardTitle>
               <p className="text-sm text-muted-foreground">
@@ -366,6 +366,11 @@ function App() {
               <p className="text-sm text-muted-foreground">
                 {tenantSiteQuery.error instanceof Error ? tenantSiteQuery.error.message : 'Tenant lookup failed.'}
               </p>
+              <DesktopConnectionPanel
+                healthError={healthQuery.error}
+                healthStatus={healthQuery.status}
+                tenantLookupStatus="error"
+              />
             </CardContent>
           </Card>
         </div>
@@ -393,6 +398,11 @@ function App() {
               <p className="text-sm text-muted-foreground">
                 This domain is not linked to an active tenant. Check the domain name or continue to the main Codexsun site.
               </p>
+              <DesktopConnectionPanel
+                healthError={healthQuery.error}
+                healthStatus={healthQuery.status}
+                tenantLookupStatus="unmapped"
+              />
               <Button asChild className="justify-self-center" type="button">
                 <a href="https://codexsun.com">Go to codexsun.com</a>
               </Button>
@@ -513,6 +523,121 @@ function App() {
       <Toaster />
     </TooltipProvider>
   )
+}
+
+function DesktopConnectionPanel({
+  healthError,
+  healthStatus,
+  tenantLookupStatus,
+}: {
+  healthError: unknown
+  healthStatus: 'pending' | 'error' | 'success'
+  tenantLookupStatus: 'error' | 'unmapped'
+}) {
+  const desktop = typeof window !== 'undefined' ? window.cxsunDesktop : undefined
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams()
+  const hostStatus = searchParams.get('desktopHostStatus')
+  const expectedHost = searchParams.get('desktopHost') || desktop?.appHost || 'codexsun.local'
+  const hostsEntry = desktop?.hostsEntry || `127.0.0.1 ${expectedHost}`
+
+  if (!desktop && hostStatus !== 'missing') {
+    return null
+  }
+
+  const rows = [
+    {
+      label: 'Desktop app host',
+      value: window.location.host,
+      state: hostStatus === 'missing' ? 'warning' : 'ok',
+      help: hostStatus === 'missing'
+        ? `${expectedHost} is not resolving on this Windows machine.`
+        : 'The desktop UI is open through a local host name.',
+    },
+    {
+      label: 'API base',
+      value: desktop?.apiBaseUrl || apiBaseUrl || '-',
+      state: healthStatus === 'success' ? 'ok' : healthStatus === 'error' ? 'error' : 'checking',
+      help: healthStatus === 'success'
+        ? 'Backend health endpoint is reachable.'
+        : healthStatus === 'error'
+          ? errorMessage(healthError, 'Backend health endpoint is not reachable.')
+          : 'Checking backend health.',
+    },
+    {
+      label: 'Tenant domain lookup',
+      value: expectedHost,
+      state: tenantLookupStatus === 'error' ? 'error' : 'warning',
+      help: tenantLookupStatus === 'error'
+        ? 'The tenant lookup request failed before a domain could be resolved.'
+        : 'The API responded, but this domain is not mapped to an active tenant.',
+    },
+  ] as const
+
+  return (
+    <div className="mt-2 grid w-full gap-3 rounded-xl border bg-muted/20 p-3 text-left">
+      <div className="flex flex-col gap-1 text-center sm:text-left">
+        <div className="text-sm font-semibold">Desktop connection check</div>
+        <p className="text-xs text-muted-foreground">
+          Use this when the desktop app opens but cannot reach the local domain or tenant workspace.
+        </p>
+      </div>
+      <div className="grid gap-2">
+        {rows.map((row) => (
+          <div className="grid gap-1 rounded-lg border bg-background/80 p-3" key={row.label}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted-foreground">{row.label}</span>
+              <StatusPill state={row.state} />
+            </div>
+            <div className="break-all font-mono text-xs">{row.value}</div>
+            <div className="text-xs text-muted-foreground">{row.help}</div>
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+        <div className="text-xs font-semibold">If local host setup is missing</div>
+        <p className="text-xs">
+          Run this from an Administrator PowerShell in the project folder:
+        </p>
+        <code className="rounded bg-background/70 px-2 py-1 font-mono text-xs text-foreground">
+          npm run hosts:local
+        </code>
+        <p className="text-xs">Or add this line to Windows hosts:</p>
+        <button
+          className="rounded bg-background/70 px-2 py-1 text-left font-mono text-xs text-foreground transition-colors hover:bg-background"
+          onClick={() => void navigator.clipboard?.writeText(hostsEntry)}
+          title="Click to copy hosts entry"
+          type="button"
+        >
+          {hostsEntry}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function StatusPill({ state }: { state: 'ok' | 'warning' | 'error' | 'checking' }) {
+  const labels = {
+    checking: 'Checking',
+    error: 'Fix needed',
+    ok: 'OK',
+    warning: 'Check',
+  }
+  const classes = {
+    checking: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200',
+    error: 'border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200',
+    ok: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-200',
+    warning: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200',
+  }
+
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${classes[state]}`}>
+      {labels[state]}
+    </span>
+  )
+}
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
 }
 
 export default function AppRoot() {

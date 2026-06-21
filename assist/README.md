@@ -1,6 +1,6 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.121
+**Project version:** 1.0.124
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
@@ -49,7 +49,7 @@ cxsun/
 ├── packages/
 │   ├── shared/      # Shared types, constants, and pure utilities
 │   ├── web/         # Reserved web package
-│   ├── desktop/     # Reserved Electron package
+│   ├── desktop/     # Active Electron desktop application
 │   └── mobile/      # Reserved Expo package
 └── assist/          # AI rules, context, templates, and session tracking
 ```
@@ -59,6 +59,7 @@ Root scripts use the active apps:
 - `npm run dev` starts `apps/server`, `apps/frontend`, and `apps/docs` together with concurrent logs.
 - `npm run dev:server` starts only the backend.
 - `npm run dev:frontend` starts only the frontend.
+- `npm run dev:desktop` starts the Electron shell against the configured frontend/API.
 - `npm run dev:docs` starts only the Docusaurus docs app.
 - `npm run dev:<product-app>` starts one scaffolded product app, such as `dev:auditor`, `dev:ecommerce`, `dev:b2b-connect`, `dev:sports`, `dev:learning`, `dev:welfare`, `dev:crm`, `dev:sites`, `dev:blog`, `dev:zetro`, `dev:textile-lab`, `dev:garment`, or `dev:upvc`.
 - `npm run dev:product-apps` starts all scaffolded product app shells together.
@@ -66,6 +67,8 @@ Root scripts use the active apps:
 - `npm run typecheck:active` typechecks all current workspaces.
 - `npm run typecheck:product-apps` typechecks all scaffolded product app shells.
 - `npm run build:active` builds the active backend and frontend apps.
+- `npm run build:desktop` builds the Windows Electron installer with bundled frontend assets.
+- `npm run e2e:desktop` builds the bundled frontend and verifies the Electron runtime API base defaults to `http://codexsun.local:6005`.
 - `npm run build:product-apps` builds all scaffolded product app shells.
 - `npm run version:bump -- --title "<title>"` updates package/display versions and creates a changelog entry split into `Database Changes` and `App Codebase Changes`; use `--database-update` or `--no-database-update` when the automatic database check needs an override.
 
@@ -74,6 +77,7 @@ Root scripts use the active apps:
 The active backend separates platform data from tenant data.
 
 - Master MariaDB stores site content, industries, tenants, tenant domains, admin users, platform RBAC policy catalog, tenant policy toggles, and queue jobs.
+- Tirupur Connect uses its own `tirupur_connect_db` MariaDB database for marketplace, public/member/admin, frontend designer, content, and audit records.
 - Tenant MariaDB databases store tenant-local companies, company child tables, accounting years, default company selection, and tenant-local RBAC role-policy assignments.
 - Application tables keep `id INT AUTO_INCREMENT PRIMARY KEY` for internal joins and `uuid CHAR(8) NOT NULL UNIQUE` for public/API references. New public IDs are 8-character uppercase alphanumeric values from the shared public UUID helper; plan 16-character public IDs later when growth requires it.
 - The request path for tenant data is `URL host/domain -> tenant_domains -> tenants -> JWT/user_tenants check -> tenant database`.
@@ -94,6 +98,7 @@ Current backend boundary layout:
 - `apps/server/src/modules/auditor/contact-credential`: tenant-isolated credentials attached separately to Contact master records.
 - `apps/server/src/modules/auditor/gst-filing`: tenant-isolated monthly GSTR-1/GSTR-3B filing tracker for Contact master records.
 - `apps/server/src/modules/gst/gst-compliance`: tenant GST credentials, global GSP provider credentials, token state, and compliance operations.
+- `apps/server/src/modules/tirupur-connect`: standalone marketplace using `tirupur_connect_db`, never the master or tenant databases.
 - `apps/server/src/modules/mail`: tenant SMTP settings, queued messages, attachment metadata, events, and delivery.
 - `apps/server/src/modules/settings`: company software settings and document numbering.
 

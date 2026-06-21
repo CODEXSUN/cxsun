@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react"
 
-type TirupurConnectLogoVariant = "light" | "dark"
+export type TirupurConnectLogoVariant = "light" | "dark"
 
-type TirupurConnectLogoProps = {
+export type TirupurConnectLogoProps = {
   className?: string
   title?: string
   variant?: TirupurConnectLogoVariant

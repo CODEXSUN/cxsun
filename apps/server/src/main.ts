@@ -1,11 +1,13 @@
 import 'reflect-metadata'
 import { CxApp } from './core/bootstrap.js'
 import { initializeDatabase } from './infrastructure/database/connection.js'
+import { initializeTirupurConnectDatabase } from './modules/tirupur-connect/infrastructure/database/tirupur-connect.connection.js'
 import { startHybridQueueWorkers } from './infrastructure/queue/hybrid-queue.runtime.js'
 import { TenantDatabaseProvisioner } from './infrastructure/tenant-database/tenant-database.provisioner.js'
 import { AppModule } from './modules/index.js'
 
 await initializeDatabase()
+await initializeTirupurConnectDatabase()
 
 const app = await CxApp.create(AppModule)
 

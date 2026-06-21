@@ -10,7 +10,7 @@ Use this file to choose the correct workspace before editing or running checks.
 | `apps/cli` | `@cxsun/cli` | Active helper | Local scripts for preflight checks and workflow helpers | Run scripts directly with `node apps/cli/<script>.mjs` |
 | `packages/shared` | `@cxsun/shared` | Active library | Framework-free shared types, constants, and pure utilities | `npm -w packages/shared run typecheck` |
 | `packages/web` | `@cxsun/web` | Reserved | Future reusable web package or app shell if intentionally activated | `npm -w packages/web run typecheck` |
-| `packages/desktop` | `@cxsun/desktop` | Reserved stub | Future Electron desktop app | `npm -w packages/desktop run typecheck` |
+| `packages/desktop` | `@cxsun/desktop` | Active | Electron desktop app with locally packaged frontend assets and `codexsun.local:6005` API default | `npm run dev:desktop`, `npm run build:desktop`, `npm run e2e:desktop`, `npm -w packages/desktop run typecheck` |
 | `packages/mobile` | `@cxsun/mobile` | Reserved | Future Expo mobile app | `npm -w packages/mobile run typecheck` |
 | `packages/app-shell` | `@cxsun/app-shell` | Active app shell | Shared scaffold/runtime for owned-product and industry app surfaces | `npm -w packages/app-shell run typecheck` |
 

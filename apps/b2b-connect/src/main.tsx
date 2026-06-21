@@ -1,9 +1,13 @@
-import { StrictMode, useEffect, useRef, useState } from "react"
+import { StrictMode, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
 import { createRoot } from "react-dom/client"
-import { ArrowRight, ArrowUpRight, Award, BadgeCheck, BarChart3, Building2, ChevronDown, Factory, FileCheck2, FileText, Globe2, Handshake, IndianRupee, Leaf, MessageCircle, PackageCheck, ScanSearch, Send, ShieldCheck, TrendingUp, Users } from "lucide-react"
+import { ArrowRight, ArrowUpRight, Award, BadgeCheck, BarChart3, BellRing, Bot, Building2, ChevronDown, Factory, FileCheck2, FileText, Globe2, Handshake, IndianRupee, Leaf, MessageCircle, PackageCheck, QrCode, ScanSearch, Send, ShieldCheck, Smartphone, TrendingUp, Users } from "lucide-react"
 import { PublicSlider, type PublicSliderSlide } from "./PublicSlider"
-import { CardGrid, CategoryCloud, DevBadge, ImageStory, PublicSection, Reveal, type CategoryCard, type ImageStorySlide } from "./public-sections"
-import { TirupurConnectLogo } from "./TirupurConnectLogo"
+import { CardGrid, DevBadge, ImageStory, PublicSection, Reveal, type ImageStorySlide, type SectionTone } from "./public-sections"
+import { TirupurConnectGlobalLoader, TirupurConnectLogo } from "@cxsun/ui"
+import { MarketplacePortal } from "./MarketplacePortal"
+import { LiveCategoryDirectory, LiveCompanyDirectory, LiveNewsEvents, LivePlans, LiveProducts, LiveRfqs } from "./LiveMarketplace"
+import { publicApi } from "./marketplace-client"
+import { ThemeProvider, ThemeToggle } from "./theme"
 import "./styles.css"
 
 const brandTagline = "Connecting Global Buyers with Trusted Textile & Garment Manufacturers"
@@ -22,6 +26,92 @@ type HomeSliderSlide = PublicSliderSlide & {
     title: string
   }
   insights: HomeSliderInsight[]
+}
+
+type ContentRow = {
+  uuid: string
+  title: string
+  slug: string
+  summary: string | null
+  excerpt?: string | null
+  body: string | null
+  image_url: string | null
+  category: string | null
+  tags?: Array<{ name: string; slug: string; uuid: string }>
+  comments?: BlogComment[]
+  related?: ContentRow[]
+  seo_title?: string | null
+  seo_description?: string | null
+  allow_comments?: number
+  published_at: string | null
+  updated_at: string
+}
+
+type BlogComment = {
+  uuid: string
+  parent_uuid?: string | null
+  author_name: string
+  body: string
+  created_at: string
+  replies?: BlogComment[]
+}
+
+type FrontendDesignerItem = {
+  uuid: string
+  item_key: string
+  eyebrow: string | null
+  title: string
+  summary: string | null
+  body: string | null
+  image_url: string | null
+  target_url: string | null
+  content: Record<string, unknown>
+}
+
+type FrontendDesignerSection = {
+  section_key: string
+  eyebrow: string | null
+  title: string | null
+  body: string | null
+  settings: Record<string, unknown>
+  items: FrontendDesignerItem[]
+}
+
+type FrontendDesignerPage = {
+  sections: FrontendDesignerSection[]
+}
+
+let frontendHomePageRequest: Promise<FrontendDesignerPage> | null = null
+
+type WhyStoryContent = {
+  eyebrow: string
+  title: string
+  body: string
+  label: string
+  headline: string
+  image: string
+  slides: ImageStorySlide[]
+}
+
+type DirectorySectionContent = {
+  eyebrow: string
+  title: string
+  body: string
+  tone: SectionTone
+}
+
+type SimplePublicCard = {
+  body: string
+  eyebrow: string
+  title: string
+}
+
+type CapacitySectionContent = DirectorySectionContent & {
+  image: string
+  items: string[]
+  label: string
+  reverse: boolean
+  storyTitle: string
 }
 
 const textileRollsImage = "https://images.unsplash.com/photo-1534639077088-d702bcf685e7?auto=format&fit=crop&fm=jpg&q=84&w=1800"
@@ -269,27 +359,6 @@ const homeSliderSlides: HomeSliderSlide[] = [
   },
 ]
 
-const categories: CategoryCard[] = [
-  { body: "GSM, blends, stock lots", icon: "FAB", title: "Fabric Suppliers", tone: "blue" },
-  { body: "Cotton, blends, counts", icon: "YRN", title: "Yarn Suppliers", tone: "emerald" },
-  { body: "Gauge and kg capacity", icon: "KNT", title: "Knitting Units", tone: "orange" },
-  { body: "Lab dips and finishing", icon: "DYE", title: "Dyeing Units", tone: "violet" },
-  { body: "Screen, digital, pigment", icon: "PRN", title: "Printing Units", tone: "blue" },
-  { body: "Heads, designs, job work", icon: "EMB", title: "Embroidery Units", tone: "emerald" },
-  { body: "Wash, compact, special finish", icon: "WSH", title: "Washing Units", tone: "orange" },
-  { body: "Cartons, polybags, labels", icon: "PKG", title: "Packing Units", tone: "violet" },
-  { body: "Factories and job work", icon: "GAR", title: "Garment Manufacturers", tone: "blue" },
-  { body: "IEC and global markets", icon: "EXP", title: "Exporters", tone: "emerald" },
-  { body: "Sourcing and buyer desks", icon: "BUY", title: "Buying Houses", tone: "orange" },
-  { body: "Dispatch and forwarding", icon: "LOG", title: "Logistics Providers", tone: "violet" },
-  { body: "Machines and spares", icon: "MAC", title: "Machinery Suppliers", tone: "blue" },
-  { body: "Buttons, zips, trims", icon: "ACC", title: "Labels and Accessories", tone: "emerald" },
-  { body: "Compliance and sourcing", icon: "CON", title: "Textile Consultants", tone: "orange" },
-  { body: "ERP, billing, automation", icon: "SFT", title: "Software Providers", tone: "violet" },
-  { body: "Print, stitch, finish support", icon: "JOB", title: "Job Work Providers", tone: "blue" },
-  { body: "Credit, insurance, exports", icon: "FIN", title: "Finance and Insurance", tone: "emerald" },
-]
-
 const ecosystemCards = [
   {
     eyebrow: "Business directory",
@@ -330,11 +399,80 @@ const rfqSteps = [
   { body: "Buyer compares offers, reveals contact, negotiates, and moves the opportunity into CRM follow-up.", icon: Handshake, label: "Business conversion", title: "Convert", tone: "violet" },
 ]
 
-const plans = [
-  { name: "Free", price: "0", body: "Basic listing for onboarding the ecosystem.", benefits: ["Company profile", "1 product/service", "5 leads per month"] },
-  { name: "Silver", price: "999", body: "Better visibility and lead access.", benefits: ["Priority listing", "10 products/services", "Lead contact access"] },
-  { name: "Gold", price: "2,999", body: "Trust, alerts, and unlimited catalog.", benefits: ["Top placement", "Unlimited products", "Verification badge"] },
-  { name: "Platinum", price: "9,999", body: "Premium discovery and assisted sourcing.", benefits: ["Homepage placement", "Dedicated support", "Export intelligence"] },
+type RfqStep = typeof rfqSteps[number]
+
+const marketplaceCatalogCards = [
+  { body: "Fabric suppliers can list GSM, composition, width, finish, color family, sample support, and stock availability.", eyebrow: "Fabric", title: "Knitted and woven fabric discovery" },
+  { body: "Yarn suppliers can publish counts, blends, mill origin, MOQ, cone details, and dispatch promise.", eyebrow: "Yarn", title: "Yarn and raw-material listings" },
+  { body: "Labels, buttons, zippers, thread, packing, hang tags, trims, and consumables become searchable by category.", eyebrow: "Accessories", title: "Accessories and trims marketplace" },
+  { body: "Move leftover fabric, surplus stock, seconds, ready garments, and urgent inventory with clear quantity and pricing notes.", eyebrow: "Surplus", title: "Leftover inventory and stock lots" },
+  { body: "Manufacturers can show t-shirts, polos, hoodies, kidswear, innerwear, activewear, and custom programs.", eyebrow: "Garments", title: "Ready garments and make-to-order" },
+  { body: "Machine suppliers and service providers can publish textile machinery, spares, AMC support, and installation services.", eyebrow: "Machinery", title: "Machinery and textile services" },
+]
+
+const broadcastSteps = [
+  { body: "Buyer requirement is captured with product, quantity, destination, timeline, certification, and attachments.", icon: Send, label: "Requirement captured", tone: "blue" },
+  { body: "Matching suppliers are selected by category, product capability, capacity, location, trust level, and plan access.", icon: ScanSearch, label: "Supplier matching", tone: "emerald" },
+  { body: "Mobile push, WhatsApp, and email alerts reach relevant suppliers quickly so the lead does not go cold.", icon: BellRing, label: "Instant broadcast", tone: "orange" },
+  { body: "Supplier responses, quotes, questions, and follow-ups are tracked for buyer comparison and conversion.", icon: Handshake, label: "Response tracking", tone: "violet" },
+]
+
+type BroadcastStep = typeof broadcastSteps[number]
+
+const networkingCards = [
+  { body: "Companies and professionals can follow one another to build a textile-first business graph.", eyebrow: "Follow", title: "Follow companies and professionals" },
+  { body: "Publish business updates, capacity openings, new products, certificates, event visits, and buyer-ready announcements.", eyebrow: "Post", title: "Share textile business updates" },
+  { body: "Comment, like, discuss market movement, ask sourcing questions, and create introductions through trusted context.", eyebrow: "Discuss", title: "Industry discussions and introductions" },
+  { body: "Associations, job-work units, buying offices, exporters, and service partners can keep the ecosystem active every day.", eyebrow: "Engage", title: "Daily network engagement" },
+]
+
+const qrProfileCards = [
+  { body: "Each supplier receives a public profile URL that works like a focused mini website.", eyebrow: "Public URL", title: "Shareable company profile" },
+  { body: "QR cards can be printed on visiting cards, catalogs, invoices, stands, stickers, and trade fair booths.", eyebrow: "QR code", title: "Scan-ready buyer access" },
+  { body: "Catalog, products, contact person, WhatsApp, map, certificates, and inquiry buttons stay available from one scan.", eyebrow: "Catalog", title: "Product and contact hub" },
+]
+
+const exportIntelligenceCards = [
+  { body: "Track country-wise export movement, product demand, and buyer-market opportunities for Tirupur categories.", eyebrow: "Market trends", title: "Country-wise export trends" },
+  { body: "Premium members can monitor product demand, currency movement, trade statistics, and timely export alerts.", eyebrow: "Alerts", title: "Global opportunity signals" },
+  { body: "Knowledge guides cover export documentation, LC/DA/DP basics, GST, MSME schemes, and compliance checklists.", eyebrow: "Guides", title: "Export knowledge library" },
+]
+
+const financeCards = [
+  { body: "Connect SMEs with working-capital providers based on business profile, invoices, RFQ pipeline, and verification strength.", eyebrow: "Working capital", title: "Cash-flow support for factories" },
+  { body: "Enable invoice discounting, factoring, export finance, insurance, and referral-led financial services.", eyebrow: "Finance marketplace", title: "Lenders, factors, and insurers" },
+  { body: "Revenue can come through verified referral partnerships while members receive faster access to relevant finance options.", eyebrow: "Revenue", title: "Partner-led finance referrals" },
+]
+
+const aiAssistantPrompts = [
+  "Find dyeing units in Tirupur.",
+  "Need kidswear exporters.",
+  "Find embroidery units with available capacity.",
+  "Explain DA and DP export terms.",
+]
+
+const advertisingCards = [
+  { body: "Homepage and category banners can promote suppliers, associations, events, offers, and buyer campaigns.", eyebrow: "Banners", title: "Homepage and category visibility" },
+  { body: "Featured company slots help paid members stand above normal directory results.", eyebrow: "Featured", title: "Featured companies and premium placement" },
+  { body: "Sponsored posts, event sponsorships, and promoted RFQs add recurring revenue without changing the core product.", eyebrow: "Sponsored", title: "Sponsored posts and events" },
+]
+
+const mobileCards = [
+  { body: "Suppliers receive RFQ alerts, lead notifications, saved company updates, chat prompts, and follow-up reminders.", eyebrow: "Notifications", title: "Instant lead and RFQ alerts" },
+  { body: "Users can save companies, leads, products, and contacts for later action from mobile.", eyebrow: "Saved work", title: "Saved companies and leads" },
+  { body: "WhatsApp integration keeps local business behavior familiar while the platform keeps the business record.", eyebrow: "WhatsApp", title: "Chat and contact actions" },
+]
+
+const crmLiteCards = [
+  { body: "Members can manage leads from RFQs, profile inquiries, contact reveals, events, and manual opportunities.", eyebrow: "Leads", title: "Lead pipeline for textile SMEs" },
+  { body: "Track follow-ups, quotations, notes, tasks, reminders, and next action dates without a heavy CRM.", eyebrow: "Follow-up", title: "Simple follow-up discipline" },
+  { body: "Premium plans can unlock team access, lead assignment, quote history, and conversion reporting.", eyebrow: "Premium", title: "CRM Lite as upgrade path" },
+]
+
+const languageCards = [
+  { body: "English keeps exporter, buyer, and professional service communication clear.", eyebrow: "English", title: "Buyer and export language" },
+  { body: "Tamil supports wider factory, job-work, association, and local-service adoption.", eyebrow: "Tamil", title: "Local industry adoption" },
+  { body: "Hindi helps with wider Indian supplier, buyer, worker, and trade-service reach.", eyebrow: "Hindi", title: "National business reach" },
 ]
 
 const associations = [
@@ -470,21 +608,32 @@ const directoryMenuCards = [
 
 const businessMenuItems = [
   ["Post a Requirement", "rfq", "Share product, quantity, target price, delivery date, compliance, and destination."],
+  ["Textile Marketplace", "marketplace-store", "List fabric, yarn, accessories, stock lots, ready garments, machinery, and consumables."],
   ["Matched Supplier Leads", "rfq", "Route buyer opportunities to relevant suppliers by capability, location, and verification."],
+  ["Requirement Broadcast", "broadcast", "Send matched lead alerts through mobile push, WhatsApp, and email."],
+  ["Finance Marketplace", "finance", "Connect members with working capital, invoice discounting, export finance, and insurance partners."],
+  ["CRM Lite", "crm-lite", "Manage leads, quotations, follow-ups, notes, tasks, and reminders."],
   ["Membership Plans", "membership", "Choose visibility, verification, catalog, and lead-access benefits."],
   ["Events and Jobs", "events", "Explore exhibitions, buyer-seller meets, training, vacancies, and applications."],
 ]
 
 const networkMenuItems = [
   ["Association Hub", "associations", "Connect with TEAMA, TEA, NIFT-TEA, TAEF, buying offices, and ecosystem partners."],
+  ["Business Networking", "networking", "Follow companies, post updates, discuss opportunities, and create introductions."],
+  ["QR Business Profile", "qr-profile", "Share public profile URL, QR code, catalog, WhatsApp, and inquiry actions."],
   ["Member Momentum", "stats", "View growing membership, verified companies, buyer requirements, orders, and market reach."],
   ["Business Ecosystem", "marketplace", "Explore directory, RFQ, capacity, networking, events, jobs, and follow-up modules."],
+  ["Mobile App", "mobile-app", "Use alerts, saved leads, chat actions, and WhatsApp integration on Android and iOS."],
+  ["Multilingual Platform", "multilingual", "Support English, Tamil, and Hindi for wider adoption."],
   ["Regional Network", "expansion", "Follow expansion from Tirupur to Coimbatore, Erode, Karur, and Tamil Nadu."],
 ]
 
 const insightMenuItems = [
   ["Industry Journal", "blog", "Read practical sourcing, capacity, compliance, export, and business-growth guidance."],
   ["Market Reports", "reports", "Track companies, RFQs, leads, contact reveals, categories, conversion, and revenue."],
+  ["Export Intelligence", "export-intelligence", "Review country-wise trends, product demand, trade stats, currency updates, and export alerts."],
+  ["AI Textile Assistant", "ai-assistant", "Ask industry questions and find suppliers, exporters, capacity, and export-term guidance."],
+  ["Advertising Center", "advertising", "Sell homepage banners, category banners, featured companies, sponsored posts, and event sponsorships."],
   ["Verification Guide", "verification", "Understand supplier trust levels, evidence, audit trails, and renewals."],
   ["Industry Updates", "events", "Follow exhibitions, training, textile news, GST updates, schemes, and trade policy."],
 ]
@@ -524,20 +673,29 @@ const whyStorySlides: ImageStorySlide[] = [
   },
 ]
 
-const brandMarqueeLogos = [
-  ["TC", "Tirupur Connect", "Network"],
-  ["TEAMA", "Exporters & Manufacturers", "Association"],
-  ["TEA", "Tiruppur Exporters", "Association"],
-  ["NIFT", "NIFT-TEA", "Skills"],
-  ["TAEF", "Tamil Nadu Entrepreneurs", "Federation"],
-  ["TT", "The Tirupur Textiles", "Buying Office"],
-  ["FAB", "Fabric Suppliers", "Marketplace"],
-  ["KNT", "Knitting Units", "Capacity"],
-  ["DYE", "Dyeing & Processing", "Job Work"],
-  ["GAR", "Garment Manufacturers", "Factory"],
-  ["ACC", "Labels & Accessories", "Supply"],
-  ["LOG", "Logistics Providers", "Export"],
-  ["CX", "Codexsun", "Platform"],
+type PlatformBrand = {
+  id: string
+  mark: string
+  name: string
+  label: string
+  logo?: string
+  target?: string
+}
+
+const brandMarqueeLogos: PlatformBrand[] = [
+  { id: "tirupur-connect", mark: "TC", name: "Tirupur Connect", label: "Network", logo: "/associations/tirupur-connect.svg", target: "#associations" },
+  { id: "teama", mark: "TEAMA", name: "Exporters & Manufacturers", label: "Association", logo: "/associations/teama.png", target: "#associations" },
+  { id: "tea", mark: "TEA", name: "Tiruppur Exporters", label: "Association", logo: "/associations/tea.png", target: "#associations" },
+  { id: "nift-tea", mark: "NIFT", name: "NIFT-TEA", label: "Skills", logo: "/associations/nift-tea.png", target: "#associations" },
+  { id: "taef", mark: "TAEF", name: "Tamil Nadu Entrepreneurs", label: "Federation", target: "#associations" },
+  { id: "tirupur-textiles", mark: "TT", name: "The Tirupur Textiles", label: "Buying Office", logo: "/associations/tirupur-textiles.png", target: "#associations" },
+  { id: "fabric-suppliers", mark: "FAB", name: "Fabric Suppliers", label: "Marketplace", target: "#directory" },
+  { id: "knitting-units", mark: "KNT", name: "Knitting Units", label: "Capacity", target: "#directory" },
+  { id: "dyeing-processing", mark: "DYE", name: "Dyeing & Processing", label: "Job Work", target: "#directory" },
+  { id: "garment-manufacturers", mark: "GAR", name: "Garment Manufacturers", label: "Factory", target: "#directory" },
+  { id: "labels-accessories", mark: "ACC", name: "Labels & Accessories", label: "Supply", target: "#directory" },
+  { id: "logistics-providers", mark: "LOG", name: "Logistics Providers", label: "Export", target: "#directory" },
+  { id: "codexsun", mark: "CX", name: "Codexsun", label: "Platform", target: "#associations" },
 ]
 
 const companyProfiles = [
@@ -671,127 +829,90 @@ function App() {
 
       <LogoStripSection />
 
-      <PublicSection
-        eyebrow="Why Tirupur Connect"
-        id="why"
-        title="Tirupur is strong, but business discovery is still fragmented"
-        body="One network for suppliers, capacity, buyers, services, jobs, updates, and trusted introductions."
-        tone="white"
-      >
-        <ImageStory
-          image={knittedFabricRollsImage}
-          items={["Supplier search", "Factory capacity", "Product catalog", "QR profile"]}
-          label="Knitted fabric rolls to finished business"
-          slides={whyStorySlides}
-          title="From Tirupur knitted fabric rolls to verified export-ready supplier profiles."
-        />
-      </PublicSection>
+      <WhyStorySection />
 
-      <PublicSection
-        eyebrow="Business Directory"
-        id="directory"
-        title="Searchable textile categories built for Tirupur's value chain"
-        body="Find companies by real textile language: fabric, yarn, knitting, dyeing, printing, job work, exporters, accessories, logistics, and services."
-        tone="soft"
-      >
-        <CategoryCloud categories={categories} />
-      </PublicSection>
+      <DirectorySection />
 
-      <PublicSection
-        eyebrow="Public company profile"
-        id="profiles"
-        title="Every supplier profile should tell buyers what matters before the first call"
-        body="Each profile shows trust, capacity, products, certificates, photos, maps, contact actions, and quote flow."
-        tone="white"
-      >
-        <CompanyProfileShowcase />
-      </PublicSection>
+      <ProfileSection />
 
-      <PublicSection
-        eyebrow="Network momentum"
-        id="stats"
-        title="A growing business network measured by useful outcomes"
-        body="Members, verified factories, buyer requirements, connected orders, and market reach show whether the platform is creating real business value."
-        tone="blue"
-      >
-        <AnimatedStats />
-      </PublicSection>
+      <StatsSection />
 
-      <PublicSection
-        eyebrow="Core ecosystem modules"
-        id="marketplace"
-        title="More than a directory: a textile operating network"
-        body="Directory, profiles, verification, RFQs, capacity, networking, events, jobs, news, ads, analytics, and CRM-like follow-up."
-        tone="green"
-      >
-        <CardGrid cards={ecosystemCards} />
-      </PublicSection>
+      <EcosystemSection />
 
-      <PublicSection
-        eyebrow="RFQ and business leads"
-        id="rfq"
-        title="The revenue engine is buyer requirements and supplier response"
-        body="Buyers post requirements. Suppliers receive matched leads, quote faster, and unlock contact access by plan."
-        tone="white"
-      >
-        <RfqFlow />
-      </PublicSection>
+      <MarketplaceCatalogSection />
 
-      <PublicSection
-        eyebrow="Capacity exchange"
-        id="capacity"
-        title="Idle capacity becomes a searchable business asset"
-        body="Factories can publish spare capacity, machine type, MOQ, lead time, and location."
-        tone="blue"
-      >
-        <ImageStory
-          image={spinningLineImage}
-          label="Factory utilization"
-          title="A live capacity board can help factories fill idle time and buyers find faster job-work slots."
-          items={["Available machines", "Lead time", "MOQ", "Location"]}
-          reverse
-        />
-      </PublicSection>
+      <RfqSection />
 
-      <PublicSection
-        eyebrow="Verified supplier program"
+      <BroadcastSection />
+
+      <CapacitySection />
+
+      <NetworkingSection />
+
+      <ManagedPublicSection
+        defaults={{
+          body: "A QR profile gives every supplier a public profile URL, product catalog, contact person, WhatsApp action, map, and inquiry path.",
+          eyebrow: "Digital business card and QR profile",
+          title: "Every company profile should be scan-ready at meetings, factories, and exhibitions",
+          tone: "white",
+        }}
+        id="qr-profile"
+        sectionKey="qr-profile-section"
+      >
+        {(section) => <QrProfileShowcase cards={section.cards.length ? section.cards : qrProfileCards} />}
+      </ManagedPublicSection>
+
+      <ManagedPublicSection
+        defaults={{
+          body: "Basic, GST, IEC, factory, export, premium, and association badges help buyers trust faster.",
+          eyebrow: "Verified supplier program",
+          title: "Trust badges should become a serious paid product",
+          tone: "white",
+        }}
         id="verification"
-        title="Trust badges should become a serious paid product"
-        body="Basic, GST, IEC, factory, export, premium, and association badges help buyers trust faster."
-        tone="white"
+        sectionKey="verification-section"
       >
         <VerificationStack />
-      </PublicSection>
+      </ManagedPublicSection>
 
-      <PublicSection
-        eyebrow="Membership model"
+      <ManagedPublicSection
+        defaults={{
+          body: "Members pay for better visibility, lead access, trust badges, premium placement, and time saved.",
+          eyebrow: "Membership model",
+          title: "Free listing first. Paid visibility after value is proven.",
+          tone: "soft",
+        }}
         id="membership"
-        title="Free listing first. Paid visibility after value is proven."
-        body="Members pay for better visibility, lead access, trust badges, premium placement, and time saved."
-        tone="soft"
+        sectionKey="membership-section"
       >
-        <PlanGrid />
-      </PublicSection>
+        <LivePlans />
+      </ManagedPublicSection>
 
-      <PublicSection
-        eyebrow="Associations and sister concerns"
+      <ManagedPublicSection
+        defaults={{
+          body: "Association hubs can carry notices, events, member directories, polls, committees, and onboarding drives.",
+          eyebrow: "Associations and sister concerns",
+          title: "Build the network with institutions that already hold industry trust",
+          tone: "blue",
+        }}
         id="associations"
-        title="Build the network with institutions that already hold industry trust"
-        body="Association hubs can carry notices, events, member directories, polls, committees, and onboarding drives."
-        tone="blue"
+        sectionKey="associations-section"
       >
         <AssociationGrid />
-      </PublicSection>
+      </ManagedPublicSection>
 
-      <PublicSection
-        eyebrow="Events, Jobs, News"
+      <ManagedPublicSection
+        defaults={{
+          body: "Exhibitions, training, jobs, resumes, news, GST updates, schemes, and trade policy keep the network active.",
+          eyebrow: "Events, Jobs, News",
+          title: "Daily reasons to return keep subscribers active",
+          tone: "white",
+        }}
         id="events"
-        title="Daily reasons to return keep subscribers active"
-        body="Exhibitions, training, jobs, resumes, news, GST updates, schemes, and trade policy keep the network active."
-        tone="white"
+        sectionKey="events-section"
       >
-        <ThreeColumnPanels />
-      </PublicSection>
+        <LiveNewsEvents />
+      </ManagedPublicSection>
 
       <PublicSection
         eyebrow="Textile business journal"
@@ -803,25 +924,67 @@ function App() {
         <BlogGrid onNavigate={go} />
       </PublicSection>
 
-      <PublicSection
-        eyebrow="Analytics and admin"
+      <ManagedPublicSection
+        defaults={{
+          body: "Track company growth, verified members, RFQs, leads, contact reveals, ad clicks, and revenue.",
+          eyebrow: "Analytics and admin",
+          title: "Admin pages need rollups, not repeated full-table calculations",
+          tone: "white",
+        }}
         id="reports"
-        title="Admin pages need rollups, not repeated full-table calculations"
-        body="Track company growth, verified members, RFQs, leads, contact reveals, ad clicks, and revenue."
-        tone="white"
+        sectionKey="reports-section"
       >
         <AnalyticsBoard />
-      </PublicSection>
+      </ManagedPublicSection>
 
-      <PublicSection
-        eyebrow="Regional expansion"
+      <ManagedCardSection defaults={{ body: "Country-wise export movement, product demand, global opportunities, currency updates, and trade alerts can turn Tirupur Connect into a decision tool.", eyebrow: "Export intelligence center", title: "Premium members need export signals, not only directory visibility", tone: "blue" }} fallbackCards={exportIntelligenceCards} id="export-intelligence" sectionKey="export-intelligence-section" />
+
+      <ManagedCardSection defaults={{ body: "Working capital, invoice discounting, export finance, factoring, and insurance can be routed through trusted referral partnerships.", eyebrow: "Finance marketplace", title: "Connect factories and exporters with the right finance partners", tone: "white" }} fallbackCards={financeCards} id="finance" sectionKey="finance-section" />
+
+      <ManagedPublicSection
+        defaults={{
+          body: "The assistant can help users find suppliers, explain export terms, discover available capacity, and navigate Tirupur's textile ecosystem.",
+          eyebrow: "AI textile assistant",
+          title: "Make industry search conversational for buyers and suppliers",
+          tone: "soft",
+        }}
+        id="ai-assistant"
+        sectionKey="ai-assistant-section"
+      >
+        <AiAssistantBoard />
+      </ManagedPublicSection>
+
+      <ManagedCardSection defaults={{ body: "Homepage banners, category banners, featured companies, sponsored posts, and event sponsorships give paid members stronger visibility.", eyebrow: "Advertising and promotion center", title: "Promotions become a recurring revenue layer on top of discovery", tone: "green" }} fallbackCards={advertisingCards} id="advertising" sectionKey="advertising-section" />
+
+      <ManagedPublicSection
+        defaults={{
+          body: "Android and iOS support makes the marketplace practical for factory owners, merchandisers, suppliers, and field teams.",
+          eyebrow: "Mobile application",
+          title: "RFQs, leads, saved companies, and chat actions should travel with the user",
+          tone: "white",
+        }}
+        id="mobile-app"
+        sectionKey="mobile-app-section"
+      >
+        {(section) => <MobileAppShowcase cards={section.cards.length ? section.cards : mobileCards} />}
+      </ManagedPublicSection>
+
+      <ManagedCardSection defaults={{ body: "Leads, quotations, notes, tasks, reminders, and follow-up dates turn public discovery into repeatable sales motion.", eyebrow: "Textile CRM Lite", title: "Small textile businesses need simple lead discipline", tone: "soft" }} fallbackCards={crmLiteCards} id="crm-lite" sectionKey="crm-lite-section" />
+
+      <ManagedCardSection defaults={{ body: "Exporters, factory owners, job-work units, buyers, service providers, and workers should all be able to understand and participate.", eyebrow: "Multilingual platform", title: "English, Tamil, and Hindi keep the platform usable across the full industry", tone: "white" }} fallbackCards={languageCards} id="multilingual" sectionKey="multilingual-section" />
+
+      <ManagedPublicSection
+        defaults={{
+          body: "Use the same platform for Coimbatore, Erode, Karur, and future textile networks.",
+          eyebrow: "Regional expansion",
+          title: "Start with Tirupur. Expand to Tamil Nadu textile networks.",
+          tone: "soft",
+        }}
         id="expansion"
-        title="Start with Tirupur. Expand to Tamil Nadu textile networks."
-        body="Use the same platform for Coimbatore, Erode, Karur, and future textile networks."
-        tone="soft"
+        sectionKey="expansion-section"
       >
         <ExpansionMap />
-      </PublicSection>
+      </ManagedPublicSection>
 
       <CtaSection />
       <PublicFooter onNavigate={go} />
@@ -891,9 +1054,9 @@ function PublicHeader({ menuOpen, onNavigate, onToggleMenu }: { menuOpen: boolea
         </nav>
 
         <div className="header-actions">
-          <a className="ghost-button" href="http://localhost:6010/sa/app-runtime">Admin</a>
-          <button className="primary-button" type="button" onClick={() => onNavigate("rfq")}>Post RFQ</button>
-          <button aria-label="Toggle theme" className="theme-button" type="button">☼</button>
+          <a className="ghost-button" href="/portal">Login</a>
+          <a className="primary-button" href="/portal">Post RFQ</a>
+          <ThemeToggle />
           <button className="menu-button" type="button" onClick={onToggleMenu}>{menuOpen ? "×" : "☰"}</button>
         </div>
       </div>
@@ -905,7 +1068,7 @@ function PublicHeader({ menuOpen, onNavigate, onToggleMenu }: { menuOpen: boolea
           <MobileMenuGroup title="Business" items={businessMenuItems.map(([label, target]) => [label, target])} onNavigate={onNavigate} />
           <MobileMenuGroup title="Network" items={networkMenuItems.map(([label, target]) => [label, target])} onNavigate={onNavigate} />
           <MobileMenuGroup title="Insights" items={insightMenuItems.map(([label, target]) => [label, target])} onNavigate={onNavigate} />
-          <a className="mobile-admin-link" href="http://localhost:6010/sa/app-runtime">Admin</a>
+          <a className="mobile-admin-link" href="/portal">Login</a>
         </nav>
       ) : null}
     </header>
@@ -952,6 +1115,18 @@ function MobileMenuGroup({ items, onNavigate, title }: { items: string[][]; onNa
 }
 
 function HeroSection({ onNavigate }: { onNavigate(target: string): void }) {
+  const [slides, setSlides] = useState<HomeSliderSlide[]>(homeSliderSlides)
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const slider = page.sections.find((section) => section.section_key === "home-slider")
+        const databaseSlides = slider?.items.map(toHomeSliderSlide).filter((slide): slide is HomeSliderSlide => Boolean(slide)) ?? []
+        if (databaseSlides.length) setSlides(databaseSlides)
+      })
+      .catch(() => undefined)
+  }, [])
+
   return (
     <PublicSlider
       devLabel="HOME-SLIDER"
@@ -964,9 +1139,70 @@ function HeroSection({ onNavigate }: { onNavigate(target: string): void }) {
         variant: "home-slider",
       }}
       renderLayer={(slide) => <HomeSliderTrustLayer slide={slide as HomeSliderSlide} />}
-      slides={homeSliderSlides}
+      slides={slides}
     />
   )
+}
+
+function toHomeSliderSlide(item: FrontendDesignerItem): HomeSliderSlide | null {
+  if (!item.title || !item.image_url) return null
+  const content = item.content ?? {}
+  const card = objectValue(content.card)
+  const rawInsights = Array.isArray(content.insights) ? content.insights : []
+  const rawActions = Array.isArray(content.actions) ? content.actions : []
+  return {
+    id: item.item_key || item.uuid,
+    eyebrow: item.eyebrow ?? "",
+    title: item.title,
+    body: item.body ?? "",
+    image: item.image_url,
+    imagePosition: stringValue(content.imagePosition, "center"),
+    actions: rawActions.map((entry) => {
+      const action = objectValue(entry)
+      return {
+        label: stringValue(action.label, "Open"),
+        target: stringValue(action.target, item.target_url ?? "directory"),
+        variant: action.variant === "ghost" ? "ghost" as const : "primary" as const,
+      }
+    }),
+    card: {
+      eyebrow: stringValue(card.eyebrow),
+      title: stringValue(card.title),
+      body: stringValue(card.body),
+    },
+    insights: rawInsights.map((entry) => {
+      const insight = objectValue(entry)
+      const tone = insight.tone
+      return {
+        icon: stringValue(insight.icon),
+        label: stringValue(insight.label),
+        value: stringValue(insight.value),
+        tone: tone === "emerald" || tone === "orange" || tone === "violet" ? tone : "blue",
+      }
+    }),
+  }
+}
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function stringValue(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback
+}
+
+function stringArrayValue(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return fallback
+  const items = value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+  return items.length ? items : fallback
+}
+
+function loadFrontendHomePage() {
+  frontendHomePageRequest ??= publicApi<FrontendDesignerPage>("/frontend-pages/home").catch((error) => {
+    frontendHomePageRequest = null
+    throw error
+  })
+  return frontendHomePageRequest
 }
 
 function HomeSliderTrustLayer({ slide }: { slide: HomeSliderSlide }) {
@@ -991,25 +1227,550 @@ function HomeSliderTrustLayer({ slide }: { slide: HomeSliderSlide }) {
 }
 
 function LogoStripSection() {
-  const marqueeItems = [...brandMarqueeLogos, ...brandMarqueeLogos]
+  const [brands, setBrands] = useState<PlatformBrand[]>(brandMarqueeLogos)
+  const marqueeItems = [...brands, ...brands]
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const items = page.sections.find((section) => section.section_key === "platform-strip")?.items ?? []
+        if (!items.length) return
+        setBrands(items.map((item) => ({
+          id: item.item_key,
+          mark: item.eyebrow || String(item.content.mark ?? ""),
+          name: item.title,
+          label: item.summary || String(item.content.category ?? ""),
+          logo: item.image_url || undefined,
+          target: item.target_url || undefined,
+        })))
+      })
+      .catch(() => undefined)
+  }, [])
 
   return (
     <section className="logo-strip brand-marquee" aria-label="Associated brands and ecosystem partners">
       <DevBadge label="PLATFORM-STRIP" />
       <div className="brand-marquee-edge brand-marquee-edge-left" />
       <div className="brand-marquee-track">
-        {marqueeItems.map(([mark, name, label], index) => (
-          <span className="brand-logo-card" key={`${mark}-${index}`}>
-            <span className="brand-logo-mark">{mark}</span>
-            <span>
-              <strong>{name}</strong>
-              <small>{label}</small>
+        {marqueeItems.map((brand, index) => (
+          <a className="brand-logo-card" href={brand.target || "#associations"} key={`${brand.id}-${index}`}>
+            <span className={`brand-logo-mark ${brand.logo ? "has-image" : ""}`}>
+              {brand.logo ? <img alt="" src={brand.logo} /> : brand.mark}
             </span>
-          </span>
+            <span>
+              <strong>{brand.name}</strong>
+              <small>{brand.label}</small>
+            </span>
+          </a>
         ))}
       </div>
       <div className="brand-marquee-edge brand-marquee-edge-right" />
     </section>
+  )
+}
+
+function WhyStorySection() {
+  const [content, setContent] = useState<WhyStoryContent>(() => defaultWhyStoryContent())
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "why-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const slides = section.items.map((item) => {
+          const itemContent = objectValue(item.content)
+          const tone = stringValue(itemContent.tone, "blue")
+          return {
+            badge: item.eyebrow || String(itemContent.badge ?? item.summary ?? item.title),
+            body: item.body || "",
+            image: item.image_url || undefined,
+            label: item.summary || String(itemContent.label ?? item.eyebrow ?? item.title),
+            tone: isStoryTone(tone) ? tone : "blue",
+            title: item.title,
+          }
+        })
+        setContent({
+          eyebrow: section.eyebrow || "Why Tirupur Connect",
+          title: section.title || "Tirupur is strong, but business discovery is still fragmented",
+          body: section.body || "One network for suppliers, capacity, buyers, services, jobs, updates, and trusted introductions.",
+          label: stringValue(settings.label, "Knitted fabric rolls to finished business"),
+          headline: stringValue(settings.headline, "From Tirupur knitted fabric rolls to verified export-ready supplier profiles."),
+          image: stringValue(settings.image, knittedFabricRollsImage),
+          slides: slides.length ? slides : whyStorySlides,
+        })
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="why" title={content.title} body={content.body} tone="white">
+      <ImageStory
+        image={content.image}
+        items={content.slides.map((slide) => slide.badge)}
+        label={content.label}
+        slides={content.slides}
+        title={content.headline}
+      />
+    </PublicSection>
+  )
+}
+
+function defaultWhyStoryContent(): WhyStoryContent {
+  return {
+    eyebrow: "Why Tirupur Connect",
+    title: "Tirupur is strong, but business discovery is still fragmented",
+    body: "One network for suppliers, capacity, buyers, services, jobs, updates, and trusted introductions.",
+    label: "Knitted fabric rolls to finished business",
+    headline: "From Tirupur knitted fabric rolls to verified export-ready supplier profiles.",
+    image: knittedFabricRollsImage,
+    slides: whyStorySlides,
+  }
+}
+
+function isStoryTone(value: string): value is ImageStorySlide["tone"] {
+  return ["blue", "emerald", "orange", "violet"].includes(value)
+}
+
+function DirectorySection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultDirectorySectionContent())
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "directory-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const tone = stringValue(settings.tone, "soft")
+        setContent({
+          eyebrow: section.eyebrow || "Business Directory",
+          title: section.title || "Searchable textile categories built for Tirupur's value chain",
+          body: section.body || "Find companies by real textile language: fabric, yarn, knitting, dyeing, printing, job work, exporters, accessories, logistics, and services.",
+          tone: tone === "white" ? "white" : "soft",
+        })
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="directory" title={content.title} body={content.body} tone={content.tone}>
+      <LiveCategoryDirectory />
+      <LiveCompanyDirectory />
+    </PublicSection>
+  )
+}
+
+function defaultDirectorySectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Business Directory",
+    title: "Searchable textile categories built for Tirupur's value chain",
+    body: "Find companies by real textile language: fabric, yarn, knitting, dyeing, printing, job work, exporters, accessories, logistics, and services.",
+    tone: "soft",
+  }
+}
+
+function ProfileSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultProfileSectionContent())
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "profile-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const tone = stringValue(settings.tone, "white")
+        setContent({
+          eyebrow: section.eyebrow || "Public company profile",
+          title: section.title || "Every supplier profile should tell buyers what matters before the first call",
+          body: section.body || "Each profile shows trust, capacity, products, certificates, photos, maps, contact actions, and quote flow.",
+          tone: tone === "soft" ? "soft" : "white",
+        })
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="profiles" title={content.title} body={content.body} tone={content.tone}>
+      <CompanyProfileShowcase />
+      <LiveProducts />
+    </PublicSection>
+  )
+}
+
+function defaultProfileSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Public company profile",
+    title: "Every supplier profile should tell buyers what matters before the first call",
+    body: "Each profile shows trust, capacity, products, certificates, photos, maps, contact actions, and quote flow.",
+    tone: "white",
+  }
+}
+
+function StatsSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultStatsSectionContent())
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "stats-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        setContent({
+          eyebrow: section.eyebrow || "Network momentum",
+          title: section.title || "A growing business network measured by useful outcomes",
+          body: section.body || "Members, verified factories, buyer requirements, connected orders, and market reach show whether the platform is creating real business value.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "blue"), "blue"),
+        })
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="stats" title={content.title} body={content.body} tone={content.tone}>
+      <AnimatedStats />
+    </PublicSection>
+  )
+}
+
+function defaultStatsSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Network momentum",
+    title: "A growing business network measured by useful outcomes",
+    body: "Members, verified factories, buyer requirements, connected orders, and market reach show whether the platform is creating real business value.",
+    tone: "blue",
+  }
+}
+
+function normalizeSectionTone(value: string, fallback: SectionTone): SectionTone {
+  return ["white", "soft", "ink", "blue", "green"].includes(value) ? value as SectionTone : fallback
+}
+
+function EcosystemSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultEcosystemSectionContent())
+  const [cards, setCards] = useState(ecosystemCards)
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "ecosystem-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const databaseCards = section.items
+          .map((item) => ({ eyebrow: item.eyebrow || "", title: item.title, body: item.body || "" }))
+          .filter((item) => item.eyebrow && item.title && item.body)
+        setContent({
+          eyebrow: section.eyebrow || "Core ecosystem modules",
+          title: section.title || "More than a directory: a textile operating network",
+          body: section.body || "Directory, profiles, verification, RFQs, capacity, networking, events, jobs, news, ads, analytics, and CRM-like follow-up.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "green"), "green"),
+        })
+        if (databaseCards.length) setCards(databaseCards)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="marketplace" title={content.title} body={content.body} tone={content.tone}>
+      <CardGrid cards={cards} />
+    </PublicSection>
+  )
+}
+
+function defaultEcosystemSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Core ecosystem modules",
+    title: "More than a directory: a textile operating network",
+    body: "Directory, profiles, verification, RFQs, capacity, networking, events, jobs, news, ads, analytics, and CRM-like follow-up.",
+    tone: "green",
+  }
+}
+
+function MarketplaceCatalogSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultMarketplaceCatalogSectionContent())
+  const [cards, setCards] = useState(marketplaceCatalogCards)
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "marketplace-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const databaseCards = section.items
+          .map((item) => ({ eyebrow: item.eyebrow || "", title: item.title, body: item.body || "" }))
+          .filter((item) => item.eyebrow && item.title && item.body)
+        setContent({
+          eyebrow: section.eyebrow || "Textile marketplace",
+          title: section.title || "A B2B catalog for fabric, yarn, accessories, stock lots, garments, and machinery",
+          body: section.body || "Suppliers can list what they sell while buyers browse by real textile buying signals: quantity, category, MOQ, stock, sample readiness, and dispatch promise.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "white"), "white"),
+        })
+        if (databaseCards.length) setCards(databaseCards)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="marketplace-store" title={content.title} body={content.body} tone={content.tone}>
+      <CardGrid cards={cards} />
+    </PublicSection>
+  )
+}
+
+function defaultMarketplaceCatalogSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Textile marketplace",
+    title: "A B2B catalog for fabric, yarn, accessories, stock lots, garments, and machinery",
+    body: "Suppliers can list what they sell while buyers browse by real textile buying signals: quantity, category, MOQ, stock, sample readiness, and dispatch promise.",
+    tone: "white",
+  }
+}
+
+function RfqSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultRfqSectionContent())
+  const [steps, setSteps] = useState<RfqStep[]>(rfqSteps)
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "rfq-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const databaseSteps = section.items
+          .map((item) => {
+            const content = objectValue(item.content)
+            const tone = stringValue(content.tone, "blue")
+            return {
+              body: item.body || "",
+              icon: rfqIcon(stringValue(content.icon, "send")),
+              label: item.eyebrow || item.title,
+              title: item.title,
+              tone: isStoryTone(tone) ? tone : "blue",
+            }
+          })
+          .filter((item) => item.label && item.title && item.body)
+        setContent({
+          eyebrow: section.eyebrow || "RFQ and business leads",
+          title: section.title || "The revenue engine is buyer requirements and supplier response",
+          body: section.body || "Buyers post requirements. Suppliers receive matched leads, quote faster, and unlock contact access by plan.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "white"), "white"),
+        })
+        if (databaseSteps.length) setSteps(databaseSteps)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="rfq" title={content.title} body={content.body} tone={content.tone}>
+      <RfqFlow steps={steps} />
+      <LiveRfqs />
+    </PublicSection>
+  )
+}
+
+function defaultRfqSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "RFQ and business leads",
+    title: "The revenue engine is buyer requirements and supplier response",
+    body: "Buyers post requirements. Suppliers receive matched leads, quote faster, and unlock contact access by plan.",
+    tone: "white",
+  }
+}
+
+function rfqIcon(value: string) {
+  if (value === "scan-search") return ScanSearch
+  if (value === "file-text") return FileText
+  if (value === "handshake") return Handshake
+  return Send
+}
+
+function BroadcastSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultBroadcastSectionContent())
+  const [steps, setSteps] = useState<BroadcastStep[]>(broadcastSteps)
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "broadcast-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const databaseSteps = section.items
+          .map((item) => {
+            const content = objectValue(item.content)
+            const tone = stringValue(content.tone, "blue")
+            return {
+              body: item.body || "",
+              icon: broadcastIcon(stringValue(content.icon, "send")),
+              label: item.eyebrow || item.title,
+              tone: isStoryTone(tone) ? tone : "blue",
+            }
+          })
+          .filter((item) => item.label && item.body)
+        setContent({
+          eyebrow: section.eyebrow || "Buyer requirement broadcast",
+          title: section.title || "Matched suppliers should hear about buyer requirements instantly",
+          body: section.body || "A posted requirement becomes a routed alert through mobile push, WhatsApp, and email, then supplier responses are tracked for buyer comparison.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "soft"), "soft"),
+        })
+        if (databaseSteps.length) setSteps(databaseSteps)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="broadcast" title={content.title} body={content.body} tone={content.tone}>
+      <BroadcastFlow steps={steps} />
+    </PublicSection>
+  )
+}
+
+function defaultBroadcastSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Buyer requirement broadcast",
+    title: "Matched suppliers should hear about buyer requirements instantly",
+    body: "A posted requirement becomes a routed alert through mobile push, WhatsApp, and email, then supplier responses are tracked for buyer comparison.",
+    tone: "soft",
+  }
+}
+
+function broadcastIcon(value: string) {
+  if (value === "scan-search") return ScanSearch
+  if (value === "bell-ring") return BellRing
+  if (value === "handshake") return Handshake
+  return Send
+}
+
+function CapacitySection() {
+  const [content, setContent] = useState<CapacitySectionContent>(() => defaultCapacitySectionContent())
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "capacity-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        setContent({
+          eyebrow: section.eyebrow || "Capacity exchange",
+          title: section.title || "Idle capacity becomes a searchable business asset",
+          body: section.body || "Factories can publish spare capacity, machine type, MOQ, lead time, and location.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "blue"), "blue"),
+          image: stringValue(settings.image, spinningLineImage),
+          items: stringArrayValue(settings.items, ["Available machines", "Lead time", "MOQ", "Location"]),
+          label: stringValue(settings.label, "Factory utilization"),
+          reverse: settings.reverse === true,
+          storyTitle: stringValue(settings.storyTitle, "A live capacity board can help factories fill idle time and buyers find faster job-work slots."),
+        })
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="capacity" title={content.title} body={content.body} tone={content.tone}>
+      <ImageStory image={content.image} items={content.items} label={content.label} reverse={content.reverse} title={content.storyTitle} />
+    </PublicSection>
+  )
+}
+
+function defaultCapacitySectionContent(): CapacitySectionContent {
+  return {
+    eyebrow: "Capacity exchange",
+    title: "Idle capacity becomes a searchable business asset",
+    body: "Factories can publish spare capacity, machine type, MOQ, lead time, and location.",
+    tone: "blue",
+    image: spinningLineImage,
+    items: ["Available machines", "Lead time", "MOQ", "Location"],
+    label: "Factory utilization",
+    reverse: true,
+    storyTitle: "A live capacity board can help factories fill idle time and buyers find faster job-work slots.",
+  }
+}
+
+function NetworkingSection() {
+  const [content, setContent] = useState<DirectorySectionContent>(() => defaultNetworkingSectionContent())
+  const [cards, setCards] = useState(networkingCards)
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === "networking-section")
+        if (!section) return
+        const settings = objectValue(section.settings)
+        const databaseCards = section.items
+          .map((item) => ({ eyebrow: item.eyebrow || "", title: item.title, body: item.body || "" }))
+          .filter((item) => item.eyebrow && item.title && item.body)
+        setContent({
+          eyebrow: section.eyebrow || "Business networking",
+          title: section.title || "Tirupur's textile industry needs its own professional network",
+          body: section.body || "Companies, professionals, associations, service partners, and buying offices can build a trusted business graph around real trade activity.",
+          tone: normalizeSectionTone(stringValue(settings.tone, "green"), "green"),
+        })
+        if (databaseCards.length) setCards(databaseCards)
+      })
+      .catch(() => undefined)
+  }, [])
+
+  return (
+    <PublicSection eyebrow={content.eyebrow} id="networking" title={content.title} body={content.body} tone={content.tone}>
+      <CardGrid cards={cards} />
+    </PublicSection>
+  )
+}
+
+function defaultNetworkingSectionContent(): DirectorySectionContent {
+  return {
+    eyebrow: "Business networking",
+    title: "Tirupur's textile industry needs its own professional network",
+    body: "Companies, professionals, associations, service partners, and buying offices can build a trusted business graph around real trade activity.",
+    tone: "green",
+  }
+}
+
+function ManagedPublicSection({
+  children,
+  defaults,
+  id,
+  sectionKey,
+}: {
+  children: ReactNode | ((section: DirectorySectionContent & { cards: SimplePublicCard[] }) => ReactNode)
+  defaults: DirectorySectionContent
+  id: string
+  sectionKey: string
+}) {
+  const [content, setContent] = useState<DirectorySectionContent>(defaults)
+  const [cards, setCards] = useState<SimplePublicCard[]>([])
+
+  useEffect(() => {
+    loadFrontendHomePage()
+      .then((page) => {
+        const section = page.sections.find((item) => item.section_key === sectionKey)
+        if (!section) return
+        const settings = objectValue(section.settings)
+        setContent({
+          eyebrow: section.eyebrow || defaults.eyebrow,
+          title: section.title || defaults.title,
+          body: section.body || defaults.body,
+          tone: normalizeSectionTone(stringValue(settings.tone, defaults.tone), defaults.tone),
+        })
+        const databaseCards = section.items
+          .map((item) => ({ eyebrow: item.eyebrow || "", title: item.title, body: item.body || "" }))
+          .filter((item) => item.eyebrow && item.title && item.body)
+        if (databaseCards.length) setCards(databaseCards)
+      })
+      .catch(() => undefined)
+  }, [sectionKey])
+
+  const childContent = typeof children === "function" ? children({ ...content, cards }) : children
+  return (
+    <PublicSection eyebrow={content.eyebrow} id={id} title={content.title} body={content.body} tone={content.tone}>
+      {childContent}
+    </PublicSection>
+  )
+}
+
+function ManagedCardSection({ defaults, fallbackCards, id, sectionKey }: { defaults: DirectorySectionContent; fallbackCards: SimplePublicCard[]; id: string; sectionKey: string }) {
+  return (
+    <ManagedPublicSection defaults={defaults} id={id} sectionKey={sectionKey}>
+      {(section) => <CardGrid cards={section.cards.length ? section.cards : fallbackCards} />}
+    </ManagedPublicSection>
   )
 }
 
@@ -1147,10 +1908,10 @@ function AnimatedStats() {
   )
 }
 
-function RfqFlow() {
+function RfqFlow({ steps }: { steps: RfqStep[] }) {
   return (
     <div className="rfq-card-grid">
-      {rfqSteps.map((step, index) => {
+      {steps.map((step, index) => {
         const Icon = step.icon
         return (
           <Reveal className={`rfq-card rfq-card-${step.tone}`} delay={index * 70} key={step.title}>
@@ -1172,7 +1933,130 @@ function RfqFlow() {
   )
 }
 
+function BroadcastFlow({ steps }: { steps: BroadcastStep[] }) {
+  return (
+    <div className="broadcast-flow">
+      {steps.map((step, index) => {
+        const Icon = step.icon
+        return (
+          <Reveal className={`broadcast-step broadcast-step-${step.tone}`} delay={index * 65} key={step.label}>
+            <span className="broadcast-index">{String(index + 1).padStart(2, "0")}</span>
+            <span className="broadcast-icon"><Icon aria-hidden="true" size={24} strokeWidth={2.25} /></span>
+            <h3>{step.label}</h3>
+            <p>{step.body}</p>
+          </Reveal>
+        )
+      })}
+    </div>
+  )
+}
+
+function QrProfileShowcase({ cards }: { cards: SimplePublicCard[] }) {
+  return (
+    <Reveal className="qr-profile-showcase" delay={80}>
+      <div className="qr-profile-card">
+        <span className="qr-profile-logo"><QrCode aria-hidden="true" size={44} strokeWidth={2.1} /></span>
+        <small>tirupurconnect.com/aruna-knit-exports</small>
+        <h3>Aruna Knit Exports</h3>
+        <p>Premium verified garment manufacturer with product catalog, certificates, capacity, contact person, WhatsApp, and inquiry action.</p>
+        <div>
+          <span>Catalog</span>
+          <span>WhatsApp</span>
+          <span>Map</span>
+          <span>Inquiry</span>
+        </div>
+      </div>
+      <div className="qr-profile-points">
+        {cards.map((card, index) => (
+          <article key={card.title}>
+            <b>{String(index + 1).padStart(2, "0")}</b>
+            <span>{card.eyebrow}</span>
+            <h3>{card.title}</h3>
+            <p>{card.body}</p>
+          </article>
+        ))}
+      </div>
+    </Reveal>
+  )
+}
+
+function AiAssistantBoard() {
+  return (
+    <Reveal className="ai-assistant-board" delay={80}>
+      <div className="ai-assistant-panel">
+        <span><Bot aria-hidden="true" size={28} strokeWidth={2.1} /></span>
+        <h3>Ask Tirupur Connect</h3>
+        <p>Search the directory, explain trade terms, find capacity, and guide buyers toward relevant supplier categories.</p>
+      </div>
+      <div className="ai-prompt-grid">
+        {aiAssistantPrompts.map((prompt) => (
+          <button key={prompt} type="button">
+            <MessageCircle aria-hidden="true" size={18} strokeWidth={2.2} />
+            {prompt}
+          </button>
+        ))}
+      </div>
+    </Reveal>
+  )
+}
+
+function MobileAppShowcase({ cards }: { cards: SimplePublicCard[] }) {
+  return (
+    <Reveal className="mobile-app-showcase" delay={80}>
+      <div className="mobile-phone-frame">
+        <span><Smartphone aria-hidden="true" size={32} strokeWidth={2.1} /></span>
+        <h3>Lead alert</h3>
+        <p>Kidswear buyer needs 8,000 pcs. Matched to your category and capacity.</p>
+        <button type="button">Open RFQ</button>
+      </div>
+      <div className="mobile-feature-grid">
+        {cards.map((card) => (
+          <article key={card.title}>
+            <small>{card.eyebrow}</small>
+            <h3>{card.title}</h3>
+            <p>{card.body}</p>
+          </article>
+        ))}
+      </div>
+    </Reveal>
+  )
+}
+
 function BlogGrid({ onNavigate }: { onNavigate(target: string): void }) {
+  const [articles, setArticles] = useState<ContentRow[]>([])
+
+  useEffect(() => {
+    publicApi<{ records: ContentRow[] }>("/articles?limit=6&surface=home")
+      .then((result) => setArticles(result.records))
+      .catch(() => undefined)
+  }, [])
+
+  if (articles.length) {
+    return (
+      <div className="blog-grid">
+        {articles.map((story, index) => (
+          <Reveal className="blog-card" delay={index * 70} key={story.uuid}>
+            <figure>
+              <img alt={story.title} loading="lazy" src={story.image_url || sourcingMeetingImage} />
+            </figure>
+            <div className="blog-card-body">
+              <div className="blog-meta">
+                <span>{story.category || "Industry journal"}</span>
+                <time>{formatDate(story.published_at || story.updated_at)}</time>
+              </div>
+              <h3>{story.title}</h3>
+              <p>{story.summary || story.body || "Published Tirupur Connect marketplace update."}</p>
+              <a className="blog-read-link" href={`/blog/${story.slug}`}>
+                Read article
+                <ArrowRight aria-hidden="true" size={17} strokeWidth={2.3} />
+              </a>
+            </div>
+          </Reveal>
+        ))}
+      </div>
+    )
+  }
+
   return (
     <div className="blog-grid">
       {blogStories.map((story, index) => (
@@ -1196,6 +2080,199 @@ function BlogGrid({ onNavigate }: { onNavigate(target: string): void }) {
       ))}
     </div>
   )
+}
+
+function BlogIndexPage() {
+  const [articles, setArticles] = useState<ContentRow[]>([])
+  const [categories, setCategories] = useState<Array<{ name: string; slug: string; uuid: string }>>([])
+  const [tags, setTags] = useState<Array<{ name: string; slug: string; uuid: string }>>([])
+  const [loading, setLoading] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const [category, setCategory] = useState("")
+  const go = (target: string) => { window.location.href = `/#${target}` }
+
+  function load() {
+    setLoading(true)
+    publicApi<{ records: ContentRow[] }>(`/articles?limit=24${search ? `&search=${encodeURIComponent(search)}` : ""}${category ? `&category=${encodeURIComponent(category)}` : ""}`)
+      .then((result) => setArticles(result.records))
+      .catch(() => undefined)
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    load()
+  }, [category])
+
+  useEffect(() => {
+    Promise.all([
+      publicApi<{ records: Array<{ name: string; slug: string; uuid: string }> }>("/blog/categories"),
+      publicApi<{ records: Array<{ name: string; slug: string; uuid: string }> }>("/blog/tags"),
+    ]).then(([categoryRows, tagRows]) => {
+      setCategories(categoryRows.records)
+      setTags(tagRows.records)
+    }).catch(() => undefined)
+  }, [])
+
+  return (
+    <main className="public-page">
+      <PublicHeader menuOpen={menuOpen} onNavigate={go} onToggleMenu={() => setMenuOpen((value) => !value)} />
+      <section className="blog-page-hero">
+        <Reveal>
+          <p className="eyebrow">Textile business journal</p>
+          <h1>Blog, guides, news, export updates, and marketplace learning</h1>
+          <p>Published from the Tirupur Connect admin desk and focused on supplier discovery, RFQs, capacity, compliance, exports, and growth.</p>
+        </Reveal>
+      </section>
+      <section className="blog-page-list blog-layout">
+        <div className="blog-main-column">
+          {loading ? <div className="live-empty"><p>Loading published articles...</p></div> : null}
+          {!loading && !articles.length ? <FallbackBlogList /> : null}
+          {articles.length ? <BlogCardList articles={articles} /> : null}
+        </div>
+        <aside className="blog-filter-panel">
+          <h3>Find articles</h3>
+          <div className="blog-search-box">
+            <input onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") load() }} placeholder="Search blog" value={search} />
+            <button onClick={load} type="button">Search</button>
+          </div>
+          <h3>Categories</h3>
+          <button className={!category ? "active" : ""} onClick={() => setCategory("")} type="button">All articles</button>
+          {categories.map((item) => <button className={category === item.slug ? "active" : ""} key={item.uuid} onClick={() => setCategory(item.slug)} type="button">{item.name}</button>)}
+          <h3>Tags</h3>
+          <div className="blog-tag-cloud">{tags.map((tag) => <span key={tag.uuid}>{tag.name}</span>)}</div>
+        </aside>
+      </section>
+      <PublicFooter onNavigate={go} />
+    </main>
+  )
+}
+
+function BlogCardList({ articles }: { articles: ContentRow[] }) {
+  return (
+    <div className="blog-grid blog-grid-list">
+      {articles.map((article, index) => (
+        <Reveal className="blog-card" delay={index * 45} key={article.uuid}>
+          <figure><img alt={article.title} loading="lazy" src={article.image_url || sourcingMeetingImage} /></figure>
+          <div className="blog-card-body">
+            <div className="blog-meta"><span>{article.category || "Industry journal"}</span><time>{formatDate(article.published_at || article.updated_at)}</time></div>
+            <h3>{article.title}</h3>
+            <p>{article.excerpt || article.summary || stripHtml(article.body || "") || "Published marketplace update."}</p>
+            {article.tags?.length ? <div className="blog-card-tags">{article.tags.map((tag) => <span key={tag.uuid}>{tag.name}</span>)}</div> : null}
+            <a className="blog-read-link" href={`/blog/${article.slug}`}>Read article <ArrowRight aria-hidden="true" size={17} strokeWidth={2.3} /></a>
+          </div>
+        </Reveal>
+      ))}
+    </div>
+  )
+}
+
+function BlogDetailPage({ slug }: { slug: string }) {
+  const [article, setArticle] = useState<ContentRow | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const go = (target: string) => { window.location.href = `/#${target}` }
+
+  useEffect(() => {
+    publicApi<ContentRow>(`/articles/${encodeURIComponent(slug)}`)
+      .then(setArticle)
+      .catch(() => undefined)
+      .finally(() => setLoading(false))
+  }, [slug])
+
+  if (loading) {
+    return (
+      <main className="public-page">
+        <PublicHeader menuOpen={menuOpen} onNavigate={go} onToggleMenu={() => setMenuOpen((value) => !value)} />
+        <section className="blog-page-hero"><p>Loading article...</p></section>
+      </main>
+    )
+  }
+
+  if (!article) {
+    return (
+      <main className="public-page">
+        <PublicHeader menuOpen={menuOpen} onNavigate={go} onToggleMenu={() => setMenuOpen((value) => !value)} />
+        <section className="blog-page-hero"><p className="eyebrow">Article not found</p><h1>This blog article is not published yet.</h1><p><a className="primary-button" href="/blog">Back to blog</a></p></section>
+      </main>
+    )
+  }
+
+  return (
+    <main className="public-page">
+      <PublicHeader menuOpen={menuOpen} onNavigate={go} onToggleMenu={() => setMenuOpen((value) => !value)} />
+      <article className="blog-detail">
+        <header>
+          <p className="eyebrow">{article.category || "Industry journal"}</p>
+          <h1>{article.title}</h1>
+          <p>{article.summary || "Tirupur Connect marketplace article."}</p>
+          <time>{formatDate(article.published_at || article.updated_at)}</time>
+        </header>
+        <figure><img alt={article.title} src={article.image_url || sourcingMeetingImage} /></figure>
+        <div className="blog-detail-body" dangerouslySetInnerHTML={{ __html: article.body || article.summary || "<p>Article content is being prepared.</p>" }} />
+      </article>
+      <section className="blog-detail-extra">
+        <div>
+          <h2>Comments</h2>
+          <CommentList article={article} comments={article.comments ?? []} />
+          {article.allow_comments !== 0 ? <CommentForm articleUuid={article.uuid} /> : <p>Comments are closed for this article.</p>}
+        </div>
+        <aside>
+          <h2>Related articles</h2>
+          {article.related?.length ? <BlogCardList articles={article.related} /> : <p>Related articles will appear here as the journal grows.</p>}
+        </aside>
+      </section>
+      <PublicFooter onNavigate={go} />
+    </main>
+  )
+}
+
+function CommentList({ article, comments }: { article: ContentRow; comments: BlogComment[] }) {
+  if (!comments.length) return <p>No approved comments yet.</p>
+  return (
+    <div className="public-comment-list">
+      {comments.map((comment) => (
+        <article key={comment.uuid}>
+          <strong>{comment.author_name}</strong>
+          <time>{formatDate(comment.created_at)}</time>
+          <p>{comment.body}</p>
+          <details>
+            <summary>Reply</summary>
+            <CommentForm articleUuid={article.uuid} parentUuid={comment.uuid} />
+          </details>
+          {comment.replies?.length ? <div className="public-comment-replies"><CommentList article={article} comments={comment.replies} /></div> : null}
+        </article>
+      ))}
+    </div>
+  )
+}
+
+function CommentForm({ articleUuid, parentUuid }: { articleUuid: string; parentUuid?: string }) {
+  const [sent, setSent] = useState(false)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const data = Object.fromEntries(new FormData(event.currentTarget).entries())
+    await publicApi("/blog/comments", { method: "POST", body: JSON.stringify({ ...data, articleUuid, parentUuid }) })
+    setSent(true)
+    event.currentTarget.reset()
+  }
+  if (sent) return <p className="comment-sent">Comment received. It will appear after review.</p>
+  return (
+    <form className="public-comment-form" onSubmit={submit}>
+      <input name="authorName" placeholder="Name" required />
+      <input name="authorEmail" placeholder="Email" type="email" />
+      <textarea name="body" placeholder="Write your comment" required rows={4} />
+      <button type="submit">Submit comment</button>
+    </form>
+  )
+}
+
+function FallbackBlogList() {
+  return <div className="blog-grid">{blogStories.map((story) => <article className="blog-card" key={story.title}><figure><img alt={story.title} src={story.image} /></figure><div className="blog-card-body"><div className="blog-meta"><span>{story.category}</span><time>{story.date}</time></div><h3>{story.title}</h3><p>{story.body}</p><a className="blog-read-link" href={`/#${story.target}`}>Read topic <ArrowRight aria-hidden="true" size={17} strokeWidth={2.3} /></a></div></article>)}</div>
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
 }
 
 function VerificationStack() {
@@ -1237,21 +2314,6 @@ function VerificationStack() {
   )
 }
 
-function PlanGrid() {
-  return (
-    <div className="plan-grid">
-      {plans.map((plan, index) => (
-        <Reveal className={`plan-card ${plan.name === "Gold" ? "featured" : ""}`} delay={index * 60} key={plan.name}>
-          <p>{plan.name}</p>
-          <h3>Rs {plan.price}<span>/month</span></h3>
-          <small>{plan.body}</small>
-          <ul>{plan.benefits.map((item) => <li key={item}>{item}</li>)}</ul>
-        </Reveal>
-      ))}
-    </div>
-  )
-}
-
 function AssociationGrid() {
   return (
     <div className="association-grid">
@@ -1273,23 +2335,6 @@ function AssociationGrid() {
             Know more
             <ArrowUpRight aria-hidden="true" size={16} strokeWidth={2.4} />
           </a>
-        </Reveal>
-      ))}
-    </div>
-  )
-}
-
-function ThreeColumnPanels() {
-  return (
-    <div className="panel-grid">
-      {[
-        ["Events and exhibitions", "Trade shows, buyer-seller meets, seminars, training, registrations, ticketing, QR attendance, and networking."],
-        ["Textile job portal", "Merchandising, production, quality, design, export documentation, accounts, marketing, compliance, resumes, and applications."],
-        ["News and knowledge", "Textile news, export updates, government policies, GST updates, market intelligence, buyer opportunities, and MSME resources."],
-      ].map(([title, body], index) => (
-        <Reveal className="info-panel" delay={index * 60} key={title}>
-          <h3>{title}</h3>
-          <p>{body}</p>
         </Reveal>
       ))}
     </div>
@@ -1435,7 +2480,7 @@ function CtaSection() {
         <h2>Public page first. Reusable blocks now. Backend modules after the story is clear.</h2>
         <p>These sections are intentionally small and reusable across future product apps. Only the content needs to change for ecommerce, sports, learning, welfare, textile lab, or any other public surface.</p>
         <div className="hero-actions centered">
-          <a className="primary-button" href="http://localhost:6010/sa/app-runtime">Open app control</a>
+          <a className="primary-button" href="/portal">Join Tirupur Connect</a>
           <a className="ghost-button" href="mailto:hello@tirupurconnect.com">Partner with us</a>
         </div>
       </Reveal>
@@ -1444,11 +2489,48 @@ function CtaSection() {
 }
 
 function PublicFooter({ onNavigate }: { onNavigate(target: string): void }) {
-  const columns: Array<{ title: string; items: string[] }> = [
-    ["Marketplace", ["Directory", "Company profiles", "RFQs", "Capacity exchange"]],
-    ["Revenue", ["Memberships", "Lead credits", "Verification", "Advertisements"]],
-    ["Community", ["Associations", "Events", "Jobs", "News"]],
-  ].map(([title, items]) => ({ title: String(title), items: items as string[] }))
+  const columns: Array<{ title: string; items: Array<{ label: string; target: string; href?: string }> }> = [
+    {
+      title: "Marketplace",
+      items: [
+        { label: "Directory", target: "directory" },
+        { label: "Company profiles", target: "profiles" },
+        { label: "Products", target: "marketplace-store" },
+        { label: "RFQs", target: "rfq" },
+        { label: "Capacity exchange", target: "capacity" },
+      ],
+    },
+    {
+      title: "Revenue",
+      items: [
+        { label: "Memberships", target: "membership" },
+        { label: "Lead credits", target: "rfq" },
+        { label: "Verification", target: "verification" },
+        { label: "Advertisements", target: "advertising" },
+        { label: "Finance", target: "finance" },
+      ],
+    },
+    {
+      title: "Community",
+      items: [
+        { label: "Associations", target: "associations" },
+        { label: "Events", target: "events" },
+        { label: "Jobs", target: "events" },
+        { label: "News", target: "blog", href: "/blog" },
+        { label: "Blog", target: "blog", href: "/blog" },
+      ],
+    },
+    {
+      title: "Tools",
+      items: [
+        { label: "Export intelligence", target: "export-intelligence" },
+        { label: "AI assistant", target: "ai-assistant" },
+        { label: "Mobile app", target: "mobile-app" },
+        { label: "CRM Lite", target: "crm-lite" },
+        { label: "Multilingual", target: "multilingual" },
+      ],
+    },
+  ]
 
   return (
     <footer className="site-footer">
@@ -1466,15 +2548,33 @@ function PublicFooter({ onNavigate }: { onNavigate(target: string): void }) {
       {columns.map(({ items, title }) => (
         <div className="footer-column" key={title}>
           <strong>{title}</strong>
-          {items.map((item) => <button key={item} type="button">{item}</button>)}
+          {items.map((item) => item.href
+            ? <a href={item.href} key={item.label}>{item.label}</a>
+            : <button key={item.label} onClick={() => onNavigate(item.target)} type="button">{item.label}</button>)}
         </div>
       ))}
     </footer>
   )
 }
 
+function formatDate(value: string | null | undefined) {
+  if (!value) return "Published"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value.slice(0, 10)
+  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      {window.location.pathname.startsWith("/portal")
+        ? <MarketplacePortal />
+        : window.location.pathname === "/blog"
+          ? <BlogIndexPage />
+          : window.location.pathname.startsWith("/blog/")
+            ? <BlogDetailPage slug={decodeURIComponent(window.location.pathname.replace(/^\/blog\//, "").replace(/\/$/, ""))} />
+            : <App />}
+      <TirupurConnectGlobalLoader />
+    </ThemeProvider>
   </StrictMode>,
 )

@@ -7,6 +7,8 @@ Handles receipt (inward money) entry creation and management for tenant business
 - Receipt entry CRUD with party-based tracking and receipt mode (cash, bank, etc.)
 - Multi-tenant data isolation via TenantContextService with 'company.manage' permission scope
 - Auto-numbering via DocumentNumberRepository
+- Exact manual receipt-number overrides that do not advance the automatic sequence
+- Duplicate manual receipt numbers are rejected instead of silently replaced
 - PDF generation via shared PrintHtmlPdfService
 - Email delivery via shared EntryDocumentMailService
 - Allocation tracking with linked reference invoices

@@ -22,6 +22,8 @@ Read `assist/context/product-picture.md` alongside this file for the product-lev
 | 2026-06-11 | Build Versatile Agent as layered Agent OS. | Start with read-only Helper Agent and add Operator, Workflow, Planner, Analytics, Router, Memory, and ecosystem layers only after logs and typed tools exist. |
 | 2026-06-16 | Keep owned products and industry apps in one repo and one server-managed platform with separate app surfaces/ports/domains. | The current team is small, so one monorepo/server is easier to manage; clean app boundaries and shared engines/services keep ecommerce, B2B Connect, sports, learning, welfare, auditor, and industry apps extensible without duplicating billing/accounting/compliance logic. |
 | 2026-06-18 | Separate TConnect from Tirupur Connect as bounded systems. | TConnect is only the billing connector; Tirupur Connect is a tenant-independent central marketplace with its own identity, persistence, public/member APIs, and dedicated administration. |
+| 2026-06-18 | Activate `packages/desktop` as the Electron client. | The packaged frontend must open from local assets without internet access while continuing to use the server-owned API and MariaDB architecture. |
+| 2026-06-18 | Default Electron API access to `codexsun.local:6005`. | Desktop should follow the same host/domain tenant-resolution path as browser deployments while still allowing `ELECTRON_API_BASE_URL` overrides per client machine. |
 
 ## Active Workspaces
 
@@ -29,11 +31,11 @@ Read `assist/context/product-picture.md` alongside this file for the product-lev
 - `apps/frontend` (`@cxsun/frontend`): active React + Vite frontend using Tailwind CSS and shadcn-style UI primitives.
 - `apps/cli` (`@cxsun/cli`): local helper scripts such as preflight port checks and GitHub helpers.
 - `packages/shared` (`@cxsun/shared`): shared types, constants, and pure utilities.
+- `packages/desktop` (`@cxsun/desktop`): active Electron client that packages the React frontend and connects to the configured CXSun API, defaulting to `http://codexsun.local:6005` for domain-based tenant resolution.
 
 ## Reserved Workspaces
 
 - `packages/web` (`@cxsun/web`): reserved package with minimal source.
-- `packages/desktop` (`@cxsun/desktop`): reserved Electron package with minimal stubs.
 - `packages/mobile` (`@cxsun/mobile`): reserved Expo package with minimal source.
 
 ## Current Verification Pattern

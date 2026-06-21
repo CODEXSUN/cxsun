@@ -6,6 +6,7 @@ Manages document numbering and auto-numbering configuration for nine document ty
 ## What We Done
 - Document number configuration for 9 document types (sales invoice, purchase invoice, payment, receipt, export sales, purchase receipt, delivery note, stock adjustment, and more)
 - Auto-numbering sequence management with prefix, suffix, and starting number
+- Sequence reconciliation advances only across already-used consecutive numbers, preserving available gaps for backward/manual invoicing
 - Multi-tenant data isolation via TenantContextService with 'company.manage' permission scope
 - DocumentNumberRepository used across entries and stock modules for number generation
 - TypeORM repository pattern for settings persistence
@@ -18,7 +19,7 @@ Manages document numbering and auto-numbering configuration for nine document ty
 - No custom number pattern with date or department placeholders
 - No document series management (multiple series per document type)
 - No number format preview before saving
-- No duplicate number detection or prevention on manual override
+- Duplicate manual document numbers are rejected without consuming a new automatic number
 - No integration with document printing/mailing for format selection
 
 ## Future Concepts

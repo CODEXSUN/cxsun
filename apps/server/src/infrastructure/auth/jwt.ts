@@ -6,7 +6,7 @@ export interface AuthTokenPayload {
   email: string
   role: string
   tenantCode: string
-  identitySource?: 'tenant' | 'platform'
+  identitySource?: 'tenant' | 'platform' | 'tirupur-connect'
   superAdmin?: boolean
   iat?: number
   exp?: number

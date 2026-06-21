@@ -1,7 +1,7 @@
 {
   "name": "@cxsun/server",
   "private": true,
-  "version": "1.0.121",
+  "version": "1.0.124",
   "type": "module",
   "scripts": {
     "dev": "node preflight.mjs",
@@ -17,6 +17,8 @@
     "test:master-data": "tsx src/modules/foundation/master-data/tests/master-data-contract.test.ts",
     "test:tenant-static": "tsx src/modules/site/tests/tenant-static-content.test.ts",
     "test:tenant-isolation": "tsx src/modules/site/tests/tenant-isolation-contract.test.ts",
+    "test:tirupur-connect": "tsx src/modules/tirupur-connect/tests/tirupur-connect-contract.test.ts",
+    "test:tirupur-connect:e2e": "tsx src/modules/tirupur-connect/tests/tirupur-connect-e2e.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

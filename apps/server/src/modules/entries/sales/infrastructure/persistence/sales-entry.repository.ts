@@ -462,16 +462,8 @@ export class SalesEntryRepository {
     }
 
     if (await this.invoiceNoExists(context, trimmedInvoiceNo, companyId, accountingYearId, existingId)) {
-      if (!preview.autoEnabled) {
-        throw new BadRequestException(`Invoice number ${trimmedInvoiceNo} already exists.`)
-      }
-      return this.nextInvoiceNo(context, companyId, accountingYearId)
+      throw new BadRequestException(`Invoice number ${trimmedInvoiceNo} already exists.`)
     }
-
-    await this.documentNumbers.advancePast(context, 'sales', {
-      accountingYearId: String(accountingYearId),
-      companyId: String(companyId),
-    }, trimmedInvoiceNo)
 
     return trimmedInvoiceNo
   }

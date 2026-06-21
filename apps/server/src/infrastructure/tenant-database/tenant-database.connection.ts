@@ -95,7 +95,10 @@ export async function dropTenantDatabase(tenant: Tenant): Promise<void> {
   }
 }
 
-export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
+export async function provisionTenantDatabase(
+  tenant: Tenant,
+  options: { schemaOnly?: boolean } = {},
+): Promise<void> {
   const rootConnection = await createConnection({
     host: tenant.db_host,
     port: tenant.db_port,
@@ -218,6 +221,8 @@ export async function provisionTenantDatabase(tenant: Tenant): Promise<void> {
     .execute()
 
   await createTenantUsersTable(database)
+
+  if (options.schemaOnly) return
 
   await seedTenantDatabase(database, tenant)
   await syncTenantCompanyMetrics(tenant)

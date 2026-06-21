@@ -134,46 +134,28 @@ export class DocumentNumberRepository {
     return this.getSyncedSetting(context, kind, await resolveDocumentContext(context, contextInput))
   }
 
-  async advancePast(context: TenantRuntimeContext, kind: DocumentEntryKind, contextInput: DocumentNumberContext, documentNumber: string) {
-    const docContext = await resolveDocumentContext(context, contextInput)
-    const current = await this.getOrCreateSetting(context, kind, docContext)
-    const usedNumber = parseUsedDocumentNumber(documentNumber, current)
-    if (!Number.isInteger(usedNumber) || usedNumber < current.nextNumber) return current
-
-    await context.database
-      .updateTable('document_number_settings')
-      .set({
-        next_number: usedNumber + 1,
-        updated_at: new Date(),
-      })
-      .where('id', '=', Number(current.id))
-      .where('next_number', '<=', usedNumber)
-      .execute()
-
-    return this.getSyncedSetting(context, kind, docContext)
-  }
-
   private async getSyncedSetting(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>) {
     const current = await this.getOrCreateSetting(context, kind, docContext)
-    const maxUsedNumber = await this.maxUsedDocumentSerial(context, kind, docContext, current)
-    if (maxUsedNumber < current.nextNumber) return current
+    const nextAvailableNumber = await this.nextAvailableDocumentSerial(context, kind, docContext, current)
+    if (nextAvailableNumber === current.nextNumber) return current
 
     await context.database
       .updateTable('document_number_settings')
       .set({
-        next_number: maxUsedNumber + 1,
+        next_number: nextAvailableNumber,
         updated_at: new Date(),
       })
       .where('id', '=', Number(current.id))
-      .where('next_number', '<=', maxUsedNumber)
+      .where('next_number', '=', current.nextNumber)
       .execute()
 
     return this.getOrCreateSetting(context, kind, docContext)
   }
 
-  private async maxUsedDocumentSerial(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>, setting: DocumentNumberSettingRecord) {
+  private async nextAvailableDocumentSerial(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>, setting: DocumentNumberSettingRecord) {
     const numbers = await this.usedDocumentNumbers(context, kind, docContext)
-    return numbers.reduce((max: number, documentNumber: string) => Math.max(max, parseUsedDocumentNumber(documentNumber, setting)), 0)
+    const usedNumbers = numbers.map((documentNumber) => parseUsedDocumentNumber(documentNumber, setting))
+    return findNextAvailableDocumentSerial(setting.nextNumber, usedNumbers)
   }
 
   private async usedDocumentNumbers(context: TenantRuntimeContext, kind: DocumentEntryKind, docContext: Required<DocumentNumberContext>) {
@@ -228,6 +210,26 @@ export class DocumentNumberRepository {
         .where('accounting_year_id', '=', accountingYearId)
         .execute()
       return rows.map((row: Record<string, unknown>) => String(row.payment_no ?? ''))
+    }
+
+    if (kind === 'purchaseReceipt') {
+      const rows = await this.database(context)
+        .selectFrom('stock_purchase_receipts')
+        .select('entry_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.entry_no ?? ''))
+    }
+
+    if (kind === 'deliveryNote') {
+      const rows = await this.database(context)
+        .selectFrom('stock_delivery_notes')
+        .select('entry_no')
+        .where('company_id', '=', companyId)
+        .where('accounting_year_id', '=', accountingYearId)
+        .execute()
+      return rows.map((row: Record<string, unknown>) => String(row.entry_no ?? ''))
     }
 
     if (kind === 'cashBook') {
@@ -419,4 +421,11 @@ function parseUsedDocumentNumber(documentNumber: string, setting: DocumentNumber
   if (suffix && value.endsWith(suffix)) value = value.slice(0, -suffix.length)
   const match = value.match(/\d+/)
   return match ? Number(match[0]) : 0
+}
+
+export function findNextAvailableDocumentSerial(currentNumber: number, usedNumbers: readonly number[]) {
+  const used = new Set(usedNumbers.filter((number) => Number.isInteger(number) && number > 0))
+  let candidate = currentNumber
+  while (used.has(candidate)) candidate += 1
+  return candidate
 }

@@ -13,6 +13,7 @@ const VERSION_FILES = [
   'apps/server/package.json',
   'apps/auditor/package.json',
   'apps/b2b-connect/package.json',
+  'apps/b2b-connect-admin/package.json',
   'apps/blog/package.json',
   'apps/crm/package.json',
   'apps/ecommerce/package.json',

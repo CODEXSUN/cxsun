@@ -4,54 +4,57 @@ title: Sales Entry
 
 # Sales Entry
 
-Use Sales Entry to create invoices for customers. A sale records what was supplied, tax values, total amount, payment status, and printable invoice details.
+Use Sales Entry to create a customer invoice, calculate GST, record delivery and compliance details, and produce the final print or PDF.
 
-![Sales entry layout](/img/docs/sales-entry-layout.svg)
+![New Sales entry screen](/img/docs/entries/sales-entry.png)
 
 ## Before You Start
 
-- Confirm the active company.
-- Create the customer contact if it does not exist.
-- Create products with unit, HSN, and tax details.
-- Check document numbering if invoice numbers are automatic.
-- Check Sales Ledger if account posting is enabled.
+- Select the correct company and accounting year.
+- Create the customer and its billing/shipping addresses.
+- Create products with HSN code, unit, GST rate, and selling price where applicable.
+- Confirm the Sales Ledger and document numbering settings.
 
-## Create A Sale
+## Create a Sales Invoice
 
-1. Open Billing > Sales.
-2. Select or enter the customer.
-3. Confirm invoice number and invoice date.
-4. Select Sales Ledger when required.
-5. Select Sales tax type: CGST-SGST or IGST.
-6. Add product lines with quantity, rate, unit, HSN, and tax.
-7. Review taxable value, GST, round off, and grand total.
-8. Save the entry.
-9. Use Print, Download PDF, or Email when needed.
+1. Open **Billing > Entries > Sales**.
+2. Select **New Sales**.
+3. In **Customer name**, search and select the customer. Use the create option if the customer does not exist.
+4. Confirm the suggested **Invoice no**. You may enter an unused manual number without moving the automatic series.
+5. Confirm the **Date**.
+6. Select the **Sales Ledger**.
+7. Select **CGST-SGST** for an intrastate sale or **IGST** for an interstate sale.
+8. Enter the **Work Order no** when the invoice belongs to a work order.
 
-## Details Tab
+## Add Items
 
-Use this tab for customer, work order, invoice date, ledger, tax type, and item lines. This is the main tab for most invoices.
+1. Search for the product in **Product name**.
+2. If it does not exist, create it from the product lookup and enter its HSN code, unit, and GST rate.
+3. Confirm the automatically populated HSN code, unit, and GST percentage.
+4. Enter PO/DC references when used by your office.
+5. Enter a description, quantity, and price.
+6. Select **Add**.
+7. Repeat for each product.
+8. Review taxable value, GST, round off, and grand total.
 
-## Address Tab
+## Address and Other Tabs
 
-Use this tab when billing or shipping address must be reviewed or changed for the invoice.
+- **Address:** Select an existing billing or shipping address, or create a secondary address. A newly created address is saved to the customer and selected immediately.
+- **E-way:** Enter transport, vehicle, and E-way details when enabled and required.
+- **E-invoice:** Generate or review IRN, acknowledgement, and signed QR details when enabled.
+- **Terms:** Enter invoice notes, delivery conditions, and printed terms.
 
-## E-way And E-invoice Tabs
+## Save and Verify
 
-Use these tabs only when GST API features are enabled and the document requires e-way bill or e-invoice work.
+1. Select **Save** to save without printing, or **Save & Print** to save and open the invoice document.
+2. Confirm the invoice number shown after saving.
+3. Reopen the invoice and check customer, address, item HSN, tax type, totals, and status.
+4. Use Print, PDF, Email, or WhatsApp tools as required.
 
-## Terms Tab
+## Common Mistakes
 
-Use Terms for invoice notes, delivery conditions, or standard terms printed with the document.
-
-## Common Mistakes To Avoid
-
-- Wrong company or accounting year.
-- Duplicate customer spelling.
-- Missing GSTIN or state when GST invoice is needed.
-- Product without HSN, unit, or tax.
-- Wrong sales tax type for interstate invoice.
-
-## Good Practice
-
-Check Customer Statement after receipts are entered to confirm pending balance.
+- Using the wrong accounting year or company.
+- Selecting IGST instead of CGST-SGST, or the reverse.
+- Saving a product without HSN, unit, or GST.
+- Typing a duplicate manual invoice number.
+- Leaving a newly typed product as plain text instead of selecting or creating the Product master.

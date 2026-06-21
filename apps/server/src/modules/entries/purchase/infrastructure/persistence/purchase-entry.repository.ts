@@ -459,16 +459,8 @@ export class PurchaseEntryRepository {
     }
 
     if (await this.entryNoExists(context, trimmedEntryNo, companyId, accountingYearId, existingId)) {
-      if (!preview.autoEnabled) {
-        throw new BadRequestException(`Entry number ${trimmedEntryNo} already exists.`)
-      }
-      return this.nextEntryNo(context, companyId, accountingYearId)
+      throw new BadRequestException(`Entry number ${trimmedEntryNo} already exists.`)
     }
-
-    await this.documentNumbers.advancePast(context, 'purchase', {
-      accountingYearId: String(accountingYearId),
-      companyId: String(companyId),
-    }, trimmedEntryNo)
 
     return trimmedEntryNo
   }
@@ -593,4 +585,3 @@ function roundMoney(value: number) {
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
-

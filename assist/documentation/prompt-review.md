@@ -2632,3 +2632,122 @@ User prompt:
 ```text
 add all to  assist/readme that to read before work
 ```
+
+## 2026-06-18 - Build Tirupur Connect backend
+
+User prompt:
+
+```text
+ok fine prepare full backend for tirupur connect with all needed
+```
+
+## 2026-06-18 - Fix Sales manual invoice override numbering
+
+User prompt:
+
+```text
+read assist/readme and find billing sales module in this manual override invoice no is not working properly , even override it jumps to next series or created gap in numbering fix this and manual override is to reserve some number and generate invoice in backward no but this is completely getting new numbers every time
+```
+
+## 2026-06-18 - Apply manual numbering fix to all entries
+
+User prompt:
+
+```text
+fix for all entries like purchase, receipts, payments, journals , cash books and bankbooks also
+```
+
+## 2026-06-18 - Fix inline product HSN mapping
+
+User prompt:
+
+```text
+in sales and purchase and quotation when selected product if not and created new in this hsn code is not properly wired or creating and maping properly find the problem why it is not getting and fix this
+```
+
+## 2026-06-18 - Fix secondary address create-and-populate flow
+
+User prompt:
+
+```text
+the same for secondary address creating flow check when address created it is not populating or not fetching we want to go to address and edit and save once again
+```
+
+## 2026-06-18 - Document entry workflows with live screenshots
+
+User prompt:
+
+```text
+write docs with documentation of clean step by step entry methods of sales , purchase ,quotation , receipt , payment ,bank and cash books with original screen shots
+```
+
+## 2026-06-18 - Build offline-capable Electron desktop application
+
+User prompt:
+
+```text
+read assist/readme and find application enable for offline with electron is build or not if not create or implement necessary for getting desktop application
+```
+
+## 2026-06-18 - Domain-based Electron desktop E2E
+
+User prompt:
+
+```text
+make full e2e electron desktop with base with default port , it is on domain based , if domain needed fit with codexsun.local:6005
+```
+
+User prompt:
+
+```text
+make this to open app with codexsun.local
+```
+
+User prompt:
+
+```text
+can logo of electron can change means change to codexsun on app frame
+and add super admin login in side menu user nav and open it new window with login page
+```
+
+User prompt:
+
+```text
+ok fine implement this
+```
+
+User prompt:
+
+```text
+in sales when we hit to generate envoice it shows
+
+localhost:6005/api/v1/gst-compliance/operations/generateIrn:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+equest failed with status 400.
+```
+
+User prompt:
+
+```text
+ok fine after generated e invoice and eway , i needed print page for eway in this format so write this eway print page
+
+File reference:
+G:/My Drive/CLIENTS/57_COTTON KNIT FASHIONS/BILLS 2026-2027/MAY/E-Way Bill CK-006.pdf
+```
+
+User prompt:
+
+```text
+ok fine next work in this b2b -admin
+```
+
+User prompt:
+
+```text
+ok fine complete this
+```
+
+User prompt:
+
+```text
+Error invoking remote method 'cxsync:tenants:schema-baseline:capture-codebase': Error: Expected schema build failed: Parameter decorators only work when experimental decorators are enabled
+```

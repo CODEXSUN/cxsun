@@ -4,6 +4,11 @@ import {
   migratePlatformDatabase,
   seedPlatformDatabase,
 } from '../../../infrastructure/database/connection.js'
+import {
+  dropTirupurConnectDatabase,
+  migrateTirupurConnectDatabase,
+  seedTirupurConnectDatabase,
+} from '../../../modules/tirupur-connect/infrastructure/database/tirupur-connect.connection.js'
 import { createMigrationEvent } from '../domain/migration-manager.events.js'
 import type { MigrationCommand, MigrationRunResult, MigrationStepResult } from '../domain/migration-manager.types.js'
 import { MigrationManagerEventBus } from './migration-manager-event-bus.js'
@@ -73,6 +78,12 @@ export class MigrationManagerService {
       await this.runStep(results, 'master.seed', 'Platform seeds completed.', () => seedPlatformDatabase())
     }
 
+    if (command.target === 'tirupur-connect' || command.target === 'all') {
+      await this.runStep(results, 'tirupur-connect.drop', 'Tirupur Connect database dropped.', () => dropTirupurConnectDatabase())
+      await this.runStep(results, 'tirupur-connect.migrate', 'Tirupur Connect migrations completed.', () => migrateTirupurConnectDatabase())
+      await this.runStep(results, 'tirupur-connect.seed', 'Tirupur Connect seeds completed.', () => seedTirupurConnectDatabase())
+    }
+
     if (command.target === 'tenant' || command.target === 'all') {
       await this.dropTenant(command, results)
       await this.provisionTenant(command, results)
@@ -85,6 +96,11 @@ export class MigrationManagerService {
       await this.runStep(results, 'master.seed', 'Platform seeds completed.', () => seedPlatformDatabase())
     }
 
+    if (command.target === 'tirupur-connect' || command.target === 'all') {
+      await this.runStep(results, 'tirupur-connect.migrate', 'Tirupur Connect migrations completed.', () => migrateTirupurConnectDatabase())
+      await this.runStep(results, 'tirupur-connect.seed', 'Tirupur Connect seeds completed.', () => seedTirupurConnectDatabase())
+    }
+
     if (command.target === 'tenant' || command.target === 'all') {
       await this.provisionTenant(command, results)
     }
@@ -95,6 +111,10 @@ export class MigrationManagerService {
       await this.runStep(results, 'master.migrate', 'Platform migrations completed.', () => migratePlatformDatabase())
     }
 
+    if (command.target === 'tirupur-connect' || command.target === 'all') {
+      await this.runStep(results, 'tirupur-connect.migrate', 'Tirupur Connect migrations completed.', () => migrateTirupurConnectDatabase())
+    }
+
     if (command.target === 'tenant' || command.target === 'all') {
       await this.provisionTenant(command, results)
     }
@@ -103,6 +123,10 @@ export class MigrationManagerService {
   private async seed(command: MigrationCommand, results: MigrationStepResult[]) {
     if (command.target === 'master' || command.target === 'all') {
       await this.runStep(results, 'master.seed', 'Platform seeds completed.', () => seedPlatformDatabase())
+    }
+
+    if (command.target === 'tirupur-connect' || command.target === 'all') {
+      await this.runStep(results, 'tirupur-connect.seed', 'Tirupur Connect seeds completed.', () => seedTirupurConnectDatabase())
     }
 
     if (command.target === 'tenant' || command.target === 'all') {

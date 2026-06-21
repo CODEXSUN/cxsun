@@ -1,0 +1,711 @@
+:root {
+  color: #172033;
+  background: #f4f7fb;
+  font-family: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.cxsync-logo {
+  align-items: center;
+  display: inline-flex;
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.cxsync-logo span {
+  align-items: center;
+  background: #2563eb;
+  border-radius: 9px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 17px;
+  font-weight: 850;
+  height: 38px;
+  justify-content: center;
+  letter-spacing: -0.06em;
+  margin-right: 8px;
+  width: 38px;
+}
+
+.cxsync-logo strong {
+  color: #172033;
+}
+
+.cxsync-logo--light strong {
+  color: #fff;
+}
+
+.app-loading {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.app-loading p {
+  color: #64748b;
+  margin: 0;
+}
+
+.connection-page {
+  margin: 0 auto;
+  max-width: 1300px;
+  min-height: 100vh;
+  padding: 34px;
+}
+
+.connection-page--compact {
+  max-width: none;
+  min-height: auto;
+  padding: 0;
+}
+
+.connection-hero {
+  align-items: center;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  margin-bottom: 26px;
+}
+
+.connection-hero small,
+.workspace-hero small,
+.workspace-panel header small,
+.login-story > small,
+.login-card > small {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.connection-hero h1 {
+  font-size: 30px;
+  margin: 3px 0;
+}
+
+.connection-hero p {
+  color: #64748b;
+  margin: 0;
+}
+
+.security-pill {
+  align-items: center;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  color: #047857;
+  display: flex;
+  font-size: 12px;
+  font-weight: 750;
+  gap: 7px;
+  padding: 9px 12px;
+}
+
+.connection-form {
+  display: grid;
+  gap: 18px;
+}
+
+.connection-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.connection-card {
+  background: #fff;
+  border: 1px solid #dfe6f0;
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.055);
+  padding: 24px;
+}
+
+.connection-card > header {
+  align-items: flex-start;
+  display: flex;
+  gap: 13px;
+  margin-bottom: 22px;
+}
+
+.connection-card > header > span {
+  align-items: center;
+  background: #eaf1ff;
+  border-radius: 10px;
+  color: #2563eb;
+  display: flex;
+  height: 44px;
+  justify-content: center;
+  width: 44px;
+}
+
+.connection-card h2 {
+  font-size: 19px;
+  margin: 0 0 5px;
+}
+
+.connection-card p {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.field-grid {
+  display: grid;
+  gap: 15px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.field-grid label,
+.login-card label {
+  display: grid;
+  gap: 7px;
+}
+
+.field-grid label > span,
+.login-card label > span {
+  color: #334155;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.field-grid input,
+.login-card input {
+  background: #fbfcfe;
+  border: 1px solid #ccd7e6;
+  border-radius: 8px;
+  color: #172033;
+  min-height: 43px;
+  outline: none;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.field-grid input:focus,
+.login-card input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.field-grid input:disabled,
+.login-card input:disabled {
+  background: #eef2f7;
+  color: #64748b;
+}
+
+.safe-note {
+  align-items: flex-start;
+  background: #f0f7ff;
+  border: 1px solid #cfe2ff;
+  border-radius: 9px;
+  color: #31517e;
+  display: flex;
+  font-size: 12px;
+  gap: 9px;
+  line-height: 1.5;
+  margin-top: 17px;
+  padding: 11px;
+}
+
+.safe-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.test-button,
+.primary-button,
+.secondary-button,
+.link-button {
+  align-items: center;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 750;
+  gap: 8px;
+  justify-content: center;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+.test-button {
+  background: #fff;
+  border: 1px solid #b9c8dc;
+  color: #25364f;
+  margin-top: 18px;
+  min-height: 40px;
+  padding: 0 13px;
+}
+
+.test-button:not(:disabled):hover,
+.secondary-button:not(:disabled):hover,
+.link-button:not(:disabled):hover {
+  background: #eff6ff;
+  border-color: #60a5fa;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.14);
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+.primary-button {
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  color: #fff;
+  min-height: 43px;
+  padding: 0 16px;
+}
+
+.primary-button:not(:disabled):hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  min-height: 39px;
+  padding: 0 13px;
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.test-button:focus-visible,
+.link-button:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18), 0 0 0 1px #2563eb;
+  outline: 0;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled,
+.test-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+.primary-button:disabled:hover,
+.secondary-button:disabled:hover,
+.test-button:disabled:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.test-result {
+  align-items: flex-start;
+  border-radius: 9px;
+  display: flex;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 11px;
+}
+
+.test-result--ok {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+
+.test-result--error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+}
+
+.test-result strong,
+.test-result small {
+  display: block;
+}
+
+.test-result strong {
+  font-size: 12px;
+}
+
+.test-result small {
+  margin-top: 3px;
+  opacity: 0.8;
+}
+
+.connection-actions {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 18px;
+}
+
+.connection-actions strong,
+.connection-actions span {
+  display: block;
+}
+
+.connection-actions strong {
+  font-size: 13px;
+}
+
+.connection-actions span {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.form-message {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  color: #1d4ed8;
+  font-size: 12px;
+  padding: 10px 12px;
+}
+
+.form-message--error {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+.spin {
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-page {
+  background: #f3f6fb;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.8fr) minmax(420px, 1.2fr);
+  min-height: 100vh;
+}
+
+.login-story {
+  background:
+    radial-gradient(circle at 88% 12%, rgba(96, 165, 250, 0.28), transparent 27%),
+    linear-gradient(145deg, #10234d, #1d4ed8);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 56px;
+}
+
+.login-story h1 {
+  font-size: clamp(36px, 4vw, 52px);
+  letter-spacing: -0.045em;
+  line-height: 1;
+  margin: 42px 0 14px;
+}
+
+.login-story > p {
+  color: #dbeafe;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 560px;
+}
+
+.login-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.login-status span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  padding: 9px 12px;
+}
+
+.login-card {
+  align-self: center;
+  background: #fff;
+  border: 1px solid #dfe6f0;
+  border-radius: 16px;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 12px;
+  justify-self: center;
+  max-width: 390px;
+  padding: 30px;
+  width: calc(100% - 64px);
+}
+
+.login-icon {
+  align-items: center;
+  background: #eaf1ff;
+  border-radius: 12px;
+  color: #2563eb;
+  display: flex;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.login-card h2 {
+  font-size: 25px;
+  margin: -4px 0 2px;
+}
+
+.login-card > p {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 4px;
+}
+
+.login-submit {
+  margin-top: 4px;
+  width: 100%;
+}
+
+.link-button {
+  background: #fff;
+  border: 1px solid #bfdbfe;
+  color: #2563eb;
+  font-size: 12px;
+  min-height: 32px;
+  padding: 0 10px;
+}
+
+.workspace-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.workspace-hero {
+  align-items: center;
+  background:
+    radial-gradient(circle at 91% 14%, rgba(147, 197, 253, 0.36), transparent 25%),
+    linear-gradient(135deg, #172554, #2563eb);
+  border-radius: 14px;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  padding: 30px;
+}
+
+.workspace-hero small {
+  color: #bfdbfe;
+}
+
+.workspace-hero h1 {
+  font-size: 31px;
+  margin: 6px 0;
+}
+
+.workspace-hero p {
+  color: #dbeafe;
+  margin: 0;
+  max-width: 760px;
+}
+
+.workspace-hero > span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  display: flex;
+  height: 72px;
+  justify-content: center;
+  width: 72px;
+}
+
+.status-cards {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.status-cards article {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  padding: 18px;
+}
+
+.status-cards article > span {
+  align-items: center;
+  background: #eaf1ff;
+  border-radius: 9px;
+  color: #2563eb;
+  display: flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.status-cards small,
+.status-cards strong,
+.status-cards em {
+  display: block;
+}
+
+.status-cards small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.status-cards strong {
+  font-size: 16px;
+  margin: 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-cards em {
+  color: #64748b;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.workspace-panel {
+  background: #fff;
+  border: 1px solid #dfe6f0;
+  border-radius: 13px;
+  padding: 24px;
+}
+
+.workspace-panel h2 {
+  margin: 5px 0;
+}
+
+.workspace-panel p {
+  color: #64748b;
+  margin: 0;
+}
+
+.workspace-panel.placeholder {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
+  justify-content: center;
+  text-align: center;
+}
+
+.workspace-panel.placeholder > span {
+  align-items: center;
+  background: #eaf1ff;
+  border-radius: 12px;
+  color: #2563eb;
+  display: flex;
+  height: 52px;
+  justify-content: center;
+  width: 52px;
+}
+
+.diagnostic-list {
+  border-top: 1px solid #e5eaf1;
+  margin: 22px 0 0;
+}
+
+.diagnostic-list > div {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: 190px 1fr;
+  padding: 13px 0;
+  border-bottom: 1px solid #e5eaf1;
+}
+
+.diagnostic-list dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.diagnostic-list dd {
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  margin: 0;
+}
+
+@media (max-width: 1000px) {
+  .connection-grid,
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-story {
+    min-height: 430px;
+    padding: 46px;
+  }
+
+  .login-story > small {
+    margin-top: 36px;
+  }
+
+  .login-card {
+    margin: 46px auto;
+  }
+
+  .status-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .connection-page {
+    padding: 20px;
+  }
+
+  .connection-hero {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .security-pill {
+    justify-self: start;
+  }
+
+  .field-grid,
+  .status-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .connection-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+}

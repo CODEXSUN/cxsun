@@ -29,6 +29,9 @@ const corsAllowedHeaders = [
   'x-user-role',
   'x-zetro-audience',
   'x-frappe-site-name',
+  'x-tc-signature',
+  'x-tc-timestamp',
+  'x-tc-idempotency-key',
   'x-requested-with',
 ]
 

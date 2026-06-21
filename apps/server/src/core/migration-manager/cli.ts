@@ -37,9 +37,10 @@ function normalizeAction(value?: string): MigrationAction {
 function parseTarget(args: string[]): MigrationTarget {
   const targetArg = args.find((arg) => arg.startsWith('--target=') || arg.startsWith('-target='))
   const explicitTarget = targetArg?.split('=').slice(1).join('=').trim().toLowerCase()
-  if (explicitTarget === 'master' || explicitTarget === 'tenant' || explicitTarget === 'all') return explicitTarget
+  if (explicitTarget === 'master' || explicitTarget === 'tenant' || explicitTarget === 'tirupur-connect' || explicitTarget === 'all') return explicitTarget
   if (args.some((arg) => arg === '--master' || arg === '-master')) return 'master'
   if (args.some((arg) => arg === '--tenant' || arg === '-tenant' || arg.startsWith('--tenant=') || arg.startsWith('-tenant='))) return 'tenant'
+  if (args.some((arg) => arg === '--tirupur-connect' || arg === '-tirupur-connect')) return 'tirupur-connect'
   if (args.some((arg) => arg === '--all' || arg === '-all')) return 'all'
   return 'all'
 }

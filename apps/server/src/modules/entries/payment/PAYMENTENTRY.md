@@ -7,6 +7,8 @@ Handles payment (outward money) entry creation and management for tenant busines
 - Payment entry CRUD with party-based tracking and payment mode (cash, bank, etc.)
 - Multi-tenant data isolation via TenantContextService with 'company.manage' permission scope
 - Auto-numbering via DocumentNumberRepository
+- Exact manual payment-number overrides that do not advance the automatic sequence
+- Duplicate manual payment numbers are rejected instead of silently replaced
 - PDF generation via shared PrintHtmlPdfService
 - Email delivery via shared EntryDocumentMailService
 - Allocation tracking with linked reference entries

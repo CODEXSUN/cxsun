@@ -1,0 +1,27 @@
+import type { DatabaseSchema } from '../../../../infrastructure/database/schema.js'
+
+export type TirupurConnectTableName =
+  | 'tc_accounts'
+  | 'tc_categories'
+  | 'tc_companies'
+  | 'tc_company_categories'
+  | 'tc_products'
+  | 'tc_submissions'
+  | 'tc_submission_revisions'
+  | 'tc_sync_requests'
+  | 'tc_rfqs'
+  | 'tc_rfq_quotes'
+  | 'tc_inquiries'
+  | 'tc_verification_requests'
+  | 'tc_membership_plans'
+  | 'tc_memberships'
+  | 'tc_payments'
+  | 'tc_content'
+  | 'tc_frontend_releases'
+  | 'tc_frontend_pages'
+  | 'tc_frontend_sections'
+  | 'tc_frontend_section_items'
+  | 'tc_audit_logs'
+  | 'tc_settings'
+
+export type TirupurConnectDatabaseSchema = Pick<DatabaseSchema, TirupurConnectTableName>

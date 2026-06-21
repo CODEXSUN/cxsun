@@ -502,11 +502,9 @@ export class AccountsEngineRepository {
     const preview = await this.documentNumbers.previewNext(context, documentKind, docContext)
     if (preview.autoEnabled && trimmed === preview.preview) return this.nextVoucherNo(context, voucherType)
     if (await this.voucherNoExists(context, voucherType, trimmed, companyId, accountingYearId, existingId)) {
-      if (!preview.autoEnabled) throw new BadRequestException(`Voucher number ${trimmed} already exists.`)
-      return this.nextVoucherNo(context, voucherType)
+      throw new BadRequestException(`Voucher number ${trimmed} already exists.`)
     }
 
-    await this.documentNumbers.advancePast(context, documentKind, docContext, trimmed)
     return trimmed
   }
 

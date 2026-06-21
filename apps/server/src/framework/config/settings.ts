@@ -54,6 +54,11 @@ export const settings = {
     webhookSecret: envOptionalString('RAZORPAY_WEBHOOK_SECRET'),
     baseUrl: envString('RAZORPAY_BASE_URL', 'https://api.razorpay.com/v1'),
   },
+  tirupurConnect: {
+    syncSecret: envOptionalString('TIRUPUR_CONNECT_SYNC_SECRET'),
+    syncToleranceSeconds: envNumber('TIRUPUR_CONNECT_SYNC_TOLERANCE_SECONDS', 300),
+    memberTokenHours: envNumber('TIRUPUR_CONNECT_MEMBER_TOKEN_HOURS', 168),
+  },
   zetro: {
     provider: envString('ZETRO_PROVIDER', 'openrouter'),
     defaultModel: envString('ZETRO_DEFAULT_MODEL', 'nex-agi/nex-n2-pro:free'),

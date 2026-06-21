@@ -33,8 +33,11 @@ Codexsun is a daily business workspace for billing, accounts-ready entries, mast
 3. [Company And Master Data](./getting-started/company-and-master-data.md)
 4. [Sales Entry](./entries/sales.md)
 5. [Purchase Entry](./entries/purchase.md)
-6. [Receipts And Payments](./entries/receipts-and-payments.md)
-7. [Customer Statement](./reports/customer-statement.md)
+6. [Receipt Entry](./entries/receipt.md)
+7. [Payment Entry](./entries/payment.md)
+8. [Cash Book Entry](./entries/cash-book.md)
+9. [Bank Book Entry](./entries/bank-book.md)
+10. [Customer Statement](./reports/customer-statement.md)
 
 ## Daily Flow
 
@@ -55,7 +58,10 @@ Most work follows this simple path:
 - [Sales Entry](./entries/sales.md)
 - [Quotation Entry](./entries/quotation.md)
 - [Purchase Entry](./entries/purchase.md)
-- [Receipts And Payments](./entries/receipts-and-payments.md)
+- [Receipt Entry](./entries/receipt.md)
+- [Payment Entry](./entries/payment.md)
+- [Cash Book Entry](./entries/cash-book.md)
+- [Bank Book Entry](./entries/bank-book.md)
 - [Customer Statement](./reports/customer-statement.md)
 - [Quotation Report](./reports/quotation-report.md)
 - [Company Defaults](./settings/company-defaults.md)

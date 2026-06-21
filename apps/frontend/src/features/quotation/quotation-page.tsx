@@ -26,6 +26,7 @@ import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import { emptyAddress, emptyContact, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
+import { resolveCreatedContactAddress, type CreatedContactAddress } from "src/features/contact/contact-address-create"
 import { listCompanies } from "src/features/company/company-client"
 import { runGstComplianceOperation } from "src/features/gst/gst-compliance-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
@@ -1210,11 +1211,10 @@ function QuotationAddressTab({ addressLabels, contacts, form, onContactsRefresh,
           contact={selectedContact}
           initialText={createAddress.initialText}
           kind={createAddress.kind}
-          addressLabels={addressLabels}
           session={session}
           onClose={() => setCreateAddress(null)}
-          onCreated={(addressText) => {
-            pickAddress(createAddress.kind, { id: addressText, label: addressText, record: { id: 0, uuid: addressText, is_active: true, created_at: null, updated_at: null, deleted_at: null, name: addressText } })
+          onCreated={({ address, text }) => {
+            pickAddress(createAddress.kind, { id: address.id ?? text, label: text, record: { id: 0, uuid: address.id ?? text, is_active: true, created_at: null, updated_at: null, deleted_at: null, name: text, address } })
             onContactsRefresh()
             setCreateAddress(null)
           }}
@@ -1224,13 +1224,12 @@ function QuotationAddressTab({ addressLabels, contacts, form, onContactsRefresh,
   )
 }
 
-function QuotationAddressCreateDialog({ addressLabels, contact, initialText, kind, onClose, onCreated, session }: {
-  addressLabels: QuotationAddressLabels
+function QuotationAddressCreateDialog({ contact, initialText, kind, onClose, onCreated, session }: {
   contact: QuotationLookupOption
   initialText: string
   kind: "billing" | "shipping"
   onClose(): void
-  onCreated(addressText: string): void
+  onCreated(result: CreatedContactAddress): void
   session: AuthSession
 }) {
   const [countryOptions, setCountryOptions] = useState<MasterDataRecord[]>([])
@@ -1248,12 +1247,12 @@ function QuotationAddressCreateDialog({ addressLabels, contact, initialText, kin
         ...input,
         addresses: [...input.addresses.filter((address) => address.addressLine1.trim()), savedAddress],
       })
-      return addressText(savedAddress, addressLabels) || contactAddressPreview(saved) || savedAddress.addressLine1
+      return resolveCreatedContactAddress(session, saved, savedAddress)
     },
     onError: (error) => toast.error("Could not create address", { description: error instanceof Error ? error.message : "Please try again." }),
-    onSuccess: (text) => {
+    onSuccess: (result) => {
       toast.success("Address created")
-      onCreated(text)
+      onCreated(result)
     },
   })
 

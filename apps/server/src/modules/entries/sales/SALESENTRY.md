@@ -7,6 +7,8 @@ Handles domestic sales invoice creation, management, and lifecycle for tenant bu
 - Sales invoice CRUD with full item details (rate, quantity, discount, tax, narration)
 - Multi-tenant data isolation via TenantContextService with `company.manage` permission scope
 - Auto-numbering via DocumentNumberRepository across sales, purchase, payment, receipt, and stock modules
+- Manual invoice numbers are saved exactly when unique and do not advance the automatic Sales sequence
+- Duplicate manual invoice numbers are rejected instead of being silently replaced with a new automatic number
 - PDF generation via shared PrintHtmlPdfService using Playwright/Chromium
 - Email delivery via shared EntryDocumentMailService with attachment support
 - Event-driven lifecycle using event bus pattern with events (created, updated, deleted, restored, commented, tool)

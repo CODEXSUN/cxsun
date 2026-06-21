@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, ExternalLink, Globe2, LayoutGrid, Play, RefreshCw, Server, Square } from "lucide-react"
+import { ArrowLeft, ExternalLink, Globe2, LayoutGrid, Play, RefreshCw, RotateCcw, Server, Square } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 
@@ -72,6 +72,14 @@ export function ProductAppDirectoryPage({ session }: { session: AuthSession }) {
       void queryClient.invalidateQueries({ queryKey: ["app-runtime", "apps"] })
     },
   })
+  const restartMutation = useMutation({
+    mutationFn: (appId: string) => restartRuntimeApp(session, appId),
+    onError: (error) => toast.error(error instanceof Error ? error.message : "App restart failed"),
+    onSuccess: (result) => {
+      toast.success(result.message)
+      void queryClient.invalidateQueries({ queryKey: ["app-runtime", "apps"] })
+    },
+  })
   const runtimeApps = runtimeQuery.data?.apps ?? []
   const fallbackRuntimeApps: RuntimeApp[] = productApps.map((app) => ({
     id: app.slug,
@@ -98,9 +106,10 @@ export function ProductAppDirectoryPage({ session }: { session: AuthSession }) {
     return (
       <AppRuntimeShowPage
         app={selectedRuntimeApp}
-        isWorking={startMutation.isPending || stopMutation.isPending}
+        isWorking={startMutation.isPending || stopMutation.isPending || restartMutation.isPending}
         product={selectedProductApp}
         onBack={() => setSelectedAppId(null)}
+        onRestart={() => restartMutation.mutate(selectedRuntimeApp.id)}
         onStart={() => startMutation.mutate(selectedRuntimeApp.id)}
         onStop={() => stopMutation.mutate(selectedRuntimeApp.id)}
       />
@@ -156,6 +165,11 @@ export function ProductAppDirectoryPage({ session }: { session: AuthSession }) {
                       <Play className="size-4" />Start
                     </Button>
                   ) : null}
+                  {app.startable && app.running ? (
+                    <Button aria-label={`Restart ${app.name}`} className="size-8 rounded-md p-0" disabled={restartMutation.isPending} size="icon" title="Restart app" type="button" variant="outline" onClick={() => restartMutation.mutate(app.id)}>
+                      <RotateCcw className="size-4" />
+                    </Button>
+                  ) : null}
                   {app.startable && app.running && app.managed ? (
                     <Button className="rounded-md" disabled={stopMutation.isPending} size="sm" type="button" variant="destructive" onClick={() => stopMutation.mutate(app.id)}>
                       <Square className="size-4" />Stop
@@ -179,6 +193,7 @@ function AppRuntimeShowPage({
   app,
   isWorking,
   onBack,
+  onRestart,
   onStart,
   onStop,
   product,
@@ -186,6 +201,7 @@ function AppRuntimeShowPage({
   app: RuntimeApp
   isWorking: boolean
   onBack(): void
+  onRestart(): void
   onStart(): void
   onStop(): void
   product: ProductApp | null
@@ -206,6 +222,7 @@ function AppRuntimeShowPage({
             <a href={app.localUrl} rel="noreferrer" target="_blank"><ExternalLink className="size-4" />Open</a>
           </Button>
           {app.startable && !app.running ? <Button className="rounded-md" disabled={isWorking} type="button" onClick={onStart}><Play className="size-4" />Start</Button> : null}
+          {app.startable && app.running ? <Button className="rounded-md" disabled={isWorking} type="button" variant="outline" onClick={onRestart}><RotateCcw className="size-4" />Restart</Button> : null}
           {app.startable && app.running && app.managed ? <Button className="rounded-md" disabled={isWorking} type="button" variant="destructive" onClick={onStop}><Square className="size-4" />Stop</Button> : null}
         </div>
       </div>
@@ -331,6 +348,17 @@ async function startRuntimeApp(session: AuthSession, appId: string): Promise<{ a
 
 async function stopRuntimeApp(session: AuthSession, appId: string): Promise<{ app: RuntimeApp; message: string }> {
   const response = await fetch(`${apiBaseUrl}/api/system/app-runtime/stop`, {
+    body: JSON.stringify({ appId }),
+    cache: "no-store",
+    headers: { ...authHeaders(session), "Content-Type": "application/json" },
+    method: "POST",
+  })
+  if (!response.ok) throw new Error(await response.text())
+  return response.json() as Promise<{ app: RuntimeApp; message: string }>
+}
+
+async function restartRuntimeApp(session: AuthSession, appId: string): Promise<{ app: RuntimeApp; message: string }> {
+  const response = await fetch(`${apiBaseUrl}/api/system/app-runtime/restart`, {
     body: JSON.stringify({ appId }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

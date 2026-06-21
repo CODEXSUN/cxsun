@@ -7,6 +7,8 @@ Handles purchase (supplier) invoice creation, management, and lifecycle for tena
 - Purchase invoice CRUD with item details (rate, quantity, discount, tax, narration)
 - Multi-tenant data isolation via TenantContextService with 'company.manage' permission scope
 - Auto-numbering via DocumentNumberRepository
+- Exact manual entry-number overrides that do not advance the automatic sequence
+- Duplicate manual entry numbers are rejected instead of silently replaced
 - PDF generation via shared PrintHtmlPdfService
 - Email delivery via shared EntryDocumentMailService
 - Event-driven lifecycle with events (created, updated, deleted, archived)

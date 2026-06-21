@@ -29,6 +29,12 @@ export class AppRuntimeController {
     assertSuperAdmin(request)
     return this.appRuntime.stop(String(body?.appId ?? ''))
   }
+
+  @Post('restart')
+  restart(@Body() body: { appId?: string }, @Req() request: FastifyRequest & { user?: { role?: string } }) {
+    assertSuperAdmin(request)
+    return this.appRuntime.restart(String(body?.appId ?? ''))
+  }
 }
 
 function assertSuperAdmin(request: FastifyRequest & { user?: { role?: string } }) {

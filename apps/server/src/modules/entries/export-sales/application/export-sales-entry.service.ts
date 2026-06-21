@@ -33,18 +33,13 @@ export class ExportSalesEntryService {
 
   async upsert(headers: TenantRequestHeaders, input: ExportSalesEntryInput) {
     const context = await this.tenantContext.resolve(headers, 'company.manage')
-    const requestedInvoiceNo = String(input.invoice_no ?? '').trim()
-    const isUpdate = Boolean(input.id || input.uuid)
     const entry = input.id || input.uuid
       ? await this.exportSalesEntries.update(context, String(input.uuid ?? input.id), input)
       : await this.exportSalesEntries.insert(context, input)
     if (!entry) throw new NotFoundException('Export sales entry was not found.')
     const aggregate = ExportSalesEntryAggregate.fromEntry(entry, context.tenant.id, context.user.email)
     await this.events.publish(input.id || input.uuid ? aggregate.updatedEvent() : aggregate.createdEvent())
-    const warning = !isUpdate && requestedInvoiceNo && requestedInvoiceNo !== entry.invoice_no
-      ? `Invoice number ${requestedInvoiceNo} was already used, so ${entry.invoice_no} was saved instead.`
-      : undefined
-    return { ok: true, entry, warning }
+    return { ok: true, entry }
   }
 
   async destroy(headers: TenantRequestHeaders, idOrUuid: string) {
@@ -108,7 +103,6 @@ export class ExportSalesEntryService {
 function emailRecipient(tool: string) {
   return /^Send to Email:\s*(.+)$/i.exec(tool)?.[1]?.trim() || null
 }
-
 
 
 

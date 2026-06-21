@@ -16,28 +16,36 @@ export const gstComplianceOperations = [
 ] as const
 
 export type GstComplianceOperation = typeof gstComplianceOperations[number]
+export type GstProviderEnvironment = "production" | "sandbox"
 export type GstProviderPurpose = "einvoice_eway" | "eway_only"
 
 export interface GstComplianceDocument {
   ackDate: string | null
   ackNo: string | null
+  documentDate?: string | null
+  documentNo?: string | null
   ewayBillDate: string | null
   ewayBillNo: string | null
   ewayStatus: string
   ewayCancelledAt?: string | null
   ewayGeneratedAt?: string | null
+  ewayValidUpto?: string | null
   irn: string | null
   irnStatus: string
   irnCancelledAt?: string | null
   irnGeneratedAt?: string | null
   signedQr: string | null
+  sourceId?: number | null
+  sourceType?: string | null
+  sourceUuid?: string | null
+  uuid?: string
 }
 
 export interface GstComplianceOperationInput {
   companyId?: string | number | null
   documentDate?: string | null
   documentNo?: string | null
-  environment?: "production" | "sandbox" | null
+  environment?: GstProviderEnvironment | null
   purpose?: GstProviderPurpose | null
   payload?: unknown
   query?: Record<string, unknown>
@@ -47,8 +55,10 @@ export interface GstComplianceOperationInput {
 }
 
 interface GstComplianceRequestOptions {
-  environment?: "production" | "sandbox"
+  companyId?: string | number | null
+  environment?: GstProviderEnvironment
   purpose?: GstProviderPurpose
+  sourceType?: string
   tenantCode?: string
 }
 
@@ -59,10 +69,12 @@ function gstHeaders(session: AuthSession, options?: GstComplianceRequestOptions)
   }
 }
 
-function gstQuery(options?: Pick<GstComplianceRequestOptions, "environment" | "purpose">) {
+function gstQuery(options?: Pick<GstComplianceRequestOptions, "companyId" | "environment" | "purpose" | "sourceType">) {
   const params = new URLSearchParams()
   if (options?.environment) params.set("environment", options.environment)
   if (options?.purpose) params.set("purpose", options.purpose)
+  if (options?.companyId !== undefined && options.companyId !== null) params.set("companyId", String(options.companyId))
+  if (options?.sourceType) params.set("sourceType", options.sourceType)
   const query = params.toString()
   return query ? `?${query}` : ""
 }
@@ -163,7 +175,7 @@ export async function runGstComplianceOperation(session: AuthSession, operation:
     headers: { ...gstHeaders(session, options), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(`GST compliance request failed with status ${response.status}.`)
+  if (!response.ok) throw new Error(await gstComplianceResponseError(response, `GST compliance request failed with status ${response.status}.`))
   const result = (await response.json()) as {
     document?: GstComplianceDocument | null
     error?: string | null
@@ -172,6 +184,16 @@ export async function runGstComplianceOperation(session: AuthSession, operation:
   }
   if (!result.ok) throw new Error(result.error ?? "GST compliance provider rejected the request.")
   return result
+}
+
+async function gstComplianceResponseError(response: Response, fallback: string) {
+  try {
+    const body = (await response.json()) as { error?: unknown; message?: unknown; title?: unknown; errors?: unknown }
+    const details = Array.isArray(body.errors) ? body.errors.map((entry) => String(entry)).filter(Boolean).join(" ") : ""
+    return String((body.error ?? body.message ?? body.title ?? details) || fallback)
+  } catch {
+    return fallback
+  }
 }
 
 export async function getGstComplianceTokenStatus(session: AuthSession, options?: GstComplianceRequestOptions) {
@@ -230,4 +252,13 @@ export async function listGstComplianceOperations(session: AuthSession, options?
   })
   if (!response.ok) throw new Error(`GST compliance history failed with status ${response.status}.`)
   return (await response.json()) as GstComplianceOperationRecord[]
+}
+
+export async function listGstComplianceDocuments(session: AuthSession, options?: GstComplianceRequestOptions) {
+  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/documents${gstQuery(options)}`, {
+    cache: "no-store",
+    headers: gstHeaders(session, options),
+  })
+  if (!response.ok) throw new Error(`GST compliance documents failed with status ${response.status}.`)
+  return (await response.json()) as GstComplianceDocument[]
 }

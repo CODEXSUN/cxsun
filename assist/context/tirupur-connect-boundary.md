@@ -75,6 +75,14 @@ Backend boundary:
 apps/server/src/modules/tirupur-connect/
 ```
 
+Database boundary:
+
+```text
+tirupur_connect_db
+```
+
+Tirupur Connect tables must not be created in `cxsun_master` or a tenant database. The product database uses the shared MariaDB server credentials by default, with optional `TIRUPUR_CONNECT_DB_*` overrides.
+
 API boundaries:
 
 ```text

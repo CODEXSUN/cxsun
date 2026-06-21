@@ -340,10 +340,8 @@ export class PaymentEntryRepository {
     const preview = await this.documentNumbers.previewNext(context, 'payment', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
     if (preview.autoEnabled && trimmedPaymentNo === preview.preview) return this.nextPaymentNo(context, companyId, accountingYearId)
     if (await this.paymentNoExists(context, trimmedPaymentNo, companyId, accountingYearId, existingId)) {
-      if (!preview.autoEnabled) throw new BadRequestException(`Payment number ${trimmedPaymentNo} already exists.`)
-      return this.nextPaymentNo(context, companyId, accountingYearId)
+      throw new BadRequestException(`Payment number ${trimmedPaymentNo} already exists.`)
     }
-    await this.documentNumbers.advancePast(context, 'payment', { accountingYearId: String(accountingYearId), companyId: String(companyId) }, trimmedPaymentNo)
     return trimmedPaymentNo
   }
 

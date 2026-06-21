@@ -340,10 +340,8 @@ export class ReceiptEntryRepository {
     const preview = await this.documentNumbers.previewNext(context, 'receipt', { accountingYearId: String(accountingYearId), companyId: String(companyId) })
     if (preview.autoEnabled && trimmedReceiptNo === preview.preview) return this.nextReceiptNo(context, companyId, accountingYearId)
     if (await this.receiptNoExists(context, trimmedReceiptNo, companyId, accountingYearId, existingId)) {
-      if (!preview.autoEnabled) throw new BadRequestException(`Receipt number ${trimmedReceiptNo} already exists.`)
-      return this.nextReceiptNo(context, companyId, accountingYearId)
+      throw new BadRequestException(`Receipt number ${trimmedReceiptNo} already exists.`)
     }
-    await this.documentNumbers.advancePast(context, 'receipt', { accountingYearId: String(accountingYearId), companyId: String(companyId) }, trimmedReceiptNo)
     return trimmedReceiptNo
   }
 

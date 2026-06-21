@@ -1,4 +1,4 @@
-export type MigrationTarget = 'master' | 'tenant' | 'all'
+export type MigrationTarget = 'master' | 'tenant' | 'tirupur-connect' | 'all'
 
 export type MigrationAction = 'migrate' | 'seed' | 'setup' | 'fresh'
 
