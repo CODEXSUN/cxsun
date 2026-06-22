@@ -6,6 +6,7 @@ import { defineConfig, loadEnv, type UserConfigExport } from "vite"
 type ProductViteOptions = {
   appName: string
   allowedHosts?: string[]
+  define?: (env: Record<string, string>) => Record<string, unknown>
   outDir: string
   port: number
 }
@@ -24,6 +25,7 @@ export function productAppViteConfig(options: ProductViteOptions): UserConfigExp
         emptyOutDir: true,
         outDir: options.outDir,
       },
+      define: options.define?.(env),
       server: {
         allowedHosts: allowedHosts(env, options.allowedHosts ?? []),
         host: "0.0.0.0",

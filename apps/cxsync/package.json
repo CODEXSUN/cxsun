@@ -1,7 +1,7 @@
 {
   "name": "@cxsun/cxsync",
   "private": true,
-  "version": "1.0.123",
+  "version": "1.0.125",
   "type": "module",
   "description": "CXSync super-admin database operations and analytics console",
   "author": "CODEXSUN",

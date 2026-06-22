@@ -392,6 +392,12 @@ button {
   color: #be123c;
 }
 
+.form-message--success {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+
 .spin {
   animation: spin 0.85s linear infinite;
 }

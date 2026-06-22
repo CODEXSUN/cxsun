@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import type { RowDataPacket } from "mysql2"
-import type { TenantCloudSnapshot } from "../../src/shared/connection-contracts.js"
+import type { TenantCloudSchemaSnapshot, TenantCloudSnapshot } from "../../src/shared/connection-contracts.js"
+import { cxSyncCloudHeaders } from "./cxsync-cloud-client.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
 import { getPrivateTenantConnection } from "./tenant-connection-store.js"
 
@@ -37,6 +38,12 @@ type CloudSessionResponse = {
   }
 }
 
+type CloudTenantSnapshotResponse = {
+  ok?: boolean
+  error?: string
+  snapshot?: TenantCloudSchemaSnapshot
+}
+
 export async function getTenantCloudSnapshot(id: string): Promise<TenantCloudSnapshot | null> {
   const database = await getCxSyncDatabase()
   const [rows] = await database.execute<SnapshotRow[]>(
@@ -62,6 +69,7 @@ export async function captureTenantCloudSnapshot(id: string): Promise<TenantClou
   let message = ""
   const health: TenantCloudSnapshot["health"] = { latencyMs: 0, ok: false, status: "not checked" }
   const session: TenantCloudSnapshot["session"] = { latencyMs: 0, ok: false, selectedTenant: null, userEmail: null }
+  let schema: TenantCloudSchemaSnapshot | null = null
 
   try {
     const login = await loginCloud(baseUrl, tenant)
@@ -92,10 +100,16 @@ export async function captureTenantCloudSnapshot(id: string): Promise<TenantClou
       session.selectedTenant = messageOf(sessionResult.reason)
     }
 
-    const status: TenantCloudSnapshot["status"] = health.ok && session.ok ? "ready" : "partial"
-    message = status === "ready"
-      ? "Cloud API login, session token, and health endpoint verified."
-      : "Cloud login worked, but one or more cloud checks need attention."
+    try {
+      schema = await readCloudTenantSnapshot(baseUrl, token, tenant.cloudDomain)
+    } catch (error) {
+      message = `Cloud API login worked, but tenant schema snapshot failed: ${messageOf(error)}`
+    }
+
+    const status: TenantCloudSnapshot["status"] = health.ok && session.ok && schema ? "ready" : "partial"
+    message = message || (status === "ready"
+      ? `Cloud API login, session token, health, and tenant schema snapshot verified (${schema?.totals.tableCount ?? 0} tables).`
+      : "Cloud login worked, but one or more cloud checks need attention.")
 
     const snapshot: TenantCloudSnapshot = {
       apiUrl: baseUrl,
@@ -105,6 +119,7 @@ export async function captureTenantCloudSnapshot(id: string): Promise<TenantClou
       health,
       id: snapshotId,
       message,
+      schema,
       session,
       status,
       tenantCode: tenant.tenantCode,
@@ -120,6 +135,7 @@ export async function captureTenantCloudSnapshot(id: string): Promise<TenantClou
       health,
       id: snapshotId,
       message: messageOf(error),
+      schema: null,
       session,
       status: "failed",
       tenantCode: tenant.tenantCode,
@@ -137,10 +153,10 @@ async function loginCloud(baseUrl: string, tenant: NonNullable<Awaited<ReturnTyp
       password: tenant.cloudAdminPassword,
       surface: "tenant",
     }),
-    headers: {
-      "Content-Type": "application/json",
-      ...(tenant.cloudDomain ? { "x-login-domain": tenant.cloudDomain } : {}),
-    },
+      headers: {
+        ...(await cxSyncCloudHeaders({ "Content-Type": "application/json" })),
+        ...(tenant.cloudDomain ? { "x-login-domain": tenant.cloudDomain } : {}),
+      },
     method: "POST",
   })
   const body = await safeJson<CloudLoginResponse>(response)
@@ -162,6 +178,7 @@ async function readCloudSession(baseUrl: string, token: string, cloudDomain: str
   const response = await fetch(`${baseUrl}/api/v1/auth/session`, {
     cache: "no-store",
     headers: {
+      ...(await cxSyncCloudHeaders()),
       Authorization: `Bearer ${token}`,
       ...(cloudDomain ? { "x-login-domain": cloudDomain } : {}),
     },
@@ -169,6 +186,20 @@ async function readCloudSession(baseUrl: string, token: string, cloudDomain: str
   const body = await safeJson<CloudSessionResponse>(response)
   if (!response.ok || !body.ok) throw new Error(body.error || `Cloud session returned HTTP ${response.status}.`)
   return { body, latencyMs: Date.now() - startedAt }
+}
+
+async function readCloudTenantSnapshot(baseUrl: string, token: string, cloudDomain: string) {
+  const response = await fetch(`${baseUrl}/api/v1/cxsync/tenant-snapshot`, {
+    cache: "no-store",
+    headers: {
+      ...(await cxSyncCloudHeaders()),
+      Authorization: `Bearer ${token}`,
+      ...(cloudDomain ? { "x-login-domain": cloudDomain } : {}),
+    },
+  })
+  const body = await safeJson<CloudTenantSnapshotResponse>(response)
+  if (!response.ok || !body.ok || !body.snapshot) throw new Error(body.error || `Cloud tenant snapshot returned HTTP ${response.status}.`)
+  return body.snapshot
 }
 
 async function saveCloudSnapshot(tenantConnectionId: string, snapshot: TenantCloudSnapshot) {
@@ -209,6 +240,7 @@ function snapshotFromRow(row: SnapshotRow): TenantCloudSnapshot {
     health: { latencyMs: 0, ok: row.status === "ready", status: row.status },
     id: row.id,
     message: "Saved cloud snapshot has no manifest details.",
+    schema: null,
     session: { latencyMs: 0, ok: false, selectedTenant: null, userEmail: null },
     status: row.status,
     tenantCode: "",

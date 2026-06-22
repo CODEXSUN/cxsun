@@ -68,6 +68,16 @@ Default CXSun routing:
 /         -> http://127.0.0.1:6010
 ```
 
+For standalone product apps, keep backend routes on `6005` and point `/` at that app's frontend port:
+
+```bash
+sudo codexsun tirupurconnect.com --ssl --www --frontend-port 6032 --force
+sudo codexsun admin.tirupurconnect.com --ssl --frontend-port 6043 --force
+sudo codexsun tenkasisports.com --ssl --www --frontend-port 6033 --force
+sudo codexsun tirupurdirect.com --ssl --www --frontend-port 6031 --force
+sudo codexsun aaranassociates.com --ssl --www --frontend-port 6030 --force
+```
+
 ## Domain Rules
 
 By default, the CLI uses only the domain you pass.

@@ -1,6 +1,7 @@
 import type { CxSyncDesktopApi, TenantConnection } from "../../shared/connection-contracts"
 
 const browserKey = "cxsync.preview.tenant-connections"
+const browserCloudUrlKey = "cxsync.preview.cloud-service-url"
 
 export function connectionClient(): CxSyncDesktopApi {
   return window.cxsyncDesktop ?? browserFallback
@@ -68,6 +69,37 @@ const browserFallback: CxSyncDesktopApi = {
   async getTenantCloudSnapshot() {
     return null
   },
+  async getServiceKeyStatus() {
+    return { cloudServiceUrl: readPreviewCloudUrl(), envPath: "Browser preview", hasKey: false, keyPreview: null, updatedAt: null }
+  },
+  async generateServiceKey() {
+    const key = crypto.getRandomValues(new Uint8Array(32)).reduce((text, byte) => text + byte.toString(16).padStart(2, "0"), "")
+    return { envPath: "Browser preview", hasKey: true, key, keyPreview: `${key.slice(0, 6)}…${key.slice(-6)}`, updatedAt: new Date().toISOString() }
+  },
+  async saveServiceKey(key) {
+    return { envPath: "Browser preview", hasKey: Boolean(key), keyPreview: key ? `${key.slice(0, 6)}…${key.slice(-6)}` : null, updatedAt: new Date().toISOString() }
+  },
+  async saveCloudServiceUrl(url) {
+    const normalized = normalizePreviewCloudUrl(url)
+    localStorage.setItem(browserCloudUrlKey, normalized)
+    return { cloudServiceUrl: normalized, envPath: "Browser preview", hasKey: false, keyPreview: null, updatedAt: new Date().toISOString() }
+  },
+  async getCloudServiceHandshake() {
+    return null
+  },
+  async verifyCloudServiceHandshake() {
+    return {
+      apiUrl: readPreviewCloudUrl(),
+      backend: { latencyMs: 0, message: "Electron desktop is required to verify backend API.", ok: false, statusCode: null },
+      checkedAt: new Date().toISOString(),
+      frontend: { latencyMs: 0, message: "Browser preview does not run desktop handshake.", ok: false, statusCode: null },
+      latencyMs: 0,
+      message: "Electron desktop is required to verify the cloud service handshake.",
+      ok: false,
+      service: "cxsync-cloud",
+      status: "unreachable",
+    }
+  },
   async getTenantUpgradePlan() {
     return null
   },
@@ -88,6 +120,18 @@ const browserFallback: CxSyncDesktopApi = {
   async getTenantUpgradeExecution() {
     return null
   },
+  async getTenantSyncJob() {
+    return null
+  },
+  async listTenantSyncJobs() {
+    return []
+  },
+  async checkTenantSyncService() {
+    return { apiUrl: "Browser preview", checkedAt: new Date().toISOString(), latencyMs: 0, message: "Electron is required to check CXSync Cloud.", ok: false, service: "cxsync-cloud" }
+  },
+  async exportTenantSyncReport() {
+    throw new Error("Electron is required to export sync reports.")
+  },
   async runTenantUpgradePreflight() {
     return {
       checkedAt: new Date().toISOString(), checks: [], id: crypto.randomUUID(), planId: "preview", ready: false,
@@ -96,6 +140,15 @@ const browserFallback: CxSyncDesktopApi = {
   },
   async executeTenantUpgrade() {
     throw new Error("Electron is required to execute tenant upgrades.")
+  },
+  async runTenantSyncJob() {
+    throw new Error("Electron is required to run sync jobs.")
+  },
+  async continueTenantSyncJob() {
+    throw new Error("Electron is required to continue sync jobs.")
+  },
+  async retryTenantSyncJob() {
+    throw new Error("Electron is required to retry sync jobs.")
   },
   async createTenantBackup() {
     throw new Error("Electron is required to create tenant backups.")
@@ -177,6 +230,7 @@ const browserFallback: CxSyncDesktopApi = {
       health: { latencyMs: 0, ok: false, status: "Electron required" },
       id: crypto.randomUUID(),
       message: "Electron is required to capture a real cloud snapshot.",
+      schema: null,
       session: { latencyMs: 0, ok: false, selectedTenant: null, userEmail: null },
       status: "failed",
       tenantCode: record?.tenantCode ?? "preview",
@@ -202,4 +256,24 @@ function readPreview(): TenantConnection[] {
 
 function writePreview(records: TenantConnection[]) {
   localStorage.setItem(browserKey, JSON.stringify(records))
+}
+
+function readPreviewCloudUrl() {
+  return localStorage.getItem(browserCloudUrlKey) || defaultPreviewCloudUrl()
+}
+
+function defaultPreviewCloudUrl() {
+  if (typeof __CXSYNC_CLOUD_PUBLIC_URL__ === "string" && __CXSYNC_CLOUD_PUBLIC_URL__.trim()) {
+    return __CXSYNC_CLOUD_PUBLIC_URL__.trim().replace(/\/+$/, "")
+  }
+  if (window.location.port === "6077") return window.location.origin
+  return ""
+}
+
+function normalizePreviewCloudUrl(value: string) {
+  const normalized = value.trim().replace(/\/+$/, "")
+  if (!normalized) throw new Error("Cloud service URL is required.")
+  const parsed = new URL(normalized)
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Cloud service URL must start with http:// or https://.")
+  return parsed.toString().replace(/\/+$/, "")
 }

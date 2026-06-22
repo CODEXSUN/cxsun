@@ -228,6 +228,21 @@ async function migrate(database: Pool) {
       KEY idx_cxsync_execution_plan (plan_id)
     ) ENGINE=InnoDB
   `)
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS cxsync_sync_jobs (
+      id CHAR(36) PRIMARY KEY,
+      tenant_connection_id CHAR(36) NOT NULL,
+      status VARCHAR(40) NOT NULL,
+      current_phase VARCHAR(80) NOT NULL,
+      report_json LONGTEXT NOT NULL,
+      started_at DATETIME(3) NOT NULL,
+      completed_at DATETIME(3) NULL,
+      CONSTRAINT fk_cxsync_sync_job_tenant
+        FOREIGN KEY (tenant_connection_id) REFERENCES cxsync_tenant_connections(id)
+        ON DELETE CASCADE,
+      KEY idx_cxsync_sync_job_latest (tenant_connection_id, started_at)
+    ) ENGINE=InnoDB
+  `)
 }
 
 function databaseName(value: string) {

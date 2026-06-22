@@ -60,6 +60,22 @@ export type TenantHandshakeHistoryItem = TenantConnectionVerification & {
   id: number
 }
 
+export type TenantCloudSchemaSnapshot = {
+  capturedAt: string
+  columns: TenantColumnInspectionItem[]
+  database: string
+  indexes: TenantIndexInspectionItem[]
+  schemaHash: string
+  tables: TenantTableInspectionItem[]
+  tenant: {
+    code: number
+    corporateId: string | null
+    name: string
+    slug: string
+  }
+  totals: TenantDatabaseInspection["totals"]
+}
+
 export type TenantCloudSnapshot = {
   apiUrl: string
   capturedAt: string
@@ -78,6 +94,7 @@ export type TenantCloudSnapshot = {
     selectedTenant: string | null
     userEmail: string | null
   }
+  schema: TenantCloudSchemaSnapshot | null
   status: "ready" | "partial" | "failed"
   tenantCode: string
 }
@@ -274,6 +291,81 @@ export type TenantUpgradeExecution = {
   }
 }
 
+export type TenantSyncJobPhaseId = "tenant-details" | "download" | "verify-before" | "migrate" | "verify-after" | "upload-report"
+
+export type TenantSyncJobPhase = {
+  detail: string
+  finishedAt: string | null
+  id: TenantSyncJobPhaseId
+  label: string
+  startedAt: string | null
+  status: "pending" | "running" | "completed" | "skipped" | "approval-required" | "failed"
+}
+
+export type TenantSyncJob = {
+  cloudSnapshotId: string | null
+  completedAt: string | null
+  id: string
+  localSnapshotId: string | null
+  phases: TenantSyncJobPhase[]
+  startedAt: string
+  status: "running" | "completed" | "approval-required" | "failed"
+  summary: {
+    cloudTables: number
+    diffTotal: number
+    localTables: number
+    uploadReportId: string | null
+  }
+}
+
+export type TenantSyncServiceStatus = {
+  apiUrl: string
+  checkedAt: string
+  latencyMs: number
+  message: string
+  ok: boolean
+  service: string
+}
+
+export type TenantSyncReportExport = {
+  fileName: string
+  path: string
+}
+
+export type CxSyncServiceKeyStatus = {
+  cloudServiceUrl?: string
+  envPath: string
+  hasKey: boolean
+  keyPreview: string | null
+  updatedAt: string | null
+}
+
+export type CxSyncGeneratedServiceKey = CxSyncServiceKeyStatus & {
+  key: string
+}
+
+export type CxSyncCloudServiceHandshake = {
+  apiUrl: string
+  backend: {
+    latencyMs: number
+    message: string
+    ok: boolean
+    statusCode: number | null
+  }
+  frontend: {
+    latencyMs: number
+    message: string
+    ok: boolean
+    statusCode: number | null
+  }
+  checkedAt: string
+  latencyMs: number
+  message: string
+  ok: boolean
+  service: string
+  status: "accepted" | "missing-key" | "missing-url" | "rejected" | "unreachable"
+}
+
 export type CxSyncDesktopApi = {
   isDesktop: boolean
   authenticateLocalAdmin(email: string, password: string): Promise<LocalAdminSession>
@@ -289,11 +381,24 @@ export type CxSyncDesktopApi = {
   getTenantUpgradePlan(id: string): Promise<TenantUpgradePlan | null>
   getTenantUpgradePreflight(id: string): Promise<TenantUpgradePreflight | null>
   getTenantUpgradeExecution(id: string): Promise<TenantUpgradeExecution | null>
+  getTenantSyncJob(id: string): Promise<TenantSyncJob | null>
+  listTenantSyncJobs(id: string): Promise<TenantSyncJob[]>
+  checkTenantSyncService(id: string): Promise<TenantSyncServiceStatus>
+  exportTenantSyncReport(id: string): Promise<TenantSyncReportExport>
+  getServiceKeyStatus(): Promise<CxSyncServiceKeyStatus>
+  generateServiceKey(): Promise<CxSyncGeneratedServiceKey>
+  saveServiceKey(key: string): Promise<CxSyncServiceKeyStatus>
+  saveCloudServiceUrl(url: string): Promise<CxSyncServiceKeyStatus>
+  getCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake | null>
+  verifyCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake>
   generateTenantUpgradePlan(id: string): Promise<TenantUpgradePlan>
   createTenantBackup(id: string): Promise<TenantBackupRecord>
   getTenantBackup(id: string): Promise<TenantBackupRecord | null>
   executeTenantUpgrade(id: string): Promise<TenantUpgradeExecution>
   runTenantUpgradePreflight(id: string): Promise<TenantUpgradePreflight>
+  runTenantSyncJob(id: string): Promise<TenantSyncJob>
+  continueTenantSyncJob(id: string): Promise<TenantSyncJob>
+  retryTenantSyncJob(id: string): Promise<TenantSyncJob>
   inspectTenantDatabase(id: string): Promise<TenantDatabaseInspection>
   listTenantHandshakeHistory(id: string): Promise<TenantHandshakeHistoryItem[]>
   listTenantConnections(): Promise<TenantConnection[]>

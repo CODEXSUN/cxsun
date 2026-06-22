@@ -4,6 +4,104 @@
 
 CXSync is a private desktop tenant-connection manager.
 
+## Service Split
+
+CXSync now separates the private sync surface from the client billing backend.
+
+```text
+CXSync Desktop app
+  -> CXSync Cloud service, separate VPS process/port
+    -> master database and tenant cloud databases
+```
+
+Default private service:
+
+```text
+apps/cxsync-cloud
+CXSYNC_CLOUD_PORT=6077
+CXSYNC_CLOUD_PUBLIC_URL=https://cxsync.codexsun.com
+```
+
+The main billing backend remains focused on client-facing application traffic. The CXSync Cloud service owns private super-admin sync APIs, engines, connectors, and reporters. This keeps heavy inspection/sync work away from billing users and lets the sync service be restarted, firewalled, logged, and scaled independently.
+
+CXSync Cloud structure:
+
+```text
+apps/cxsync-cloud/src/connectors
+apps/cxsync-cloud/src/engines
+apps/cxsync-cloud/src/reporters
+```
+
+Run locally:
+
+```text
+npm run dev:cxsync-cloud
+```
+
+Useful endpoints:
+
+```text
+GET /health
+GET /api/v1/cxsync-cloud/status
+POST /api/v1/auth/login
+GET /api/v1/auth/session
+GET /api/v1/cxsync/tenant-snapshot
+POST /api/v1/cxsync/reports
+```
+
+The desktop tenant connection's cloud API URL should point to this private service reverse-proxy domain:
+
+```text
+https://cxsync.codexsun.com
+```
+
+The tenant login domain remains the tenant/company domain used for tenant resolution. Do not point CXSync Desktop to the public client billing API.
+
+For live deployment, set a long random service key on both the CXSync Cloud service and the CXSync Desktop `.env`:
+
+```text
+CXSYNC_SERVICE_KEY=long-random-secret
+```
+
+When this key is configured, CXSync Cloud requires `x-cxsync-service-key` for private auth, status, snapshot, and report endpoints.
+
+CXSync Desktop includes a Service Key page in the side menu. It can generate a random key, save it into the desktop `.env`, and copy either the raw key or the VPS-ready `.env` line:
+
+```text
+CXSYNC_SERVICE_KEY=...
+```
+
+Recommended nginx shape:
+
+```text
+server_name cxsync.codexsun.com;
+proxy_pass http://127.0.0.1:6077;
+```
+
+### Bounded Sync Job
+
+CXSync Desktop now owns an auditable bounded sync workflow:
+
+```text
+get tenant database details
+download cloud metadata snapshot
+verify local vs cloud
+prepare local migration plan when needed
+verify after approved migration
+upload audit report to CXSync Cloud
+```
+
+Boundaries:
+
+- tenant business rows are not downloaded;
+- CXSync Desktop does not write directly to VPS MariaDB;
+- local schema migration is prepared as a reviewed plan and stops with `approval-required`;
+- upload currently sends only the sync audit report to `POST /api/v1/cxsync/reports`.
+
+When a migration is needed, the first sync run stops at `approval-required`. The maintainer then reviews the Upgrade Plan tab, creates a restore-tested backup, runs preflight, and executes approved local steps. After that, the Sync Engine tab can continue the same job to verify local/cloud metadata again and upload the final audit report. CXSync Cloud persists received reports in `cxsync_cloud_reports`.
+
+The Sync Engine tab also provides service reachability checks, job history, retry for failed jobs, and sanitized JSON report export from the local CXSync user-data folder.
+
 ### Login
 
 - Login is local to CXSync.
@@ -80,10 +178,13 @@ Cloud snapshot:
 2. Requires the cloud login response to return a backend session token.
 3. Verifies the token against `/api/v1/auth/session`.
 4. Reads `/health` for cloud status, uptime timestamp, and backend version.
-5. Saves the result as a `cloud-status` record in `cxsync_data_snapshots`.
-6. Shows whether cloud API login, session, and health checks are ready, partial, or failed.
+5. Calls `/api/v1/cxsync/tenant-snapshot` with the same tenant session token.
+6. The cloud backend resolves the tenant context and reads metadata from that tenant cloud database.
+7. The backend returns table, column, index, row-estimate, size, missing-primary-key, and schema-hash metadata.
+8. CXSync saves the result as a `cloud-status` record in `cxsync_data_snapshots`.
+9. Shows whether cloud API login, session, health, and tenant schema snapshot checks are ready, partial, or failed.
 
-This is an API visibility check only. It does not connect directly to the VPS database, does not read tenant business rows, and does not upload or repair cloud data. It prepares the safe path for future cloud schema/data snapshot endpoints that must be exposed by the authenticated backend.
+This is an API visibility check only. It does not connect directly to the VPS database, does not read tenant business rows, and does not upload or repair cloud data. Cloud metadata is exposed only through the authenticated backend so tenant isolation, auth checks, and audit boundaries stay in place.
 
 ### Tenant Inspection
 

@@ -13,6 +13,8 @@ Default services:
 - Public URL: `https://codexsun.com`
 - Backend container port: `6005`
 - Frontend container port: `6010`
+- Docs container port: `6020`
+- Product app ports: `6030` through `6044`
 - CXMedia File Browser port: `6050`
 - MariaDB access from the app: `mariadb:3306`
 - Redis container access from the app: `redis:6379`
@@ -21,6 +23,40 @@ Default services:
 - Uploaded files live in a separate Docker volume named `cxmedia-storage`.
 - CXMedia is a standalone `filebrowser/filebrowser` container for upload and media management.
 - CORS defaults: `https://codexsun.com` and `https://www.codexsun.com`.
+
+Default cloud app surfaces:
+
+| App | Port |
+| --- | ---: |
+| Main tenant/admin/super-admin frontend | `6010` |
+| Docs | `6020` |
+| Auditor | `6030` |
+| Ecommerce | `6031` |
+| B2B Connect | `6032` |
+| Sports | `6033` |
+| Learning | `6034` |
+| Welfare | `6035` |
+| CRM | `6036` |
+| Sites | `6037` |
+| Blog | `6038` |
+| ZETRO | `6039` |
+| Textile Lab | `6040` |
+| Garment | `6041` |
+| UPVC | `6042` |
+| B2B Connect Admin | `6043` |
+| CXSync web console | `6044` |
+
+The app list is controlled by `CLOUD_PRODUCT_APPS`, using `app-folder:port` pairs:
+
+```bash
+CLOUD_PRODUCT_APPS=auditor:6030,ecommerce:6031,b2b-connect:6032 bash .container/setup-cloud.sh --reinstall
+```
+
+Docs can be skipped with `CLOUD_DOCS_ENABLED=false`. CXSync Cloud is a private API service and stays off by default; enable it only with a real `CXSYNC_SERVICE_KEY`:
+
+```bash
+CLOUD_CXSYNC_CLOUD_ENABLED=true CXSYNC_SERVICE_KEY='replace-with-long-random-key' bash .container/setup-cloud.sh --reinstall
+```
 
 Create the shared Docker network once:
 
@@ -180,6 +216,16 @@ sudo codexsun tirupurconnect.com --ssl --force
 ```
 
 The helper writes `/etc/nginx/sites-available/<domain>`, symlinks it into `/etc/nginx/sites-enabled/<domain>`, runs `nginx -t`, reloads Nginx, and runs Certbot when `--ssl` is used before the certificate files exist.
+
+For standalone product apps, pass the app's frontend port:
+
+```bash
+sudo codexsun tirupurconnect.com --ssl --www --frontend-port 6032 --force
+sudo codexsun admin.tirupurconnect.com --ssl --frontend-port 6043 --force
+sudo codexsun tenkasisports.com --ssl --www --frontend-port 6033 --force
+sudo codexsun tirupurdirect.com --ssl --www --frontend-port 6031 --force
+sudo codexsun aaranassociates.com --ssl --www --frontend-port 6030 --force
+```
 
 Open CXMedia:
 

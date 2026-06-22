@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.124`
-- **Release tag:** `v-1.0.124`
-- **Changelog label:** `v 1.0.124`
+- **Current version:** `1.0.125`
+- **Release tag:** `v-1.0.125`
+- **Changelog label:** `v 1.0.125`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -14,6 +14,25 @@ New changelog entries must keep database-facing work and application code work s
 - `#### App Codebase Changes` records UI, API, service logic, tooling, and documentation changes.
 
 ---
+
+## v-1.0.125
+
+### [v 1.0.125] 2026-06-22 10:27 am - CXSync dev preflight and cloud handshake reflection
+
+#### Database Changes
+
+- Database update: No (manual).
+- Added no tenant or platform billing schema migration for this release.
+- CXSync Cloud now creates its own `cxsync_cloud_handshake_events` operational table lazily inside the CXSync Cloud service database when the latest-handshake endpoint is used.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.125
+- Added `predev:cxsync` so `npm run dev:cxsync` first checks CXSync dev ports, frees stale listeners, and then starts desktop and cloud services.
+- Added `scripts/cxsync-dev-preflight.mjs` to detect and stop existing Windows PIDs on the CXSync Vite port `6044` and CXSync Cloud backend port `6077`.
+- Added CXSync Cloud handshake persistence APIs so the desktop handshake is saved by the cloud backend and can be reflected on the cloud overview page.
+- Updated the CXSync cloud overview to recheck the backend and show the latest accepted desktop handshake instead of staying at "No accepted request yet".
+- Aligned CXSync desktop, CXSync Cloud, workspace package, lockfile, and UI display versions with `1.0.125`.
 
 ## v-1.0.124
 

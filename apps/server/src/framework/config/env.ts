@@ -1,13 +1,9 @@
 import { existsSync, readFileSync } from 'fs'
-import { resolve } from 'path'
+import { dirname, parse, resolve } from 'path'
 
 type EnvValue = string | undefined
 
-const workspaceRoot = resolve(
-  process.cwd(),
-  process.cwd().replaceAll('\\', '/').endsWith('/apps/server') ? '../..' : '.',
-)
-const envFile = readEnvFile(resolve(workspaceRoot, '.env'))
+const envFile = readEnvFile(findEnvFile(process.cwd()) ?? resolve(process.cwd(), '.env'))
 const runtimeEnv = { ...envFile, ...process.env }
 
 export function envString(key: string, fallback = '') {
@@ -48,6 +44,18 @@ function readEnvFile(path: string): Record<string, string> {
   }
 
   return values
+}
+
+function findEnvFile(start: string) {
+  let current = resolve(start)
+  const root = parse(current).root
+  for (let index = 0; index < 8; index += 1) {
+    const candidate = resolve(current, '.env')
+    if (existsSync(candidate)) return candidate
+    if (current === root) break
+    current = dirname(current)
+  }
+  return null
 }
 
 function parseEnvValue(rawValue: string) {

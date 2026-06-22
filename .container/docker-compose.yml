@@ -17,6 +17,7 @@ services:
       HOST: 0.0.0.0
       PORT: ${PORT:-6005}
       VITE_PORT: ${VITE_PORT:-6010}
+      DOCS_PORT: ${DOCS_PORT:-6020}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://codexsun.com}
       VITE_STORAGE_BASE_URL: ${VITE_STORAGE_BASE_URL:-https://codexsun.com}
       VITE_MEDIA_MANAGER_URL: ${VITE_MEDIA_MANAGER_URL:-http://localhost:6050}
@@ -49,9 +50,19 @@ services:
       AUTO_SEED_TENANT_DOMAINS: ${AUTO_SEED_TENANT_DOMAINS:-false}
       SKIP_MARIADB_WAIT: ${SKIP_MARIADB_WAIT:-true}
       HEALTH_WAIT_SECONDS: ${HEALTH_WAIT_SECONDS:-900}
+      CLOUD_DOCS_ENABLED: ${CLOUD_DOCS_ENABLED:-true}
+      CLOUD_PRODUCT_APPS: ${CLOUD_PRODUCT_APPS:-auditor:6030,ecommerce:6031,b2b-connect:6032,sports:6033,learning:6034,welfare:6035,crm:6036,sites:6037,blog:6038,zetro:6039,textile-lab:6040,garment:6041,upvc:6042,b2b-connect-admin:6043,cxsync:6044}
+      CLOUD_CXSYNC_CLOUD_ENABLED: ${CLOUD_CXSYNC_CLOUD_ENABLED:-false}
+      CXSYNC_CLOUD_PORT: ${CXSYNC_CLOUD_PORT:-6077}
+      CXSYNC_CLOUD_HOST: ${CXSYNC_CLOUD_HOST:-0.0.0.0}
+      CXSYNC_CLOUD_LOG_LEVEL: ${CXSYNC_CLOUD_LOG_LEVEL:-info}
+      CXSYNC_SERVICE_KEY: ${CXSYNC_SERVICE_KEY:-}
     ports:
       - "${PORT:-6005}:${PORT:-6005}"
       - "${VITE_PORT:-6010}:${VITE_PORT:-6010}"
+      - "${DOCS_PORT:-6020}:${DOCS_PORT:-6020}"
+      - "6030-6044:6030-6044"
+      - "${CXSYNC_CLOUD_PORT:-6077}:${CXSYNC_CLOUD_PORT:-6077}"
     volumes:
       - cxsun-volume:/workspace
       - cxmedia-storage:/workspace/cxsun/storage

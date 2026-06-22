@@ -5,11 +5,16 @@ APP_DIR="${APP_DIR:-/workspace/cxsun}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
 FRONTEND_PORT="${VITE_PORT:-6010}"
 SERVER_PORT="${PORT:-6005}"
+DOCS_PORT="${DOCS_PORT:-6020}"
 API_BASE_URL="${VITE_API_BASE_URL:-https://codexsun.com}"
 STORAGE_BASE_URL="${VITE_STORAGE_BASE_URL:-$API_BASE_URL}"
 MEDIA_MANAGER_URL="${VITE_MEDIA_MANAGER_URL:-http://localhost:6050}"
 FRONTEND_APP_URL="${FRONTEND_URL:-https://codexsun.com}"
 CORS_ALLOWED_ORIGINS="${CORS_ORIGINS:-${FRONTEND_APP_URL},https://www.codexsun.com}"
+CLOUD_DOCS_ENABLED="${CLOUD_DOCS_ENABLED:-true}"
+CLOUD_PRODUCT_APPS="${CLOUD_PRODUCT_APPS:-auditor:6030,ecommerce:6031,b2b-connect:6032,sports:6033,learning:6034,welfare:6035,crm:6036,sites:6037,blog:6038,zetro:6039,textile-lab:6040,garment:6041,upvc:6042,b2b-connect-admin:6043,cxsync:6044}"
+CLOUD_CXSYNC_CLOUD_ENABLED="${CLOUD_CXSYNC_CLOUD_ENABLED:-false}"
+CXSYNC_CLOUD_PORT="${CXSYNC_CLOUD_PORT:-6077}"
 GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}"
 DATABASE_HOST="${DB_HOST:-mariadb}"
 DATABASE_PORT="${DB_PORT:-3306}"
@@ -152,6 +157,7 @@ fi
 
 set_env_value "PORT" "$SERVER_PORT"
 set_env_value "VITE_PORT" "$FRONTEND_PORT"
+set_env_value "DOCS_PORT" "$DOCS_PORT"
 set_env_value "VITE_API_BASE_URL" "$API_BASE_URL"
 set_env_value "VITE_STORAGE_BASE_URL" "$STORAGE_BASE_URL"
 set_env_value "VITE_MEDIA_MANAGER_URL" "$MEDIA_MANAGER_URL"
@@ -185,9 +191,14 @@ set_env_value "INSTALL_RUN_TESTS" "$INSTALL_RUN_TESTS"
 set_env_value "AUTO_SEED_TENANT_DOMAINS" "$AUTO_SEED_TENANT_DOMAINS"
 set_env_value "SKIP_MARIADB_WAIT" "$SKIP_MARIADB_WAIT"
 set_env_value "HEALTH_WAIT_SECONDS" "$HEALTH_WAIT_SECONDS"
+set_env_value "CLOUD_DOCS_ENABLED" "$CLOUD_DOCS_ENABLED"
+set_env_value "CLOUD_PRODUCT_APPS" "$CLOUD_PRODUCT_APPS"
+set_env_value "CLOUD_CXSYNC_CLOUD_ENABLED" "$CLOUD_CXSYNC_CLOUD_ENABLED"
+set_env_value "CXSYNC_CLOUD_PORT" "$CXSYNC_CLOUD_PORT"
 
 export PORT="$SERVER_PORT"
 export VITE_PORT="$FRONTEND_PORT"
+export DOCS_PORT="$DOCS_PORT"
 export VITE_API_BASE_URL="$API_BASE_URL"
 export VITE_STORAGE_BASE_URL="$STORAGE_BASE_URL"
 export VITE_MEDIA_MANAGER_URL="$MEDIA_MANAGER_URL"
@@ -221,8 +232,15 @@ export INSTALL_RUN_TESTS="$INSTALL_RUN_TESTS"
 export AUTO_SEED_TENANT_DOMAINS="$AUTO_SEED_TENANT_DOMAINS"
 export SKIP_MARIADB_WAIT="$SKIP_MARIADB_WAIT"
 export HEALTH_WAIT_SECONDS="$HEALTH_WAIT_SECONDS"
+export CLOUD_DOCS_ENABLED="$CLOUD_DOCS_ENABLED"
+export CLOUD_PRODUCT_APPS="$CLOUD_PRODUCT_APPS"
+export CLOUD_CXSYNC_CLOUD_ENABLED="$CLOUD_CXSYNC_CLOUD_ENABLED"
+export CXSYNC_CLOUD_PORT="$CXSYNC_CLOUD_PORT"
 
 echo "Configured ports: backend=$SERVER_PORT frontend=$FRONTEND_PORT api=$API_BASE_URL storage=$STORAGE_BASE_URL media=$MEDIA_MANAGER_URL"
+echo "Configured docs: enabled=$CLOUD_DOCS_ENABLED port=$DOCS_PORT"
+echo "Configured product apps: $CLOUD_PRODUCT_APPS"
+echo "Configured CXSync Cloud: enabled=$CLOUD_CXSYNC_CLOUD_ENABLED port=$CXSYNC_CLOUD_PORT"
 echo "Configured services: db=$DB_HOST:$DB_PORT redis=$REDIS_HOST:$REDIS_PORT"
 echo "Install tests: $INSTALL_RUN_TESTS"
 echo "Auto seed tenant domains: $AUTO_SEED_TENANT_DOMAINS"
@@ -289,20 +307,90 @@ run_step "Cleaning previous build output" rm -rf build apps/server/dist apps/fro
 
 run_step "Building CXSun" npm run build:active
 
+if [ "$CLOUD_DOCS_ENABLED" = "true" ]; then
+  run_step "Building docs app" npm -w apps/docs run build
+else
+  log_step "Skipping docs app build"
+fi
+
+start_product_app_preview() {
+  app_name="$1"
+  app_port="$2"
+
+  log_step "Starting $app_name preview on port $app_port"
+  if [ "$app_name" = "cxsync" ]; then
+    (cd "apps/$app_name" && VITE_PORT="$app_port" npx vite preview --host 0.0.0.0 --port "$app_port") &
+  else
+    VITE_PORT="$app_port" npm -w "apps/$app_name" run preview -- --host 0.0.0.0 --port "$app_port" &
+  fi
+  PRODUCT_APP_PIDS="$PRODUCT_APP_PIDS $!"
+  echo "$app_name preview PID: $!"
+}
+
+build_product_app() {
+  app_name="$1"
+
+  if [ "$app_name" = "cxsync" ]; then
+    run_step "Building $app_name web app" npm -w apps/cxsync run build:web
+    return
+  fi
+
+  run_step "Building $app_name app" npm -w "apps/$app_name" run build
+}
+
+for app_spec in ${CLOUD_PRODUCT_APPS//,/ }; do
+  app_name="${app_spec%%:*}"
+  app_port="${app_spec##*:}"
+  if [ -z "$app_name" ] || [ -z "$app_port" ] || [ "$app_name" = "$app_port" ]; then
+    echo "Invalid CLOUD_PRODUCT_APPS item: $app_spec" >&2
+    exit 1
+  fi
+  build_product_app "$app_name"
+done
+
+if [ "$CLOUD_CXSYNC_CLOUD_ENABLED" = "true" ]; then
+  run_step "Building CXSync Cloud service" npm -w apps/cxsync-cloud run build
+else
+  log_step "Skipping CXSync Cloud build"
+fi
+
 log_step "Starting backend on port $SERVER_PORT"
 PORT="$SERVER_PORT" HOST="${HOST:-0.0.0.0}" npm -w apps/server run start &
 SERVER_PID="$!"
 echo "Backend process PID: $SERVER_PID"
+
+if [ "$CLOUD_CXSYNC_CLOUD_ENABLED" = "true" ]; then
+  log_step "Starting CXSync Cloud on port $CXSYNC_CLOUD_PORT"
+  CXSYNC_CLOUD_PORT="$CXSYNC_CLOUD_PORT" CXSYNC_CLOUD_HOST="${HOST:-0.0.0.0}" npm -w apps/cxsync-cloud run start &
+  CXSYNC_CLOUD_PID="$!"
+  echo "CXSync Cloud process PID: $CXSYNC_CLOUD_PID"
+else
+  CXSYNC_CLOUD_PID=""
+fi
 
 log_step "Starting frontend preview on port $FRONTEND_PORT"
 VITE_PORT="$FRONTEND_PORT" npm -w apps/frontend run preview -- --host 0.0.0.0 --port "$FRONTEND_PORT" &
 FRONTEND_PID="$!"
 echo "Frontend preview process PID: $FRONTEND_PID"
 
+if [ "$CLOUD_DOCS_ENABLED" = "true" ]; then
+  log_step "Starting docs app on port $DOCS_PORT"
+  npm -w apps/docs run docusaurus -- serve --host 0.0.0.0 --port "$DOCS_PORT" &
+  DOCS_PID="$!"
+  echo "Docs process PID: $DOCS_PID"
+else
+  DOCS_PID=""
+fi
+
+PRODUCT_APP_PIDS=""
+for app_spec in ${CLOUD_PRODUCT_APPS//,/ }; do
+  start_product_app_preview "${app_spec%%:*}" "${app_spec##*:}"
+done
+
 shutdown() {
   echo "Stopping CXSun processes"
-  kill "$SERVER_PID" "$FRONTEND_PID" 2>/dev/null || true
-  wait "$SERVER_PID" "$FRONTEND_PID" 2>/dev/null || true
+  kill "$SERVER_PID" "$FRONTEND_PID" ${DOCS_PID:-} ${CXSYNC_CLOUD_PID:-} $PRODUCT_APP_PIDS 2>/dev/null || true
+  wait "$SERVER_PID" "$FRONTEND_PID" ${DOCS_PID:-} ${CXSYNC_CLOUD_PID:-} $PRODUCT_APP_PIDS 2>/dev/null || true
 }
 
 log_step "Waiting for backend health"
@@ -345,5 +433,5 @@ fi
 
 trap shutdown INT TERM
 
-wait -n "$SERVER_PID" "$FRONTEND_PID"
+wait -n "$SERVER_PID" "$FRONTEND_PID" ${DOCS_PID:-} ${CXSYNC_CLOUD_PID:-} $PRODUCT_APP_PIDS
 shutdown

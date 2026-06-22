@@ -2,6 +2,7 @@ import mysql from "mysql2/promise"
 import type { RowDataPacket } from "mysql2"
 import { app } from "electron"
 import type { TenantConnectionVerification } from "../../src/shared/connection-contracts.js"
+import { cxSyncCloudHeaders } from "./cxsync-cloud-client.js"
 import { getPrivateTenantConnection, saveTenantHandshake } from "./tenant-connection-store.js"
 
 export async function verifyTenantConnection(id: string): Promise<TenantConnectionVerification> {
@@ -70,7 +71,7 @@ async function verifyCloud(tenant: PrivateTenantConnection) {
         surface: "tenant",
       }),
       headers: {
-        "Content-Type": "application/json",
+        ...(await cxSyncCloudHeaders({ "Content-Type": "application/json" })),
         ...(tenant.cloudDomain ? { "x-login-domain": tenant.cloudDomain } : {}),
       },
       method: "POST",

@@ -176,7 +176,7 @@ def render_ssl_config(site: NginxSite) -> str:
 
 server {{
     listen 443 ssl http2;
-    server_name {site.domain};
+    server_name {site.server_name_line};
 
     ssl_certificate /etc/letsencrypt/live/{site.domain}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/{site.domain}/privkey.pem;
