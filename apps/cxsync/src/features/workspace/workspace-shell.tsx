@@ -399,7 +399,7 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
           <p>Cloud does not start sync work by itself. It only accepts a desktop request when the service key exists and matches on both ends.</p>
           <dl>
             <Detail label="Cloud service URL" value={cloudUrl || cloudHandshake?.apiUrl || serviceKey?.cloudServiceUrl || "Not configured"} />
-            <Detail label="Cloud service key" value={serviceKey?.hasKey ? `Configured (${serviceKey.keyPreview})` : "Service key not found"} />
+            <Detail label="Cloud service key" value={backendStatus?.ok || cloudHandshake?.ok ? "Protected on backend" : "Hidden from browser"} />
             <Detail label="Accepted when" value="Desktop sends matching service key" />
             <Detail label="Base URL reachability" value={formatEndpointStatus(cloudHandshake?.frontend)} />
             <Detail label="Backend API" value={formatEndpointStatus(backendStatus ?? cloudHandshake?.backend)} />
