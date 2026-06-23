@@ -195,6 +195,8 @@ async function migrate(database: Pool) {
       restore_database VARCHAR(191) NULL,
       restore_verified_at DATETIME(3) NULL,
       schema_hash CHAR(64) NULL,
+      baseline_hash CHAR(64) NULL,
+      plan_hash CHAR(64) NULL,
       table_count INT NOT NULL DEFAULT 0,
       created_at DATETIME(3) NOT NULL,
       CONSTRAINT fk_cxsync_backup_tenant
@@ -206,7 +208,9 @@ async function migrate(database: Pool) {
   await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS restore_database VARCHAR(191) NULL AFTER status")
   await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS restore_verified_at DATETIME(3) NULL AFTER restore_database")
   await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS schema_hash CHAR(64) NULL AFTER restore_verified_at")
-  await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS table_count INT NOT NULL DEFAULT 0 AFTER schema_hash")
+  await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS baseline_hash CHAR(64) NULL AFTER schema_hash")
+  await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS plan_hash CHAR(64) NULL AFTER baseline_hash")
+  await database.query("ALTER TABLE cxsync_tenant_backups ADD COLUMN IF NOT EXISTS table_count INT NOT NULL DEFAULT 0 AFTER plan_hash")
   await database.query(`
     CREATE TABLE IF NOT EXISTS cxsync_upgrade_executions (
       id CHAR(36) PRIMARY KEY,

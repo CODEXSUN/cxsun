@@ -3,6 +3,7 @@ import type { RowDataPacket } from "mysql2"
 import { app } from "electron"
 import type { TenantConnectionVerification } from "../../src/shared/connection-contracts.js"
 import { cxSyncCloudHeaders } from "./cxsync-cloud-client.js"
+import { normalizeTenantCloudApiUrl } from "./tenant-cloud-api-url.js"
 import { getPrivateTenantConnection, saveTenantHandshake } from "./tenant-connection-store.js"
 
 export async function verifyTenantConnection(id: string): Promise<TenantConnectionVerification> {
@@ -62,7 +63,7 @@ async function verifyLocal(tenant: PrivateTenantConnection) {
 async function verifyCloud(tenant: PrivateTenantConnection) {
   const startedAt = Date.now()
   try {
-    const baseUrl = tenant.cloudApiUrl.replace(/\/+$/, "")
+    const baseUrl = await normalizeTenantCloudApiUrl(tenant.cloudApiUrl)
     const loginResponse = await fetch(`${baseUrl}/api/v1/auth/login`, {
       body: JSON.stringify({
         corporateId: tenant.corporateId,

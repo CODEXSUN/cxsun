@@ -6,6 +6,8 @@ import { resolve } from "node:path"
 import type { TenantCloudSchemaSnapshot, TenantDatabaseInspection, TenantSchemaDiffItem, TenantSyncJob, TenantSyncJobPhase, TenantSyncJobPhaseId, TenantSyncReportExport, TenantSyncServiceStatus } from "../../src/shared/connection-contracts.js"
 import { cxSyncCloudHeaders } from "./cxsync-cloud-client.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
+import { loadCxSyncEnvironment } from "./environment.js"
+import { normalizeTenantCloudApiUrl } from "./tenant-cloud-api-url.js"
 import { getPrivateTenantConnection } from "./tenant-connection-store.js"
 import { captureTenantCloudSnapshot } from "./tenant-cloud-snapshot.js"
 import { inspectTenantDatabase } from "./tenant-database-inspector.js"
@@ -35,7 +37,7 @@ export async function listTenantSyncJobs(id: string): Promise<TenantSyncJob[]> {
 export async function checkTenantSyncService(id: string): Promise<TenantSyncServiceStatus> {
   const tenant = await getPrivateTenantConnection(id)
   if (!tenant) throw new Error("Tenant connection was not found.")
-  const baseUrl = tenant.cloudApiUrl.replace(/\/+$/, "")
+  const baseUrl = await cxSyncCloudServiceUrl()
   const startedAt = Date.now()
   try {
     const response = await fetch(`${baseUrl}/api/v1/cxsync-cloud/status`, { cache: "no-store", headers: await cxSyncCloudHeaders() })
@@ -246,7 +248,7 @@ function describeColumn(column: { columnDefault: string | null; columnType: stri
 async function uploadReport(id: string, job: TenantSyncJob) {
   const tenant = await getPrivateTenantConnection(id)
   if (!tenant) throw new Error("Tenant connection was not found.")
-  const baseUrl = tenant.cloudApiUrl.replace(/\/+$/, "")
+  const baseUrl = await normalizeTenantCloudApiUrl(tenant.cloudApiUrl)
   const loginResponse = await fetch(`${baseUrl}/api/v1/auth/login`, {
     body: JSON.stringify({ corporateId: tenant.corporateId, email: tenant.cloudAdminEmail, password: tenant.cloudAdminPassword, surface: "tenant" }),
     headers: { ...(await cxSyncCloudHeaders({ "Content-Type": "application/json" })), ...(tenant.cloudDomain ? { "x-login-domain": tenant.cloudDomain } : {}) },
@@ -314,4 +316,13 @@ function sqlDate(value: Date) {
 
 function safeSegment(value: string) {
   return value.replace(/[^a-zA-Z0-9_-]/g, "_") || "tenant"
+}
+
+async function cxSyncCloudServiceUrl() {
+  const env = await loadCxSyncEnvironment()
+  const value = (env.CXSYNC_CLOUD_PUBLIC_URL || "").trim().replace(/\/+$/, "")
+  if (!value) throw new Error("CXSYNC_CLOUD_PUBLIC_URL is not configured.")
+  const parsed = new URL(value)
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("CXSYNC_CLOUD_PUBLIC_URL must start with http:// or https://.")
+  return value
 }

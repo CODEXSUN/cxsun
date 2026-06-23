@@ -3,6 +3,7 @@ import type { RowDataPacket } from "mysql2"
 import type { TenantCloudSchemaSnapshot, TenantCloudSnapshot } from "../../src/shared/connection-contracts.js"
 import { cxSyncCloudHeaders } from "./cxsync-cloud-client.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
+import { normalizeTenantCloudApiUrl } from "./tenant-cloud-api-url.js"
 import { getPrivateTenantConnection } from "./tenant-connection-store.js"
 
 type SnapshotRow = RowDataPacket & {
@@ -61,7 +62,7 @@ export async function captureTenantCloudSnapshot(id: string): Promise<TenantClou
   const tenant = await getPrivateTenantConnection(id)
   if (!tenant) throw new Error("Tenant connection was not found.")
 
-  const baseUrl = tenant.cloudApiUrl.replace(/\/+$/, "")
+  const baseUrl = await normalizeTenantCloudApiUrl(tenant.cloudApiUrl)
   const capturedAt = new Date().toISOString()
   const snapshotId = randomUUID()
   let token = ""
@@ -198,6 +199,9 @@ async function readCloudTenantSnapshot(baseUrl: string, token: string, cloudDoma
     },
   })
   const body = await safeJson<CloudTenantSnapshotResponse>(response)
+  if (response.status === 404) {
+    throw new Error(`Tenant backend route was not found at ${baseUrl}/api/v1/cxsync/tenant-snapshot. Deploy/restart the main billing backend with CxSyncModule enabled; the CXSync Cloud service on port 6077 is not this endpoint.`)
+  }
   if (!response.ok || !body.ok || !body.snapshot) throw new Error(body.error || `Cloud tenant snapshot returned HTTP ${response.status}.`)
   return body.snapshot
 }

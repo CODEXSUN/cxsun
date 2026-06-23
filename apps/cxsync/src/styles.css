@@ -243,6 +243,7 @@ button {
 .secondary-button,
 .link-button {
   align-items: center;
+  border: 1px solid #b9c8dc;
   border-radius: 8px;
   cursor: pointer;
   display: inline-flex;
@@ -271,9 +272,16 @@ button {
   transform: translateY(-1px);
 }
 
+.test-button:not(:disabled):hover svg,
+.primary-button:not(:disabled):hover svg,
+.secondary-button:not(:disabled):hover svg,
+.link-button:not(:disabled):hover svg {
+  color: currentColor;
+}
+
 .primary-button {
   background: #2563eb;
-  border: 1px solid #2563eb;
+  border: 1px solid #1d4ed8;
   color: #fff;
   min-height: 43px;
   padding: 0 16px;
@@ -281,17 +289,25 @@ button {
 
 .primary-button:not(:disabled):hover {
   background: #1d4ed8;
-  border-color: #1d4ed8;
+  border-color: #1e40af;
   box-shadow: 0 12px 26px rgba(37, 99, 235, 0.24);
+  color: #fff;
   transform: translateY(-1px);
 }
 
 .secondary-button {
   background: #fff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #b9c8dc;
   color: #334155;
   min-height: 39px;
   padding: 0 13px;
+}
+
+.link-button {
+  background: #fff;
+  color: #334155;
+  min-height: 36px;
+  padding: 0 12px;
 }
 
 .primary-button:focus-visible,
@@ -506,6 +522,11 @@ button {
   font-size: 12px;
   min-height: 32px;
   padding: 0 10px;
+  white-space: nowrap;
+}
+
+.link-button:not(:disabled):hover {
+  color: #1d4ed8;
 }
 
 .workspace-stack {

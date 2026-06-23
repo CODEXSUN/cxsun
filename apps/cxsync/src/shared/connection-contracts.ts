@@ -38,6 +38,13 @@ export type TenantConnection = Omit<TenantConnectionInput, "cloudAdminPassword" 
   updatedAt: string
 }
 
+export type CxSyncMasterTenant = {
+  corporateId: string
+  id: number
+  tenantCode: string
+  tenantName: string
+}
+
 export type TenantConnectionVerification = {
   cloud: {
     latencyMs: number
@@ -247,11 +254,13 @@ export type TenantUpgradePreflight = {
 }
 
 export type TenantBackupRecord = {
+  baselineHash: string | null
   createdAt: string
   database: string
   fileName: string
   id: string
   planId: string
+  planHash: string | null
   restoreDatabase: string | null
   restoreVerifiedAt: string | null
   schemaHash: string | null

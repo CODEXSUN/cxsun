@@ -4,7 +4,7 @@ import type { RowDataPacket } from "mysql2"
 import type { TenantUpgradeExecution, TenantUpgradeExecutionStep, TenantUpgradePlanStep } from "../../src/shared/connection-contracts.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
 import { getPrivateTenantConnection } from "./tenant-connection-store.js"
-import { getTenantBackup } from "./tenant-backup-manager.js"
+import { validateTenantBackupForExecution } from "./tenant-backup-manager.js"
 import { getTenantUpgradePlan } from "./tenant-upgrade-planner.js"
 import { getTenantUpgradePreflight } from "./tenant-upgrade-preflight.js"
 
@@ -19,10 +19,7 @@ export async function executeTenantUpgrade(id: string): Promise<TenantUpgradeExe
   if (!preflight || preflight.planId !== plan.id || !preflight.ready) {
     throw new Error("Run a passing preflight for the current plan before execution.")
   }
-  const backup = await getTenantBackup(id)
-  if (!backup || backup.planId !== plan.id || backup.status !== "restore-verified") {
-    throw new Error("Create a restore-tested backup for the current plan before execution.")
-  }
+  const backup = await validateTenantBackupForExecution(id, plan)
 
   const execution: TenantUpgradeExecution = {
     backupId: backup.id,

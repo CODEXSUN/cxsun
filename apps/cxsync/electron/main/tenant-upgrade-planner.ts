@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import type { RowDataPacket } from "mysql2"
 import type {
   TenantColumnInspectionItem,
@@ -11,11 +11,11 @@ import type {
 import { getCxSyncDatabase } from "./cxsync-database.js"
 import { compareTenantSchema } from "./tenant-database-inspector.js"
 
-type BaselineManifestRow = RowDataPacket & { id: string; manifest_json: string }
+export type ActiveTenantBaseline = RowDataPacket & { id: string; manifest_json: string; schema_hash: string }
 type PlanRow = RowDataPacket & { manifest_json: string }
 
 export async function generateTenantUpgradePlan(id: string): Promise<TenantUpgradePlan> {
-  const baseline = await activeBaseline(id)
+  const baseline = await getActiveTenantBaseline(id)
   if (!baseline) throw new Error("Build an expected schema baseline before generating an upgrade plan.")
   const expected = JSON.parse(baseline.manifest_json) as TenantDatabaseInspection
   const diff = await compareTenantSchema(id)
@@ -54,13 +54,17 @@ export async function getTenantUpgradePlan(id: string): Promise<TenantUpgradePla
   return rows[0] ? JSON.parse(rows[0].manifest_json) as TenantUpgradePlan : null
 }
 
-async function activeBaseline(id: string) {
+export async function getActiveTenantBaseline(id: string): Promise<ActiveTenantBaseline | null> {
   const database = await getCxSyncDatabase()
-  const [rows] = await database.execute<BaselineManifestRow[]>(
-    "SELECT id, manifest_json FROM cxsync_schema_baselines WHERE tenant_connection_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
+  const [rows] = await database.execute<ActiveTenantBaseline[]>(
+    "SELECT id, manifest_json, schema_hash FROM cxsync_schema_baselines WHERE tenant_connection_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1",
     [id],
   )
   return rows[0] ?? null
+}
+
+export function tenantUpgradePlanHash(plan: TenantUpgradePlan) {
+  return createHash("sha256").update(JSON.stringify(plan)).digest("hex")
 }
 
 function buildSteps(items: TenantSchemaDiffItem[], expected: TenantDatabaseInspection) {

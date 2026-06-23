@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.125`
-- **Release tag:** `v-1.0.125`
-- **Changelog label:** `v 1.0.125`
+- **Current version:** `1.0.126`
+- **Release tag:** `v-1.0.126`
+- **Changelog label:** `v 1.0.126`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -15,6 +15,28 @@ New changelog entries must keep database-facing work and application code work s
 
 ---
 
+## v-1.0.126
+
+### [v 1.0.126] 2026-06-23 9:53 am - CXSync tenant diagnostics and backup tooling
+
+#### Database Changes
+
+- Database update: No (manual).
+- Added no billing tenant schema migration for this release.
+- Reused existing CXSync local operational tables for tenant connection records, handshake history, cloud snapshots, sync jobs, and restore-tested backup metadata.
+- Reused CXSync Cloud service operational storage for accepted desktop handshakes and master-tenant read-only listing.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.126
+- Mounted the server-side `CxSyncModule` in the main billing backend so authenticated tenant backends can expose `/api/v1/cxsync/tenant-snapshot` and sync report APIs.
+- Hardened CXSync tenant connection handling by separating tenant backend API URLs from CXSync Cloud service URLs, rejecting desktop/cloud service ports for tenant login, and validating tenant login domains separately from local API addresses.
+- Added overview handshake diagnostics that explain local backend credential/domain/corporate-ID failures, version mismatches, and wrong local-domain setup directly under the local/cloud comparison.
+- Added local-development helper actions for tenant setup, including "Use local backend 6005" and "Use local seed admin" to match the seeded local backend credentials.
+- Improved Cloud Snapshot UX with consolidated progress, refresh and safe-cancel actions, stale snapshot detection when the tenant API URL changes, and detailed operation trace metrics for login, health, session, schema metadata, and saved evidence.
+- Added CXSync Cloud master tenant service listing and cloud handshake reflection so the cloud overview can show accepted desktop handshakes and read-only tenant identifiers.
+- Standardized CXSync button styling across tabs and action areas with thin borders, stable hover colors, visible text, and consistent danger/execute button states.
+- Wired MariaDB backup tooling to MariaDB 12.x client paths, added explicit `CXSYNC_MARIADB_DUMP_PATH` and `CXSYNC_MARIADB_CLIENT_PATH` support, and extended automatic dump/client discovery for restore-tested tenant backups.
 ## v-1.0.125
 
 ### [v 1.0.125] 2026-06-22 10:27 am - CXSync dev preflight and cloud handshake reflection

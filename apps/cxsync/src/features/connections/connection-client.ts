@@ -2,6 +2,16 @@ import type { CxSyncDesktopApi, TenantConnection } from "../../shared/connection
 
 const browserKey = "cxsync.preview.tenant-connections"
 const browserCloudUrlKey = "cxsync.preview.cloud-service-url"
+const browserServiceKey = "cxsync.cloud.service-key"
+
+export function cxSyncCloudBrowserHeaders() {
+  const key = sessionStorage.getItem(browserServiceKey)?.trim()
+  return { Accept: "application/json", ...(key ? { "x-cxsync-service-key": key } : {}) }
+}
+
+export function cxSyncCloudBrowserUrl() {
+  return readPreviewCloudUrl().replace(/\/+$/, "")
+}
 
 export function connectionClient(): CxSyncDesktopApi {
   return window.cxsyncDesktop ?? browserFallback
@@ -70,19 +80,27 @@ const browserFallback: CxSyncDesktopApi = {
     return null
   },
   async getServiceKeyStatus() {
-    return { cloudServiceUrl: readPreviewCloudUrl(), envPath: "Browser preview", hasKey: false, keyPreview: null, updatedAt: null }
+    const key = sessionStorage.getItem(browserServiceKey)?.trim() || ""
+    return { cloudServiceUrl: readPreviewCloudUrl(), envPath: "Browser session", hasKey: Boolean(key), keyPreview: key ? `${key.slice(0, 6)}...${key.slice(-6)}` : null, updatedAt: null }
   },
   async generateServiceKey() {
+    const response = await fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/service-key/generate`, { credentials: "include", method: "POST" })
+    const body = await response.json().catch(() => null) as { error?: string; key?: string; keyPreview?: string; updatedAt?: string } | null
+    if (!response.ok || !body?.key) throw new Error(body?.error || `Cloud key generation returned HTTP ${response.status}.`)
+    return { cloudServiceUrl: cxSyncCloudBrowserUrl(), envPath: "CXSync Cloud .env", hasKey: true, key: body.key, keyPreview: body.keyPreview ?? `${body.key.slice(0, 6)}...${body.key.slice(-6)}`, updatedAt: body.updatedAt ?? new Date().toISOString() }
+    /* c8 ignore next 2 -- retained only for older browser bundles during hot reload */
     const key = crypto.getRandomValues(new Uint8Array(32)).reduce((text, byte) => text + byte.toString(16).padStart(2, "0"), "")
     return { envPath: "Browser preview", hasKey: true, key, keyPreview: `${key.slice(0, 6)}…${key.slice(-6)}`, updatedAt: new Date().toISOString() }
   },
   async saveServiceKey(key) {
+    sessionStorage.setItem(browserServiceKey, key.trim())
     return { envPath: "Browser preview", hasKey: Boolean(key), keyPreview: key ? `${key.slice(0, 6)}…${key.slice(-6)}` : null, updatedAt: new Date().toISOString() }
   },
   async saveCloudServiceUrl(url) {
     const normalized = normalizePreviewCloudUrl(url)
+    const key = sessionStorage.getItem(browserServiceKey)?.trim() || ""
     localStorage.setItem(browserCloudUrlKey, normalized)
-    return { cloudServiceUrl: normalized, envPath: "Browser preview", hasKey: false, keyPreview: null, updatedAt: new Date().toISOString() }
+    return { cloudServiceUrl: normalized, envPath: "Browser session", hasKey: Boolean(key), keyPreview: key ? `${key.slice(0, 6)}...${key.slice(-6)}` : null, updatedAt: new Date().toISOString() }
   },
   async getCloudServiceHandshake() {
     return null

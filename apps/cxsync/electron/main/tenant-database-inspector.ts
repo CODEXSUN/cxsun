@@ -5,6 +5,7 @@ import { spawn } from "node:child_process"
 import { readdir, readFile, stat } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { app } from "electron"
 import type {
   TenantColumnInspectionItem,
   TenantDatabaseInspection,
@@ -59,6 +60,14 @@ type CodebaseBaselineManifest = TenantDatabaseInspection & {
   codebaseSourceHash?: string
 }
 
+type PackagedExpectedSchemaManifest = {
+  formatVersion: 1
+  generatedAt: string
+  inspection: TenantDatabaseInspection
+  schemaHash: string
+  sourceHash: string
+}
+
 type ScratchProgress = {
   operation: string | null
   processState: string | null
@@ -67,6 +76,11 @@ type ScratchProgress = {
 }
 
 const schemaBuildStatuses = new Map<string, TenantSchemaBuildStatus>()
+
+// Legacy development builders remain temporarily for manifest regeneration compatibility.
+// Desktop runtime baseline capture uses readPackagedExpectedSchemaManifest exclusively.
+void buildExpectedSchema
+void codebaseSchemaSourceHash
 
 export async function inspectTenantDatabase(id: string): Promise<TenantDatabaseInspection> {
   const tenant = await getPrivateTenantConnection(id)
@@ -189,10 +203,23 @@ export async function captureTenantSchemaBaseline(id: string): Promise<TenantSch
 }
 
 export async function captureCodebaseSchemaBaseline(id: string): Promise<TenantSchemaBaseline> {
-  const serverSource = await findServerSourceRoot()
-  const sourceHash = await codebaseSchemaSourceHash(serverSource)
+  const packaged = await readPackagedExpectedSchemaManifest()
+  const sourceHash = packaged.sourceHash
+  updateBuildStatus(id, {
+    activity: [`Loaded packaged expected schema ${packaged.schemaHash.slice(0, 12)}.`],
+    database: null,
+    error: null,
+    message: `Loaded packaged expected schema with ${packaged.inspection.totals.tableCount} tables.`,
+    operation: "Loading packaged manifest",
+    phase: "completed",
+    processState: null,
+    recentOutput: null,
+    recentTables: [],
+    startedAt: new Date().toISOString(),
+    tableCount: packaged.inspection.totals.tableCount,
+  })
   const database = await getCxSyncDatabase()
-  const cached = await latestCodebaseBaselineForSource(id, sourceHash)
+  const cached = await latestCodebaseBaselineForSource(id, sourceHash, packaged.schemaHash)
   if (cached) {
     const now = sqlDate(new Date())
     await database.execute("UPDATE cxsync_schema_baselines SET is_active = 0, updated_at = ? WHERE tenant_connection_id = ?", [now, id])
@@ -214,7 +241,7 @@ export async function captureCodebaseSchemaBaseline(id: string): Promise<TenantS
     return baseline
   }
 
-  const inspection = await buildExpectedSchema(id)
+  const inspection = { ...packaged.inspection, capturedAt: packaged.generatedAt, snapshotId: randomUUID() }
   const baselineId = randomUUID()
   const capturedAt = sqlDate(new Date(inspection.capturedAt))
   const schemaHash = hashInspection(inspection)
@@ -226,7 +253,7 @@ export async function captureCodebaseSchemaBaseline(id: string): Promise<TenantS
     [
       baselineId,
       id,
-      `Migration-built tenant schema ${new Date(inspection.capturedAt).toLocaleString("en-IN")}`,
+      `Packaged expected schema ${new Date(inspection.capturedAt).toLocaleString("en-IN")}`,
       schemaHash,
       JSON.stringify({ ...inspection, codebaseSourceHash: sourceHash } satisfies CodebaseBaselineManifest),
       capturedAt,
@@ -234,13 +261,36 @@ export async function captureCodebaseSchemaBaseline(id: string): Promise<TenantS
     ],
   )
   return {
-    baselineName: `Migration-built tenant schema ${new Date(inspection.capturedAt).toLocaleString("en-IN")}`,
+    baselineName: `Packaged expected schema ${new Date(inspection.capturedAt).toLocaleString("en-IN")}`,
     capturedAt: inspection.capturedAt,
     id: baselineId,
     schemaHash,
     source: "codebase",
     totals: inspection.totals,
   }
+}
+
+async function readPackagedExpectedSchemaManifest(): Promise<PackagedExpectedSchemaManifest> {
+  const start = dirname(fileURLToPath(import.meta.url))
+  const candidates = app.isPackaged
+    ? [resolve(process.resourcesPath, "expected-schema", "expected-schema-manifest.json")]
+    : [
+        resolve(process.cwd(), "electron/resources/expected-schema-manifest.json"),
+        resolve(process.cwd(), "apps/cxsync/electron/resources/expected-schema-manifest.json"),
+        resolve(start, "../../resources/expected-schema-manifest.json"),
+        resolve(start, "../../../electron/resources/expected-schema-manifest.json"),
+      ]
+  for (const path of candidates) {
+    try {
+      const parsed = JSON.parse(await readFile(path, "utf8")) as PackagedExpectedSchemaManifest
+      if (parsed.formatVersion !== 1 || !parsed.inspection?.tables || !parsed.schemaHash || !parsed.sourceHash) throw new Error("Manifest format is invalid.")
+      if (hashInspection(parsed.inspection) !== parsed.schemaHash) throw new Error("Manifest schema hash does not match its contents.")
+      return parsed
+    } catch (error) {
+      if (error instanceof SyntaxError || (error instanceof Error && error.message.includes("Manifest"))) throw error
+    }
+  }
+  throw new Error("Packaged expected-schema manifest was not found. Run npm -w apps/cxsync run generate:expected-schema before building CXSync.")
 }
 
 export async function getCodebaseSchemaBuildStatus(id: string): Promise<TenantSchemaBuildStatus> {
@@ -323,7 +373,7 @@ async function latestBaselineRow(id: string) {
   return rows[0] ?? null
 }
 
-async function latestCodebaseBaselineForSource(id: string, sourceHash: string) {
+async function latestCodebaseBaselineForSource(id: string, sourceHash: string, schemaHash: string) {
   const database = await getCxSyncDatabase()
   const [rows] = await database.execute<BaselineRow[]>(
     `SELECT id, baseline_name, source, schema_hash, manifest_json, created_at
@@ -335,7 +385,7 @@ async function latestCodebaseBaselineForSource(id: string, sourceHash: string) {
   )
   return rows.find((row) => {
     try {
-      return (JSON.parse(row.manifest_json) as CodebaseBaselineManifest).codebaseSourceHash === sourceHash
+      return row.schema_hash === schemaHash && (JSON.parse(row.manifest_json) as CodebaseBaselineManifest).codebaseSourceHash === sourceHash
     } catch {
       return false
     }

@@ -5,6 +5,7 @@ import { resolve } from "node:path"
 import type { ResultSetHeader, RowDataPacket } from "mysql2"
 import type { TenantConnection, TenantConnectionInput, TenantConnectionVerification, TenantHandshakeHistoryItem } from "../../src/shared/connection-contracts.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
+import { normalizeTenantCloudApiUrl } from "./tenant-cloud-api-url.js"
 
 type TenantRow = RowDataPacket & {
   cloud_admin_email: string
@@ -74,6 +75,8 @@ export async function saveTenantConnection(input: TenantConnectionInput, id?: st
   const current = id ? await findRow(id) : null
   const now = sqlDate(new Date())
   const recordId = current?.id ?? randomUUID()
+  const cloudApiUrl = await normalizeTenantCloudApiUrl(input.cloudApiUrl)
+  validateCloudDomain(input.cloudDomain, cloudApiUrl)
   const encryptedCloudPassword = input.cloudAdminPassword ? encrypt(input.cloudAdminPassword) : current?.encrypted_cloud_password ?? ""
   const encryptedLocalPassword = input.localPassword ? encrypt(input.localPassword) : current?.encrypted_local_password ?? ""
   if (!encryptedCloudPassword || !encryptedLocalPassword) throw new Error("Local and cloud passwords are required.")
@@ -89,7 +92,7 @@ export async function saveTenantConnection(input: TenantConnectionInput, id?: st
       [
         input.tenantName, input.tenantCode, input.corporateId,
         input.localHost, input.localPort, input.localDatabase, input.localUser, encryptedLocalPassword,
-        input.cloudApiUrl, input.cloudDomain, input.cloudAdminEmail, encryptedCloudPassword,
+        cloudApiUrl, input.cloudDomain, input.cloudAdminEmail, encryptedCloudPassword,
         now, recordId,
       ],
     )
@@ -104,7 +107,7 @@ export async function saveTenantConnection(input: TenantConnectionInput, id?: st
       [
         recordId, input.tenantName, input.tenantCode, input.corporateId,
         input.localHost, input.localPort, input.localDatabase, input.localUser, encryptedLocalPassword,
-        input.cloudApiUrl, input.cloudDomain, input.cloudAdminEmail, encryptedCloudPassword,
+        cloudApiUrl, input.cloudDomain, input.cloudAdminEmail, encryptedCloudPassword,
         now, now,
       ],
     )
@@ -288,6 +291,22 @@ function sqlDate(value: Date) {
 function toSqlDate(value: unknown) {
   const date = new Date(String(value ?? ""))
   return sqlDate(Number.isNaN(date.getTime()) ? new Date() : date)
+}
+
+function validateCloudDomain(value: string, apiUrl: string) {
+  const domain = value.trim()
+  if (!domain) throw new Error("Login domain is required.")
+  if (/^https?:\/\//i.test(domain)) throw new Error("Login domain must be only the tenant domain or slug, not a URL. Example: codexsun.com")
+  if (domain.includes(":")) throw new Error("Login domain must not include a port. Use API URL for http://127.0.0.1:6005 and Login domain for the tenant identity, for example codexsun.com.")
+  const api = new URL(apiUrl)
+  if (isLocalHost(api.hostname) && isLocalHost(domain)) {
+    throw new Error("When API URL is local, Login domain still must be the tenant identity, for example codexsun.com, not localhost or 127.0.0.1.")
+  }
+}
+
+function isLocalHost(value: string) {
+  const normalized = value.trim().toLowerCase()
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1"
 }
 
 function isoDate(value: string) {

@@ -10,14 +10,16 @@ import type { TenantBackupRecord } from "../../src/shared/connection-contracts.j
 import { getCxSyncDatabase } from "./cxsync-database.js"
 import { loadCxSyncEnvironment } from "./environment.js"
 import { getPrivateTenantConnection } from "./tenant-connection-store.js"
-import { getTenantUpgradePlan } from "./tenant-upgrade-planner.js"
+import { getActiveTenantBaseline, getTenantUpgradePlan, tenantUpgradePlanHash } from "./tenant-upgrade-planner.js"
 
 type BackupRow = RowDataPacket & {
+  baseline_hash: string | null
   created_at: Date | string
   database_name: string
   file_name: string
   id: string
   plan_id: string
+  plan_hash: string | null
   restore_database: string | null
   restore_verified_at: Date | string | null
   schema_hash: string | null
@@ -32,6 +34,8 @@ export async function createTenantBackup(id: string): Promise<TenantBackupRecord
   if (!tenant) throw new Error("Tenant connection was not found.")
   const plan = await getTenantUpgradePlan(id)
   if (!plan) throw new Error("Generate an upgrade plan before creating its recovery backup.")
+  const baseline = await getActiveTenantBaseline(id)
+  if (!baseline || baseline.id !== plan.baselineId) throw new Error("The active expected-schema baseline changed. Generate a new plan before creating its backup.")
   const dumpTool = await findDumpTool()
   if (!dumpTool) throw new Error("MariaDB dump utility was not found. Install MariaDB/MySQL client tools, or set CXSYNC_MARIADB_DUMP_PATH in .env to the full mariadb-dump.exe/mysqldump.exe path.")
   const clientTool = await findClientTool(dumpTool)
@@ -47,11 +51,13 @@ export async function createTenantBackup(id: string): Promise<TenantBackupRecord
     if (file.size <= 0) throw new Error("The backup file is empty.")
     const restore = await verifyRestore(clientTool, path, tenant)
     const record: TenantBackupRecord = {
+      baselineHash: baseline.schema_hash,
       createdAt: new Date().toISOString(),
       database: tenant.localDatabase,
       fileName: path,
       id: randomUUID(),
       planId: plan.id,
+      planHash: tenantUpgradePlanHash(plan),
       restoreDatabase: restore.database,
       restoreVerifiedAt: new Date().toISOString(),
       schemaHash: restore.schemaHash,
@@ -74,11 +80,52 @@ export async function getTenantBackup(id: string): Promise<TenantBackupRecord | 
   return rows[0] ? toRecord(rows[0]) : null
 }
 
+export async function validateTenantBackupForExecution(id: string, plan: NonNullable<Awaited<ReturnType<typeof getTenantUpgradePlan>>>) {
+  const tenant = await getPrivateTenantConnection(id)
+  if (!tenant) throw new Error("Tenant connection was not found.")
+  const baseline = await getActiveTenantBaseline(id)
+  if (!baseline || baseline.id !== plan.baselineId) {
+    throw new Error("Execution blocked: the active expected-schema baseline changed after this plan was generated. Generate a new plan.")
+  }
+  const backup = await getTenantBackup(id)
+  if (!backup || backup.planId !== plan.id || backup.status !== "restore-verified") {
+    throw new Error("Execution blocked: create a restore-tested backup for the current plan.")
+  }
+  if (!backup.planHash || !backup.baselineHash) {
+    throw new Error("Execution blocked: this backup predates drift protection. Recreate the restore-tested backup for the current plan.")
+  }
+  if (backup.planHash !== tenantUpgradePlanHash(plan)) {
+    throw new Error("Execution blocked: the upgrade plan changed after the backup was created. Generate a new plan and backup.")
+  }
+  if (backup.baselineHash !== baseline.schema_hash) {
+    throw new Error("Execution blocked: the expected-schema baseline changed after the backup was created. Generate a new plan and backup.")
+  }
+  const backupFile = await stat(backup.fileName).catch(() => null)
+  if (!backupFile || backupFile.size !== backup.sizeBytes || await hashFile(backup.fileName) !== backup.sha256) {
+    throw new Error("Execution blocked: the recovery backup file is missing or changed. Create a new restore-tested backup.")
+  }
+  let connection: mysql.Connection | undefined
+  try {
+    connection = await mysql.createConnection({ connectTimeout: 8_000, host: tenant.localHost, password: tenant.localPassword, port: tenant.localPort, user: tenant.localUser })
+    const current = await schemaFingerprint(connection, tenant.localDatabase)
+    if (!backup.schemaHash || current.schemaHash !== backup.schemaHash) {
+      throw new Error("Execution blocked: the live tenant schema changed after the backup was created. Re-inspect, generate a new plan, and create a new backup.")
+    }
+  } finally {
+    await connection?.end().catch(() => undefined)
+  }
+  return backup
+}
+
 async function findDumpTool(): Promise<string | null> {
   const env = await loadCxSyncEnvironment()
   const configured = env.CXSYNC_MARIADB_DUMP_PATH?.trim()
   const candidates = [
     configured,
+    "C:\\Program Files\\MariaDB 12.3\\bin\\mariadb-dump.exe",
+    "C:\\Program Files\\MariaDB 12.2\\bin\\mariadb-dump.exe",
+    "C:\\Program Files\\MariaDB 12.1\\bin\\mariadb-dump.exe",
+    "C:\\Program Files\\MariaDB 12.0\\bin\\mariadb-dump.exe",
     "C:\\Program Files\\MariaDB 11.8\\bin\\mariadb-dump.exe",
     "C:\\Program Files\\MariaDB 11.7\\bin\\mariadb-dump.exe",
     "C:\\Program Files\\MariaDB 11.4\\bin\\mariadb-dump.exe",
@@ -112,6 +159,10 @@ async function findClientTool(dumpTool: string): Promise<string | null> {
     configured,
     resolve(siblingDirectory, "mariadb.exe"),
     resolve(siblingDirectory, "mysql.exe"),
+    "C:\\Program Files\\MariaDB 12.3\\bin\\mariadb.exe",
+    "C:\\Program Files\\MariaDB 12.2\\bin\\mariadb.exe",
+    "C:\\Program Files\\MariaDB 12.1\\bin\\mariadb.exe",
+    "C:\\Program Files\\MariaDB 12.0\\bin\\mariadb.exe",
     "C:\\Program Files\\MariaDB 11.8\\bin\\mariadb.exe",
     "C:\\Program Files\\MariaDB 11.7\\bin\\mariadb.exe",
     "C:\\Program Files\\MariaDB 11.4\\bin\\mariadb.exe",
@@ -260,19 +311,21 @@ async function saveBackup(id: string, record: TenantBackupRecord) {
   const database = await getCxSyncDatabase()
   await database.execute(
     `INSERT INTO cxsync_tenant_backups
-      (id, tenant_connection_id, plan_id, database_name, file_name, size_bytes, sha256, status, restore_database, restore_verified_at, schema_hash, table_count, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [record.id, id, record.planId, record.database, record.fileName, record.sizeBytes, record.sha256, record.status, record.restoreDatabase, record.restoreVerifiedAt ? sqlDate(new Date(record.restoreVerifiedAt)) : null, record.schemaHash, record.tableCount, sqlDate(new Date(record.createdAt))],
+      (id, tenant_connection_id, plan_id, database_name, file_name, size_bytes, sha256, status, restore_database, restore_verified_at, schema_hash, baseline_hash, plan_hash, table_count, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [record.id, id, record.planId, record.database, record.fileName, record.sizeBytes, record.sha256, record.status, record.restoreDatabase, record.restoreVerifiedAt ? sqlDate(new Date(record.restoreVerifiedAt)) : null, record.schemaHash, record.baselineHash, record.planHash, record.tableCount, sqlDate(new Date(record.createdAt))],
   )
 }
 
 function toRecord(row: BackupRow): TenantBackupRecord {
   return {
+    baselineHash: row.baseline_hash,
     createdAt: isoDate(row.created_at),
     database: row.database_name,
     fileName: row.file_name,
     id: row.id,
     planId: row.plan_id,
+    planHash: row.plan_hash,
     restoreDatabase: row.restore_database,
     restoreVerifiedAt: row.restore_verified_at ? isoDate(row.restore_verified_at) : null,
     schemaHash: row.schema_hash,

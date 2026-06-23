@@ -38,6 +38,13 @@ export interface CxSyncCloudHandshakeRecord {
   status: string
 }
 
+export interface CxSyncMasterTenantRecord {
+  corporateId: string
+  id: number
+  tenantCode: string
+  tenantName: string
+}
+
 @Injectable()
 export class CxSyncCloudEngine {
   constructor(
@@ -94,6 +101,22 @@ export class CxSyncCloudEngine {
     if (!latest) throw new Error('CXSync Cloud handshake was not saved.')
     return latest
   }
+
+  async listMasterTenants(): Promise<CxSyncMasterTenantRecord[]> {
+    const database = getDatabase()
+    const result = await sql<MasterTenantRow>`
+      SELECT id, name, code, corporate_id
+      FROM tenants
+      WHERE deleted_at IS NULL
+      ORDER BY name, code
+    `.execute(database)
+    return result.rows.map((row) => ({
+      corporateId: row.corporate_id ?? '',
+      id: Number(row.id),
+      tenantCode: String(row.code ?? ''),
+      tenantName: row.name,
+    }))
+  }
 }
 
 interface HandshakeRow {
@@ -107,6 +130,13 @@ interface HandshakeRow {
   payload_json: string
   service: string
   status: string
+}
+
+interface MasterTenantRow {
+  code: number | string
+  corporate_id: string | null
+  id: number
+  name: string
 }
 
 let handshakeTableReady = false

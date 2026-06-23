@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react"
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react"
 import {
   Activity,
   AlertTriangle,
@@ -12,6 +12,7 @@ import {
   KeyRound,
   LoaderCircle,
   MonitorCog,
+  Pencil,
   Plus,
   RefreshCw,
   Server,
@@ -25,6 +26,7 @@ import type {
   CxSyncGeneratedServiceKey,
   CxSyncServiceKeyStatus,
   CxSyncCloudServiceHandshake,
+  CxSyncMasterTenant,
   TenantCloudSnapshot,
   TenantConnection,
   TenantDatabaseInspection,
@@ -41,9 +43,9 @@ import type {
   TenantUpgradeExecution,
   TenantBackupRecord,
 } from "../../shared/connection-contracts"
-import { connectionClient } from "../connections/connection-client"
+import { connectionClient, cxSyncCloudBrowserHeaders } from "../connections/connection-client"
 
-type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service"
+type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service"
 
 const navGroups: Array<DashboardShellNavGroup<Page>> = [
   {
@@ -79,6 +81,7 @@ const cloudNavGroups: Array<DashboardShellNavGroup<Page>> = [
     id: "start",
     items: [
       { icon: Cloud, id: "overview", label: "Cloud overview" },
+      { icon: Server, id: "tenant-service", label: "Tenant service" },
       { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
     ],
     label: "Cloud service",
@@ -93,6 +96,7 @@ const titles: Record<Page, string> = {
   "desktop-local": "Desktop storage",
   overview: "Overview",
   show: "Tenant connection",
+  "tenant-service": "Tenant service",
 }
 
 const design = getCxDesignSystem("blue")
@@ -122,7 +126,7 @@ export function WorkspaceShell({ onLogout, session }: { onLogout(): void; sessio
       title={titles[page]}
       tone={design.tone}
       user={{ displayName: session.name, email: session.email, roleLabel: session.role }}
-      version="1.0.125"
+      version="1.0.126"
     >
       {page === "overview" ? <OverviewPage onAddTenant={() => setPage("add")} onCloud={() => setPage("cloud-service")} onDesktop={() => setPage("desktop-local")} onTenants={() => setPage("connections")} /> : null}
       {page === "connections" ? <ConnectionList key={refreshKey} onAdd={() => setPage("add")} onOpen={openConnection} /> : null}
@@ -130,6 +134,7 @@ export function WorkspaceShell({ onLogout, session }: { onLogout(): void; sessio
       {page === "show" ? <ConnectionShow id={selectedId} onBack={() => setPage("connections")} onDeleted={() => { setRefreshKey((value) => value + 1); setPage("connections") }} /> : null}
       {page === "desktop-local" ? <LocalEnvironmentPage /> : null}
       {page === "cloud-service" ? <CloudServiceKeyPage /> : null}
+      {page === "tenant-service" ? <TenantServicePage /> : null}
     </DashboardShell>
   )
 }
@@ -240,7 +245,7 @@ function DesktopOverviewPage({ onAddTenant, onCloud, onDesktop, onTenants }: { o
             <span><MonitorCog size={22} /></span>
             <div><small>Desktop end</small><h3>Desktop connects to cloud</h3></div>
           </header>
-          <p>Desktop sends the request to the cloud URL. If this is a new setup, generate the service key, put the same key on the VPS, then run handshake.</p>
+          <p>Desktop sends requests to CXSync Cloud. Generate the shared key on the cloud console, paste it into this desktop app, then run the handshake.</p>
           <dl>
             <Detail label="Desktop service key" value={serviceKey?.hasKey ? `Found locally (${serviceKey.keyPreview})` : "Service key not found"} />
             <Detail label="Desktop bridge" value="Electron bridge active" />
@@ -317,7 +322,7 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
     if (loading || autoChecked || !cloudUrl.trim()) return
     setAutoChecked(true)
     void recheckCloudBackend()
-  }, [autoChecked, cloudUrl, loading])
+  }, [autoChecked, cloudUrl, loading, serviceKey])
 
   async function recheckCloudBackend() {
     const baseUrl = (cloudUrl || cloudHandshake?.apiUrl || serviceKey?.cloudServiceUrl || "").trim().replace(/\/+$/, "")
@@ -336,9 +341,9 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
     setCheckingBackend(true)
     try {
       const apiBase = parsed.toString().replace(/\/+$/, "")
-      const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/status`, { headers: { Accept: "application/json" } })
+      const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/status`, { credentials: "include", headers: cxSyncCloudBrowserHeaders() })
       if (!response.ok) {
-        setBackendStatus({ message: `Backend status endpoint returned HTTP ${response.status}.`, ok: false, statusCode: response.status })
+        setBackendStatus({ message: response.status === 401 ? "Cloud admin session expired. Sign out and sign in again." : `Backend status endpoint returned HTTP ${response.status}.`, ok: false, statusCode: response.status })
         return
       }
       const latest = await fetchLatestCloudHandshake(apiBase)
@@ -394,7 +399,7 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
         <article className="endpoint-card endpoint-card--cloud-only">
           <header>
             <span><Cloud size={22} /></span>
-            <div><small>Cloud end</small><h3>Waiting for desktop handshake</h3></div>
+            <div><small>Cloud end</small><h3>{cloudHandshake?.ok ? "Desktop handshake connected" : "Waiting for desktop handshake"}</h3></div>
           </header>
           <p>Cloud does not start sync work by itself. It only accepts a desktop request when the service key exists and matches on both ends.</p>
           <dl>
@@ -424,7 +429,7 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
 
       <section className="overview-next overview-next--cloud">
         <header><small>Cloud rule</small><h3>Cloud accepts, desktop initiates</h3></header>
-        <p>Generate or paste the same service key on both sides. Then use the Electron desktop Overview to press Handshake cloud. This cloud view only shows cloud readiness.</p>
+        <p>Generate and activate the key in this cloud console, copy it into Electron Desktop, then press Handshake cloud. The cloud overview records the accepted desktop request.</p>
       </section>
     </section>
   )
@@ -483,9 +488,25 @@ function ConnectionList({ onAdd, onOpen }: { onAdd(): void; onOpen(id: string): 
   )
 }
 
-function ConnectionForm({ onCancel, onSaved }: { onCancel(): void; onSaved(record: TenantConnection): void }) {
+function ConnectionForm({ mode = "create", onCancel, onSaved, record }: { mode?: "create" | "edit"; onCancel(): void; onSaved(record: TenantConnection): void; record?: TenantConnection }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const cloudApiUrlRef = useRef<HTMLInputElement | null>(null)
+  const cloudAdminEmailRef = useRef<HTMLInputElement | null>(null)
+  const cloudAdminPasswordRef = useRef<HTMLInputElement | null>(null)
+  const isEdit = mode === "edit" && Boolean(record)
+
+  function useLocalBackendUrl() {
+    if (!cloudApiUrlRef.current) return
+    cloudApiUrlRef.current.value = "http://127.0.0.1:6005"
+    setError("")
+  }
+
+  function useLocalSeedAdmin() {
+    if (cloudAdminEmailRef.current) cloudAdminEmailRef.current.value = "admin@tenant.com"
+    if (cloudAdminPasswordRef.current) cloudAdminPasswordRef.current.value = "admin@123"
+    setError("")
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -493,7 +514,7 @@ function ConnectionForm({ onCancel, onSaved }: { onCancel(): void; onSaved(recor
     setError("")
     const data = new FormData(event.currentTarget)
     try {
-      onSaved(await connectionClient().saveTenantConnection(readTenantInput(data)))
+      onSaved(await connectionClient().saveTenantConnection(readTenantInput(data), record?.id))
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
@@ -503,29 +524,43 @@ function ConnectionForm({ onCancel, onSaved }: { onCancel(): void; onSaved(recor
 
   return (
     <form className="workspace-panel tenant-form" onSubmit={submit}>
-      <header><small>New registry entry</small><h2>Add tenant connection</h2><p>Store tenant-local and cloud connection information. Passwords are encrypted by Windows.</p></header>
+      <header>
+        <small>{isEdit ? "Update registry entry" : "New registry entry"}</small>
+        <h2>{isEdit ? "Edit tenant connection" : "Add tenant connection"}</h2>
+        <p>{isEdit ? "Change local database or cloud portal details. Leave password fields blank to keep the existing encrypted password." : "Store tenant-local and cloud connection information. Passwords are encrypted by Windows."}</p>
+      </header>
       <FormSection icon={<Server size={19} />} title="Tenant">
-        <Field label="Tenant name"><input name="tenantName" required /></Field>
-        <Field label="Tenant code"><input name="tenantCode" required /></Field>
-        <Field label="Corporate ID"><input name="corporateId" required /></Field>
+        <Field label="Tenant name"><input defaultValue={record?.tenantName ?? ""} name="tenantName" required /></Field>
+        <Field label="Tenant code"><input defaultValue={record?.tenantCode ?? ""} name="tenantCode" required /></Field>
+        <Field label="Corporate ID"><input defaultValue={record?.corporateId ?? ""} name="corporateId" required /></Field>
       </FormSection>
       <FormSection icon={<Database size={19} />} title="Local tenant database">
-        <Field label="Host"><input defaultValue="127.0.0.1" name="localHost" required /></Field>
-        <Field label="Port"><input defaultValue="3306" max="65535" min="1" name="localPort" required type="number" /></Field>
-        <Field label="Database"><input name="localDatabase" required /></Field>
-        <Field label="User"><input defaultValue="root" name="localUser" required /></Field>
-        <Field label="Password"><input autoComplete="new-password" name="localPassword" required type="password" /></Field>
+        <Field label="Host"><input defaultValue={record?.localHost ?? "127.0.0.1"} name="localHost" required /></Field>
+        <Field label="Port"><input defaultValue={record?.localPort ?? 3306} max="65535" min="1" name="localPort" required type="number" /></Field>
+        <Field label="Database"><input defaultValue={record?.localDatabase ?? ""} name="localDatabase" required /></Field>
+        <Field label="User"><input defaultValue={record?.localUser ?? "root"} name="localUser" required /></Field>
+        <Field label="Password"><input autoComplete="new-password" name="localPassword" placeholder={isEdit ? "Leave blank to keep existing password" : ""} required={!isEdit} type="password" /></Field>
       </FormSection>
       <FormSection icon={<Cloud size={19} />} title="Cloud portal">
-        <Field label="API URL"><input name="cloudApiUrl" placeholder="Use CXSYNC_CLOUD_PUBLIC_URL or tenant cloud API URL" required type="url" /></Field>
-        <Field label="Login domain"><input name="cloudDomain" placeholder="client.example.com" required /></Field>
-        <Field label="Admin email"><input name="cloudAdminEmail" required type="email" /></Field>
-        <Field label="Admin password"><input autoComplete="new-password" name="cloudAdminPassword" required type="password" /></Field>
+        <Field label="Tenant backend API URL"><input defaultValue={record?.cloudApiUrl ?? ""} name="cloudApiUrl" placeholder="Example: http://127.0.0.1:6005 or https://tenant-api.example.com" ref={cloudApiUrlRef} required type="url" /></Field>
+        <div className="tenant-url-presets">
+          <button className="secondary-button" onClick={useLocalBackendUrl} type="button"><Server size={16} />Use local backend 6005</button>
+          <span>Use this for local testing when the main billing/admin backend is running from this repo.</span>
+        </div>
+        <p className="field-help">Do not use CXSync desktop port 6044 or CXSync Cloud service port 6077 here. This URL must answer /api/v1/auth/login.</p>
+        <Field label="Tenant login domain"><input defaultValue={record?.cloudDomain ?? ""} name="cloudDomain" placeholder="codexsun.com" required /></Field>
+        <p className="field-help">This is the tenant identity sent as x-login-domain. Do not enter localhost, 127.0.0.1, or a port here.</p>
+        <Field label="Admin email"><input defaultValue={record?.cloudAdminEmail ?? ""} name="cloudAdminEmail" ref={cloudAdminEmailRef} required type="email" /></Field>
+        <Field label="Admin password"><input autoComplete="new-password" name="cloudAdminPassword" placeholder={isEdit ? "Leave blank to keep existing password" : ""} ref={cloudAdminPasswordRef} required={!isEdit} type="password" /></Field>
+        <div className="tenant-url-presets">
+          <button className="secondary-button" onClick={useLocalSeedAdmin} type="button"><KeyRound size={16} />Use local seed admin</button>
+          <span>For local backend testing, this fills the seeded tenant admin from the repo .env/default seed.</span>
+        </div>
       </FormSection>
       {error ? <div className="form-message form-message--error">{error}</div> : null}
       <footer className="form-footer">
         <button className="secondary-button" onClick={onCancel} type="button">Cancel</button>
-        <button className="primary-button" disabled={saving} type="submit">{saving ? <LoaderCircle className="spin" size={17} /> : <Plus size={17} />}Save tenant</button>
+        <button className="primary-button" disabled={saving} type="submit">{saving ? <LoaderCircle className="spin" size={17} /> : isEdit ? <Pencil size={17} /> : <Plus size={17} />}{isEdit ? "Update tenant" : "Save tenant"}</button>
       </footer>
     </form>
   )
@@ -548,9 +583,11 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
   const [syncJobs, setSyncJobs] = useState<TenantSyncJob[]>([])
   const [syncServiceStatus, setSyncServiceStatus] = useState<TenantSyncServiceStatus | null>(null)
   const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState(false)
   const [capturingBaseline, setCapturingBaseline] = useState(false)
   const [capturingCodebaseBaseline, setCapturingCodebaseBaseline] = useState(false)
   const [capturingCloudSnapshot, setCapturingCloudSnapshot] = useState(false)
+  const [refreshingCloudSnapshot, setRefreshingCloudSnapshot] = useState(false)
   const [comparingSchema, setComparingSchema] = useState(false)
   const [inspecting, setInspecting] = useState(false)
   const [generatingUpgradePlan, setGeneratingUpgradePlan] = useState(false)
@@ -562,6 +599,7 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
   const [verifying, setVerifying] = useState(false)
   const [upgradeActionMessage, setUpgradeActionMessage] = useState("")
   const [error, setError] = useState("")
+  const cloudSnapshotRunRef = useRef(0)
 
   useEffect(() => {
     if (!id) {
@@ -644,14 +682,35 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
   }
 
   async function captureCloudSnapshot() {
+    const runId = cloudSnapshotRunRef.current + 1
+    cloudSnapshotRunRef.current = runId
     setCapturingCloudSnapshot(true)
     setError("")
     try {
-      setCloudSnapshot(await captureTenantCloudSnapshot(id))
+      const next = await captureTenantCloudSnapshot(id)
+      if (cloudSnapshotRunRef.current === runId) setCloudSnapshot(next)
+    } catch (reason) {
+      if (cloudSnapshotRunRef.current === runId) setError(messageOf(reason))
+    } finally {
+      if (cloudSnapshotRunRef.current === runId) setCapturingCloudSnapshot(false)
+    }
+  }
+
+  function cancelCloudSnapshot() {
+    cloudSnapshotRunRef.current += 1
+    setCapturingCloudSnapshot(false)
+    setError("")
+  }
+
+  async function refreshCloudSnapshot() {
+    setRefreshingCloudSnapshot(true)
+    setError("")
+    try {
+      setCloudSnapshot(await loadTenantCloudSnapshot(id))
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
-      setCapturingCloudSnapshot(false)
+      setRefreshingCloudSnapshot(false)
     }
   }
 
@@ -854,8 +913,33 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
     onDeleted()
   }
 
+  function savedEditedConnection(next: TenantConnection) {
+    const cloudApiChanged = record ? normalizeUrlForCompare(record.cloudApiUrl) !== normalizeUrlForCompare(next.cloudApiUrl) : false
+    setRecord(next)
+    setVerification(next.lastHandshake ?? null)
+    if (cloudApiChanged) {
+      setCloudSnapshot(null)
+      setSyncJob(null)
+      setSyncJobs([])
+    }
+    setEditing(false)
+  }
+
   if (loading) return <LoadingLine />
   if (!record) return <section className="workspace-panel"><button className="link-button" onClick={onBack} type="button"><ArrowLeft size={15} />Back</button><p>Tenant connection not found.</p></section>
+
+  if (editing) {
+    return (
+      <div className="workspace-stack">
+        <section className="workspace-panel">
+          <header className="panel-heading-row">
+            <div><button className="back-button" onClick={() => setEditing(false)} type="button"><ArrowLeft size={16} />Connection</button><h2>Edit {record.tenantName}</h2><p>Update credentials, then run Handshake again to verify.</p></div>
+          </header>
+        </section>
+        <ConnectionForm mode="edit" onCancel={() => setEditing(false)} onSaved={savedEditedConnection} record={record} />
+      </div>
+    )
+  }
 
   return (
     <div className="workspace-stack">
@@ -863,6 +947,7 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
         <header className="panel-heading-row">
           <div><button className="back-button" onClick={onBack} type="button"><ArrowLeft size={16} />Connections</button><h2>{record.tenantName}</h2><p>{record.tenantCode} · {record.corporateId}</p></div>
           <div className="sync-actions">
+            <button className="secondary-button" onClick={() => setEditing(true)} type="button"><Pencil size={16} />Edit</button>
             <button className="secondary-button danger-button" onClick={remove} type="button"><Trash2 size={16} />Delete</button>
             <button className="secondary-button" disabled={inspecting} onClick={inspect} type="button">{inspecting ? <LoaderCircle className="spin" size={17} /> : <Table2 size={17} />}Inspect tables</button>
             <button className="primary-button" disabled={verifying} onClick={verify} type="button">{verifying ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}Handshake</button>
@@ -875,7 +960,7 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
         defaultValue="overview"
         tabs={[
           {
-            content: <TenantOverview record={record} verification={verification} />,
+            content: <TenantOverview onUpdated={savedEditedConnection} record={record} verification={verification} />,
             label: "Overview",
             value: "overview",
           },
@@ -885,8 +970,8 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
             value: "history",
           },
           {
-            content: <CloudSnapshotPanel capturing={capturingCloudSnapshot} onCapture={captureCloudSnapshot} snapshot={cloudSnapshot} />,
-            label: cloudSnapshot ? `Cloud snapshot (${cloudSnapshot.status})` : "Cloud snapshot",
+            content: <CloudSnapshotPanel capturing={capturingCloudSnapshot} expectedApiUrl={record.cloudApiUrl} onCancel={cancelCloudSnapshot} onCapture={captureCloudSnapshot} onRefresh={refreshCloudSnapshot} refreshing={refreshingCloudSnapshot} snapshot={cloudSnapshot} />,
+            label: currentSnapshotFor(record, cloudSnapshot) ? `Cloud snapshot (${cloudSnapshot?.status})` : cloudSnapshot ? "Cloud snapshot (stale)" : "Cloud snapshot",
             value: "cloud",
           },
           {
@@ -906,7 +991,7 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
           },
           {
             content: <SyncEnginePanel checkingService={checkingSyncService} job={syncJob} jobs={syncJobs} onCheckService={checkSyncService} onContinue={continueSyncJob} onExport={exportSyncReport} onRetry={retrySyncJob} onRun={runSyncJob} running={runningSyncJob} serviceStatus={syncServiceStatus} />,
-            label: syncJob ? `Sync engine (${syncJob.status})` : "Sync engine",
+            label: syncJob ? `Schema Sync (${syncJob.status})` : "Schema Sync",
             value: "sync",
           },
         ]}
@@ -915,11 +1000,39 @@ function ConnectionShow({ id, onBack, onDeleted }: { id: string; onBack(): void;
   )
 }
 
-function TenantOverview({ record, verification }: { record: TenantConnection; verification: TenantConnectionVerification | null }) {
+function TenantOverview({ onUpdated, record, verification }: { onUpdated(record: TenantConnection): void; record: TenantConnection; verification: TenantConnectionVerification | null }) {
+  const [fixing, setFixing] = useState(false)
+  const [fixError, setFixError] = useState("")
+  const needsLocalBackendFix = tenantApiUrlNeedsLocalBackend(record.cloudApiUrl)
+
+  async function useLocalBackendUrl() {
+    setFixing(true)
+    setFixError("")
+    try {
+      const saved = await connectionClient().saveTenantConnection(tenantInputFromRecord(record, { cloudApiUrl: "http://127.0.0.1:6005" }), record.id)
+      onUpdated(saved)
+    } catch (reason) {
+      setFixError(messageOf(reason))
+    } finally {
+      setFixing(false)
+    }
+  }
+
   return (
     <div className="workspace-stack">
       <section className="workspace-panel">
-        <header><small>Tenant access</small><h2>Connection overview</h2></header>
+        <header><small>Tenant connection</small><h2>Connection overview</h2></header>
+        {needsLocalBackendFix ? (
+          <div className="tenant-url-warning">
+            <AlertTriangle size={18} />
+            <div>
+              <strong>This tenant is using a CXSync URL, not the tenant backend API.</strong>
+              <small>For local development, use the main server backend URL that owns /api/v1/auth/login. From this repo .env, that is usually http://127.0.0.1:6005.</small>
+            </div>
+            <button className="secondary-button" disabled={fixing} onClick={useLocalBackendUrl} type="button">{fixing ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}Use 6005</button>
+          </div>
+        ) : null}
+        {fixError ? <div className="form-message form-message--error">{fixError}</div> : null}
         <div className="detail-grid">
           <DetailCard icon={<Database size={19} />} title="Local database">
             <Detail label="Server" value={`${record.localHost}:${record.localPort}`} />
@@ -933,12 +1046,13 @@ function TenantOverview({ record, verification }: { record: TenantConnection; ve
           </DetailCard>
         </div>
       </section>
-      {verification ? <VersionComparison verification={verification} /> : <section className="workspace-panel"><div className="empty-mini">Run handshake to compare local and cloud status.</div></section>}
+      {verification ? <VersionComparison record={record} verification={verification} /> : <section className="workspace-panel"><div className="empty-mini">Run handshake to compare local and cloud status.</div></section>}
     </div>
   )
 }
 
-function VersionComparison({ verification }: { verification: TenantConnectionVerification }) {
+function VersionComparison({ record, verification }: { record: TenantConnection; verification: TenantConnectionVerification }) {
+  const diagnostic = handshakeDiagnostic(record, verification)
   return (
     <section className="workspace-panel">
       <header><small>Handshake result</small><h2>Local and cloud comparison</h2></header>
@@ -949,6 +1063,12 @@ function VersionComparison({ verification }: { verification: TenantConnectionVer
         </div>
         <ComparisonCard icon={<Cloud size={20} />} label="Cloud application" result={verification.cloud} />
       </div>
+      {diagnostic ? (
+        <div className={`handshake-diagnostic handshake-diagnostic--${diagnostic.tone}`}>
+          <AlertTriangle size={18} />
+          <div><strong>{diagnostic.title}</strong><small>{diagnostic.detail}</small></div>
+        </div>
+      ) : null}
     </section>
   )
 }
@@ -975,17 +1095,52 @@ function HandshakeHistory({ history }: { history: TenantHandshakeHistoryItem[] }
   )
 }
 
-function CloudSnapshotPanel({ capturing, onCapture, snapshot }: { capturing: boolean; onCapture(): void; snapshot: TenantCloudSnapshot | null }) {
+function CloudSnapshotPanel({
+  capturing,
+  expectedApiUrl,
+  onCancel,
+  onCapture,
+  onRefresh,
+  refreshing,
+  snapshot,
+}: {
+  capturing: boolean
+  expectedApiUrl: string
+  onCancel(): void
+  onCapture(): void
+  onRefresh(): void
+  refreshing: boolean
+  snapshot: TenantCloudSnapshot | null
+}) {
+  const staleSnapshot = Boolean(snapshot && normalizeUrlForCompare(snapshot.apiUrl) !== normalizeUrlForCompare(expectedApiUrl))
   return (
     <section className="workspace-panel">
       <header className="panel-heading-row">
         <div><small>Backend API evidence</small><h2>Cloud snapshot</h2><p>Captures tenant admin login, session token, and cloud health through the portal API. No direct VPS database access.</p></div>
-        <button className="primary-button" disabled={capturing} onClick={onCapture} type="button">{capturing ? <LoaderCircle className="spin" size={17} /> : <Cloud size={17} />}{capturing ? "Capturing..." : "Capture cloud snapshot"}</button>
+        <div className="sync-actions cloud-snapshot-actions">
+          <button className="secondary-button" disabled={capturing || refreshing} onClick={onRefresh} type="button">{refreshing ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}Refresh</button>
+          {capturing ? (
+            <button className="secondary-button danger-button" onClick={onCancel} type="button"><AlertTriangle size={17} />Cancel</button>
+          ) : (
+            <button className="primary-button" onClick={onCapture} type="button"><Cloud size={17} />Capture cloud snapshot</button>
+          )}
+        </div>
       </header>
-      {!snapshot ? <div className="empty-mini">Capture the first cloud snapshot to save current portal reachability and version evidence.</div> : (
-        <>
+      {capturing ? <CloudSnapshotTrace snapshot={null} running /> : null}
+      {!snapshot && !capturing ? <div className="empty-mini">Capture the first cloud snapshot to save current portal reachability and version evidence.</div> : null}
+      {snapshot ? (
+        <div className={capturing ? "cloud-snapshot-content cloud-snapshot-content--hidden" : "cloud-snapshot-content"}>
+          {staleSnapshot ? (
+            <div className="cloud-snapshot-stale">
+              <AlertTriangle size={18} />
+              <div>
+                <strong>Saved snapshot is from a different backend URL.</strong>
+                <small>Current tenant API is {expectedApiUrl}. This saved snapshot was captured from {snapshot.apiUrl}. Click Capture cloud snapshot to create fresh local evidence.</small>
+              </div>
+            </div>
+          ) : null}
           <div className="connection-summary">
-            <SummaryItem icon={<Cloud size={18} />} label="Snapshot status" tone={snapshot.status === "ready" ? "healthy" : "attention"} value={snapshot.status} />
+            <SummaryItem icon={<Cloud size={18} />} label="Snapshot status" tone={!staleSnapshot && snapshot.status === "ready" ? "healthy" : "attention"} value={staleSnapshot ? "stale" : snapshot.status} />
             <SummaryItem icon={<Activity size={18} />} label="Cloud version" tone={snapshot.cloudVersion === "unavailable" ? "attention" : "neutral"} value={snapshot.cloudVersion} />
             <SummaryItem icon={<Table2 size={18} />} label="Cloud tables" tone={snapshot.schema ? "healthy" : "attention"} value={snapshot.schema ? String(snapshot.schema.totals.tableCount) : "not captured"} />
           </div>
@@ -1019,9 +1174,69 @@ function CloudSnapshotPanel({ capturing, onCapture, snapshot }: { capturing: boo
             {snapshot.status === "ready" ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
             <div><strong>{snapshot.message}</strong><small>{formatCheckedAt(snapshot.capturedAt)}{snapshot.session.selectedTenant ? ` · selected tenant ${snapshot.session.selectedTenant}` : ""}</small></div>
           </div>
-        </>
-      )}
+          <CloudSnapshotTrace snapshot={snapshot} />
+        </div>
+      ) : null}
     </section>
+  )
+}
+
+function CloudSnapshotTrace({ running = false, snapshot }: { running?: boolean; snapshot: TenantCloudSnapshot | null }) {
+  const totalLatency = (snapshot?.health.latencyMs ?? 0) + (snapshot?.session.latencyMs ?? 0)
+  const schemaTotals = snapshot?.schema?.totals
+  const rows = [
+    {
+      detail: snapshot ? `${snapshot.apiUrl}${snapshot.domain ? ` · ${snapshot.domain}` : ""}` : "Waiting for tenant backend API URL.",
+      label: "Target tenant backend",
+      status: snapshot ? "done" : running ? "running" : "pending",
+    },
+    {
+      detail: snapshot ? "Admin login returned a session token before these metrics were saved." : "Posting admin email, password, corporate ID, and tenant surface.",
+      label: "Admin login",
+      status: snapshot ? "done" : running ? "running" : "pending",
+    },
+    {
+      detail: snapshot ? `${snapshot.health.status} · ${snapshot.health.latencyMs} ms · version ${snapshot.cloudVersion}` : "Reading /health from the tenant backend.",
+      label: "Backend health",
+      status: snapshot ? (snapshot.health.ok ? "done" : "failed") : running ? "pending" : "pending",
+    },
+    {
+      detail: snapshot ? `${snapshot.session.userEmail ?? "no user"}${snapshot.session.selectedTenant ? ` · selected tenant ${snapshot.session.selectedTenant}` : ""} · ${snapshot.session.latencyMs} ms` : "Verifying token with /api/v1/auth/session.",
+      label: "Session check",
+      status: snapshot ? (snapshot.session.ok ? "done" : "failed") : running ? "pending" : "pending",
+    },
+    {
+      detail: schemaTotals
+        ? `${formatNumber(schemaTotals.tableCount)} tables · ${formatNumber(schemaTotals.columnCount)} columns · ${formatNumber(schemaTotals.indexCount)} indexes · ${formatBytes(schemaTotals.dataLength + schemaTotals.indexLength)}`
+        : snapshot
+          ? "Tenant schema snapshot was not captured."
+          : "Reading /api/v1/cxsync/tenant-snapshot.",
+      label: "Tenant schema metadata",
+      status: snapshot ? (snapshot.schema ? "done" : "failed") : running ? "pending" : "pending",
+    },
+    {
+      detail: snapshot ? `${snapshot.status} · ${totalLatency} ms measured health/session time · saved ${formatCheckedAt(snapshot.capturedAt).replace("Checked ", "")}` : "Saving snapshot into local CXSync storage.",
+      label: "Saved evidence",
+      status: snapshot ? (snapshot.status === "failed" ? "failed" : "done") : running ? "pending" : "pending",
+    },
+  ] as const
+
+  return (
+    <div className="cloud-snapshot-trace">
+      <header>
+        <div><small>Operation trace</small><h3>{running ? "Capturing cloud snapshot..." : "What CXSync checked"}</h3></div>
+        {snapshot ? <span>{snapshot.status}</span> : <span>running</span>}
+      </header>
+      <div className="cloud-snapshot-trace__rows">
+        {rows.map((row) => (
+          <article className={`cloud-snapshot-trace__row cloud-snapshot-trace__row--${row.status}`} key={row.label}>
+            <span>{row.status === "done" ? <CheckCircle2 size={16} /> : row.status === "failed" ? <AlertTriangle size={16} /> : running ? <LoaderCircle className="spin" size={16} /> : <Clock3 size={16} />}</span>
+            <div><strong>{row.label}</strong><small>{row.detail}</small></div>
+          </article>
+        ))}
+      </div>
+      {snapshot?.message ? <p>{snapshot.message}</p> : null}
+    </div>
   )
 }
 
@@ -1102,10 +1317,10 @@ function SchemaDiff({
   return (
     <section className="workspace-panel schema-diff-panel">
       <header className="panel-heading-row">
-        <div><small>Schema baseline</small><h2>Schema diff</h2><p>Build the expected schema in an isolated temporary database, then compare every local table, column, and index.</p></div>
+        <div><small>Schema baseline</small><h2>Schema diff</h2><p>Load the release-packaged expected schema, then compare every local table, column, and index.</p></div>
         <div className="sync-actions">
           <button className="secondary-button" disabled={capturing || capturingCodebase || comparing} onClick={onCapture} type="button">{capturing ? <LoaderCircle className="spin" size={17} /> : <Database size={17} />}Set from local</button>
-          <button className="secondary-button" disabled={capturing || capturingCodebase || comparing} onClick={onCaptureCodebase} type="button">{capturingCodebase ? <LoaderCircle className="spin" size={17} /> : <Server size={17} />}{capturingCodebase ? `Building... ${formatElapsed(buildStatus?.elapsedMs ?? 0)}` : "Build expected schema"}</button>
+          <button className="secondary-button" disabled={capturing || capturingCodebase || comparing} onClick={onCaptureCodebase} type="button">{capturingCodebase ? <LoaderCircle className="spin" size={17} /> : <Server size={17} />}{capturingCodebase ? "Loading packaged schema..." : "Load expected schema"}</button>
           <button className="primary-button" disabled={!baseline || capturing || capturingCodebase || comparing} onClick={onCompare} type="button">{comparing ? <LoaderCircle className="spin" size={17} /> : <RefreshCw size={17} />}Compare now</button>
         </div>
       </header>
@@ -1131,7 +1346,7 @@ function SchemaDiff({
           </div>
         </div>
       ) : null}
-      {!baseline ? <div className="empty-mini">No active baseline yet. Build the expected schema from the checked-out backend migrations first.</div> : (
+      {!baseline ? <div className="empty-mini">No active baseline yet. Load the expected schema packaged with this CXSync release.</div> : (
         <div className="connection-summary">
           <SummaryItem icon={<CheckCircle2 size={18} />} label="Baseline tables" value={String(baseline.totals.tableCount)} />
           <SummaryItem icon={<Activity size={18} />} label="Source" value={baseline.source} />
@@ -1250,7 +1465,7 @@ function UpgradePlan({
           <span>{progressMessage}</span>
         </div>
       ) : null}
-      {!plan ? <div className="empty-mini">Build the expected schema, then generate a reviewable tenant upgrade plan.</div> : (
+      {!plan ? <div className="empty-mini">Load the packaged expected schema, then generate a reviewable tenant upgrade plan.</div> : (
         <>
           <div className="connection-summary">
             <SummaryItem icon={<CheckCircle2 size={18} />} label="Safe suggestions" tone="healthy" value={String(plan.summary.safe)} />
@@ -1333,7 +1548,7 @@ function SyncEnginePanel({
   return (
     <section className="workspace-panel sync-engine-panel">
       <header className="panel-heading-row">
-        <div><small>Bounded sync workflow</small><h2>Sync engine</h2><p>Get tenant details, download cloud metadata, verify, prepare migration, verify again, and upload an audit report.</p></div>
+        <div><small>Bounded schema workflow</small><h2>Schema Sync</h2><p>Get tenant details, download cloud schema metadata, verify, prepare migration, verify again, and upload an audit report. Business rows are not synchronized.</p></div>
         <div className="sync-actions">
           <button className="secondary-button" disabled={checkingService} onClick={onCheckService} type="button">{checkingService ? <LoaderCircle className="spin" size={17} /> : <Cloud size={17} />}{checkingService ? "Checking..." : "Check service"}</button>
           <button className="secondary-button" disabled={!job || running} onClick={onExport} type="button"><History size={17} />Export report</button>
@@ -1382,10 +1597,51 @@ function SyncEnginePanel({
   )
 }
 
+function TenantServicePage() {
+  const [tenants, setTenants] = useState<CxSyncMasterTenant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    loadTenantServiceTenants()
+      .then(setTenants)
+      .catch((reason) => setError(messageOf(reason)))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <section className="workspace-panel page-surface page-surface--cloud tenant-service-panel">
+      <header className="panel-heading-row">
+        <div><small>Tenant service</small><h2>Master tenants</h2><p>Read-only tenant list from the cloud master database. Only tenant, corporate ID, and tenant code are shown.</p></div>
+        <button className="secondary-button" disabled={loading} onClick={() => { setLoading(true); setError(""); loadTenantServiceTenants().then(setTenants).catch((reason) => setError(messageOf(reason))).finally(() => setLoading(false)) }} type="button">{loading ? <LoaderCircle className="spin" size={16} /> : <RefreshCw size={16} />}Refresh</button>
+      </header>
+      {error ? <div className="form-message form-message--error">{error}</div> : null}
+      {loading ? <LoadingLine /> : null}
+      {!loading && !tenants.length ? <div className="empty-mini">No tenants found in the master database.</div> : null}
+      {tenants.length ? (
+        <div className="tenant-service-list">
+          <div className="tenant-service-list__head">
+            <span>Tenant</span>
+            <span>Corporate ID</span>
+            <span>Tenant code</span>
+          </div>
+          {tenants.map((tenant) => (
+            <article className="tenant-service-row" key={tenant.id}>
+              <span><strong>{tenant.tenantName}</strong></span>
+              <span>{tenant.corporateId || "-"}</span>
+              <span>{tenant.tenantCode || "-"}</span>
+            </article>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
 function CloudServiceKeyPage() {
+  const desktopRuntime = connectionClient().isDesktop
   const [status, setStatus] = useState<CxSyncServiceKeyStatus | null>(null)
   const [generated, setGenerated] = useState<CxSyncGeneratedServiceKey | null>(null)
-  const [cloudUrl, setCloudUrl] = useState("")
   const [manualKey, setManualKey] = useState("")
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
@@ -1395,7 +1651,6 @@ function CloudServiceKeyPage() {
     loadServiceKeyStatus()
       .then((next) => {
         setStatus(next)
-        setCloudUrl(next.cloudServiceUrl || "")
       })
       .catch((reason) => setError(messageOf(reason)))
   }, [])
@@ -1407,10 +1662,8 @@ function CloudServiceKeyPage() {
     try {
       const next = await generateCxSyncServiceKey()
       setGenerated(next)
-      setStatus(next)
-      setCloudUrl(next.cloudServiceUrl || cloudUrl)
       setManualKey(next.key)
-      setMessage("Cloud service key generated. Copy the same value to the VPS CXSync Cloud .env and restart the cloud service.")
+      setMessage("Cloud key generated and activated in CXSync Cloud storage. Copy it now and paste it into Desktop; neither app needs a restart.")
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
@@ -1425,25 +1678,8 @@ function CloudServiceKeyPage() {
     try {
       const next = await saveCxSyncServiceKey(manualKey)
       setStatus(next)
-      setCloudUrl(next.cloudServiceUrl || cloudUrl)
       setGenerated(null)
-      setMessage("Cloud service key saved in this desktop app. Use the same value on the VPS.")
-    } catch (reason) {
-      setError(messageOf(reason))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  async function saveUrl() {
-    setSaving(true)
-    setError("")
-    setMessage("")
-    try {
-      const next = await saveCxSyncCloudServiceUrl(cloudUrl)
-      setStatus(next)
-      setCloudUrl(next.cloudServiceUrl || cloudUrl)
-      setMessage("Cloud service URL saved. New handshakes will use this URL immediately.")
+      setMessage(desktopRuntime ? "Cloud service key saved in this desktop app. Return to Overview and run Handshake cloud; no restart is required." : "Cloud service key saved for this browser session. Return to Overview and recheck the backend.")
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
@@ -1465,52 +1701,25 @@ function CloudServiceKeyPage() {
 
   return (
     <section className="workspace-panel service-key-panel page-surface page-surface--cloud">
-      <header className="panel-heading-row">
-        <div><small>Cloud service only</small><h2>VPS CXSync access key</h2><p>This page uses the CXSync Cloud URL from desktop .env. It does not manage local tenant tables.</p></div>
-        <button className="primary-button" disabled={saving} onClick={generate} type="button">{saving ? <LoaderCircle className="spin" size={17} /> : <KeyRound size={17} />}Generate cloud key</button>
-      </header>
       {error ? <div className="form-message form-message--error">{error}</div> : null}
       {message ? <div className="form-message form-message--success">{message}</div> : null}
       {!status && !error ? <LoadingLine /> : null}
-      <div className="detail-grid">
-        <DetailCard icon={<Cloud size={19} />} title="Cloud service">
-          <Detail label="Public URL" value={status?.cloudServiceUrl || cloudUrl || "Not configured"} />
-          <Detail label="Request header" value="x-cxsync-service-key" />
-          <Detail label="VPS .env name" value="CXSYNC_SERVICE_KEY" />
-        </DetailCard>
-        <DetailCard icon={<CheckCircle2 size={19} />} title="Cloud acceptance">
-          <Detail label="Accepted when" value="Desktop sends matching key" />
-          <Detail label="Current state" value={status?.hasKey ? "Ready to accept handshake" : "Waiting for shared key"} />
-          <Detail label="Cloud response" value="Health, auth, tenant snapshot" />
-        </DetailCard>
+      <header className="service-key-heading">
+        <span><KeyRound size={19} /></span>
+        <h3>Cloud key value</h3>
+      </header>
+      <div className="tenant-field-grid service-key-field-grid">
+        <Field label="Service key"><input autoComplete="off" name="serviceKey" onChange={(event) => setManualKey(event.target.value)} placeholder={desktopRuntime ? "Paste the key generated on CXSync Cloud" : "Generate a new cloud key or paste the VPS CXSYNC_SERVICE_KEY"} type={generated ? "text" : "password"} value={manualKey} /></Field>
       </div>
-      <HandshakePatternPanel
-        tone="cloud"
-        title="Cloud side pattern"
-        steps={[
-          ["Wait", "CXSync Cloud waits on the VPS for a desktop request."],
-          ["Accept", "It accepts only requests carrying the correct service key."],
-          ["Reply", "It replies with health, login/session, tenant snapshot, and report result."],
-        ]}
-      />
-      <FormSection icon={<Cloud size={19} />} title="Cloud service URL">
-        <Field label="URL"><input autoComplete="off" name="cloudServiceUrl" onChange={(event) => setCloudUrl(event.target.value)} placeholder="Set CXSYNC_CLOUD_PUBLIC_URL" type="url" value={cloudUrl} /></Field>
-      </FormSection>
       <div className="service-key-actions">
-        <button className="secondary-button" disabled={!cloudUrl.trim() || saving} onClick={saveUrl} type="button"><Cloud size={16} />Save cloud URL</button>
-        <button className="secondary-button" disabled={!cloudUrl.trim()} onClick={() => copyText(`CXSYNC_CLOUD_PUBLIC_URL=${cloudUrl.trim().replace(/\/+$/, "")}`, "Cloud URL .env line")} type="button"><Copy size={16} />Copy URL .env line</button>
-      </div>
-      <FormSection icon={<KeyRound size={19} />} title="Cloud key value">
-        <Field label="Service key"><input autoComplete="off" name="serviceKey" onChange={(event) => setManualKey(event.target.value)} placeholder="Generate or paste CXSYNC_SERVICE_KEY" type="text" value={manualKey} /></Field>
-      </FormSection>
-      <div className="service-key-actions">
+        {!desktopRuntime ? <button className="primary-button" disabled={saving} onClick={generate} type="button">{saving ? <LoaderCircle className="spin" size={17} /> : <KeyRound size={17} />}Generate cloud key</button> : null}
         <button className="secondary-button" disabled={!keyToCopy} onClick={() => copyText(keyToCopy, "Raw key")} type="button"><Copy size={16} />Copy key</button>
-        <button className="secondary-button" disabled={!envLine} onClick={() => copyText(envLine, "VPS .env line")} type="button"><Copy size={16} />Copy VPS .env line</button>
-        <button className="secondary-button" disabled={!manualKey.trim() || saving} onClick={saveManual} type="button"><KeyRound size={16} />Save key locally</button>
+        {desktopRuntime ? <button className="secondary-button" disabled={!envLine} onClick={() => copyText(envLine, "VPS .env line")} type="button"><Copy size={16} />Copy .env line</button> : null}
+        {desktopRuntime ? <button className="secondary-button" disabled={!manualKey.trim() || saving} onClick={saveManual} type="button"><KeyRound size={16} />Save key locally</button> : null}
       </div>
       <div className="safe-note">
         <KeyRound size={16} />
-        <span>Cloud rule: put the copied line in the VPS `.env` for `apps/cxsync-cloud`, restart CXSync Cloud, and keep the matching local copy here. This key is never for clients.</span>
+        <span>{desktopRuntime ? "Desktop never creates the shared key. Paste the key generated on CXSync Cloud, save it locally, then run Handshake cloud." : "Generate and activate the key here, copy it before leaving this page, and paste it into Desktop. CXSync Cloud stores the active key in its private database; no restart or .env rewrite occurs."} This key is never for clients.</span>
       </div>
     </section>
   )
@@ -1621,6 +1830,104 @@ function readTenantInput(data: FormData): TenantConnectionInput {
     localUser: text(data, "localUser"),
     tenantCode: text(data, "tenantCode"),
     tenantName: text(data, "tenantName"),
+  }
+}
+
+function tenantInputFromRecord(record: TenantConnection, overrides: Partial<TenantConnectionInput> = {}): TenantConnectionInput {
+  return {
+    cloudAdminEmail: record.cloudAdminEmail,
+    cloudAdminPassword: "",
+    cloudApiUrl: record.cloudApiUrl,
+    cloudDomain: record.cloudDomain,
+    corporateId: record.corporateId,
+    localDatabase: record.localDatabase,
+    localHost: record.localHost,
+    localPassword: "",
+    localPort: record.localPort,
+    localUser: record.localUser,
+    tenantCode: record.tenantCode,
+    tenantName: record.tenantName,
+    ...overrides,
+  }
+}
+
+function tenantApiUrlNeedsLocalBackend(value: string) {
+  try {
+    const parsed = new URL(value)
+    return parsed.port === "6044" || parsed.port === "6077"
+  } catch {
+    return false
+  }
+}
+
+function handshakeDiagnostic(record: TenantConnection, verification: TenantConnectionVerification) {
+  if (verification.local.ok && verification.cloud.ok && verification.versionsMatch) return null
+  const apiHost = safeHost(record.cloudApiUrl)
+  const domain = record.cloudDomain.trim()
+  if (isLocalHostName(apiHost) && (isLocalHostName(domain) || domain.includes(":"))) {
+    return {
+      detail: `API URL can be local (${record.cloudApiUrl}), but Login domain must identify the tenant. Change Login domain from "${record.cloudDomain}" to the tenant domain/slug, for example codexsun.com, then run Handshake again.`,
+      title: "Login domain is set to the local API address",
+      tone: "warning" as const,
+    }
+  }
+  if (!verification.cloud.ok && /invalid login details/i.test(verification.cloud.message)) {
+    if (isLocalHostName(apiHost) && record.cloudAdminEmail.toLowerCase() !== "admin@tenant.com") {
+      return {
+        detail: `The local backend accepted the tenant domain/corporate ID pattern, but rejected ${record.cloudAdminEmail}. For local seeded data, edit this tenant and use the local seed admin, then run Handshake again.`,
+        title: "Local backend rejected this admin email/password",
+        tone: "error" as const,
+      }
+    }
+    return {
+      detail: `The local database connected, but tenant backend login rejected the admin credential/domain/corporate ID combination. Check Login domain (${record.cloudDomain}), Corporate ID (${record.corporateId}), Admin email, and Admin password.`,
+      title: "Tenant backend rejected login",
+      tone: "error" as const,
+    }
+  }
+  if (!verification.cloud.ok) {
+    return {
+      detail: verification.cloud.message,
+      title: "Cloud application did not connect",
+      tone: "error" as const,
+    }
+  }
+  if (!verification.versionsMatch) {
+    return {
+      detail: `Local CXSync app version is ${verification.local.version}; backend version is ${verification.cloud.version}. Update/restart the side that is behind before schema operations.`,
+      title: "Application versions differ",
+      tone: "warning" as const,
+    }
+  }
+  return null
+}
+
+function safeHost(value: string) {
+  try {
+    return new URL(value).hostname
+  } catch {
+    return value
+  }
+}
+
+function isLocalHostName(value: string) {
+  const normalized = value.trim().toLowerCase()
+  return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1"
+}
+
+function currentSnapshotFor(record: TenantConnection, snapshot: TenantCloudSnapshot | null) {
+  if (!snapshot) return null
+  return normalizeUrlForCompare(record.cloudApiUrl) === normalizeUrlForCompare(snapshot.apiUrl) ? snapshot : null
+}
+
+function normalizeUrlForCompare(value: string) {
+  try {
+    const parsed = new URL(value.trim())
+    parsed.hash = ""
+    parsed.search = ""
+    return parsed.toString().replace(/\/+$/, "")
+  } catch {
+    return value.trim().replace(/\/+$/, "")
   }
 }
 
@@ -1760,7 +2067,7 @@ async function loadOptionalCloudServiceHandshake() {
 }
 
 async function fetchLatestCloudHandshake(apiBase: string): Promise<CxSyncCloudServiceHandshake | null> {
-  const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/handshake`, { headers: { Accept: "application/json" } })
+  const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/handshake`, { credentials: "include", headers: cxSyncCloudBrowserHeaders() })
   if (!response.ok) {
     throw new Error(`Latest handshake endpoint returned HTTP ${response.status}.`)
   }
@@ -1778,6 +2085,22 @@ async function fetchLatestCloudHandshake(apiBase: string): Promise<CxSyncCloudSe
     ok: Boolean(payload.ok ?? record.ok),
     service: payload.service || record.service || "cxsync-cloud",
     status: cloudHandshakeStatus(payload.status || record.status),
+  }
+}
+
+async function loadTenantServiceTenants(): Promise<CxSyncMasterTenant[]> {
+  const status = await connectionClient().getServiceKeyStatus()
+  const apiBase = normalizeCloudUrlInput(status.cloudServiceUrl || "")
+  try {
+    const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/tenants`, { credentials: "include", headers: cxSyncCloudBrowserHeaders() })
+    const body = await response.json().catch(() => null) as { error?: string; tenants?: CxSyncMasterTenant[] } | null
+    if (!response.ok) throw new Error(response.status === 401 ? "Cloud admin session expired. Sign out and sign in again." : body?.error || `Tenant service returned HTTP ${response.status}.`)
+    return body?.tenants ?? []
+  } catch (reason) {
+    if (reason instanceof TypeError) {
+      throw new Error(`CXSync Cloud backend is not reachable at ${apiBase}. Start it with npm run dev:cxsync, then click Refresh.`)
+    }
+    throw reason
   }
 }
 

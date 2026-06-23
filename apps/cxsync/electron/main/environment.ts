@@ -47,8 +47,8 @@ export async function getServiceKeyStatus(): Promise<CxSyncServiceKeyStatus> {
 
 export async function generateServiceKey(): Promise<CxSyncGeneratedServiceKey> {
   const key = randomBytes(32).toString("base64url")
-  const status = await saveServiceKey(key)
-  return { ...status, key }
+  const status = await getServiceKeyStatus()
+  return { ...status, hasKey: false, key, keyPreview: previewKey(key), updatedAt: new Date().toISOString() }
 }
 
 export async function saveServiceKey(key: string): Promise<CxSyncServiceKeyStatus> {

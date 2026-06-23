@@ -35,4 +35,14 @@ export class CxSyncCloudController {
       service: 'cxsync-cloud',
     }
   }
+
+  @Get('tenants')
+  async tenants() {
+    const tenants = await this.engine.listMasterTenants()
+    return {
+      ok: true,
+      service: 'cxsync-cloud',
+      tenants,
+    }
+  }
 }
