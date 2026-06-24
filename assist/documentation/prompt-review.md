@@ -2600,6 +2600,26 @@ User prompt:
 ok next
 ```
 
+User prompt:
+
+```text
+ok fine create log in changelog and create isolated CXSync maintenance deployment path
+```
+
+## 2026-06-24 - CXSync all-tenant fleet database upgrades
+
+User prompt:
+
+```text
+ok fine prepare all except 1 we do it later and this is only for database maintenance and migration upgrading tool that audit existing cloud database and safe migrate to latest at present
+
+we are working daily but we can not deploy daily when prepare to deploy it may occurs error or fail on live server so we build this to do safe for all tenants so keep this in document as memory and work for this
+
+now we prepare fast to go with live server , get all tenant data and then upgrade in military grade solid
+
+prepare for clone or sync all tenant database
+```
+
 ## 2026-06-16 - Continue Receipt Payment module pattern
 
 User prompt:
@@ -2750,4 +2770,22 @@ User prompt:
 
 ```text
 Error invoking remote method 'cxsync:tenants:schema-baseline:capture-codebase': Error: Expected schema build failed: Parameter decorators only work when experimental decorators are enabled
+```
+
+## 2026-06-24 - CXSync Cloud audit ownership and integration verification
+
+User prompts:
+
+```text
+ok fine now we move to cxsync get what is to do next in this
+```
+
+```text
+ok start now
+```
+
+User prompt:
+
+```text
+ok next
 ```

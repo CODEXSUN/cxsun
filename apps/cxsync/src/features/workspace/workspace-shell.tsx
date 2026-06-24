@@ -18,6 +18,7 @@ import {
   Server,
   Table2,
   Trash2,
+  ShieldCheck,
 } from "lucide-react"
 import { AnimatedTabs, DashboardShell, getCxDesignSystem, type DashboardShellNavGroup } from "@cxsun/ui"
 import type { AuthSession } from "../auth/auth-client"
@@ -44,8 +45,9 @@ import type {
   TenantBackupRecord,
 } from "../../shared/connection-contracts"
 import { connectionClient, cxSyncCloudBrowserHeaders } from "../connections/connection-client"
+import { FleetUpgradePage } from "../fleet/fleet-upgrade-page"
 
-type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service"
+type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service" | "fleet"
 
 const navGroups: Array<DashboardShellNavGroup<Page>> = [
   {
@@ -82,6 +84,7 @@ const cloudNavGroups: Array<DashboardShellNavGroup<Page>> = [
     items: [
       { icon: Cloud, id: "overview", label: "Cloud overview" },
       { icon: Server, id: "tenant-service", label: "Tenant service" },
+      { icon: ShieldCheck, id: "fleet", label: "Fleet upgrades" },
       { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
     ],
     label: "Cloud service",
@@ -94,6 +97,7 @@ const titles: Record<Page, string> = {
   "cloud-service": "Cloud service key",
   connections: "Tenant connections",
   "desktop-local": "Desktop storage",
+  fleet: "Fleet upgrades",
   overview: "Overview",
   show: "Tenant connection",
   "tenant-service": "Tenant service",
@@ -126,7 +130,7 @@ export function WorkspaceShell({ onLogout, session }: { onLogout(): void; sessio
       title={titles[page]}
       tone={design.tone}
       user={{ displayName: session.name, email: session.email, roleLabel: session.role }}
-      version="1.0.126"
+      version={__CXSYNC_VERSION__}
     >
       {page === "overview" ? <OverviewPage onAddTenant={() => setPage("add")} onCloud={() => setPage("cloud-service")} onDesktop={() => setPage("desktop-local")} onTenants={() => setPage("connections")} /> : null}
       {page === "connections" ? <ConnectionList key={refreshKey} onAdd={() => setPage("add")} onOpen={openConnection} /> : null}
@@ -135,6 +139,7 @@ export function WorkspaceShell({ onLogout, session }: { onLogout(): void; sessio
       {page === "desktop-local" ? <LocalEnvironmentPage /> : null}
       {page === "cloud-service" ? <CloudServiceKeyPage /> : null}
       {page === "tenant-service" ? <TenantServicePage /> : null}
+      {page === "fleet" ? <FleetUpgradePage /> : null}
     </DashboardShell>
   )
 }

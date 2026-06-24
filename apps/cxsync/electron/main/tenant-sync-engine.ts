@@ -7,7 +7,6 @@ import type { TenantCloudSchemaSnapshot, TenantDatabaseInspection, TenantSchemaD
 import { cxSyncCloudHeaders } from "./cxsync-cloud-client.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
 import { loadCxSyncEnvironment } from "./environment.js"
-import { normalizeTenantCloudApiUrl } from "./tenant-cloud-api-url.js"
 import { getPrivateTenantConnection } from "./tenant-connection-store.js"
 import { captureTenantCloudSnapshot } from "./tenant-cloud-snapshot.js"
 import { inspectTenantDatabase } from "./tenant-database-inspector.js"
@@ -248,22 +247,24 @@ function describeColumn(column: { columnDefault: string | null; columnType: stri
 async function uploadReport(id: string, job: TenantSyncJob) {
   const tenant = await getPrivateTenantConnection(id)
   if (!tenant) throw new Error("Tenant connection was not found.")
-  const baseUrl = await normalizeTenantCloudApiUrl(tenant.cloudApiUrl)
-  const loginResponse = await fetch(`${baseUrl}/api/v1/auth/login`, {
-    body: JSON.stringify({ corporateId: tenant.corporateId, email: tenant.cloudAdminEmail, password: tenant.cloudAdminPassword, surface: "tenant" }),
-    headers: { ...(await cxSyncCloudHeaders({ "Content-Type": "application/json" })), ...(tenant.cloudDomain ? { "x-login-domain": tenant.cloudDomain } : {}) },
+  const baseUrl = await cxSyncCloudServiceUrl()
+  const response = await fetch(`${baseUrl}/api/v1/cxsync-cloud/reports`, {
+    body: JSON.stringify({
+      jobId: job.id,
+      phases: job.phases,
+      summary: job.summary,
+      tenant: {
+        corporateId: tenant.corporateId,
+        tenantCode: tenant.tenantCode,
+        tenantName: tenant.tenantName,
+      },
+    }),
+    headers: await cxSyncCloudHeaders({ "Content-Type": "application/json" }),
     method: "POST",
   })
-  const login = await loginResponse.json() as { ok?: boolean; token?: string; error?: string }
-  if (!loginResponse.ok || !login.ok || !login.token) throw new Error(login.error || "Could not login to upload sync report.")
-  const response = await fetch(`${baseUrl}/api/v1/cxsync/reports`, {
-    body: JSON.stringify({ jobId: job.id, phases: job.phases, summary: job.summary }),
-    headers: { ...(await cxSyncCloudHeaders({ Authorization: `Bearer ${login.token}`, "Content-Type": "application/json" })), ...(tenant.cloudDomain ? { "x-login-domain": tenant.cloudDomain } : {}) },
-    method: "POST",
-  })
-  const body = await response.json() as { ok?: boolean; reportId?: string; error?: string }
-  if (!response.ok || !body.ok || !body.reportId) throw new Error(body.error || `Report upload returned HTTP ${response.status}.`)
-  return body.reportId
+  const body = await response.json() as { ok?: boolean; report?: { reportId?: string }; error?: string }
+  if (!response.ok || !body.ok || !body.report?.reportId) throw new Error(body.error || `Report upload returned HTTP ${response.status}.`)
+  return body.report.reportId
 }
 
 async function loadCloudSchemaSnapshot(id: string, snapshotId: string) {

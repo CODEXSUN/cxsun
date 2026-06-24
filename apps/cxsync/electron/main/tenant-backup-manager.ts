@@ -117,7 +117,7 @@ export async function validateTenantBackupForExecution(id: string, plan: NonNull
   return backup
 }
 
-async function findDumpTool(): Promise<string | null> {
+export async function findDumpTool(): Promise<string | null> {
   const env = await loadCxSyncEnvironment()
   const configured = env.CXSYNC_MARIADB_DUMP_PATH?.trim()
   const candidates = [

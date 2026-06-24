@@ -11,6 +11,7 @@ CXSync is a private Electron application for managing tenant database connection
 5. CXSync verifies the local tenant MariaDB, authenticates the cloud tenant admin, checks cloud health, and compares the local CXSync version with the cloud backend version.
 6. Schema upgrade preparation creates a plan-bound backup and restores it into a disposable database before preflight can pass.
 7. Controlled execution applies only allow-listed local schema statements and stores the audit in `cxsync_upgrade_executions`.
+8. Completed schema-sync audit reports are uploaded to the private CXSync Cloud service at `/api/v1/cxsync-cloud/reports`; tenant billing backends remain snapshot-only.
 
 Tenant database and cloud credentials are stored per connection. Passwords are encrypted using Electron `safeStorage`.
 
@@ -30,4 +31,5 @@ The renderer runs on port `6044`.
 npm -w apps/cxsync run typecheck
 npm -w apps/cxsync run build:web
 npm -w apps/cxsync run compile:electron
+npm -w apps/cxsync-cloud run test:contract
 ```

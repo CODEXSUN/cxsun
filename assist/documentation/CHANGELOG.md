@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.126`
-- **Release tag:** `v-1.0.126`
-- **Changelog label:** `v 1.0.126`
+- **Current version:** `1.0.128`
+- **Release tag:** `v-1.0.128`
+- **Changelog label:** `v 1.0.128`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -15,6 +15,44 @@ New changelog entries must keep database-facing work and application code work s
 
 ---
 
+## v-1.0.128
+
+### [v 1.0.128] 2026-06-24 8:17 am - CXSync all-tenant fleet upgrade preparation
+
+#### Database Changes
+
+- Database update: Yes (manual).
+- Added CXSync Cloud operational tables for fleet release batches and per-tenant clone/migration evidence. No tenant business schema is changed during batch preparation.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.128
+- Corrected the canonical CXSync boundary to database maintenance, audit, full-data clone, migration rehearsal, and controlled tenant upgrades only; business-record synchronization is explicitly outside scope.
+- Added protected fleet inventory and idempotent release-batch APIs with deterministic candidate database names, canary-first ordering, one-at-a-time execution, stop-on-failure state, and persistent evidence.
+- Added disabled-by-default VPS clone execution that takes a consistent full-data logical dump, restores a new candidate database, checks exact row parity, runs reviewed tenant migrations against the candidate only, and verifies retained existing-table counts after migration.
+- Added the Cloud Fleet Upgrades operator page and environment/container controls for clone activation and MariaDB client paths.
+- Added contract assertions preventing automatic `tenants.db_name` cutover and a live integration smoke covering protected fleet inventory and release-batch preparation.
+- Added an isolated CXSync maintenance deployment with its own image, container, workspace/evidence volumes, web/API ports, and release-version gate. Its startup path builds and runs only CXSync web and CXSync Cloud, exits before the normal application database setup, tenant provisioning, Redis runtime, and main backend startup, and explicitly skips shared platform migrations/seeds while retaining CXSync-owned operational tables.
+- Added a dedicated `setup-cxsync-maintenance.sh` deployment command that recreates only CXSync maintenance, verifies the live CXSun container remains running, and keeps fleet cloning locked during initial deployment.
+- Split the CXSync Nginx route between the isolated web console on host port `6080` and maintenance API on host port `6078`.
+## v-1.0.127
+
+### [v 1.0.127] 2026-06-24 7:38 am - CXSync Cloud audit ownership and verification
+
+#### Database Changes
+
+- Database update: No (manual).
+- Reused the existing platform `cxsync_cloud_reports` operational table; added no billing tenant schema migration.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.127
+- Made CXSync Cloud the sole owner of schema-sync audit report ingestion and removed report writes from tenant billing backends, which remain responsible only for authenticated tenant schema snapshots.
+- Bound report uploads to the master tenant registry and made repeated tenant/job uploads return the original report instead of creating duplicate audit entries.
+- Added protected Cloud report listing, explicit service-key transport from Desktop, focused boundary/validation contract coverage, and a live integration smoke for unauthorized access, handshake, report persistence, retry idempotency, and listing.
+- Added CXSync Desktop and CXSync Cloud typechecks/builds to the standard active verification gate and refreshed CXSync execution and operator documentation.
+- Completed the isolated 160-table Desktop schema-safety drill: one detected drift, one safe plan step, restore-verified backup, zero-blocker preflight, one successful repair, zero post-repair differences, and confirmed Cloud audit persistence without modifying the real tenant database.
+- Removed the hard-coded Desktop shell version and inject the CXSync package version during the Vite build; built the `CXSync Setup 1.0.127.exe` installer and verified the unpacked application starts, signs in, and displays v1.0.127.
 ## v-1.0.126
 
 ### [v 1.0.126] 2026-06-23 9:53 am - CXSync tenant diagnostics and backup tooling

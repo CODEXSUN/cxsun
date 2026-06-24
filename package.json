@@ -1,7 +1,7 @@
 {
   "name": "cxsun",
   "private": true,
-  "version": "1.0.126",
+  "version": "1.0.128",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -35,7 +35,7 @@
     "dev:all": "concurrently -k -n core,products \"npm run dev\" \"npm run dev:product-apps\"",
     "codeit:run": "concurrently -k -n backend,frontend \"npm -w apps/codeit/backend run dev\" \"npm -w apps/codeit/frontend run dev\"",
     "check": "bash assist/scripts/check.sh",
-    "typecheck:active": "npm -w apps/server run typecheck && npm -w apps/frontend run typecheck && npm -w apps/docs run typecheck && npm -w packages/shared run typecheck && npm -w packages/ui run typecheck && npm -w packages/app-shell run typecheck && npm -w packages/web run typecheck && npm -w packages/desktop run typecheck && npm -w packages/mobile run typecheck && npm run typecheck:product-apps",
+    "typecheck:active": "npm -w apps/server run typecheck && npm -w apps/frontend run typecheck && npm -w apps/docs run typecheck && npm -w packages/shared run typecheck && npm -w packages/ui run typecheck && npm -w packages/app-shell run typecheck && npm -w packages/web run typecheck && npm -w packages/desktop run typecheck && npm -w packages/mobile run typecheck && npm run typecheck:cxsync && npm run typecheck:cxsync-cloud && npm run typecheck:product-apps",
     "typecheck:product-apps": "npm -w apps/auditor run typecheck && npm -w apps/ecommerce run typecheck && npm -w apps/b2b-connect run typecheck && npm -w apps/b2b-connect-admin run typecheck && npm -w apps/sports run typecheck && npm -w apps/learning run typecheck && npm -w apps/welfare run typecheck && npm -w apps/crm run typecheck && npm -w apps/sites run typecheck && npm -w apps/blog run typecheck && npm -w apps/zetro run typecheck && npm -w apps/textile-lab run typecheck && npm -w apps/garment run typecheck && npm -w apps/upvc run typecheck",
     "test:tenant-static": "npm -w apps/server run test:tenant-static",
     "test:tenant-isolation": "npm -w apps/server run test:tenant-isolation",

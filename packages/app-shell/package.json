@@ -1,6 +1,6 @@
 {
   "name": "@cxsun/app-shell",
-  "version": "1.0.126",
+  "version": "1.0.128",
   "private": true,
   "type": "module",
   "exports": {

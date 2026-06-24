@@ -353,6 +353,34 @@ export type CxSyncGeneratedServiceKey = CxSyncServiceKeyStatus & {
   key: string
 }
 
+export type SqlDumpCredentials = {
+  database: string
+  host: string
+  password: string
+  port: number
+  user: string
+}
+
+export type SqlDumpTable = {
+  name: string
+  rows: number
+  sizeBytes: number
+}
+
+export type SqlDumpJob = {
+  completedAt: string | null
+  database: string
+  destination: string
+  error: string | null
+  fileName: string | null
+  id: string
+  progress: number
+  sizeBytes: number
+  startedAt: string
+  status: "running" | "completed" | "failed"
+  tableCount: number
+}
+
 export type CxSyncCloudServiceHandshake = {
   apiUrl: string
   backend: {
@@ -400,6 +428,10 @@ export type CxSyncDesktopApi = {
   saveCloudServiceUrl(url: string): Promise<CxSyncServiceKeyStatus>
   getCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake | null>
   verifyCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake>
+  chooseSqlDumpDirectory(): Promise<string | null>
+  inspectSqlDumpTables(credentials: SqlDumpCredentials): Promise<SqlDumpTable[]>
+  startSqlDump(credentials: SqlDumpCredentials, destination: string): Promise<SqlDumpJob>
+  getSqlDumpJob(id: string): Promise<SqlDumpJob | null>
   generateTenantUpgradePlan(id: string): Promise<TenantUpgradePlan>
   createTenantBackup(id: string): Promise<TenantBackupRecord>
   getTenantBackup(id: string): Promise<TenantBackupRecord | null>

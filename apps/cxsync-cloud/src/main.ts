@@ -14,7 +14,12 @@ const host = process.env.CXSYNC_CLOUD_HOST?.trim() || process.env.HOST?.trim() |
 const bootstrapServiceKey = requiredServiceKey()
 const cloudAdminSessions = new Map<string, number>()
 
-await initializeDatabase()
+if (process.env.CXSYNC_CLOUD_SKIP_PLATFORM_MIGRATIONS?.trim().toLowerCase() === 'true') {
+  await sql`SELECT 1`.execute(getDatabase())
+  console.log('  ok CXSync maintenance mode: shared platform migrations and seeds skipped')
+} else {
+  await initializeDatabase()
+}
 const serviceKeyState = { hash: await loadPersistedServiceKeyHash() ?? hashServiceKey(bootstrapServiceKey) }
 
 const app = await CxApp.create(CxSyncCloudModule, {
@@ -32,7 +37,7 @@ try {
   const res = await fetch(healthUrl)
   const body = await res.json()
   console.log(`  ok CXSync Cloud health check: ${JSON.stringify(body)}`)
-  console.log(`  ok CXSync Cloud API: http://127.0.0.1:${port}/api/v1/cxsync/tenant-snapshot`)
+  console.log(`  ok CXSync Cloud audit API: http://127.0.0.1:${port}/api/v1/cxsync-cloud/reports`)
 } catch (err) {
   console.error(err)
   process.exit(1)

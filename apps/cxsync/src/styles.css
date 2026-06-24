@@ -414,6 +414,15 @@ button {
   color: #15803d;
 }
 
+.form-message--warning {
+  align-items: center;
+  background: #fff7ed;
+  border-color: #fdba74;
+  color: #9a3412;
+  display: flex;
+  gap: 0.55rem;
+}
+
 .spin {
   animation: spin 0.85s linear infinite;
 }

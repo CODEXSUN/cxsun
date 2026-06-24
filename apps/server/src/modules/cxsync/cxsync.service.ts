@@ -1,9 +1,8 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { sql } from 'kysely'
 import { Inject } from '../../core/decorators/inject.js'
 import { Injectable } from '../../core/decorators/injectable.js'
 import { TenantContextService, type TenantRequestHeaders } from '../../core/tenant/tenant-context.service.js'
-import { getDatabase } from '../../infrastructure/database/connection.js'
 import type { CxSyncTenantColumnSnapshot, CxSyncTenantIndexSnapshot, CxSyncTenantSnapshot, CxSyncTenantTableSnapshot } from './cxsync.types.js'
 
 @Injectable()
@@ -108,48 +107,6 @@ export class CxSyncService {
       },
     }
   }
-
-  async report(headers: TenantRequestHeaders, input: Record<string, unknown>) {
-    const context = await this.tenants.resolve(headers)
-    const reportId = randomUUID()
-    await ensureReportTable()
-    await getDatabase().executeQuery(sql`
-      INSERT INTO cxsync_cloud_reports
-        (id, tenant_id, tenant_slug, job_id, summary_json, report_json, received_at)
-      VALUES
-        (${reportId}, ${context.tenant.id}, ${context.tenant.slug}, ${String(input.jobId ?? '')}, ${JSON.stringify(input.summary ?? null)}, ${JSON.stringify(input)}, ${new Date().toISOString().slice(0, 19).replace('T', ' ')})
-    `.compile(getDatabase()))
-    console.log(JSON.stringify({
-      at: new Date().toISOString(),
-      reportId,
-      service: 'cxsync-cloud',
-      tenant: context.tenant.slug,
-      type: 'sync-report',
-      summary: input.summary ?? null,
-    }))
-    return {
-      ok: true,
-      receivedAt: new Date().toISOString(),
-      reportId,
-      tenant: context.tenant.slug,
-    }
-  }
-}
-
-async function ensureReportTable() {
-  await getDatabase().executeQuery(sql`
-    CREATE TABLE IF NOT EXISTS cxsync_cloud_reports (
-      id CHAR(36) PRIMARY KEY,
-      tenant_id INT NOT NULL,
-      tenant_slug VARCHAR(120) NOT NULL,
-      job_id CHAR(36) NOT NULL,
-      summary_json LONGTEXT NULL,
-      report_json LONGTEXT NOT NULL,
-      received_at DATETIME(3) NOT NULL,
-      KEY idx_cxsync_cloud_reports_tenant (tenant_id, received_at),
-      KEY idx_cxsync_cloud_reports_job (job_id)
-    ) ENGINE=InnoDB
-  `.compile(getDatabase()))
 }
 
 function normalizeTable(row: CxSyncTenantTableSnapshot): CxSyncTenantTableSnapshot {

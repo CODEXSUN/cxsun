@@ -58,6 +58,42 @@ Docs can be skipped with `CLOUD_DOCS_ENABLED=false`. CXSync Cloud is a private A
 CLOUD_CXSYNC_CLOUD_ENABLED=true CXSYNC_SERVICE_KEY='replace-with-long-random-key' bash .container/setup-cloud.sh --reinstall
 ```
 
+## Isolated CXSync Maintenance Deployment
+
+Do not install CXSync maintenance with the full live-application reinstall command. The isolated deployment has its own container, image, workspace volume, and ports, and does not run the main application's database setup or tenant provisioner.
+
+Before deployment, commit and push release `1.0.128` to the configured Git branch. Keep fleet cloning locked for the initial install, then run:
+
+```bash
+GIT_PULL_ON_START=true CXSYNC_EXPECTED_VERSION=1.0.128 \
+  bash .container/setup-cxsync-maintenance.sh --reinstall
+```
+
+Required values are read from the repository `.env` when they are not exported: `DB_PASSWORD`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`, and `CXSYNC_SERVICE_KEY`. The service uses:
+
+- container `cxsun-cxsync-maintenance`;
+- image `cxsun:cxsync-maintenance`;
+- workspace volume `cxsync-maintenance-workspace`;
+- evidence volume `cxsync-maintenance-storage`;
+- web host port `6080`;
+- API host port `6078`.
+
+The script fails when the checked-out package version differs from `CXSYNC_EXPECTED_VERSION`. It also refuses initial startup when either fleet-clone safety flag is enabled and verifies that an already-running live `cxsun` container remains running. The maintenance service sets `CXSYNC_CLOUD_SKIP_PLATFORM_MIGRATIONS=true`: it checks connectivity to the existing master database but does not run shared platform migrations or seeds. CXSync-owned operational audit/batch tables remain allowed.
+
+Install `apps/cxsync-cloud/deploy/nginx-cxsync.codexsun.com.conf`, test Nginx, and reload it only after both local health endpoints respond:
+
+```bash
+curl -fsS http://127.0.0.1:6078/health
+curl -fsS http://127.0.0.1:6080/
+nginx -t && systemctl reload nginx
+```
+
+Stop or remove only this maintenance runtime with:
+
+```bash
+bash .container/setup-cxsync-maintenance.sh --stop
+```
+
 Create the shared Docker network once:
 
 ```bash

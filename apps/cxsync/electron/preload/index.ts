@@ -22,6 +22,9 @@ import type {
   TenantBackupRecord,
   TenantConnectionInput,
   TenantConnectionVerification,
+  SqlDumpCredentials,
+  SqlDumpJob,
+  SqlDumpTable,
 } from "../../src/shared/connection-contracts.js"
 
 const api: CxSyncDesktopApi = {
@@ -63,6 +66,10 @@ const api: CxSyncDesktopApi = {
   saveTenantConnection: (input: TenantConnectionInput, id?: string) => ipcRenderer.invoke("cxsync:tenants:save", input, id) as Promise<TenantConnection>,
   captureTenantCloudSnapshot: (id: string) => ipcRenderer.invoke("cxsync:tenants:cloud-snapshot:capture", id) as Promise<TenantCloudSnapshot>,
   verifyTenantConnection: (id: string) => ipcRenderer.invoke("cxsync:tenants:verify", id) as Promise<TenantConnectionVerification>,
+  chooseSqlDumpDirectory: () => ipcRenderer.invoke("cxsync:sql-dump:directory:choose") as Promise<string | null>,
+  inspectSqlDumpTables: (credentials: SqlDumpCredentials) => ipcRenderer.invoke("cxsync:sql-dump:tables", credentials) as Promise<SqlDumpTable[]>,
+  startSqlDump: (credentials: SqlDumpCredentials, destination: string) => ipcRenderer.invoke("cxsync:sql-dump:start", credentials, destination) as Promise<SqlDumpJob>,
+  getSqlDumpJob: (id: string) => ipcRenderer.invoke("cxsync:sql-dump:job", id) as Promise<SqlDumpJob | null>,
 }
 
 contextBridge.exposeInMainWorld("cxsyncDesktop", api)

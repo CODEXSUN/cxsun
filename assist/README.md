@@ -1,6 +1,6 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.126
+**Project version:** 1.0.128
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
@@ -11,6 +11,8 @@ For owned-product and industry-app expansion, read `assist/context/one-platform-
 For the marketplace boundary, read `assist/context/tirupur-connect-boundary.md`. It is the canonical rule that TConnect is the billing connector while Tirupur Connect is the standalone central marketplace.
 
 For the AI operating layer, read `assist/context/versatile-agent-os.md` and `ZRO/Vision/agent-os.md`. The agent direction is layered: Helper Agent first, then Operator, Workflow, Planner, Analytics, Router, Memory, and the full multi-agent ecosystem.
+
+For CXSync, read `assist/context/cxsync-fleet-maintenance.md`. CXSync is the private all-tenant database audit, full-data clone, migration rehearsal, and controlled-upgrade system; it is not a business-data synchronization product.
 
 ## Mandatory Reading Before Work
 

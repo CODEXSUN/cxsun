@@ -49,5 +49,8 @@ const totalStartedAt = performance.now()
 
 runNpm('Backend server build', ['-w', 'apps/server', 'run', 'build'])
 runNpm('Frontend app build', ['-w', 'apps/frontend', 'run', 'build'])
+runNpm('CXSync Cloud build', ['-w', 'apps/cxsync-cloud', 'run', 'build'])
+runNpm('CXSync web build', ['-w', 'apps/cxsync', 'run', 'build:web'])
+runNpm('CXSync Electron compile', ['-w', 'apps/cxsync', 'run', 'compile:electron'])
 
 console.log(`\n[build] Active build completed in ${formatDuration(performance.now() - totalStartedAt)}`)

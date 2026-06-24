@@ -1,12 +1,14 @@
 {
   "name": "@cxsun/cxsync-cloud",
   "private": true,
-  "version": "1.0.126",
+  "version": "1.0.128",
   "type": "module",
   "scripts": {
     "dev": "tsx src/main.ts",
     "build": "tsc",
     "start": "node ../../build/cxsync-cloud/cxsync-cloud/src/main.js",
+    "test:contract": "tsx src/tests/cxsync-cloud-contract.test.ts",
+    "test:integration": "node scripts/integration-smoke.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

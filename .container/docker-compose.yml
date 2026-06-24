@@ -57,6 +57,10 @@ services:
       CXSYNC_CLOUD_HOST: ${CXSYNC_CLOUD_HOST:-0.0.0.0}
       CXSYNC_CLOUD_LOG_LEVEL: ${CXSYNC_CLOUD_LOG_LEVEL:-info}
       CXSYNC_SERVICE_KEY: ${CXSYNC_SERVICE_KEY:-}
+      CXSYNC_FLEET_CLONE_ENABLED: ${CXSYNC_FLEET_CLONE_ENABLED:-false}
+      CXSYNC_FLEET_SOURCE_QUIESCED: ${CXSYNC_FLEET_SOURCE_QUIESCED:-false}
+      CXSYNC_FLEET_DUMP_PATH: ${CXSYNC_FLEET_DUMP_PATH:-mariadb-dump}
+      CXSYNC_FLEET_CLIENT_PATH: ${CXSYNC_FLEET_CLIENT_PATH:-mariadb}
     ports:
       - "${PORT:-6005}:${PORT:-6005}"
       - "${VITE_PORT:-6010}:${VITE_PORT:-6010}"
@@ -66,6 +70,54 @@ services:
     volumes:
       - cxsun-volume:/workspace
       - cxmedia-storage:/workspace/cxsun/storage
+    networks:
+      - codexion-network
+
+  cxsync-maintenance:
+    build:
+      context: ..
+      dockerfile: .container/Dockerfile
+    image: cxsun:cxsync-maintenance
+    container_name: cxsun-cxsync-maintenance
+    restart: unless-stopped
+    environment:
+      CXSUN_RUNTIME_MODE: cxsync-maintenance
+      GIT_REPO_URL: ${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}
+      GIT_BRANCH: ${GIT_BRANCH:-main}
+      GIT_PULL_ON_START: ${GIT_PULL_ON_START:-true}
+      APP_DIR: /workspace/cxsun
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-http-header-size=65536}
+      HOST: 0.0.0.0
+      VITE_PORT: 6044
+      CXSYNC_MAINTENANCE_WEB_PORT: 6044
+      CXSYNC_CLOUD_PORT: 6077
+      CXSYNC_CLOUD_HOST: 0.0.0.0
+      CXSYNC_CLOUD_LOG_LEVEL: ${CXSYNC_CLOUD_LOG_LEVEL:-info}
+      CXSYNC_CLOUD_PUBLIC_URL: ${CXSYNC_CLOUD_PUBLIC_URL:-https://cxsync.codexsun.com}
+      CXSYNC_CLOUD_SKIP_PLATFORM_MIGRATIONS: "true"
+      CXSYNC_EXPECTED_VERSION: ${CXSYNC_EXPECTED_VERSION:-1.0.128}
+      CXSYNC_SERVICE_KEY: ${CXSYNC_SERVICE_KEY:-}
+      CXSYNC_FLEET_CLONE_ENABLED: ${CXSYNC_FLEET_CLONE_ENABLED:-false}
+      CXSYNC_FLEET_SOURCE_QUIESCED: ${CXSYNC_FLEET_SOURCE_QUIESCED:-false}
+      CXSYNC_FLEET_DUMP_PATH: ${CXSYNC_FLEET_DUMP_PATH:-mariadb-dump}
+      CXSYNC_FLEET_CLIENT_PATH: ${CXSYNC_FLEET_CLIENT_PATH:-mariadb}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-cxsun_master}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-SUNDAR}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://cxsync.codexsun.com}
+      QUEUE_ENABLED: "false"
+      SKIP_MARIADB_WAIT: "true"
+    ports:
+      - "${CXSYNC_MAINTENANCE_WEB_HOST_PORT:-6080}:6044"
+      - "${CXSYNC_MAINTENANCE_API_HOST_PORT:-6078}:6077"
+    volumes:
+      - cxsync-maintenance-workspace:/workspace
+      - cxsync-maintenance-storage:/workspace/cxsun/storage
     networks:
       - codexion-network
 
@@ -86,6 +138,10 @@ services:
 volumes:
   cxsun-volume:
     name: cxsun-volume
+  cxsync-maintenance-workspace:
+    name: cxsync-maintenance-workspace
+  cxsync-maintenance-storage:
+    name: cxsync-maintenance-storage
   cxmedia-storage:
     name: ${CXMEDIA_STORAGE_VOLUME:-cxmedia-storage}
     external: true

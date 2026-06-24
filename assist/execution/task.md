@@ -1,5 +1,49 @@
 # Tasks
 
+## 2026-06-24 - CXSync all-tenant fleet upgrade preparation
+
+**Batch:** #128
+
+- [x] Correct CXSync scope to database maintenance, audit, clone, migration rehearsal, and controlled upgrades only.
+- [x] Record the corrected boundary in durable memory and canonical assist context.
+- [x] Add protected active-MariaDB tenant fleet inventory.
+- [x] Add idempotent release-batch persistence with deterministic candidate databases.
+- [x] Enforce canary-first, serial, stop-on-failure fleet preparation.
+- [x] Add a disabled-by-default server-side clone execution gate.
+- [x] Add consistent full-data logical dump and candidate restore preparation.
+- [x] Verify exact source/candidate row parity before migration.
+- [x] Run reviewed tenant migrations against the candidate database only.
+- [x] Verify retained existing-table row counts after migration.
+- [x] Keep production cutover and source/candidate deletion entirely outside automatic preparation.
+- [x] Add the CXSync Cloud Fleet Upgrades operator page.
+- [x] Add contract and live integration coverage for fleet inventory and batch preparation.
+- [x] Add an isolated CXSync maintenance container, image, workspace volume, and host ports.
+- [x] Ensure maintenance startup bypasses normal database setup, shared platform migrations/seeds, tenant provisioning, Redis, and the main application runtime.
+- [x] Add a fail-closed expected-release check and initial-deploy clone lock.
+- [x] Add an isolated deployment/stop script and split Nginx web/API proxy configuration.
+- [ ] Run the first approved VPS canary clone with `CXSYNC_FLEET_CLONE_ENABLED=true`.
+- [ ] Review canary evidence before preparing the remaining live tenants.
+- [ ] Design and approve the separate production cutover/rollback operation after all candidates validate.
+
+## 2026-06-24 - CXSync Cloud audit ownership and verification
+
+**Batch:** #127
+
+- [x] Trace the Desktop, tenant-backend, and CXSync Cloud report paths.
+- [x] Keep the tenant billing backend CXSync API snapshot-only.
+- [x] Move sync-audit report ingestion to CXSync Cloud.
+- [x] Resolve report identity against the master tenant registry.
+- [x] Make repeated `(tenant, jobId)` uploads return the original report.
+- [x] Add Cloud report listing for verification and administration.
+- [x] Add a focused contract test.
+- [x] Add a live service-key-protected integration smoke harness.
+- [x] Update CXSync and execution documentation.
+- [x] Run the integration smoke against a running CXSync Cloud and the Aaran Associates master tenant.
+- [x] Complete the full Desktop schema drift, backup, repair, and audit-upload drill against an isolated schema clone.
+- [x] Restore the tenant connection to `codexsun_db` and remove the temporary drill database.
+- [x] Build the CXSync 1.0.127 Windows installer and smoke-test the unpacked application.
+- [ ] Install and validate the CXSync Windows package on a separate clean workstation.
+
 ## 2026-06-21 - CXSync schema baseline decorator runtime
 
 - [x] Trace the codebase baseline scratch-schema launcher.

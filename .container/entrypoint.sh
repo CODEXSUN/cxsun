@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_DIR="${APP_DIR:-/workspace/cxsun}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
+CXSUN_RUNTIME_MODE="${CXSUN_RUNTIME_MODE:-application}"
 FRONTEND_PORT="${VITE_PORT:-6010}"
 SERVER_PORT="${PORT:-6005}"
 DOCS_PORT="${DOCS_PORT:-6020}"
@@ -15,6 +16,12 @@ CLOUD_DOCS_ENABLED="${CLOUD_DOCS_ENABLED:-true}"
 CLOUD_PRODUCT_APPS="${CLOUD_PRODUCT_APPS:-auditor:6030,ecommerce:6031,b2b-connect:6032,sports:6033,learning:6034,welfare:6035,crm:6036,sites:6037,blog:6038,zetro:6039,textile-lab:6040,garment:6041,upvc:6042,b2b-connect-admin:6043,cxsync:6044}"
 CLOUD_CXSYNC_CLOUD_ENABLED="${CLOUD_CXSYNC_CLOUD_ENABLED:-false}"
 CXSYNC_CLOUD_PORT="${CXSYNC_CLOUD_PORT:-6077}"
+CXSYNC_MAINTENANCE_WEB_PORT="${CXSYNC_MAINTENANCE_WEB_PORT:-6044}"
+CXSYNC_EXPECTED_VERSION="${CXSYNC_EXPECTED_VERSION:-}"
+CXSYNC_FLEET_CLONE_ENABLED="${CXSYNC_FLEET_CLONE_ENABLED:-false}"
+CXSYNC_FLEET_SOURCE_QUIESCED="${CXSYNC_FLEET_SOURCE_QUIESCED:-false}"
+CXSYNC_FLEET_DUMP_PATH="${CXSYNC_FLEET_DUMP_PATH:-mariadb-dump}"
+CXSYNC_FLEET_CLIENT_PATH="${CXSYNC_FLEET_CLIENT_PATH:-mariadb}"
 GIT_REPO_URL="${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}"
 DATABASE_HOST="${DB_HOST:-mariadb}"
 DATABASE_PORT="${DB_PORT:-3306}"
@@ -195,6 +202,10 @@ set_env_value "CLOUD_DOCS_ENABLED" "$CLOUD_DOCS_ENABLED"
 set_env_value "CLOUD_PRODUCT_APPS" "$CLOUD_PRODUCT_APPS"
 set_env_value "CLOUD_CXSYNC_CLOUD_ENABLED" "$CLOUD_CXSYNC_CLOUD_ENABLED"
 set_env_value "CXSYNC_CLOUD_PORT" "$CXSYNC_CLOUD_PORT"
+set_env_value "CXSYNC_FLEET_CLONE_ENABLED" "$CXSYNC_FLEET_CLONE_ENABLED"
+set_env_value "CXSYNC_FLEET_SOURCE_QUIESCED" "$CXSYNC_FLEET_SOURCE_QUIESCED"
+set_env_value "CXSYNC_FLEET_DUMP_PATH" "$CXSYNC_FLEET_DUMP_PATH"
+set_env_value "CXSYNC_FLEET_CLIENT_PATH" "$CXSYNC_FLEET_CLIENT_PATH"
 
 export PORT="$SERVER_PORT"
 export VITE_PORT="$FRONTEND_PORT"
@@ -236,11 +247,16 @@ export CLOUD_DOCS_ENABLED="$CLOUD_DOCS_ENABLED"
 export CLOUD_PRODUCT_APPS="$CLOUD_PRODUCT_APPS"
 export CLOUD_CXSYNC_CLOUD_ENABLED="$CLOUD_CXSYNC_CLOUD_ENABLED"
 export CXSYNC_CLOUD_PORT="$CXSYNC_CLOUD_PORT"
+export CXSYNC_FLEET_CLONE_ENABLED="$CXSYNC_FLEET_CLONE_ENABLED"
+export CXSYNC_FLEET_SOURCE_QUIESCED="$CXSYNC_FLEET_SOURCE_QUIESCED"
+export CXSYNC_FLEET_DUMP_PATH="$CXSYNC_FLEET_DUMP_PATH"
+export CXSYNC_FLEET_CLIENT_PATH="$CXSYNC_FLEET_CLIENT_PATH"
 
 echo "Configured ports: backend=$SERVER_PORT frontend=$FRONTEND_PORT api=$API_BASE_URL storage=$STORAGE_BASE_URL media=$MEDIA_MANAGER_URL"
 echo "Configured docs: enabled=$CLOUD_DOCS_ENABLED port=$DOCS_PORT"
 echo "Configured product apps: $CLOUD_PRODUCT_APPS"
 echo "Configured CXSync Cloud: enabled=$CLOUD_CXSYNC_CLOUD_ENABLED port=$CXSYNC_CLOUD_PORT"
+echo "Runtime mode: $CXSUN_RUNTIME_MODE"
 echo "Configured services: db=$DB_HOST:$DB_PORT redis=$REDIS_HOST:$REDIS_PORT"
 echo "Install tests: $INSTALL_RUN_TESTS"
 echo "Auto seed tenant domains: $AUTO_SEED_TENANT_DOMAINS"
@@ -271,7 +287,7 @@ else
   done
 fi
 
-if [ "$QUEUE_RUNTIME_ENABLED" != "false" ]; then
+if [ "$CXSUN_RUNTIME_MODE" != "cxsync-maintenance" ] && [ "$QUEUE_RUNTIME_ENABLED" != "false" ]; then
   log_step "Waiting for Redis at $REDIS_HOST:$REDIS_PORT"
   for attempt in $(seq 1 "$HEALTH_WAIT_SECONDS"); do
     if timeout 2 bash -c "cat < /dev/null > /dev/tcp/$REDIS_HOST/$REDIS_PORT" >/dev/null 2>&1; then
@@ -292,6 +308,53 @@ if [ -f package-lock.json ]; then
   run_step "Installing dependencies with npm ci" npm ci --no-audit --fund=false
 else
   run_step "Installing dependencies with npm install" npm install --no-audit --fund=false
+fi
+
+if [ "$CXSUN_RUNTIME_MODE" = "cxsync-maintenance" ]; then
+  log_step "Starting isolated CXSync maintenance runtime"
+
+  CURRENT_VERSION="$(node -p "require('./package.json').version")"
+  if [ -n "$CXSYNC_EXPECTED_VERSION" ] && [ "$CURRENT_VERSION" != "$CXSYNC_EXPECTED_VERSION" ]; then
+    echo "CXSync maintenance version mismatch: expected $CXSYNC_EXPECTED_VERSION, checked out $CURRENT_VERSION." >&2
+    exit 1
+  fi
+
+  run_step "Cleaning CXSync maintenance build output" rm -rf build/apps/cxsync build/cxsync-cloud
+  run_step "Building CXSync maintenance web console" npm -w apps/cxsync run build:web
+  run_step "Building CXSync Cloud maintenance service" npm -w apps/cxsync-cloud run build
+
+  log_step "Starting CXSync Cloud maintenance API on port $CXSYNC_CLOUD_PORT"
+  CXSYNC_CLOUD_PORT="$CXSYNC_CLOUD_PORT" CXSYNC_CLOUD_HOST="${HOST:-0.0.0.0}" npm -w apps/cxsync-cloud run start &
+  CXSYNC_CLOUD_PID="$!"
+
+  log_step "Starting CXSync maintenance web console on port $CXSYNC_MAINTENANCE_WEB_PORT"
+  (cd apps/cxsync && npx vite preview --host 0.0.0.0 --port "$CXSYNC_MAINTENANCE_WEB_PORT") &
+  CXSYNC_WEB_PID="$!"
+
+  maintenance_shutdown() {
+    echo "Stopping isolated CXSync maintenance runtime"
+    kill "$CXSYNC_CLOUD_PID" "$CXSYNC_WEB_PID" 2>/dev/null || true
+    wait "$CXSYNC_CLOUD_PID" "$CXSYNC_WEB_PID" 2>/dev/null || true
+  }
+  trap maintenance_shutdown INT TERM
+
+  log_step "Waiting for isolated CXSync Cloud health"
+  for attempt in $(seq 1 120); do
+    if curl -fsS "http://127.0.0.1:${CXSYNC_CLOUD_PORT}/health" >/dev/null 2>&1; then
+      echo "Isolated CXSync maintenance runtime ready at version $CURRENT_VERSION."
+      break
+    fi
+    if [ "$attempt" -eq 120 ]; then
+      echo "Isolated CXSync Cloud health failed." >&2
+      maintenance_shutdown
+      exit 1
+    fi
+    sleep 2
+  done
+
+  wait -n "$CXSYNC_CLOUD_PID" "$CXSYNC_WEB_PID"
+  maintenance_shutdown
+  exit 1
 fi
 
 run_step "Running database setup" npm -w apps/server run db:setup

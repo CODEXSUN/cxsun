@@ -2,7 +2,9 @@
 
 ## Current Foundation
 
-CXSync is a private desktop tenant-connection manager.
+CXSync is the private database maintenance, audit, full-data clone, migration rehearsal, and controlled-upgrade system for all CXSun tenant databases. It exists to make delayed live deployments safe while application development continues daily.
+
+CXSync is not a customer billing-data synchronization product. Device activation, transaction outboxes, pull cursors, and business-record conflict handling are outside its boundary. The canonical rule is `assist/context/cxsync-fleet-maintenance.md`.
 
 ## Service Split
 
@@ -44,10 +46,19 @@ Useful endpoints:
 ```text
 GET /health
 GET /api/v1/cxsync-cloud/status
+POST /api/v1/cxsync-cloud/admin/login
+GET /api/v1/cxsync-cloud/admin/session
+GET/POST /api/v1/cxsync-cloud/handshake
+GET /api/v1/cxsync-cloud/tenants
+GET/POST /api/v1/cxsync-cloud/reports
+```
+
+The tenant billing backend separately owns authenticated tenant visibility:
+
+```text
 POST /api/v1/auth/login
 GET /api/v1/auth/session
 GET /api/v1/cxsync/tenant-snapshot
-POST /api/v1/cxsync/reports
 ```
 
 The desktop-level CXSync Cloud service URL should point to this private service reverse-proxy domain:
@@ -76,7 +87,54 @@ Recommended nginx shape:
 
 ```text
 server_name cxsync.codexsun.com;
-proxy_pass http://127.0.0.1:6077;
+/api/ and /health -> http://127.0.0.1:6078
+/                 -> http://127.0.0.1:6080
+```
+
+### Isolated Maintenance Deployment
+
+Production CXSync maintenance runs separately from the live CXSun application. It owns container `cxsun-cxsync-maintenance`, image `cxsun:cxsync-maintenance`, workspace volume `cxsync-maintenance-workspace`, evidence volume `cxsync-maintenance-storage`, web host port `6080`, and API host port `6078`. Its entrypoint builds and starts only CXSync web and CXSync Cloud. It exits before the normal `db:setup`, tenant provisioner, Redis wait, backend, docs, and product-app startup paths. Maintenance mode also sets `CXSYNC_CLOUD_SKIP_PLATFORM_MIGRATIONS=true`, so Cloud verifies its master-database connection without running shared platform migrations or seeds; only CXSync-owned operational audit/batch tables are created as required.
+
+The release must first be committed and pushed to the configured branch. Then deploy only the isolated maintenance service:
+
+```bash
+GIT_PULL_ON_START=true CXSYNC_EXPECTED_VERSION=1.0.128 \
+  bash .container/setup-cxsync-maintenance.sh --reinstall
+```
+
+The command removes only the isolated maintenance workspace, checks the running release is exactly `1.0.128`, and confirms an already-running live `cxsun` container remains running. Initial deployment refuses clone-enabled or source-quiesced flags; it audits and prepares fleet operations without cloning until a separate approved canary window.
+
+Stop only CXSync maintenance with:
+
+```bash
+bash .container/setup-cxsync-maintenance.sh --stop
+```
+
+Do not use `.container/setup-cloud.sh --reinstall` to install CXSync maintenance on a live older application. That command is the full CXSun application reinstall path and runs database setup and active-tenant provisioning.
+
+### Fleet Clone Safety Gate
+
+CXSync Cloud exposes fleet inventory and release-batch preparation while clone execution remains locked by default:
+
+```text
+CXSYNC_FLEET_CLONE_ENABLED=false
+CXSYNC_FLEET_SOURCE_QUIESCED=false
+CXSYNC_FLEET_DUMP_PATH=mariadb-dump
+CXSYNC_FLEET_CLIENT_PATH=mariadb
+```
+
+An approved rehearsal window may temporarily set both `CXSYNC_FLEET_CLONE_ENABLED=true` and `CXSYNC_FLEET_SOURCE_QUIESCED=true` after tenant writes are stopped. Fleet preparation is canary-first, serial, and stop-on-failure. It creates full-data candidate databases and retains backup/evidence files under `storage/cxsync/fleet`; it does not update `tenants.db_name`, cut over production, delete the source database, or automatically delete failed candidates.
+
+Clone work runs in the CXSync Cloud background after the protected request is accepted, so a large database is not tied to one browser request. If CXSync Cloud restarts during a clone, the persisted item and batch are marked failed on startup; retained backup/candidate evidence must be inspected before a new batch is prepared.
+
+Useful fleet endpoints:
+
+```text
+GET  /api/v1/cxsync-cloud/fleet/tenants
+GET  /api/v1/cxsync-cloud/fleet/batches
+GET  /api/v1/cxsync-cloud/fleet/batches/:id
+POST /api/v1/cxsync-cloud/fleet/batches
+POST /api/v1/cxsync-cloud/fleet/batches/:id/clone-next
 ```
 
 ### Bounded Sync Job
@@ -97,11 +155,11 @@ Boundaries:
 - tenant business rows are not downloaded;
 - CXSync Desktop does not write directly to VPS MariaDB;
 - local schema migration is prepared as a reviewed plan and stops with `approval-required`;
-- upload currently sends only the sync audit report to `POST /api/v1/cxsync/reports`.
+- upload sends only the sync audit report to CXSync Cloud at `POST /api/v1/cxsync-cloud/reports`.
 
 When a migration is needed, the first schema run stops at `approval-required`. The maintainer then reviews the Upgrade Plan tab, creates a restore-tested backup, runs preflight, and executes approved local steps. After that, the Schema Sync tab can continue the same job to verify local/cloud metadata again and upload the final audit report. CXSync Cloud persists received reports in `cxsync_cloud_reports`.
 
-The Schema Sync tab also provides service reachability checks, job history, retry for failed jobs, and sanitized JSON report export from the local CXSync user-data folder. It synchronizes schema evidence and audit reports only; business-row synchronization is not implemented.
+The Schema Sync tab also provides service reachability checks, job history, retry for failed jobs, and sanitized JSON report export from the local CXSync user-data folder. CXSync Cloud resolves the report tenant against its master tenant registry and treats `(tenant, jobId)` as idempotent, so a retry returns the original report instead of creating a duplicate. It synchronizes schema evidence and audit reports only; business-row synchronization is not implemented.
 
 ### Login
 
@@ -258,4 +316,42 @@ Controlled local schema execution report
 Local environment status
 ```
 
-No download, upload, cloud repair, or data synchronization engine is included in this foundation.
+No business-row download/upload, cloud repair, or business-data synchronization engine is included in this foundation.
+
+## Verification
+
+Run the local contract and compile checks:
+
+```text
+npm -w apps/cxsync-cloud run test:contract
+npm -w apps/cxsync-cloud run typecheck
+npm -w apps/cxsync run typecheck
+npm -w apps/cxsync run compile:electron
+```
+
+With CXSync Cloud running and a real master tenant available, run the service-key-protected integration smoke:
+
+```text
+$env:CXSYNC_SERVICE_KEY="..."
+$env:CXSYNC_TEST_CORPORATE_ID="..."
+$env:CXSYNC_TEST_TENANT_CODE="..."
+npm -w apps/cxsync-cloud run test:integration
+```
+
+The integration smoke verifies Cloud status, Desktop handshake persistence, report persistence, retry idempotency, and report listing. The next product phase is all-tenant full-data clone and migration rehearsal on CXSync Cloud, never business-row push/pull.
+
+### Verified Schema-Safety Drill
+
+The 1.0.127 operator drill completed against an isolated 160-table schema clone while leaving the real tenant database untouched:
+
+1. removed one nullable column from the disposable clone;
+2. detected exactly one local/cloud difference;
+3. generated one safe `ADD COLUMN` plan step;
+4. created a 160-table logical backup and restore-verified its schema hash;
+5. passed upgrade preflight with zero blockers;
+6. applied one allow-listed statement with zero skipped or failed steps;
+7. verified zero remaining differences;
+8. uploaded and confirmed the final audit report in CXSync Cloud;
+9. restored the connection to the real tenant database and removed the disposable clone.
+
+The packaged application version is injected from `apps/cxsync/package.json` during the Vite build so the Desktop shell and installer release cannot silently display different versions.

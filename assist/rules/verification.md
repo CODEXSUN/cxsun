@@ -38,6 +38,15 @@ Desktop, web, or mobile package changes:
 - Run that workspace's `typecheck` script.
 - Run additional app build/dev checks when the package becomes active or user-facing.
 
+CXSync Desktop or CXSync Cloud changes:
+
+- `npm -w apps/cxsync-cloud run test:contract`
+- `npm -w apps/cxsync-cloud run typecheck`
+- `npm -w apps/cxsync-cloud run build`
+- `npm -w apps/cxsync run typecheck`
+- `npm -w apps/cxsync run compile:electron`
+- Run `npm -w apps/cxsync-cloud run test:integration` against a configured live service and master tenant when transport, authentication, handshake, or report persistence changes.
+
 Assist-only documentation changes:
 
 - Run `rg` scans for stale paths when architecture or workflow guidance changes.

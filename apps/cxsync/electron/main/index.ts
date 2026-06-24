@@ -3,7 +3,7 @@ import { existsSync } from "node:fs"
 import { readFile, stat } from "node:fs/promises"
 import { dirname, extname, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
-import { app, BrowserWindow, ipcMain, shell } from "electron"
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron"
 import { generateServiceKey, getServiceKeyStatus, saveCloudServiceUrl, saveServiceKey } from "./environment.js"
 import { getCloudServiceHandshake, verifyCloudServiceHandshake } from "./cloud-service-handshake.js"
 import { authenticateLocalAdmin, getLocalEnvironmentStatus } from "./local-admin.js"
@@ -18,6 +18,8 @@ import { executeTenantUpgrade, getTenantUpgradeExecution } from "./tenant-upgrad
 import { checkTenantSyncService, continueTenantSyncJob, exportTenantSyncReport, getTenantSyncJob, listTenantSyncJobs, retryTenantSyncJob, runTenantSyncJob } from "./tenant-sync-engine.js"
 import type { TenantConnectionInput } from "../../src/shared/connection-contracts.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
+import { getSqlDumpJob, inspectSqlDumpTables, startSqlDump } from "./sql-dump-manager.js"
+import type { SqlDumpCredentials } from "../../src/shared/connection-contracts.js"
 
 const compiledRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const packageRoot = resolve(compiledRoot, "../../..")
@@ -125,6 +127,13 @@ function registerIpc() {
   ipcMain.handle("cxsync:tenants:save", (_event, input: TenantConnectionInput, id?: string) => saveTenantConnection(input, id))
   ipcMain.handle("cxsync:tenants:delete", (_event, id: string) => deleteTenantConnection(id))
   ipcMain.handle("cxsync:tenants:verify", (_event, id: string) => verifyTenantConnection(id))
+  ipcMain.handle("cxsync:sql-dump:directory:choose", async () => {
+    const result = await dialog.showOpenDialog(mainWindow ?? undefined, { properties: ["openDirectory", "createDirectory"], title: "Choose full SQL dump folder" })
+    return result.canceled ? null : result.filePaths[0] ?? null
+  })
+  ipcMain.handle("cxsync:sql-dump:tables", (_event, credentials: SqlDumpCredentials) => inspectSqlDumpTables(credentials))
+  ipcMain.handle("cxsync:sql-dump:start", (_event, credentials: SqlDumpCredentials, destination: string) => startSqlDump(credentials, destination))
+  ipcMain.handle("cxsync:sql-dump:job", (_event, id: string) => getSqlDumpJob(id))
 }
 
 async function applicationUrl() {
