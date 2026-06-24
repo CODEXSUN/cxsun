@@ -31,9 +31,32 @@
 - [x] Add database selection and serial bulk dump queues with per-item progress and results.
 - [x] Add a read-only Desktop-to-Cloud diagnostic sequence for API, release, MariaDB, tenant DB, storage, tool, and safety checks.
 - [x] Add redacted deployment/reinstall recommendations without running database mutation paths.
+- [x] Split CXSync into isolated Maintenance Upgrade and Mirror modes in documentation and navigation.
+- [x] Add Maintenance Upgrade as a dedicated app page that keeps full clone/upgrade/verify/cutover-later work separate from daily sync.
+- [x] Add Mirror as a dedicated app page with protected Cloud foundation status while keeping the scheduler unarmed.
+- [x] Add separate Desktop and Cloud mirror operational tables for mirror jobs and cursors.
+- [x] Add manual Mirror Full Sync: Cloud creates a full tenant dump, Desktop downloads it, restores into a dedicated local mirror database, verifies table/row counts, and records a full-dump cursor.
+- [x] Harden Mirror Full Sync with `cxmirror_` target enforcement, per-table row verification, persisted Desktop history, persisted Cloud evidence/expiry metadata, and recent job history in the Mirror page.
+- [x] Add all-tenant Mirror full-sync queue that runs saved tenant connections serially and reports completed/failed counts.
+- [x] Add local daily Mirror schedule for the office server; it runs all tenants only while CXSync Desktop is open and skips runs when another queue is active.
+- [x] Add manual Mirror incremental pull for eligible tables with a single primary key and `updated_at`, upsert changed rows into `cxmirror_*`, and persist per-table `updated-at-json` cursors.
+- [x] Add all-tenant Mirror incremental queue and schedule mode selection for daily full bootstrap or daily incremental pull.
+- [x] Harden incremental Mirror with required full-dump bootstrap cursor, source database cursor persistence, recent incremental history, and summary evidence.
+- [x] Add and run repeatable Mirror E2E smoke for protected full dump, disposable local restore, per-table row verification, incremental upsert check, and cleanup.
+- [x] Complete Mirror flow with table coverage reporting, skipped-table reasons, paged incremental catch-up, page safety cap, and Desktop audit JSON export support.
+- [x] Close the current Mirror release baseline as complete for safe online-to-offline office replication.
+- [x] Split CXSync into breadcrumb-switchable Sync and Mirror desks with separate side menus.
+- [x] Rework CXSync Mirror into clean tenant list and tenant show pages with focused forms and visual cards.
+- [x] Rework Mirror schedule into a clean upsert card with enable/disable switch.
+- [x] Move Mirror schedule upsert to a separate Mirror Settings page.
+- [x] Add Mirror Sync top controls for full sync, start, pause, stop, and refresh.
+- [x] Add tenant progress cards with status details and progress bars, removing remaining/queued wording from the queue display.
+- [x] Convert Mirror Sync tenant display to a Super Admin-style one-row table and remove count cards.
+- [x] Add compact colored runtime/schedule indicators and icon-led short status pills.
 - [ ] Run the first approved VPS canary clone with `CXSYNC_FLEET_CLONE_ENABLED=true`.
 - [ ] Review canary evidence before preparing the remaining live tenants.
 - [ ] Design and approve the separate production cutover/rollback operation after all candidates validate.
+- [x] Add safe delete propagation through explicit tenant `cxsync_mirror_tombstones` outbox and report `missing-tombstone-outbox` when the source has not enabled it.
 
 ## 2026-06-24 - CXSync Cloud audit ownership and verification
 

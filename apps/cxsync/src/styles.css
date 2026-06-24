@@ -793,7 +793,287 @@ button {
 .sql-dump-progress-track { background: #dce6f1; border-radius: 999px; height: 9px; overflow: hidden; }
 .sql-dump-progress-track span { background: #2775d8; border-radius: inherit; display: block; height: 100%; transition: width 300ms ease; }
 .sql-dump-progress--completed .sql-dump-progress-track span { background: #24a45a; }
-.cloud-diagnostics-page { display: grid; gap: 18px; }
+
+.mirror-desk,
+.mirror-show { gap: 18px; }
+.mirror-form-card,
+.mirror-tenant-card {
+  background: rgba(255,255,255,.84);
+  border: 1px solid #d8e5f3;
+  border-radius: 16px;
+  box-shadow: 0 14px 35px rgba(15, 43, 82, .06);
+  padding: 16px;
+}
+.mirror-form-card {
+  display: grid;
+  gap: 6px;
+}
+.mirror-control-buttons {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.mirror-control-buttons--top {
+  max-width: 100%;
+}
+.mirror-control-buttons--top button {
+  min-height: 38px;
+}
+.mirror-status-strip {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.mirror-live-chip {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #dce7f4;
+  border-radius: 999px;
+  color: #475569;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  padding: 7px 10px;
+}
+.mirror-live-chip b {
+  color: #64748b;
+  font-size: 10px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.mirror-live-chip strong {
+  color: #0f2742;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+.mirror-live-chip--running { background: #eef6ff; border-color: #b9d8fb; color: #1d5fa8; }
+.mirror-live-chip--paused,
+.mirror-live-chip--scheduled { background: #fff8e8; border-color: #f5d48a; color: #9a6400; }
+.mirror-live-chip--stopped { background: #fff1f1; border-color: #efc2c2; color: #9f2929; }
+.mirror-live-chip--idle { background: #f8fafc; border-color: #dce7f4; color: #64748b; }
+.mirror-tenant-table {
+  background: rgba(255,255,255,.86);
+  border: 1px solid #d8e5f3;
+  border-radius: 16px;
+  display: grid;
+  overflow: hidden;
+}
+.mirror-tenant-table__head,
+.mirror-tenant-card {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(150px, 1.1fr) minmax(150px, 1fr) 120px 120px minmax(260px, 1.8fr) 90px;
+}
+.mirror-tenant-table__head {
+  background: #eef5ff;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  padding: 12px 16px;
+  text-transform: uppercase;
+}
+.mirror-tenant-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 16px;
+}
+.mirror-tenant-card + .mirror-tenant-card { border-top: 1px solid #e4edf7; }
+.mirror-tenant-card h3,
+.mirror-form-card h3 { margin: 0; }
+.mirror-tenant-card p,
+.mirror-form-card small,
+.mirror-form-card p { color: #64748b; margin: 0; }
+.mirror-tenant-main {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.mirror-tenant-main h3 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mirror-tenant-main small {
+  color: #2563eb;
+  font-weight: 800;
+}
+.mirror-table-value {
+  color: #475569;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.mirror-card-status {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.mirror-card-status span {
+  background: #f8fbff;
+  border: 1px solid #e1ebf7;
+  border-radius: 12px;
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+}
+.mirror-card-status small { color: #64748b; }
+.mirror-status-pill {
+  align-items: center;
+  background: #f8fbff;
+  border: 1px solid #dce7f4;
+  border-radius: 999px;
+  color: #334155;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  font-weight: 800;
+  justify-content: center;
+  padding: 7px 10px;
+  text-transform: capitalize;
+}
+.mirror-status-pill--completed { background: #effbf4; border-color: #b7e1c7; color: #17633a; }
+.mirror-status-pill--failed { background: #fff1f1; border-color: #efc2c2; color: #9f2929; }
+.mirror-status-pill--running { background: #eef6ff; border-color: #b9d8fb; color: #1d5fa8; }
+.mirror-status-pill--paused { background: #fff8e8; border-color: #f5d48a; color: #9a6400; }
+.mirror-status-pill--stopped { background: #fff1f1; border-color: #efc2c2; color: #9f2929; }
+.mirror-status-pill--completed-with-errors { background: #fff8e8; border-color: #f5d48a; color: #9a6400; }
+.mirror-status-pill--idle { background: #f8fafc; color: #64748b; }
+.mirror-progress {
+  display: grid;
+  gap: 8px;
+}
+.mirror-progress > div {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.mirror-progress small {
+  color: #64748b;
+  display: block;
+  font-weight: 500;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+.mirror-progress b {
+  color: #334155;
+  font-size: 12px;
+}
+.mirror-progress > span {
+  background: #dce6f1;
+  border-radius: 999px;
+  display: block;
+  height: 9px;
+  overflow: hidden;
+}
+.mirror-progress i {
+  background: #2775d8;
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+  transition: width 250ms ease;
+}
+.mirror-progress--done i { background: #24a45a; }
+.mirror-progress--failed i { background: #d94646; }
+.mirror-progress--paused i { background: #f59e0b; }
+.mirror-row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.mirror-row-actions .primary-button {
+  min-height: 36px;
+  padding-inline: 14px;
+}
+.mirror-show-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.mirror-schedule-card {
+  border-color: #c9daf0;
+  gap: 16px;
+}
+.mirror-schedule-card.is-enabled {
+  background: linear-gradient(135deg, rgba(239, 253, 246, .95), rgba(255, 255, 255, .9));
+  border-color: #a9dfbf;
+}
+.mirror-schedule-card .panel-heading-row {
+  align-items: start;
+}
+.mirror-switch {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin: 0;
+  min-width: 150px;
+}
+.mirror-switch input {
+  height: 1px;
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+}
+.mirror-switch > span {
+  background: #cbd5e1;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .08);
+  height: 28px;
+  padding: 3px;
+  transition: background 160ms ease;
+  width: 52px;
+}
+.mirror-switch i {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, .22);
+  display: block;
+  height: 22px;
+  transition: transform 180ms ease;
+  width: 22px;
+}
+.mirror-switch input:checked + span {
+  background: #22a05a;
+}
+.mirror-switch input:checked + span i {
+  transform: translateX(24px);
+}
+.mirror-switch input:disabled + span {
+  opacity: .55;
+}
+.mirror-switch b {
+  color: #0f2742;
+  font-size: 13px;
+}
+.mirror-schedule-form {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.mirror-schedule-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.mirror-schedule-summary span {
+  background: #f8fbff;
+  border: 1px solid #e1ebf7;
+  border-radius: 12px;
+  display: grid;
+  gap: 2px;
+  padding: 11px 12px;
+}
+.mirror-schedule-summary small {
+  color: #64748b;
+}
+.mode-stack, .cloud-diagnostics-page { display: grid; gap: 18px; }
 .diagnostic-overall { align-items: center; background: #f7faff; border: 1px solid #d6e3f2; border-radius: 13px; display: flex; gap: 12px; padding: 16px; }
 .diagnostic-overall > div { display: grid; gap: 4px; }
 .diagnostic-overall--healthy { background: #f0fbf4; border-color: #b7dfc4; color: #17663a; }
@@ -816,4 +1096,33 @@ button {
   .sql-dump-table-list label:nth-child(3n + 2), .sql-dump-table-list label:nth-child(3n + 3) { border-left: 0; }
   .sql-dump-table-list label:nth-child(even) { border-left: 1px solid #edf1f5; }
   .sql-database-list-head, .sql-database-list-row { grid-template-columns: 28px minmax(180px, 1fr) 80px 110px 40px; }
+  .mirror-tenant-table__head { display: none; }
+  .mirror-tenant-card {
+    align-items: stretch;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mirror-progress,
+  .mirror-row-actions {
+    grid-column: 1 / -1;
+  }
+  .mirror-row-actions .primary-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  .mirror-control-buttons--top {
+    justify-content: stretch;
+    width: 100%;
+  }
+  .mirror-control-buttons--top button {
+    flex: 1 1 130px;
+  }
+  .mirror-tenant-card {
+    grid-template-columns: 1fr;
+  }
+  .mirror-progress,
+  .mirror-row-actions {
+    grid-column: auto;
+  }
 }

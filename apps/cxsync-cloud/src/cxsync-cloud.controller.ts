@@ -1,12 +1,17 @@
+import { createReadStream } from 'node:fs'
+import { basename } from 'node:path'
 import { Controller, Get, Post } from '../../server/src/core/decorators/controller.js'
 import { Body, Param } from '../../server/src/core/decorators/http-params.js'
+import { Res } from '../../server/src/core/decorators/http-params.js'
 import { Inject } from '../../server/src/core/decorators/inject.js'
+import type { FastifyReply } from 'fastify'
 import { CxSyncCloudEngine, type CxSyncCloudHandshakeInput } from './engines/cxsync-cloud.engine.js'
 import { SyncReporter, type CxSyncReportInput } from './reporters/sync.reporter.js'
 import { FleetUpgradeService } from './fleet/fleet-upgrade.service.js'
 import type { PrepareFleetBatchInput } from './fleet/fleet-upgrade.types.js'
 import { SqlDumpService, type SqlDumpCredentials, type SqlDumpServerCredentials } from './backups/sql-dump.service.js'
 import { CloudDiagnosticsService } from './diagnostics/cloud-diagnostics.service.js'
+import { MirrorService } from './mirror/mirror.service.js'
 
 @Controller('api/v1/cxsync-cloud')
 export class CxSyncCloudController {
@@ -16,6 +21,7 @@ export class CxSyncCloudController {
     @Inject(FleetUpgradeService) private readonly fleet: FleetUpgradeService,
     @Inject(SqlDumpService) private readonly sqlDumps: SqlDumpService,
     @Inject(CloudDiagnosticsService) private readonly diagnostics: CloudDiagnosticsService,
+    @Inject(MirrorService) private readonly mirror: MirrorService,
   ) {}
 
   @Get('status')
@@ -30,6 +36,34 @@ export class CxSyncCloudController {
   @Get('diagnostics')
   async cloudDiagnostics() {
     return { diagnostics: await this.diagnostics.inspect(), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Get('mirror/status')
+  async mirrorStatus() {
+    return { mirror: await this.mirror.status(), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Post('mirror/full-dumps')
+  async startMirrorFullDump(@Body() body: { corporateId?: string; tenantCode?: string }) {
+    return { job: await this.mirror.startFullDump(body), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Get('mirror/full-dumps/:id')
+  mirrorFullDump(@Param('id') id: string) {
+    return { job: this.mirror.fullDumpJob(id), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Get('mirror/full-dumps/:id/download')
+  mirrorFullDumpDownload(@Param('id') id: string, @Res() reply: FastifyReply) {
+    const path = this.mirror.fullDumpPath(id)
+    reply.header('Content-Type', 'application/sql')
+    reply.header('Content-Disposition', `attachment; filename="${basename(path).replaceAll('"', '')}"`)
+    return reply.send(createReadStream(path))
+  }
+
+  @Post('mirror/incremental/pull')
+  async mirrorIncrementalPull(@Body() body: { corporateId?: string; cursors?: Record<string, string | null>; limit?: number; tenantCode?: string }) {
+    return { incremental: await this.mirror.incrementalPull(body), ok: true, service: 'cxsync-cloud' }
   }
 
   @Get('handshake')

@@ -439,6 +439,71 @@ export type CloudDiagnostics = {
   service: "cxsync-cloud"
 }
 
+export type MirrorFullSyncJob = {
+  cloudDumpJobId: string | null
+  completedAt: string | null
+  downloadedBytes: number
+  error: string | null
+  id: string
+  localDatabase: string
+  phase: "request-cloud-dump" | "download" | "restore-local" | "verify" | "completed" | "failed"
+  rowCount: number
+  sourceDatabase: string | null
+  startedAt: string
+  status: "running" | "completed" | "failed"
+  tableCount: number
+  tenantConnectionId: string
+}
+
+export type MirrorFullSyncQueue = {
+  completedCount: number
+  failedCount: number
+  id: string
+  items: MirrorFullSyncJob[]
+  queuedCount: number
+  startedAt: string
+  status: "queued" | "running" | "paused" | "stopped" | "completed" | "completed-with-errors"
+  totalCount: number
+}
+
+export type MirrorSchedule = {
+  enabled: boolean
+  lastRunAt: string | null
+  mode: "full" | "incremental"
+  nextRunAt: string | null
+  target: "all-tenants"
+  time: string
+  timezone: string
+}
+
+export type MirrorIncrementalSyncJob = {
+  completedAt: string | null
+  error: string | null
+  id: string
+  localDatabase: string
+  phase: "pull" | "upsert" | "completed" | "failed"
+  rowCount: number
+  startedAt: string
+  status: "running" | "completed" | "failed"
+  tableCount: number
+  tenantConnectionId: string
+}
+
+export type MirrorIncrementalSyncQueue = {
+  completedCount: number
+  failedCount: number
+  id: string
+  items: MirrorIncrementalSyncJob[]
+  queuedCount: number
+  startedAt: string
+  status: "queued" | "running" | "paused" | "stopped" | "completed" | "completed-with-errors"
+  totalCount: number
+}
+
+export type MirrorAuditExport = {
+  path: string
+}
+
 export type CxSyncDesktopApi = {
   isDesktop: boolean
   authenticateLocalAdmin(email: string, password: string): Promise<LocalAdminSession>
@@ -465,6 +530,22 @@ export type CxSyncDesktopApi = {
   getCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake | null>
   verifyCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake>
   runCloudDiagnostics(): Promise<CloudDiagnostics>
+  startMirrorFullSync(id: string, targetDatabase?: string): Promise<MirrorFullSyncJob>
+  getMirrorFullSyncJob(id: string): Promise<MirrorFullSyncJob | null>
+  listMirrorFullSyncJobs(): Promise<MirrorFullSyncJob[]>
+  listMirrorIncrementalSyncJobs(): Promise<MirrorIncrementalSyncJob[]>
+  exportMirrorAudit(id: string): Promise<MirrorAuditExport>
+  startMirrorFullSyncQueue(ids?: string[]): Promise<MirrorFullSyncQueue>
+  getMirrorFullSyncQueue(id: string): Promise<MirrorFullSyncQueue | null>
+  getMirrorSchedule(): Promise<MirrorSchedule>
+  saveMirrorSchedule(schedule: MirrorSchedule): Promise<MirrorSchedule>
+  startMirrorIncrementalSync(id: string, targetDatabase?: string): Promise<MirrorIncrementalSyncJob>
+  getMirrorIncrementalSyncJob(id: string): Promise<MirrorIncrementalSyncJob | null>
+  startMirrorIncrementalSyncQueue(ids?: string[]): Promise<MirrorIncrementalSyncQueue>
+  getMirrorIncrementalSyncQueue(id: string): Promise<MirrorIncrementalSyncQueue | null>
+  pauseMirrorIncrementalSyncQueue(id: string): Promise<MirrorIncrementalSyncQueue | null>
+  resumeMirrorIncrementalSyncQueue(id: string): Promise<MirrorIncrementalSyncQueue | null>
+  stopMirrorIncrementalSyncQueue(id: string): Promise<MirrorIncrementalSyncQueue | null>
   chooseSqlDumpDirectory(): Promise<string | null>
   listSqlDumpDatabases(credentials: SqlDumpServerCredentials): Promise<SqlDumpDatabase[]>
   inspectSqlDumpTables(credentials: SqlDumpCredentials): Promise<SqlDumpTable[]>

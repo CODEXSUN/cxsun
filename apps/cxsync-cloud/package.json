@@ -9,6 +9,7 @@
     "start": "node ../../build/cxsync-cloud/cxsync-cloud/src/main.js",
     "test:contract": "tsx src/tests/cxsync-cloud-contract.test.ts",
     "test:integration": "node scripts/integration-smoke.mjs",
+    "test:mirror-e2e": "node scripts/mirror-e2e-smoke.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -247,6 +247,63 @@ async function migrate(database: Pool) {
       KEY idx_cxsync_sync_job_latest (tenant_connection_id, started_at)
     ) ENGINE=InnoDB
   `)
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS cxsync_mirror_jobs (
+      id CHAR(36) PRIMARY KEY,
+      tenant_connection_id CHAR(36) NOT NULL,
+      direction VARCHAR(40) NOT NULL,
+      mode VARCHAR(40) NOT NULL,
+      source_database VARCHAR(191) NULL,
+      target_database VARCHAR(191) NULL,
+      current_phase VARCHAR(80) NULL,
+      table_count INT NOT NULL DEFAULT 0,
+      row_count BIGINT NOT NULL DEFAULT 0,
+      downloaded_bytes BIGINT NOT NULL DEFAULT 0,
+      cloud_job_id CHAR(36) NULL,
+      schedule_cron VARCHAR(120) NULL,
+      status VARCHAR(40) NOT NULL,
+      last_started_at DATETIME(3) NULL,
+      last_completed_at DATETIME(3) NULL,
+      last_error TEXT NULL,
+      created_at DATETIME(3) NOT NULL,
+      updated_at DATETIME(3) NOT NULL,
+      CONSTRAINT fk_cxsync_mirror_job_tenant
+        FOREIGN KEY (tenant_connection_id) REFERENCES cxsync_tenant_connections(id)
+        ON DELETE CASCADE,
+      KEY idx_cxsync_mirror_job_tenant (tenant_connection_id, status, created_at)
+    ) ENGINE=InnoDB
+  `)
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS source_database VARCHAR(191) NULL AFTER mode")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS target_database VARCHAR(191) NULL AFTER source_database")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS current_phase VARCHAR(80) NULL AFTER target_database")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS table_count INT NOT NULL DEFAULT 0 AFTER current_phase")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS row_count BIGINT NOT NULL DEFAULT 0 AFTER table_count")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS downloaded_bytes BIGINT NOT NULL DEFAULT 0 AFTER row_count")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS cloud_job_id CHAR(36) NULL AFTER downloaded_bytes")
+  await database.query("ALTER TABLE cxsync_mirror_jobs ADD COLUMN IF NOT EXISTS evidence_json LONGTEXT NULL AFTER cloud_job_id")
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS cxsync_mirror_cursors (
+      id CHAR(36) PRIMARY KEY,
+      mirror_job_id CHAR(36) NOT NULL,
+      tenant_connection_id CHAR(36) NOT NULL,
+      source_database VARCHAR(191) NOT NULL,
+      target_database VARCHAR(191) NOT NULL,
+      cursor_type VARCHAR(40) NOT NULL,
+      cursor_value VARCHAR(500) NULL,
+      high_watermark_json LONGTEXT NULL,
+      verified_at DATETIME(3) NULL,
+      created_at DATETIME(3) NOT NULL,
+      updated_at DATETIME(3) NOT NULL,
+      CONSTRAINT fk_cxsync_mirror_cursor_job
+        FOREIGN KEY (mirror_job_id) REFERENCES cxsync_mirror_jobs(id)
+        ON DELETE CASCADE,
+      CONSTRAINT fk_cxsync_mirror_cursor_tenant
+        FOREIGN KEY (tenant_connection_id) REFERENCES cxsync_tenant_connections(id)
+        ON DELETE CASCADE,
+      UNIQUE KEY uq_cxsync_mirror_cursor_source (mirror_job_id, source_database, cursor_type),
+      KEY idx_cxsync_mirror_cursor_tenant (tenant_connection_id, updated_at)
+    ) ENGINE=InnoDB
+  `)
 }
 
 function databaseName(value: string) {

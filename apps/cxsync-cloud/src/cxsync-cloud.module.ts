@@ -9,6 +9,7 @@ import { FleetCloneExecutor } from './fleet/fleet-clone.executor.js'
 import { FleetUpgradeService } from './fleet/fleet-upgrade.service.js'
 import { SqlDumpService } from './backups/sql-dump.service.js'
 import { CloudDiagnosticsService } from './diagnostics/cloud-diagnostics.service.js'
+import { MirrorService } from './mirror/mirror.service.js'
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CloudDiagnosticsService } from './diagnostics/cloud-diagnostics.service
     FleetUpgradeService,
     SqlDumpService,
     CloudDiagnosticsService,
+    MirrorService,
   ],
   controllers: [CxSyncCloudController],
 })

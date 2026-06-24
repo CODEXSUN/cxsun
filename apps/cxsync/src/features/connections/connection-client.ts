@@ -146,7 +146,23 @@ const browserFallback: CxSyncDesktopApi = {
     }
   },
   async runCloudDiagnostics() { throw new Error("Use the CXSync Cloud diagnostics API in the browser runtime.") },
-  async getTenantUpgradePlan() {
+  async startMirrorFullSync() { throw new Error("Mirror full sync restore requires the CXSync Desktop runtime.") },
+    async getMirrorFullSyncJob() { return null },
+    async listMirrorFullSyncJobs() { return [] },
+    async listMirrorIncrementalSyncJobs() { return [] },
+    async exportMirrorAudit() { throw new Error("Mirror audit export requires the CXSync Desktop runtime.") },
+    async startMirrorFullSyncQueue() { throw new Error("Mirror queue restore requires the CXSync Desktop runtime.") },
+  async getMirrorFullSyncQueue() { return null },
+    async getMirrorSchedule() { return { enabled: false, lastRunAt: null, mode: "full", nextRunAt: null, target: "all-tenants", time: "02:00", timezone: "Browser" } },
+    async saveMirrorSchedule(schedule) { return schedule },
+    async startMirrorIncrementalSync() { throw new Error("Mirror incremental sync requires the CXSync Desktop runtime.") },
+    async getMirrorIncrementalSyncJob() { return null },
+    async startMirrorIncrementalSyncQueue() { throw new Error("Mirror incremental queue requires the CXSync Desktop runtime.") },
+    async getMirrorIncrementalSyncQueue() { return null },
+    async pauseMirrorIncrementalSyncQueue() { return null },
+    async resumeMirrorIncrementalSyncQueue() { return null },
+    async stopMirrorIncrementalSyncQueue() { return null },
+    async getTenantUpgradePlan() {
     return null
   },
   async generateTenantUpgradePlan() {

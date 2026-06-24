@@ -9,6 +9,7 @@ import {
   Copy,
   Database,
   DatabaseBackup,
+  GitBranch,
   History,
   KeyRound,
   LoaderCircle,
@@ -49,10 +50,13 @@ import { connectionClient, cxSyncCloudBrowserHeaders, hasCxSyncCloudAdminBrowser
 import { FleetUpgradePage } from "../fleet/fleet-upgrade-page"
 import { SqlDumpPage } from "../backup/sql-dump-page"
 import { CloudDiagnosticsPage } from "../diagnostics/cloud-diagnostics-page"
+import { MaintenanceUpgradePage } from "../maintenance/maintenance-upgrade-page"
+import { MirrorPage, MirrorSettingsPage } from "../mirror/mirror-page"
 
-type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service" | "fleet" | "sql-dump" | "diagnostics"
+type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service" | "maintenance-upgrade" | "fleet" | "mirror" | "mirror-settings" | "sql-dump" | "diagnostics"
+type Desk = "sync" | "mirror"
 
-const navGroups: Array<DashboardShellNavGroup<Page>> = [
+const syncNavGroups: Array<DashboardShellNavGroup<Page>> = [
   {
     id: "start",
     items: [
@@ -67,14 +71,60 @@ const navGroups: Array<DashboardShellNavGroup<Page>> = [
       { icon: Server, id: "connections", label: "Tenant connections" },
       { icon: Plus, id: "add", label: "Add tenant" },
       { icon: Database, id: "desktop-local", label: "Desktop storage" },
-      { icon: DatabaseBackup, id: "sql-dump", label: "SQL dump" },
     ],
     label: "Desktop console",
     standalone: true,
   },
   {
+    id: "maintenance",
+    items: [
+      { icon: ShieldCheck, id: "maintenance-upgrade", label: "Maintenance upgrade" },
+      { icon: DatabaseBackup, id: "sql-dump", label: "SQL dump" },
+      { icon: Activity, id: "diagnostics", label: "Cloud diagnostics" },
+    ],
+    label: "Maintenance Upgrade",
+    standalone: true,
+  },
+  {
     id: "cloud",
     items: [
+      { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
+    ],
+    label: "Cloud service",
+    standalone: true,
+  },
+]
+
+const mirrorNavGroups: Array<DashboardShellNavGroup<Page>> = [
+  {
+    id: "mirror",
+    items: [
+      { icon: GitBranch, id: "mirror", label: "Mirror sync" },
+      { icon: Database, id: "mirror-settings", label: "Settings" },
+    ],
+    label: "Mirror operations",
+    standalone: true,
+  },
+  {
+    id: "mirror-setup",
+    items: [
+      { icon: Server, id: "connections", label: "Tenant connections" },
+      { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
+      { icon: Activity, id: "diagnostics", label: "Cloud diagnostics" },
+    ],
+    label: "Mirror setup",
+    standalone: true,
+  },
+]
+
+const cloudSyncNavGroups: Array<DashboardShellNavGroup<Page>> = [
+  {
+    id: "start",
+    items: [
+      { icon: Cloud, id: "overview", label: "Cloud overview" },
+      { icon: Server, id: "tenant-service", label: "Tenant service" },
+      { icon: ShieldCheck, id: "maintenance-upgrade", label: "Maintenance upgrade" },
+      { icon: DatabaseBackup, id: "sql-dump", label: "SQL dump" },
       { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
       { icon: Activity, id: "diagnostics", label: "Cloud diagnostics" },
     ],
@@ -83,18 +133,15 @@ const navGroups: Array<DashboardShellNavGroup<Page>> = [
   },
 ]
 
-const cloudNavGroups: Array<DashboardShellNavGroup<Page>> = [
+const cloudMirrorNavGroups: Array<DashboardShellNavGroup<Page>> = [
   {
-    id: "start",
+    id: "mirror",
     items: [
-      { icon: Cloud, id: "overview", label: "Cloud overview" },
-      { icon: Server, id: "tenant-service", label: "Tenant service" },
-      { icon: ShieldCheck, id: "fleet", label: "Fleet upgrades" },
-      { icon: DatabaseBackup, id: "sql-dump", label: "SQL dump" },
+      { icon: GitBranch, id: "mirror", label: "Mirror status" },
+      { icon: Database, id: "mirror-settings", label: "Settings" },
       { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
-      { icon: Activity, id: "diagnostics", label: "Cloud diagnostics" },
     ],
-    label: "Cloud service",
+    label: "Mirror",
     standalone: true,
   },
 ]
@@ -106,6 +153,9 @@ const titles: Record<Page, string> = {
   diagnostics: "Cloud diagnostics",
   "desktop-local": "Desktop storage",
   fleet: "Fleet upgrades",
+  "maintenance-upgrade": "Maintenance upgrade",
+  mirror: "Mirror",
+  "mirror-settings": "Mirror settings",
   "sql-dump": "Full SQL dump",
   overview: "Overview",
   show: "Tenant connection",
@@ -115,27 +165,49 @@ const titles: Record<Page, string> = {
 const design = getCxDesignSystem("blue")
 
 export function WorkspaceShell({ onLogout, session }: { onLogout(): void; session: AuthSession }) {
+  const [desk, setDesk] = useState<Desk>("sync")
   const [page, setPage] = useState<Page>("overview")
   const [selectedId, setSelectedId] = useState("")
   const [refreshKey, setRefreshKey] = useState(0)
   const isDesktopRuntime = connectionClient().isDesktop
+  const navGroupsForDesk = isDesktopRuntime
+    ? desk === "mirror" ? mirrorNavGroups : syncNavGroups
+    : desk === "mirror" ? cloudMirrorNavGroups : cloudSyncNavGroups
+  const activeAppId = desk === "mirror" ? "cxsync-mirror" : "cxsync-sync"
 
   function openConnection(id: string) {
     setSelectedId(id)
     setPage("show")
   }
 
+  function navigate(next: Page) {
+    setPage(next)
+    if (next === "mirror" || next === "mirror-settings") setDesk("mirror")
+    else if (next !== "connections" && next !== "show" && next !== "cloud-service" && next !== "diagnostics") setDesk("sync")
+  }
+
+  function switchDesk(next: string) {
+    const nextDesk: Desk = next === "cxsync-mirror" ? "mirror" : "sync"
+    setDesk(nextDesk)
+    setPage(nextDesk === "mirror" ? "mirror" : "overview")
+  }
+
   return (
     <DashboardShell
-      activeAppId="cxsync"
+      activeAppId={activeAppId}
       activePage={page}
-      apps={[{ description: "Tenant database connection manager", icon: MonitorCog, id: "cxsync", name: "CXSync", shortName: "CXSync" }]}
+      appSwitcherLabel="Switch CXSync desk"
+      apps={[
+        { description: "Maintenance, tenant checks, SQL dumps, diagnostics", icon: MonitorCog, id: "cxsync-sync", name: "CXSync Sync", shortName: "Sync" },
+        { description: "Online-to-offline office mirror", icon: GitBranch, id: "cxsync-mirror", name: "CXSync Mirror", shortName: "Mirror" },
+      ]}
       brand={{ mark: "CX", name: "CXSync", subtitle: "Admin" }}
-      navGroups={isDesktopRuntime ? navGroups : cloudNavGroups}
+      navGroups={navGroupsForDesk}
       navStyle={design.navStyle}
-      onHome={() => setPage("overview")}
+      onAppChange={switchDesk}
+      onHome={() => { setDesk("sync"); setPage("overview") }}
       onLogout={onLogout}
-      onNavigate={setPage}
+      onNavigate={navigate}
       title={titles[page]}
       tone={design.tone}
       user={{ displayName: session.name, email: session.email, roleLabel: session.role }}
@@ -148,7 +220,10 @@ export function WorkspaceShell({ onLogout, session }: { onLogout(): void; sessio
       {page === "desktop-local" ? <LocalEnvironmentPage /> : null}
       {page === "cloud-service" ? <CloudServiceKeyPage /> : null}
       {page === "tenant-service" ? <TenantServicePage /> : null}
+      {page === "maintenance-upgrade" ? <MaintenanceUpgradePage /> : null}
       {page === "fleet" ? <FleetUpgradePage /> : null}
+      {page === "mirror" ? <MirrorPage /> : null}
+      {page === "mirror-settings" ? <MirrorSettingsPage /> : null}
       {page === "sql-dump" ? <SqlDumpPage /> : null}
       {page === "diagnostics" ? <CloudDiagnosticsPage /> : null}
     </DashboardShell>

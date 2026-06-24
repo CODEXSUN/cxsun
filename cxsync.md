@@ -2,9 +2,119 @@
 
 ## Current Foundation
 
-CXSync is the private database maintenance, audit, full-data clone, migration rehearsal, and controlled-upgrade system for all CXSun tenant databases. It exists to make delayed live deployments safe while application development continues daily.
+CXSync has two isolated modes:
 
-CXSync is not a customer billing-data synchronization product. Device activation, transaction outboxes, pull cursors, and business-record conflict handling are outside its boundary. The canonical rule is `assist/context/cxsync-fleet-maintenance.md`.
+1. **CXSync Maintenance Upgrade** is the private database maintenance, audit, full-data clone, migration rehearsal, verified backup, upload, and later controlled-cutover system for CXSun tenant databases. It exists to make delayed live deployments safe while application development continues daily.
+2. **CXSync Mirror** is the separate online-to-offline office mirror mode. It connects an office local server to the VPS, bootstraps a dedicated local `cxmirror_*` database by full sync, then can manually pull incremental insert/update changes for eligible tables.
+
+These modes must not share job tables, cursors, execution buttons, or safety assumptions. Maintenance Upgrade works with full database artifacts and approved release windows. Mirror works with scheduled incremental replication and local offline read availability.
+
+The UI also keeps the modes separated by desk. The breadcrumb app switcher exposes **CXSync Sync** for maintenance, tenant checks, SQL dumps, diagnostics, and service-key work, and **CXSync Mirror** for online-to-offline mirror operations. Each desk owns its own side menu so Mirror execution controls are not mixed into the maintenance workflow.
+
+CXSync Mirror is not the same as Maintenance Upgrade. Device activation, transaction outboxes, pull cursors, and business-record conflict handling remain outside Maintenance Upgrade, but belong to the separate Mirror roadmap once explicitly implemented. The original maintenance boundary remains recorded in `assist/context/cxsync-fleet-maintenance.md`.
+
+## Mode Split
+
+```text
+CXSync
+  -> Maintenance Upgrade
+       -> cloud tenant inventory
+       -> full cloud/local database clone
+       -> candidate upgrade and verification
+       -> restore-tested backup evidence
+       -> upgraded artifact upload
+       -> cutover/rollback later, never automatic
+
+  -> Mirror
+       -> office local server identity
+       -> cloud-to-local incremental pull
+       -> schedule window
+       -> mirror jobs
+       -> mirror cursors
+       -> retry/resume/audit
+       -> local offline read mirror
+```
+
+The first Mirror foundation owns isolated operational tables only:
+
+```text
+Cloud:
+- cxsync_mirror_jobs
+- cxsync_mirror_cursors
+
+Desktop/local:
+- cxsync_mirror_jobs
+- cxsync_mirror_cursors
+```
+
+The current Mirror desk has two separate pages. **Mirror Sync** exposes manual full sync, one-tenant manual incremental pull, all-tenant full/incremental queues, top-level Start/Pause/Stop/Refresh controls, and per-tenant progress cards. **Mirror Settings** owns the daily schedule upsert form and enable/disable switch.
+
+### Mirror Full Sync
+
+The first Mirror function is **Full sync now** in the CXSync Desktop Mirror page. It is a manual cloud-to-local bootstrap for one saved tenant connection:
+
+1. Desktop sends the tenant code/corporate ID to CXSync Cloud.
+2. CXSync Cloud resolves the active tenant from the master registry and creates a full logical dump under `storage/cxsync/mirror/full`.
+3. Desktop polls the protected Cloud dump job until completion.
+4. Desktop downloads the dump into its private user-data mirror folder.
+5. Desktop drops and recreates only the chosen local mirror database, normally `cxmirror_<tenantCode>`.
+6. Desktop restores the dump into that mirror database.
+7. Desktop verifies local table count and exact total row count against the Cloud dump evidence.
+8. Desktop records the Mirror job and a `full-dump-sha256` cursor in its isolated Mirror tables.
+
+This full sync is not incremental and does not schedule itself. It is the safe bootstrap step before incremental Mirror is used. Operators must keep the target database as a dedicated `cxmirror_*` database and must not point it at a working tenant database.
+
+### Manual incremental Mirror pull
+
+After a successful full mirror bootstrap, Desktop can run **Incremental sync now** for one tenant. Cloud returns rows from eligible tenant tables where:
+
+- the table is a base table;
+- the table has a single-column primary key;
+- the table has an `updated_at` column;
+- `updated_at` is newer than the saved per-table cursor.
+
+Desktop upserts those rows into the matching local `cxmirror_*` database and saves the new per-table `updated_at` cursors in `cxsync_mirror_cursors` with cursor type `updated-at-json`.
+
+Desktop can also run **Incremental all tenants**. It uses saved tenant connections serially, targets each tenant's `cxmirror_<tenantCode>` database, continues after item failure, and reports completed/failed counts.
+
+Incremental safety hardening:
+
+- incremental sync refuses to run until the selected `cxmirror_*` database has a verified `full-dump-sha256` bootstrap cursor;
+- incremental cursor records save the real source cloud database name;
+- incremental jobs persist recent history after restart;
+- completed incremental jobs store summary evidence including source database, eligible table count, skipped table reasons, pulled table count, pulled row count, and page count;
+- incremental pull pages until caught up, with `CXSYNC_MIRROR_INCREMENTAL_MAX_PAGES` as a safety cap;
+- Desktop can export a Mirror audit JSON for a stored job through the Electron API.
+
+Current incremental limits:
+
+- it handles inserts, updates, and deletes when the cloud tenant database provides the explicit `cxsync_mirror_tombstones` outbox;
+- delete propagation is never guessed from missing rows; when the tombstone outbox is absent, Mirror reports `missing-tombstone-outbox` and safely skips delete application;
+- it does not migrate schema changes; run full sync again after schema changes;
+- daily scheduling can run either full bootstrap or incremental pull depending on the selected schedule mode;
+- tables without a single primary key and `updated_at` are skipped by design and reported with reasons.
+
+Full sync hardening:
+
+- Desktop refuses target database names that do not start with `cxmirror_`.
+- Desktop persists job history, source/target database names, phase, cloud job ID, downloaded bytes, row count, table count, and final error.
+- Cloud persists full-dump evidence and expiry metadata; default retention is 72 hours via `CXSYNC_MIRROR_FULL_DUMP_RETENTION_HOURS`.
+- Verification compares every table row count, not only total rows.
+- The Mirror page lists recent full-sync jobs after restart.
+
+### Mirror Full-Sync Queue and Daily Schedule
+
+Desktop Mirror can now run **Full sync all tenants**. It reads every saved tenant connection, runs one full-sync job at a time, stops only that item on failure, and continues to the next tenant. The queue remains local to the Desktop runtime and displays completed/failed counts plus item history and a progress bar.
+
+The **Mirror Settings** page stores the daily all-tenant schedule. The scheduler is intentionally local and conservative:
+
+- it runs only while CXSync Desktop is open on the office server;
+- it can run either the safe full-sync queue or the incremental queue;
+- it runs all saved tenant connections serially;
+- it skips a scheduled run if another mirror queue is already active;
+- it records the last run and next run in local CXSync config.
+
+Full bootstrap is safest after schema changes. Incremental pull is the normal daily mirror option after every tenant has a successful full bootstrap.
 
 ## Service Split
 
@@ -371,6 +481,29 @@ npm -w apps/cxsync-cloud run test:integration
 ```
 
 The integration smoke verifies Cloud status, Desktop handshake persistence, report persistence, retry idempotency, and report listing. The next product phase is all-tenant full-data clone and migration rehearsal on CXSync Cloud, never business-row push/pull.
+
+With CXSync Cloud running and MariaDB client tools available, run the Mirror full E2E smoke:
+
+```text
+npm -w apps/cxsync-cloud run test:mirror-e2e
+```
+
+The Mirror E2E smoke selects a real active tenant, asks CXSync Cloud to create a protected full dump, downloads it, restores it into a disposable local database named `cxmirror_e2e_*`, verifies every restored table row count against Cloud evidence, runs a small incremental pull/upsert check, and drops the disposable database unless `CXSYNC_MIRROR_E2E_KEEP_DB=true` is set.
+
+Optional delete outbox contract for tenant databases:
+
+```sql
+CREATE TABLE cxsync_mirror_tombstones (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  table_name VARCHAR(191) NOT NULL,
+  primary_key VARCHAR(191) NOT NULL,
+  primary_key_value VARCHAR(500) NOT NULL,
+  deleted_at DATETIME(3) NOT NULL,
+  KEY idx_cxsync_mirror_tombstones_cursor (deleted_at, table_name, primary_key_value)
+) ENGINE=InnoDB;
+```
+
+Application delete paths or reviewed triggers must insert one row into this outbox before/when deleting a source row. CXSync Cloud reads only tombstones newer than the saved delete cursor and Desktop applies matching deletes to the local `cxmirror_*` database.
 
 ### Verified Schema-Safety Drill
 

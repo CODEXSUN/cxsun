@@ -151,7 +151,7 @@ export async function findDumpTool(): Promise<string | null> {
     ?? await findToolOnPath("mysqldump")
 }
 
-async function findClientTool(dumpTool: string): Promise<string | null> {
+export async function findClientTool(dumpTool: string): Promise<string | null> {
   const env = await loadCxSyncEnvironment()
   const configured = env.CXSYNC_MARIADB_CLIENT_PATH?.trim()
   const siblingDirectory = dirname(dumpTool)

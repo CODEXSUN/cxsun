@@ -21,6 +21,7 @@ import { getCxSyncDatabase } from "./cxsync-database.js"
 import { getSqlDumpJob, getSqlDumpQueue, inspectSqlDumpTables, listSqlDumpDatabases, startSqlDump, startSqlDumpQueue } from "./sql-dump-manager.js"
 import type { SqlDumpCredentials, SqlDumpServerCredentials } from "../../src/shared/connection-contracts.js"
 import { runCloudDiagnostics } from "./cloud-diagnostics-client.js"
+import { exportMirrorAudit, getMirrorFullSyncJob, getMirrorFullSyncQueue, getMirrorIncrementalSyncJob, getMirrorIncrementalSyncQueue, getMirrorSchedule, listMirrorFullSyncJobs, listMirrorIncrementalSyncJobs, pauseMirrorIncrementalSyncQueue, resumeMirrorIncrementalSyncQueue, saveMirrorSchedule, startMirrorFullSync, startMirrorFullSyncQueue, startMirrorIncrementalSync, startMirrorIncrementalSyncQueue, startMirrorScheduler, stopMirrorIncrementalSyncQueue, stopMirrorScheduler } from "./mirror-full-sync-manager.js"
 
 const compiledRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const packageRoot = resolve(compiledRoot, "../../..")
@@ -42,6 +43,7 @@ if (!app.requestSingleInstanceLock()) {
   })
   app.whenReady().then(async () => {
     await getCxSyncDatabase()
+    startMirrorScheduler()
     await createWindow()
   }).catch((error: unknown) => {
     console.error("CXSync failed to start.", error)
@@ -57,7 +59,7 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) void createWindow()
 })
 
-app.on("before-quit", () => frontendServer?.close())
+app.on("before-quit", () => { stopMirrorScheduler(); frontendServer?.close() })
 
 async function createWindow() {
   const window = new BrowserWindow({
@@ -100,6 +102,22 @@ function registerIpc() {
   ipcMain.handle("cxsync:cloud-service:handshake", () => getCloudServiceHandshake())
   ipcMain.handle("cxsync:cloud-service:handshake:verify", () => verifyCloudServiceHandshake())
   ipcMain.handle("cxsync:cloud-service:diagnostics", () => runCloudDiagnostics())
+  ipcMain.handle("cxsync:mirror:full-sync:start", (_event, id: string, targetDatabase?: string) => startMirrorFullSync(id, targetDatabase))
+  ipcMain.handle("cxsync:mirror:full-sync:job", (_event, id: string) => getMirrorFullSyncJob(id))
+  ipcMain.handle("cxsync:mirror:full-sync:list", () => listMirrorFullSyncJobs())
+  ipcMain.handle("cxsync:mirror:incremental:list", () => listMirrorIncrementalSyncJobs())
+  ipcMain.handle("cxsync:mirror:audit:export", (_event, id: string) => exportMirrorAudit(id))
+  ipcMain.handle("cxsync:mirror:full-sync:queue:start", (_event, ids?: string[]) => startMirrorFullSyncQueue(ids))
+  ipcMain.handle("cxsync:mirror:full-sync:queue", (_event, id: string) => getMirrorFullSyncQueue(id))
+  ipcMain.handle("cxsync:mirror:schedule", () => getMirrorSchedule())
+  ipcMain.handle("cxsync:mirror:schedule:save", (_event, schedule) => saveMirrorSchedule(schedule))
+  ipcMain.handle("cxsync:mirror:incremental:start", (_event, id: string, targetDatabase?: string) => startMirrorIncrementalSync(id, targetDatabase))
+  ipcMain.handle("cxsync:mirror:incremental:job", (_event, id: string) => getMirrorIncrementalSyncJob(id))
+  ipcMain.handle("cxsync:mirror:incremental:queue:start", (_event, ids?: string[]) => startMirrorIncrementalSyncQueue(ids))
+  ipcMain.handle("cxsync:mirror:incremental:queue", (_event, id: string) => getMirrorIncrementalSyncQueue(id))
+  ipcMain.handle("cxsync:mirror:incremental:queue:pause", (_event, id: string) => pauseMirrorIncrementalSyncQueue(id))
+  ipcMain.handle("cxsync:mirror:incremental:queue:resume", (_event, id: string) => resumeMirrorIncrementalSyncQueue(id))
+  ipcMain.handle("cxsync:mirror:incremental:queue:stop", (_event, id: string) => stopMirrorIncrementalSyncQueue(id))
   ipcMain.handle("cxsync:tenants:list", () => listTenantConnections())
   ipcMain.handle("cxsync:tenants:get", (_event, id: string) => getTenantConnection(id))
   ipcMain.handle("cxsync:tenants:cloud-snapshot", (_event, id: string) => getTenantCloudSnapshot(id))

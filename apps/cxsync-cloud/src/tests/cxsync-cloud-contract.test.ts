@@ -77,7 +77,7 @@ assert.match(sqlDumpService, /storage', 'cxsync', 'sql-dumps'/, 'Cloud SQL dumps
 assert.match(sqlDumpService, /'--databases'/, 'Every SQL backup must use a complete database dump.')
 assert.match(sqlDumpService, /`\$\{path\}\.partial`/, 'Cloud dumps must remain partial until completion.')
 assert.match(sqlDumpService, /await rename\(partialPath, path\)/, 'Cloud dumps must be atomically published after success.')
-for (const method of ['chooseSqlDumpDirectory', 'listSqlDumpDatabases', 'inspectSqlDumpTables', 'startSqlDump', 'getSqlDumpJob', 'startSqlDumpQueue', 'getSqlDumpQueue', 'runCloudDiagnostics']) {
+for (const method of ['chooseSqlDumpDirectory', 'listSqlDumpDatabases', 'inspectSqlDumpTables', 'startSqlDump', 'getSqlDumpJob', 'startSqlDumpQueue', 'getSqlDumpQueue', 'runCloudDiagnostics', 'startMirrorFullSync', 'getMirrorFullSyncJob', 'listMirrorFullSyncJobs', 'listMirrorIncrementalSyncJobs', 'startMirrorFullSyncQueue', 'getMirrorFullSyncQueue', 'getMirrorSchedule', 'saveMirrorSchedule', 'startMirrorIncrementalSync', 'getMirrorIncrementalSyncJob', 'startMirrorIncrementalSyncQueue', 'getMirrorIncrementalSyncQueue', 'pauseMirrorIncrementalSyncQueue', 'resumeMirrorIncrementalSyncQueue', 'stopMirrorIncrementalSyncQueue']) {
   assert.match(preloadGenerator, new RegExp(`${method}:`), `The packaged Electron preload must expose ${method}.`)
 }
 assert.match(sqlDumpService, /NOT IN \('information_schema', 'mysql', 'performance_schema', 'sys'\)/, 'SQL dump inventory must exclude MariaDB system databases.')
@@ -88,5 +88,6 @@ assert.match(sqlDumpPage, /Back to databases/, 'The SQL dump detail surface must
 assert.match(diagnosticsService, /SELECT VERSION\(\) AS version/, 'Cloud diagnostics must verify MariaDB with a read-only query.')
 assert.match(diagnosticsService, /information_schema\.SCHEMATA/, 'Cloud diagnostics must verify active tenant database visibility.')
 assert.doesNotMatch(diagnosticsService, /process\.env\.DB_PASSWORD|dbConfig\.master\.password/, 'Cloud diagnostics must not return or directly expose database passwords.')
+assert.match(await readFile(resolve(process.cwd(), 'src/mirror/mirror.service.ts'), 'utf8'), /storage', 'cxsync', 'mirror', 'full'/, 'Mirror full dumps must stay inside CXSync mirror storage.')
 
 console.log('CXSync Cloud contract tests passed.')
