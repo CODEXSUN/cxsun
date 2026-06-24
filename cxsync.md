@@ -127,6 +127,38 @@ An approved rehearsal window may temporarily set both `CXSYNC_FLEET_CLONE_ENABLE
 
 Clone work runs in the CXSync Cloud background after the protected request is accepted, so a large database is not tied to one browser request. If CXSync Cloud restarts during a clone, the persisted item and batch are marked failed on startup; retained backup/candidate evidence must be inspected before a new batch is prepared.
 
+### Full SQL Dump
+
+Desktop and Cloud expose the same **SQL dump** workspace. The operator enters MariaDB server credentials once; the list page discovers every visible user database while excluding `information_schema`, `mysql`, `performance_schema`, and `sys`. Opening a database shows its tables, estimated rows, and sizes.
+
+The list provides database checkboxes and **Bulk dump in queue**. Selected databases run serially, one full dump at a time, with queued/running/completed/failed status, aggregate progress, completion ticks, and final paths. A failed database is recorded and the queue continues to the next selected database. The show page can queue its current database directly.
+
+Each run uses `mariadb-dump`/`mysqldump` with a consistent transaction and includes the complete database schema and rows, routines, triggers, events, and binary values. The password is passed only through the child-process environment and is not saved or added to command arguments. Progress is updated from dump bytes, then the frontend shows a green completion tick and final file location.
+
+Desktop opens the operating-system folder chooser and permits any selected local directory. Cloud accepts only a safe relative folder beneath:
+
+```text
+storage/cxsync/sql-dumps/<operator-folder>
+```
+
+Cloud storage is backed by the isolated `cxsync-maintenance-storage` volume. Output is written as `.sql.partial` and atomically renamed to `.sql` only after the dump process exits successfully and the file is confirmed non-empty.
+
+Dump filenames use the compact database-based format `<database>-YYYY-MM-DDTHH.sql`, for example `cxsun_master-2026-06-24T04.sql`. A second dump of the same database within that hour will not overwrite the existing file.
+
+### Cloud Diagnostics
+
+The **Cloud diagnostics** page runs a small read-only Desktop-to-Cloud sequence before deployment or reinstall:
+
+1. reach the public `/health` endpoint;
+2. authenticate to the protected CXSync status API;
+3. compare running, expected, and recorded database release versions;
+4. test the master MariaDB connection and server version;
+5. count active MariaDB tenants and detect missing/invisible tenant databases;
+6. verify CXSync evidence-storage permissions and MariaDB dump/client tools;
+7. report runtime isolation and fleet-clone safety-lock state.
+
+Each check returns pass, warning, or fail with a focused corrective action. The endpoint redacts errors and never returns credentials. It performs no migration, seed, provisioning, clone, cutover, or database-write operation.
+
 Useful fleet endpoints:
 
 ```text

@@ -50,6 +50,10 @@ const fleetService = await readFile(resolve(process.cwd(), 'src/fleet/fleet-upgr
 const cloudMain = await readFile(resolve(process.cwd(), 'src/main.ts'), 'utf8')
 const containerEntrypoint = await readFile(resolve(process.cwd(), '../../.container/entrypoint.sh'), 'utf8')
 const containerCompose = await readFile(resolve(process.cwd(), '../../.container/docker-compose.yml'), 'utf8')
+const sqlDumpService = await readFile(resolve(process.cwd(), 'src/backups/sql-dump.service.ts'), 'utf8')
+const sqlDumpPage = await readFile(resolve(process.cwd(), '../cxsync/src/features/backup/sql-dump-page.tsx'), 'utf8')
+const preloadGenerator = await readFile(resolve(process.cwd(), '../cxsync/scripts/write-preload-cjs.mjs'), 'utf8')
+const diagnosticsService = await readFile(resolve(process.cwd(), 'src/diagnostics/cloud-diagnostics.service.ts'), 'utf8')
 
 assert.doesNotMatch(cloudModule, /AuthModule|CxSyncModule/, 'CXSync Cloud must not mount tenant-backend auth or snapshot modules.')
 assert.match(desktopSyncEngine, /api\/v1\/cxsync-cloud\/reports/, 'Desktop reports must target CXSync Cloud.')
@@ -69,5 +73,20 @@ assert.ok(
   containerEntrypoint.indexOf('if [ "$CXSUN_RUNTIME_MODE" = "cxsync-maintenance" ]') < containerEntrypoint.indexOf('run_step "Running database setup"'),
   'The isolated maintenance branch must exit before normal application database setup.',
 )
+assert.match(sqlDumpService, /storage', 'cxsync', 'sql-dumps'/, 'Cloud SQL dumps must stay inside CXSync storage.')
+assert.match(sqlDumpService, /'--databases'/, 'Every SQL backup must use a complete database dump.')
+assert.match(sqlDumpService, /`\$\{path\}\.partial`/, 'Cloud dumps must remain partial until completion.')
+assert.match(sqlDumpService, /await rename\(partialPath, path\)/, 'Cloud dumps must be atomically published after success.')
+for (const method of ['chooseSqlDumpDirectory', 'listSqlDumpDatabases', 'inspectSqlDumpTables', 'startSqlDump', 'getSqlDumpJob', 'startSqlDumpQueue', 'getSqlDumpQueue', 'runCloudDiagnostics']) {
+  assert.match(preloadGenerator, new RegExp(`${method}:`), `The packaged Electron preload must expose ${method}.`)
+}
+assert.match(sqlDumpService, /NOT IN \('information_schema', 'mysql', 'performance_schema', 'sys'\)/, 'SQL dump inventory must exclude MariaDB system databases.')
+assert.match(sqlDumpService, /for \(const item of prepared\)/, 'Bulk SQL dumps must execute through a serial queue.')
+assert.match(sqlDumpService, /toISOString\(\)\.slice\(0, 13\)/, 'SQL dump filenames must use database plus UTC date and hour only.')
+assert.match(sqlDumpPage, /Bulk dump in queue/, 'The SQL dump list must expose the bulk queue action.')
+assert.match(sqlDumpPage, /Back to databases/, 'The SQL dump detail surface must return to the database list.')
+assert.match(diagnosticsService, /SELECT VERSION\(\) AS version/, 'Cloud diagnostics must verify MariaDB with a read-only query.')
+assert.match(diagnosticsService, /information_schema\.SCHEMATA/, 'Cloud diagnostics must verify active tenant database visibility.')
+assert.doesNotMatch(diagnosticsService, /process\.env\.DB_PASSWORD|dbConfig\.master\.password/, 'Cloud diagnostics must not return or directly expose database passwords.')
 
 console.log('CXSync Cloud contract tests passed.')

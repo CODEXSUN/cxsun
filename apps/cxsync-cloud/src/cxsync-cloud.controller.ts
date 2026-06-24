@@ -5,6 +5,8 @@ import { CxSyncCloudEngine, type CxSyncCloudHandshakeInput } from './engines/cxs
 import { SyncReporter, type CxSyncReportInput } from './reporters/sync.reporter.js'
 import { FleetUpgradeService } from './fleet/fleet-upgrade.service.js'
 import type { PrepareFleetBatchInput } from './fleet/fleet-upgrade.types.js'
+import { SqlDumpService, type SqlDumpCredentials, type SqlDumpServerCredentials } from './backups/sql-dump.service.js'
+import { CloudDiagnosticsService } from './diagnostics/cloud-diagnostics.service.js'
 
 @Controller('api/v1/cxsync-cloud')
 export class CxSyncCloudController {
@@ -12,6 +14,8 @@ export class CxSyncCloudController {
     @Inject(CxSyncCloudEngine) private readonly engine: CxSyncCloudEngine,
     @Inject(SyncReporter) private readonly reporter: SyncReporter,
     @Inject(FleetUpgradeService) private readonly fleet: FleetUpgradeService,
+    @Inject(SqlDumpService) private readonly sqlDumps: SqlDumpService,
+    @Inject(CloudDiagnosticsService) private readonly diagnostics: CloudDiagnosticsService,
   ) {}
 
   @Get('status')
@@ -21,6 +25,11 @@ export class CxSyncCloudController {
       service: 'cxsync-cloud',
       status: this.engine.status(),
     }
+  }
+
+  @Get('diagnostics')
+  async cloudDiagnostics() {
+    return { diagnostics: await this.diagnostics.inspect(), ok: true, service: 'cxsync-cloud' }
   }
 
   @Get('handshake')
@@ -99,5 +108,35 @@ export class CxSyncCloudController {
   @Post('fleet/batches/:id/clone-next')
   async cloneNextFleetTenant(@Param('id') id: string) {
     return { batch: await this.fleet.cloneNext(id), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Post('sql-dumps/tables')
+  async sqlDumpTables(@Body() body: SqlDumpCredentials) {
+    return { ok: true, service: 'cxsync-cloud', tables: await this.sqlDumps.tables(body) }
+  }
+
+  @Post('sql-dumps/databases')
+  async sqlDumpDatabases(@Body() body: SqlDumpServerCredentials) {
+    return { databases: await this.sqlDumps.databases(body), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Post('sql-dumps/jobs')
+  async startSqlDump(@Body() body: { credentials: SqlDumpCredentials; folder?: string }) {
+    return { job: await this.sqlDumps.start(body), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Get('sql-dumps/jobs/:id')
+  sqlDumpJob(@Param('id') id: string) {
+    return { job: this.sqlDumps.get(id), ok: true, service: 'cxsync-cloud' }
+  }
+
+  @Post('sql-dumps/queues')
+  async startSqlDumpQueue(@Body() body: { credentials: SqlDumpServerCredentials; databases: string[]; folder?: string }) {
+    return { ok: true, queue: await this.sqlDumps.startQueue(body), service: 'cxsync-cloud' }
+  }
+
+  @Get('sql-dumps/queues/:id')
+  sqlDumpQueue(@Param('id') id: string) {
+    return { ok: true, queue: this.sqlDumps.getQueue(id), service: 'cxsync-cloud' }
   }
 }

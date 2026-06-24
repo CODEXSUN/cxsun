@@ -35,6 +35,18 @@ New changelog entries must keep database-facing work and application code work s
 - Added an isolated CXSync maintenance deployment with its own image, container, workspace/evidence volumes, web/API ports, and release-version gate. Its startup path builds and runs only CXSync web and CXSync Cloud, exits before the normal application database setup, tenant provisioning, Redis runtime, and main backend startup, and explicitly skips shared platform migrations/seeds while retaining CXSync-owned operational tables.
 - Added a dedicated `setup-cxsync-maintenance.sh` deployment command that recreates only CXSync maintenance, verifies the live CXSun container remains running, and keeps fleet cloning locked during initial deployment.
 - Split the CXSync Nginx route between the isolated web console on host port `6080` and maintenance API on host port `6078`.
+- Added the same Full SQL Dump workspace to CXSync Desktop and Cloud: credential entry, live table inventory with required all-table checkboxes, destination selection, background progress, and a completed success tick with the final file location.
+- Added Desktop native folder selection for saving a complete dump anywhere on the workstation and Cloud folder selection restricted to `storage/cxsync/sql-dumps` on the isolated maintenance evidence volume.
+- Full dumps include the database schema and rows plus routines, triggers, events, and binary data; credentials are not persisted or placed in child-process arguments, and incomplete output remains a `.partial` file until it is atomically published as `.sql` after success.
+- Fixed the generated CommonJS Electron preload to expose the SQL-dump directory, table inspection, job start, and progress methods used by the renderer; added a contract guard preventing the source and packaged preload bridges from drifting again.
+- Reworked SQL Dump into list and show pages: one server connection lists only non-system databases, each database opens a table-detail view, and list checkboxes support multi-database selection.
+- Added serial bulk dump queues to Desktop and Cloud with queued/running/completed/failed status per database, aggregate progress, final paths, and continue-on-item-failure behavior.
+- Simplified Desktop and Cloud dump filenames to `<database>-YYYY-MM-DDTHH.sql`, removing the `full` label, minutes, seconds, milliseconds, and UUID suffix while preserving no-overwrite protection within the same hour.
+- Added an explicit Refresh action to the SQL Dump database list for reloading the connected server inventory.
+- Added a protected, read-only CXSync Cloud diagnostics API and matching Desktop/Cloud page that checks health/API access, running versus expected release, recorded master database version, MariaDB connectivity, active tenant database visibility, CXSync storage permissions, MariaDB client tools, runtime isolation, and fleet-clone safety flags.
+- Diagnostics return redacted pass/warning/fail results with focused deployment or reinstall recommendations and never run migrations, seeds, tenant provisioning, clone execution, or database writes.
+- Fixed CXSync Cloud service-key management so a logged-in cloud super-admin can generate a replacement key without already having the old service key, while generated keys remain pending until explicitly saved in the browser or Desktop.
+- Added a short-lived cloud super-admin browser token for protected Cloud console calls, allowed its CORS header, and reused it across Cloud overview, handshake reflection, tenant listing, diagnostics, fleet, and SQL-dump requests so the browser console no longer reports false service-key/session errors after login.
 ## v-1.0.127
 
 ### [v 1.0.127] 2026-06-24 7:38 am - CXSync Cloud audit ownership and verification

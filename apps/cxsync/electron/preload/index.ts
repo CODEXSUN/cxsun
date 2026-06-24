@@ -25,6 +25,10 @@ import type {
   SqlDumpCredentials,
   SqlDumpJob,
   SqlDumpTable,
+  SqlDumpDatabase,
+  SqlDumpQueue,
+  SqlDumpServerCredentials,
+  CloudDiagnostics,
 } from "../../src/shared/connection-contracts.js"
 
 const api: CxSyncDesktopApi = {
@@ -41,6 +45,7 @@ const api: CxSyncDesktopApi = {
   saveCloudServiceUrl: (url: string) => ipcRenderer.invoke("cxsync:cloud-service:url:save", url) as Promise<CxSyncServiceKeyStatus>,
   getCloudServiceHandshake: () => ipcRenderer.invoke("cxsync:cloud-service:handshake") as Promise<CxSyncCloudServiceHandshake | null>,
   verifyCloudServiceHandshake: () => ipcRenderer.invoke("cxsync:cloud-service:handshake:verify") as Promise<CxSyncCloudServiceHandshake>,
+  runCloudDiagnostics: () => ipcRenderer.invoke("cxsync:cloud-service:diagnostics") as Promise<CloudDiagnostics>,
   getTenantSchemaBaseline: (id: string) => ipcRenderer.invoke("cxsync:tenants:schema-baseline", id) as Promise<TenantSchemaBaseline | null>,
   getCodebaseSchemaBuildStatus: (id: string) => ipcRenderer.invoke("cxsync:tenants:schema-baseline:build-status", id) as Promise<TenantSchemaBuildStatus>,
   getTenantConnection: (id: string) => ipcRenderer.invoke("cxsync:tenants:get", id) as Promise<TenantConnection | null>,
@@ -67,9 +72,12 @@ const api: CxSyncDesktopApi = {
   captureTenantCloudSnapshot: (id: string) => ipcRenderer.invoke("cxsync:tenants:cloud-snapshot:capture", id) as Promise<TenantCloudSnapshot>,
   verifyTenantConnection: (id: string) => ipcRenderer.invoke("cxsync:tenants:verify", id) as Promise<TenantConnectionVerification>,
   chooseSqlDumpDirectory: () => ipcRenderer.invoke("cxsync:sql-dump:directory:choose") as Promise<string | null>,
+  listSqlDumpDatabases: (credentials: SqlDumpServerCredentials) => ipcRenderer.invoke("cxsync:sql-dump:databases", credentials) as Promise<SqlDumpDatabase[]>,
   inspectSqlDumpTables: (credentials: SqlDumpCredentials) => ipcRenderer.invoke("cxsync:sql-dump:tables", credentials) as Promise<SqlDumpTable[]>,
   startSqlDump: (credentials: SqlDumpCredentials, destination: string) => ipcRenderer.invoke("cxsync:sql-dump:start", credentials, destination) as Promise<SqlDumpJob>,
   getSqlDumpJob: (id: string) => ipcRenderer.invoke("cxsync:sql-dump:job", id) as Promise<SqlDumpJob | null>,
+  startSqlDumpQueue: (credentials: SqlDumpServerCredentials, databases: string[], destination: string) => ipcRenderer.invoke("cxsync:sql-dump:queue:start", credentials, databases, destination) as Promise<SqlDumpQueue>,
+  getSqlDumpQueue: (id: string) => ipcRenderer.invoke("cxsync:sql-dump:queue", id) as Promise<SqlDumpQueue | null>,
 }
 
 contextBridge.exposeInMainWorld("cxsyncDesktop", api)

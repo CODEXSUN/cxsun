@@ -18,8 +18,9 @@ import { executeTenantUpgrade, getTenantUpgradeExecution } from "./tenant-upgrad
 import { checkTenantSyncService, continueTenantSyncJob, exportTenantSyncReport, getTenantSyncJob, listTenantSyncJobs, retryTenantSyncJob, runTenantSyncJob } from "./tenant-sync-engine.js"
 import type { TenantConnectionInput } from "../../src/shared/connection-contracts.js"
 import { getCxSyncDatabase } from "./cxsync-database.js"
-import { getSqlDumpJob, inspectSqlDumpTables, startSqlDump } from "./sql-dump-manager.js"
-import type { SqlDumpCredentials } from "../../src/shared/connection-contracts.js"
+import { getSqlDumpJob, getSqlDumpQueue, inspectSqlDumpTables, listSqlDumpDatabases, startSqlDump, startSqlDumpQueue } from "./sql-dump-manager.js"
+import type { SqlDumpCredentials, SqlDumpServerCredentials } from "../../src/shared/connection-contracts.js"
+import { runCloudDiagnostics } from "./cloud-diagnostics-client.js"
 
 const compiledRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const packageRoot = resolve(compiledRoot, "../../..")
@@ -98,6 +99,7 @@ function registerIpc() {
   ipcMain.handle("cxsync:cloud-service:url:save", (_event, url: string) => saveCloudServiceUrl(url))
   ipcMain.handle("cxsync:cloud-service:handshake", () => getCloudServiceHandshake())
   ipcMain.handle("cxsync:cloud-service:handshake:verify", () => verifyCloudServiceHandshake())
+  ipcMain.handle("cxsync:cloud-service:diagnostics", () => runCloudDiagnostics())
   ipcMain.handle("cxsync:tenants:list", () => listTenantConnections())
   ipcMain.handle("cxsync:tenants:get", (_event, id: string) => getTenantConnection(id))
   ipcMain.handle("cxsync:tenants:cloud-snapshot", (_event, id: string) => getTenantCloudSnapshot(id))
@@ -128,12 +130,16 @@ function registerIpc() {
   ipcMain.handle("cxsync:tenants:delete", (_event, id: string) => deleteTenantConnection(id))
   ipcMain.handle("cxsync:tenants:verify", (_event, id: string) => verifyTenantConnection(id))
   ipcMain.handle("cxsync:sql-dump:directory:choose", async () => {
-    const result = await dialog.showOpenDialog(mainWindow ?? undefined, { properties: ["openDirectory", "createDirectory"], title: "Choose full SQL dump folder" })
+    const options = { properties: ["openDirectory", "createDirectory"] as Array<"openDirectory" | "createDirectory">, title: "Choose full SQL dump folder" }
+    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options)
     return result.canceled ? null : result.filePaths[0] ?? null
   })
   ipcMain.handle("cxsync:sql-dump:tables", (_event, credentials: SqlDumpCredentials) => inspectSqlDumpTables(credentials))
+  ipcMain.handle("cxsync:sql-dump:databases", (_event, credentials: SqlDumpServerCredentials) => listSqlDumpDatabases(credentials))
   ipcMain.handle("cxsync:sql-dump:start", (_event, credentials: SqlDumpCredentials, destination: string) => startSqlDump(credentials, destination))
   ipcMain.handle("cxsync:sql-dump:job", (_event, id: string) => getSqlDumpJob(id))
+  ipcMain.handle("cxsync:sql-dump:queue:start", (_event, credentials: SqlDumpServerCredentials, databases: string[], destination: string) => startSqlDumpQueue(credentials, databases, destination))
+  ipcMain.handle("cxsync:sql-dump:queue", (_event, id: string) => getSqlDumpQueue(id))
 }
 
 async function applicationUrl() {

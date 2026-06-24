@@ -353,12 +353,21 @@ export type CxSyncGeneratedServiceKey = CxSyncServiceKeyStatus & {
   key: string
 }
 
-export type SqlDumpCredentials = {
-  database: string
+export type SqlDumpServerCredentials = {
   host: string
   password: string
   port: number
   user: string
+}
+
+export type SqlDumpCredentials = SqlDumpServerCredentials & {
+  database: string
+}
+
+export type SqlDumpDatabase = {
+  name: string
+  sizeBytes: number
+  tableCount: number
 }
 
 export type SqlDumpTable = {
@@ -377,8 +386,18 @@ export type SqlDumpJob = {
   progress: number
   sizeBytes: number
   startedAt: string
-  status: "running" | "completed" | "failed"
+  status: "queued" | "running" | "completed" | "failed"
   tableCount: number
+}
+
+export type SqlDumpQueue = {
+  completedCount: number
+  failedCount: number
+  id: string
+  items: SqlDumpJob[]
+  queuedCount: number
+  status: "queued" | "running" | "completed" | "completed-with-errors"
+  totalCount: number
 }
 
 export type CxSyncCloudServiceHandshake = {
@@ -401,6 +420,23 @@ export type CxSyncCloudServiceHandshake = {
   ok: boolean
   service: string
   status: "accepted" | "missing-key" | "missing-url" | "rejected" | "unreachable"
+}
+
+export type CloudDiagnosticCheck = {
+  detail: string
+  id: string
+  label: string
+  recommendation: string | null
+  status: "pass" | "warning" | "fail"
+}
+
+export type CloudDiagnostics = {
+  checkedAt: string
+  checks: CloudDiagnosticCheck[]
+  database: { activeTenants: number | null; missingTenantDatabases: number | null; recordedPlatformVersion: string | null; serverVersion: string | null }
+  deployment: { cloneEnabled: boolean; expectedVersion: string | null; packageVersion: string; runtimeMode: string }
+  overall: "healthy" | "warning" | "unhealthy"
+  service: "cxsync-cloud"
 }
 
 export type CxSyncDesktopApi = {
@@ -428,10 +464,14 @@ export type CxSyncDesktopApi = {
   saveCloudServiceUrl(url: string): Promise<CxSyncServiceKeyStatus>
   getCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake | null>
   verifyCloudServiceHandshake(): Promise<CxSyncCloudServiceHandshake>
+  runCloudDiagnostics(): Promise<CloudDiagnostics>
   chooseSqlDumpDirectory(): Promise<string | null>
+  listSqlDumpDatabases(credentials: SqlDumpServerCredentials): Promise<SqlDumpDatabase[]>
   inspectSqlDumpTables(credentials: SqlDumpCredentials): Promise<SqlDumpTable[]>
   startSqlDump(credentials: SqlDumpCredentials, destination: string): Promise<SqlDumpJob>
   getSqlDumpJob(id: string): Promise<SqlDumpJob | null>
+  startSqlDumpQueue(credentials: SqlDumpServerCredentials, databases: string[], destination: string): Promise<SqlDumpQueue>
+  getSqlDumpQueue(id: string): Promise<SqlDumpQueue | null>
   generateTenantUpgradePlan(id: string): Promise<TenantUpgradePlan>
   createTenantBackup(id: string): Promise<TenantBackupRecord>
   getTenantBackup(id: string): Promise<TenantBackupRecord | null>

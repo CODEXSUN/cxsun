@@ -34,6 +34,7 @@ const corsAllowedHeaders = [
   'x-tc-idempotency-key',
   'x-requested-with',
   'x-cxsync-service-key',
+  'x-cxsync-cloud-admin-token',
 ]
 
 const corsExposedHeaders = [

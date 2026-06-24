@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('cxsyncDesktop', {
   saveCloudServiceUrl: (url) => ipcRenderer.invoke('cxsync:cloud-service:url:save', url),
   getCloudServiceHandshake: () => ipcRenderer.invoke('cxsync:cloud-service:handshake'),
   verifyCloudServiceHandshake: () => ipcRenderer.invoke('cxsync:cloud-service:handshake:verify'),
+  runCloudDiagnostics: () => ipcRenderer.invoke('cxsync:cloud-service:diagnostics'),
   getTenantConnection: (id) => ipcRenderer.invoke('cxsync:tenants:get', id),
   getTenantCloudSnapshot: (id) => ipcRenderer.invoke('cxsync:tenants:cloud-snapshot', id),
   captureTenantCloudSnapshot: (id) => ipcRenderer.invoke('cxsync:tenants:cloud-snapshot:capture', id),
@@ -49,5 +50,12 @@ contextBridge.exposeInMainWorld('cxsyncDesktop', {
   listTenantConnections: () => ipcRenderer.invoke('cxsync:tenants:list'),
   saveTenantConnection: (input, id) => ipcRenderer.invoke('cxsync:tenants:save', input, id),
   verifyTenantConnection: (id) => ipcRenderer.invoke('cxsync:tenants:verify', id),
+  chooseSqlDumpDirectory: () => ipcRenderer.invoke('cxsync:sql-dump:directory:choose'),
+  listSqlDumpDatabases: (credentials) => ipcRenderer.invoke('cxsync:sql-dump:databases', credentials),
+  inspectSqlDumpTables: (credentials) => ipcRenderer.invoke('cxsync:sql-dump:tables', credentials),
+  startSqlDump: (credentials, destination) => ipcRenderer.invoke('cxsync:sql-dump:start', credentials, destination),
+  getSqlDumpJob: (id) => ipcRenderer.invoke('cxsync:sql-dump:job', id),
+  startSqlDumpQueue: (credentials, databases, destination) => ipcRenderer.invoke('cxsync:sql-dump:queue:start', credentials, databases, destination),
+  getSqlDumpQueue: (id) => ipcRenderer.invoke('cxsync:sql-dump:queue', id),
 })
 `)

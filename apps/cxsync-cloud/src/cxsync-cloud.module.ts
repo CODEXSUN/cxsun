@@ -7,6 +7,8 @@ import { CloudTenantSnapshotConnector } from './connectors/cloud-tenant-snapshot
 import { SyncReporter } from './reporters/sync.reporter.js'
 import { FleetCloneExecutor } from './fleet/fleet-clone.executor.js'
 import { FleetUpgradeService } from './fleet/fleet-upgrade.service.js'
+import { SqlDumpService } from './backups/sql-dump.service.js'
+import { CloudDiagnosticsService } from './diagnostics/cloud-diagnostics.service.js'
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { FleetUpgradeService } from './fleet/fleet-upgrade.service.js'
     SyncReporter,
     FleetCloneExecutor,
     FleetUpgradeService,
+    SqlDumpService,
+    CloudDiagnosticsService,
   ],
   controllers: [CxSyncCloudController],
 })

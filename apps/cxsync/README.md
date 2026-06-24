@@ -2,6 +2,8 @@
 
 CXSync is a private Electron application for managing tenant database connections.
 
+The SQL Dump page is shared by Desktop and Cloud. It discovers the live table inventory, requires every table to remain checked, creates a complete MariaDB dump, shows progress, and reports the final local or Cloud-storage path after completion.
+
 ## Current flow
 
 1. Sign in locally using `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD` from the root `.env`.

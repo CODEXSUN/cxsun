@@ -21,6 +21,16 @@
 - [x] Ensure maintenance startup bypasses normal database setup, shared platform migrations/seeds, tenant provisioning, Redis, and the main application runtime.
 - [x] Add a fail-closed expected-release check and initial-deploy clone lock.
 - [x] Add an isolated deployment/stop script and split Nginx web/API proxy configuration.
+- [x] Add matching Desktop and Cloud Full SQL Dump pages with database credential entry and table inventory.
+- [x] Require every table checkbox before backup so every run remains a complete database dump.
+- [x] Add Desktop native folder selection and Cloud storage-restricted folder selection.
+- [x] Run dumps in the background with byte progress, completion/failure state, and final location.
+- [x] Publish completed SQL files atomically and keep credentials out of command arguments and persistent application storage.
+- [x] Replace the single-database form with a server-connected database list excluding MariaDB system schemas.
+- [x] Add a database show page with table, row-estimate, and size details.
+- [x] Add database selection and serial bulk dump queues with per-item progress and results.
+- [x] Add a read-only Desktop-to-Cloud diagnostic sequence for API, release, MariaDB, tenant DB, storage, tool, and safety checks.
+- [x] Add redacted deployment/reinstall recommendations without running database mutation paths.
 - [ ] Run the first approved VPS canary clone with `CXSYNC_FLEET_CLONE_ENABLED=true`.
 - [ ] Review canary evidence before preparing the remaining live tenants.
 - [ ] Design and approve the separate production cutover/rollback operation after all candidates validate.

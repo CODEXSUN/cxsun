@@ -2606,6 +2606,35 @@ User prompt:
 ok fine create log in changelog and create isolated CXSync maintenance deployment path
 ```
 
+User prompt:
+
+```text
+ok fine can create sql dump app in cxsync separately just get crediential and show tables with check box and backup button when hits create sql dump and save it at particular folder at local or cloud
+
+make this in desktop and cloud same and want to get location for save on cloud it will inside storage
+on desktop it can be any where
+
+make full sql dump every time , runs with progress and completed message with tick at frontend
+```
+
+User prompt:
+
+```text
+in this create a list + show  page format
+
+in list only connect with server get all database except systems , when click inside show details
+
+in list when select option and bulk dump in queue
+```
+
+User prompt:
+
+```text
+can you make small connection sequence to talk with cloud server with this cxsync api code base
+
+to get information on cloud server , database , and find problem when deploy, or reinstall like so
+```
+
 ## 2026-06-24 - CXSync all-tenant fleet database upgrades
 
 User prompt:

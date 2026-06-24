@@ -8,6 +8,7 @@ import {
   Clock3,
   Copy,
   Database,
+  DatabaseBackup,
   History,
   KeyRound,
   LoaderCircle,
@@ -44,10 +45,12 @@ import type {
   TenantUpgradeExecution,
   TenantBackupRecord,
 } from "../../shared/connection-contracts"
-import { connectionClient, cxSyncCloudBrowserHeaders } from "../connections/connection-client"
+import { connectionClient, cxSyncCloudBrowserHeaders, hasCxSyncCloudAdminBrowserToken, hasCxSyncCloudBrowserServiceKey } from "../connections/connection-client"
 import { FleetUpgradePage } from "../fleet/fleet-upgrade-page"
+import { SqlDumpPage } from "../backup/sql-dump-page"
+import { CloudDiagnosticsPage } from "../diagnostics/cloud-diagnostics-page"
 
-type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service" | "fleet"
+type Page = "overview" | "connections" | "add" | "show" | "desktop-local" | "cloud-service" | "tenant-service" | "fleet" | "sql-dump" | "diagnostics"
 
 const navGroups: Array<DashboardShellNavGroup<Page>> = [
   {
@@ -64,6 +67,7 @@ const navGroups: Array<DashboardShellNavGroup<Page>> = [
       { icon: Server, id: "connections", label: "Tenant connections" },
       { icon: Plus, id: "add", label: "Add tenant" },
       { icon: Database, id: "desktop-local", label: "Desktop storage" },
+      { icon: DatabaseBackup, id: "sql-dump", label: "SQL dump" },
     ],
     label: "Desktop console",
     standalone: true,
@@ -72,6 +76,7 @@ const navGroups: Array<DashboardShellNavGroup<Page>> = [
     id: "cloud",
     items: [
       { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
+      { icon: Activity, id: "diagnostics", label: "Cloud diagnostics" },
     ],
     label: "Cloud service",
     standalone: true,
@@ -85,7 +90,9 @@ const cloudNavGroups: Array<DashboardShellNavGroup<Page>> = [
       { icon: Cloud, id: "overview", label: "Cloud overview" },
       { icon: Server, id: "tenant-service", label: "Tenant service" },
       { icon: ShieldCheck, id: "fleet", label: "Fleet upgrades" },
+      { icon: DatabaseBackup, id: "sql-dump", label: "SQL dump" },
       { icon: KeyRound, id: "cloud-service", label: "Cloud service key" },
+      { icon: Activity, id: "diagnostics", label: "Cloud diagnostics" },
     ],
     label: "Cloud service",
     standalone: true,
@@ -96,8 +103,10 @@ const titles: Record<Page, string> = {
   add: "Add tenant connection",
   "cloud-service": "Cloud service key",
   connections: "Tenant connections",
+  diagnostics: "Cloud diagnostics",
   "desktop-local": "Desktop storage",
   fleet: "Fleet upgrades",
+  "sql-dump": "Full SQL dump",
   overview: "Overview",
   show: "Tenant connection",
   "tenant-service": "Tenant service",
@@ -140,6 +149,8 @@ export function WorkspaceShell({ onLogout, session }: { onLogout(): void; sessio
       {page === "cloud-service" ? <CloudServiceKeyPage /> : null}
       {page === "tenant-service" ? <TenantServicePage /> : null}
       {page === "fleet" ? <FleetUpgradePage /> : null}
+      {page === "sql-dump" ? <SqlDumpPage /> : null}
+      {page === "diagnostics" ? <CloudDiagnosticsPage /> : null}
     </DashboardShell>
   )
 }
@@ -348,7 +359,8 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
       const apiBase = parsed.toString().replace(/\/+$/, "")
       const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/status`, { credentials: "include", headers: cxSyncCloudBrowserHeaders() })
       if (!response.ok) {
-        setBackendStatus({ message: response.status === 401 ? "Cloud admin session expired. Sign out and sign in again." : `Backend status endpoint returned HTTP ${response.status}.`, ok: false, statusCode: response.status })
+        const body = await response.json().catch(() => null) as { error?: string } | null
+        setBackendStatus({ message: cloudAuthErrorMessage(response.status, body?.error), ok: false, statusCode: response.status })
         return
       }
       const latest = await fetchLatestCloudHandshake(apiBase)
@@ -409,7 +421,7 @@ function CloudOverviewPage({ onCloud }: { onCloud(): void }) {
           <p>Cloud does not start sync work by itself. It only accepts a desktop request when the service key exists and matches on both ends.</p>
           <dl>
             <Detail label="Cloud service URL" value={cloudUrl || cloudHandshake?.apiUrl || serviceKey?.cloudServiceUrl || "Not configured"} />
-            <Detail label="Cloud service key" value={backendStatus?.ok || cloudHandshake?.ok ? "Protected on backend" : "Hidden from browser"} />
+            <Detail label="Cloud service key" value={backendStatus?.ok || cloudHandshake?.ok ? "Protected on backend" : hasCxSyncCloudBrowserServiceKey() ? "Saved in browser" : hasCxSyncCloudAdminBrowserToken() ? "Using super-admin session" : "Hidden from browser"} />
             <Detail label="Accepted when" value="Desktop sends matching service key" />
             <Detail label="Base URL reachability" value={formatEndpointStatus(cloudHandshake?.frontend)} />
             <Detail label="Backend API" value={formatEndpointStatus(backendStatus ?? cloudHandshake?.backend)} />
@@ -1668,7 +1680,7 @@ function CloudServiceKeyPage() {
       const next = await generateCxSyncServiceKey()
       setGenerated(next)
       setManualKey(next.key)
-      setMessage("Cloud key generated and activated in CXSync Cloud storage. Copy it now and paste it into Desktop; neither app needs a restart.")
+      setMessage("Cloud key generated and activated in CXSync Cloud storage. Click Save key in browser to use it from this page, then copy it into Desktop; neither app needs a restart.")
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
@@ -1720,7 +1732,7 @@ function CloudServiceKeyPage() {
         {!desktopRuntime ? <button className="primary-button" disabled={saving} onClick={generate} type="button">{saving ? <LoaderCircle className="spin" size={17} /> : <KeyRound size={17} />}Generate cloud key</button> : null}
         <button className="secondary-button" disabled={!keyToCopy} onClick={() => copyText(keyToCopy, "Raw key")} type="button"><Copy size={16} />Copy key</button>
         {desktopRuntime ? <button className="secondary-button" disabled={!envLine} onClick={() => copyText(envLine, "VPS .env line")} type="button"><Copy size={16} />Copy .env line</button> : null}
-        {desktopRuntime ? <button className="secondary-button" disabled={!manualKey.trim() || saving} onClick={saveManual} type="button"><KeyRound size={16} />Save key locally</button> : null}
+        <button className="secondary-button" disabled={!manualKey.trim() || saving} onClick={saveManual} type="button"><KeyRound size={16} />{desktopRuntime ? "Save key locally" : "Save key in browser"}</button>
       </div>
       <div className="safe-note">
         <KeyRound size={16} />
@@ -1948,6 +1960,18 @@ function messageOf(reason: unknown) {
   return reason instanceof Error ? reason.message : "Operation failed."
 }
 
+function cloudAuthErrorMessage(status: number, error?: string) {
+  if (status !== 401) return error || `Backend status endpoint returned HTTP ${status}.`
+  if (error === "CXSync service key is required.") {
+    return hasCxSyncCloudBrowserServiceKey()
+      ? "Cloud rejected the browser service key. Generate the current Cloud key again or paste the active key, save it in browser, then recheck."
+      : hasCxSyncCloudAdminBrowserToken()
+        ? "Cloud rejected the browser super-admin session. Sign out and sign in again, then recheck."
+        : "Cloud browser has no service key. Open Manage cloud key, generate or paste the active key, save it in browser, then recheck."
+  }
+  return error || "Cloud admin session is not active. Sign out, sign in again, then recheck."
+}
+
 async function loadTenantHandshakeHistory(id: string) {
   const client = connectionClient()
   if (typeof client.listTenantHandshakeHistory !== "function") return []
@@ -2074,7 +2098,8 @@ async function loadOptionalCloudServiceHandshake() {
 async function fetchLatestCloudHandshake(apiBase: string): Promise<CxSyncCloudServiceHandshake | null> {
   const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/handshake`, { credentials: "include", headers: cxSyncCloudBrowserHeaders() })
   if (!response.ok) {
-    throw new Error(`Latest handshake endpoint returned HTTP ${response.status}.`)
+    const body = await response.json().catch(() => null) as { error?: string } | null
+    throw new Error(cloudAuthErrorMessage(response.status, body?.error))
   }
   const body = await response.json().catch(() => null) as { handshake?: { apiUrl?: string; checkedAt?: string; latencyMs?: number; message?: string; ok?: boolean; payload?: Partial<CxSyncCloudServiceHandshake>; service?: string; status?: string } | null } | null
   const record = body?.handshake
@@ -2099,7 +2124,7 @@ async function loadTenantServiceTenants(): Promise<CxSyncMasterTenant[]> {
   try {
     const response = await fetch(`${apiBase}/api/v1/cxsync-cloud/tenants`, { credentials: "include", headers: cxSyncCloudBrowserHeaders() })
     const body = await response.json().catch(() => null) as { error?: string; tenants?: CxSyncMasterTenant[] } | null
-    if (!response.ok) throw new Error(response.status === 401 ? "Cloud admin session expired. Sign out and sign in again." : body?.error || `Tenant service returned HTTP ${response.status}.`)
+    if (!response.ok) throw new Error(cloudAuthErrorMessage(response.status, body?.error))
     return body?.tenants ?? []
   } catch (reason) {
     if (reason instanceof TypeError) {

@@ -3,10 +3,30 @@ import type { CxSyncDesktopApi, TenantConnection } from "../../shared/connection
 const browserKey = "cxsync.preview.tenant-connections"
 const browserCloudUrlKey = "cxsync.preview.cloud-service-url"
 const browserServiceKey = "cxsync.cloud.service-key"
+const browserCloudAdminTokenKey = "cxsync.cloud.admin-token"
 
 export function cxSyncCloudBrowserHeaders() {
   const key = sessionStorage.getItem(browserServiceKey)?.trim()
-  return { Accept: "application/json", ...(key ? { "x-cxsync-service-key": key } : {}) }
+  return { Accept: "application/json", ...cxSyncCloudAdminBrowserHeaders(), ...(key ? { "x-cxsync-service-key": key } : {}) }
+}
+
+export function hasCxSyncCloudBrowserServiceKey() {
+  return Boolean(sessionStorage.getItem(browserServiceKey)?.trim())
+}
+
+export function hasCxSyncCloudAdminBrowserToken() {
+  return Boolean(sessionStorage.getItem(browserCloudAdminTokenKey)?.trim())
+}
+
+export function cxSyncCloudAdminBrowserHeaders(): Record<string, string> {
+  const token = sessionStorage.getItem(browserCloudAdminTokenKey)?.trim()
+  return token ? { "x-cxsync-cloud-admin-token": token } : {}
+}
+
+export function setCxSyncCloudAdminBrowserToken(token: string | null | undefined) {
+  const trimmed = token?.trim() || ""
+  if (trimmed) sessionStorage.setItem(browserCloudAdminTokenKey, trimmed)
+  else sessionStorage.removeItem(browserCloudAdminTokenKey)
 }
 
 export function cxSyncCloudBrowserUrl() {
@@ -19,6 +39,13 @@ export function connectionClient(): CxSyncDesktopApi {
 
 const browserFallback: CxSyncDesktopApi = {
   isDesktop: false,
+  async chooseSqlDumpDirectory() { return null },
+  async listSqlDumpDatabases() { throw new Error("Use the CXSync Cloud SQL dump API in the browser runtime.") },
+  async inspectSqlDumpTables() { throw new Error("Use the CXSync Cloud SQL dump API in the browser runtime.") },
+  async startSqlDump() { throw new Error("Use the CXSync Cloud SQL dump API in the browser runtime.") },
+  async getSqlDumpJob() { return null },
+  async startSqlDumpQueue() { throw new Error("Use the CXSync Cloud SQL dump API in the browser runtime.") },
+  async getSqlDumpQueue() { return null },
   async authenticateLocalAdmin(email) {
     return { email, name: "Preview Admin", role: "super-admin" }
   },
@@ -84,10 +111,10 @@ const browserFallback: CxSyncDesktopApi = {
     return { cloudServiceUrl: readPreviewCloudUrl(), envPath: "Browser session", hasKey: Boolean(key), keyPreview: key ? `${key.slice(0, 6)}...${key.slice(-6)}` : null, updatedAt: null }
   },
   async generateServiceKey() {
-    const response = await fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/service-key/generate`, { credentials: "include", method: "POST" })
+    const response = await fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/service-key/generate`, { credentials: "include", headers: cxSyncCloudAdminBrowserHeaders(), method: "POST" })
     const body = await response.json().catch(() => null) as { error?: string; key?: string; keyPreview?: string; updatedAt?: string } | null
     if (!response.ok || !body?.key) throw new Error(body?.error || `Cloud key generation returned HTTP ${response.status}.`)
-    return { cloudServiceUrl: cxSyncCloudBrowserUrl(), envPath: "CXSync Cloud .env", hasKey: true, key: body.key, keyPreview: body.keyPreview ?? `${body.key.slice(0, 6)}...${body.key.slice(-6)}`, updatedAt: body.updatedAt ?? new Date().toISOString() }
+    return { cloudServiceUrl: cxSyncCloudBrowserUrl(), envPath: "Generated key pending browser save", hasKey: false, key: body.key, keyPreview: body.keyPreview ?? `${body.key.slice(0, 6)}...${body.key.slice(-6)}`, updatedAt: body.updatedAt ?? new Date().toISOString() }
     /* c8 ignore next 2 -- retained only for older browser bundles during hot reload */
     const key = crypto.getRandomValues(new Uint8Array(32)).reduce((text, byte) => text + byte.toString(16).padStart(2, "0"), "")
     return { envPath: "Browser preview", hasKey: true, key, keyPreview: `${key.slice(0, 6)}…${key.slice(-6)}`, updatedAt: new Date().toISOString() }
@@ -118,6 +145,7 @@ const browserFallback: CxSyncDesktopApi = {
       status: "unreachable",
     }
   },
+  async runCloudDiagnostics() { throw new Error("Use the CXSync Cloud diagnostics API in the browser runtime.") },
   async getTenantUpgradePlan() {
     return null
   },

@@ -1,5 +1,5 @@
 import type { LocalAdminSession } from "../../shared/connection-contracts"
-import { connectionClient, cxSyncCloudBrowserUrl } from "../connections/connection-client"
+import { connectionClient, cxSyncCloudAdminBrowserHeaders, cxSyncCloudBrowserUrl, setCxSyncCloudAdminBrowserToken } from "../connections/connection-client"
 
 const sessionKey = "cxsync.local-admin.session"
 
@@ -15,7 +15,9 @@ export function getStoredSession(): AuthSession | null {
 
 export function clearStoredSession() {
   sessionStorage.removeItem(sessionKey)
-  if (!connectionClient().isDesktop) void fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/admin/logout`, { credentials: "include", method: "POST" }).catch(() => undefined)
+  const headers = cxSyncCloudAdminBrowserHeaders()
+  setCxSyncCloudAdminBrowserToken(null)
+  if (!connectionClient().isDesktop) void fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/admin/logout`, { credentials: "include", headers, method: "POST" }).catch(() => undefined)
 }
 
 export async function login(credentials: { email: string; password: string }) {
@@ -29,9 +31,10 @@ export async function login(credentials: { email: string; password: string }) {
 export async function validateStoredSession() {
   const stored = getStoredSession()
   if (!stored || connectionClient().isDesktop) return stored
-  const response = await fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/admin/session`, { credentials: "include" })
+  const response = await fetch(`${cxSyncCloudBrowserUrl()}/api/v1/cxsync-cloud/admin/session`, { credentials: "include", headers: cxSyncCloudAdminBrowserHeaders() })
   if (!response.ok) {
     sessionStorage.removeItem(sessionKey)
+    setCxSyncCloudAdminBrowserToken(null)
     return null
   }
   const session = await response.json() as AuthSession
@@ -46,7 +49,8 @@ async function loginCloudAdmin(credentials: { email: string; password: string })
     headers: { "Content-Type": "application/json" },
     method: "POST",
   })
-  const body = await response.json().catch(() => null) as (AuthSession & { error?: string }) | null
+  const body = await response.json().catch(() => null) as (AuthSession & { error?: string; sessionToken?: string }) | null
   if (!response.ok || !body?.email) throw new Error(body?.error || `CXSync Cloud login returned HTTP ${response.status}.`)
+  setCxSyncCloudAdminBrowserToken(body.sessionToken)
   return { email: body.email, name: body.name, role: body.role }
 }

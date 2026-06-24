@@ -53,6 +53,9 @@ function registerCxSyncServiceKeyGuard(app: Awaited<ReturnType<typeof CxApp.crea
     const path = request.url.split('?')[0] ?? ''
     if (request.method === 'OPTIONS') return
     if (path === '/api/v1/cxsync-cloud/admin/login') return
+    if (path === '/api/v1/cxsync-cloud/admin/session') return
+    if (path === '/api/v1/cxsync-cloud/admin/logout') return
+    if (path === '/api/v1/cxsync-cloud/service-key/generate') return
     const guarded = path.startsWith('/api/v1/auth')
       || path.startsWith('/api/v1/cxsync')
       || path.startsWith('/api/v1/cxsync-cloud')
@@ -60,7 +63,7 @@ function registerCxSyncServiceKeyGuard(app: Awaited<ReturnType<typeof CxApp.crea
 
     const received = request.headers['x-cxsync-service-key']
     const value = Array.isArray(received) ? received[0] : received
-    if (!matchesServiceKey(value, serviceKey.hash) && !hasCloudAdminSession(request.headers.cookie, sessions)) {
+    if (!matchesServiceKey(value, serviceKey.hash) && !hasCloudAdminRequest(request, sessions)) {
       return reply.status(401).send({ error: 'CXSync service key is required.', statusCode: 401 })
     }
   })
@@ -81,26 +84,48 @@ function registerCloudAdminRoutes(
     const token = randomUUID().replaceAll('-', '') + randomBytes(16).toString('hex')
     sessions.set(token, Date.now() + 8 * 60 * 60 * 1000)
     reply.header('Set-Cookie', cloudAdminCookie(token))
-    return { email: expectedEmail, name: 'CXSync Admin', role: 'super-admin' }
+    return { email: expectedEmail, name: 'CXSync Admin', role: 'super-admin', sessionToken: token }
   })
   app.app.get('/api/v1/cxsync-cloud/admin/session', async (request, reply) => {
-    if (!hasCloudAdminSession(request.headers.cookie, sessions)) return reply.status(401).send({ error: 'Cloud admin session is required.', statusCode: 401 })
+    if (!hasCloudAdminRequest(request, sessions)) return reply.status(401).send({ error: 'Cloud admin session is required.', statusCode: 401 })
     return { email: process.env.SUPER_ADMIN_EMAIL?.trim() || '', name: 'CXSync Admin', role: 'super-admin' }
   })
   app.app.post('/api/v1/cxsync-cloud/admin/logout', async (request, reply) => {
     const token = cookieValue(request.headers.cookie, 'cxsync_cloud_session')
     if (token) sessions.delete(token)
+    const headerToken = headerValue(request.headers['x-cxsync-cloud-admin-token'])
+    if (headerToken) sessions.delete(headerToken)
     reply.header('Set-Cookie', 'cxsync_cloud_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0')
     return { ok: true }
   })
   app.app.post('/api/v1/cxsync-cloud/service-key/generate', async (request, reply) => {
-    if (!hasCloudAdminSession(request.headers.cookie, sessions)) return reply.status(401).send({ error: 'Cloud admin session is required.', statusCode: 401 })
+    if (!hasCloudAdminRequest(request, sessions)) return reply.status(401).send({ error: 'Cloud admin session is required.', statusCode: 401 })
     const key = randomBytes(32).toString('base64url')
     const keyHash = hashServiceKey(key)
     await savePersistedServiceKeyHash(keyHash)
     serviceKey.hash = keyHash
     return { key, keyPreview: `${key.slice(0, 6)}...${key.slice(-6)}`, updatedAt: new Date().toISOString() }
   })
+}
+
+function hasCloudAdminRequest(request: { headers: { cookie?: string; [key: string]: unknown } }, sessions: Map<string, number>) {
+  return hasCloudAdminSession(request.headers.cookie, sessions) || hasCloudAdminToken(request.headers['x-cxsync-cloud-admin-token'], sessions)
+}
+
+function hasCloudAdminToken(received: unknown, sessions: Map<string, number>) {
+  const token = headerValue(received)
+  if (typeof token !== 'string' || !token) return false
+  const expiresAt = sessions.get(token) ?? 0
+  if (expiresAt <= Date.now()) {
+    sessions.delete(token)
+    return false
+  }
+  return true
+}
+
+function headerValue(received: unknown) {
+  const value = Array.isArray(received) ? received[0] : received
+  return typeof value === 'string' ? value : undefined
 }
 
 function hasCloudAdminSession(cookie: string | undefined, sessions: Map<string, number>) {
