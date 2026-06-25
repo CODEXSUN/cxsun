@@ -33,6 +33,11 @@ Shared package changes under `packages/shared`:
 - `npm -w packages/shared run typecheck`
 - Also run affected app typechecks when shared exports are consumed by apps.
 
+Shared UI changes under `packages/ui`:
+
+- `npm -w packages/ui run typecheck`
+- Run affected app typechecks or builds when shared UI exports are consumed by apps.
+
 Desktop, web, or mobile package changes:
 
 - Run that workspace's `typecheck` script.

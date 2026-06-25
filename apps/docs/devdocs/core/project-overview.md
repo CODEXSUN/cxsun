@@ -5,11 +5,12 @@ title: Project Overview
 
 # Project Overview
 
-CXSun is a TypeScript monorepo for a multi-tenant business operating system. The active runtime is split into a Node.js backend, a React frontend, a Docusaurus documentation app, and shared package workspaces.
+CXSun is a TypeScript monorepo for a multi-tenant business operating system. The current runtime has a combined Node.js backend, a React frontend, a Docusaurus documentation app, and shared package workspaces. The target cleanup direction is one repo with multiple backend services and independently deployable app units.
 
 ## Workspace Shape
 
-- `apps/server`: active backend API, database migrations, tenant runtime, queue runtime, and system operations.
+- `apps/server`: current combined backend API, database migrations, tenant runtime, queue runtime, and system operations. This is a transition container, not the final backend shape.
+- Future backend services: `platform-api`, `billing-api`, `ecommerce-api`, `crm-api`, `sites-api`, and `cxsync-api`.
 - `apps/frontend`: active React and Vite dashboard for tenant, admin, and super-admin surfaces.
 - `apps/docs`: Docusaurus project documentation site.
 - `apps/cli`: local workflow helpers for builds, backups, release versioning, and cloud setup helpers.
@@ -26,4 +27,6 @@ CXSun is a TypeScript monorepo for a multi-tenant business operating system. The
 
 ## Primary Boundary
 
-Platform-owned data lives in the master database. Tenant-owned business data lives in isolated tenant databases. Runtime requests resolve the tenant from domain/session context before touching tenant data.
+Platform-owned data lives in the master database. Tenant-owned business data lives in isolated tenant databases. The target tenant shape keeps one database per tenant, with `core_*` tables always present and optional app table groups such as `billing_*`, `ecommerce_*`, `crm_*`, and `sites_*`.
+
+`platform-api` is the first extraction target. `billing-api` is the first business-service extraction target. The current `apps/server` must stay working until those replacements are verified.

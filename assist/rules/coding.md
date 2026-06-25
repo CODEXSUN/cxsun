@@ -47,18 +47,19 @@
 - Put active backend work under `apps/server`.
 - Put active frontend work under `apps/frontend`.
 - Put shared framework-free code under `packages/shared`.
+- Put shared reusable UI primitives, rich editors, dashboard shell components, and design-system helpers under `packages/ui`.
 - Use `apps/cli` for workflow helpers.
 - Treat `packages/web` and `packages/mobile` as placeholders unless the user explicitly asks to activate them.
-- Treat `packages/desktop` as a minimal reserved Electron package until real desktop work is requested.
+- Treat `packages/desktop` as the active Electron desktop package.
 
 ## Architecture
 
-- Follow a modular monolith for the backend: one deployable server app with clear module boundaries.
+- The current backend is a combined transition server. Keep module boundaries strict so Platform API and Billing API can be extracted into separate backend services.
 - Follow Domain-Driven Design for business modules: each module represents a bounded context/domain.
 - Use events or explicit public contracts for cross-module behavior.
 - Do not import another module's internals directly.
-- Keep owned products and industry apps in the same repo/server by default. Separate the app experience with app workspaces, routes, ports, and domains when needed; do not duplicate billing, accounting, compliance, mail, files, CRM, sites/blog, auth, tenant/company, or ZETRO logic inside each app.
-- App-specific modules must request shared transaction behavior through server-owned services/engines. For example, ecommerce, auditor, sports, learning, welfare, B2B Connect, and industry apps should call billing/accounting services for invoices, receipts, vouchers, postings, and reports.
+- Keep owned products and industry apps in the same repo by default. Separate the app experience with app workspaces, routes, ports, domains, and later service deploy units when needed; do not duplicate billing, accounting, compliance, mail, files, CRM, sites/blog, auth, tenant/company, or ZETRO logic inside each app.
+- App-specific modules must request shared transaction behavior through the owning service or engine. For example, ecommerce, auditor, sports, learning, welfare, B2B Connect, and industry apps should call billing/accounting contracts for invoices, receipts, vouchers, postings, and reports.
 - Keep `@cxsun/shared` limited to types, constants, and pure utilities.
 - Frontend module pages must be standalone feature pages routed explicitly from the dashboard/router.
 - Keep module-specific UI logic inside that module's feature folder. Do not add product/contact/company/sales-specific switches to generic master-data or common-data pages.
@@ -80,7 +81,7 @@
 New or expanded business modules should follow this shape:
 
 ```
-apps/server/src/modules/<module-name>/
+apps/server/src/modules/<group-or-boundary>/<module-name>/
 ├── domain/           # Entities, value objects, domain events
 ├── application/      # Use cases, application services, DTOs
 ├── infrastructure/   # Repositories, external adapters, database

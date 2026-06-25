@@ -1,7 +1,7 @@
 {
   "name": "cxsun",
   "private": true,
-  "version": "1.0.128",
+  "version": "1.0.129",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm run dev:server\" \"npm run dev:frontend\"",
     "dev:server": "npm -w apps/server run dev",
+    "dev:platform-api": "npm -w apps/platform-api run dev",
     "dev:frontend": "npm -w apps/frontend run dev",
     "dev:desktop": "npm -w packages/desktop run dev",
     "dev:docs": "npm -w apps/docs run dev",
@@ -42,6 +43,7 @@
     "build:active": "node apps/cli/build-active.mjs",
     "restart:active": "node apps/cli/restart-active.mjs",
     "build:server": "npm -w apps/server run build",
+    "build:platform-api": "npm -w apps/platform-api run build",
     "build:frontend": "npm -w apps/frontend run build",
     "build:desktop": "npm -w packages/desktop run build",
     "build:cxsync": "npm -w apps/cxsync run build",
@@ -51,6 +53,7 @@
     "build:product-apps": "npm -w apps/auditor run build && npm -w apps/ecommerce run build && npm -w apps/b2b-connect run build && npm -w apps/b2b-connect-admin run build && npm -w apps/sports run build && npm -w apps/learning run build && npm -w apps/welfare run build && npm -w apps/crm run build && npm -w apps/sites run build && npm -w apps/blog run build && npm -w apps/zetro run build && npm -w apps/textile-lab run build && npm -w apps/garment run build && npm -w apps/upvc run build",
     "typecheck:cxsync": "npm -w apps/cxsync run typecheck",
     "typecheck:cxsync-cloud": "npm -w apps/cxsync-cloud run typecheck",
+    "typecheck:platform-api": "npm -w apps/platform-api run typecheck",
     "db:refresh": "npm -w apps/server run db:refresh --",
     "db:fresh": "npm -w apps/server run db:fresh --",
     "db:migrate": "npm -w apps/server run db:migrate --",

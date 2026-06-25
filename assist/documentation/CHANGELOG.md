@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.128`
-- **Release tag:** `v-1.0.128`
-- **Changelog label:** `v 1.0.128`
+- **Current version:** `1.0.129`
+- **Release tag:** `v-1.0.129`
+- **Changelog label:** `v 1.0.129`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -15,6 +15,27 @@ New changelog entries must keep database-facing work and application code work s
 
 ---
 
+## v-1.0.129
+
+### [v 1.0.129] 2026-06-25 8:33 am - Platform API service split foundation
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.129
+- Added `apps/platform-api` as the first backend service extraction scaffold, using Platform API as the deployable service name and keeping `core` for internal framework/foundation code and `core_*` tenant table prefixes.
+- Wired Platform API root scripts for development, typecheck, and build while leaving the live combined `apps/server` backend intact.
+- Started Platform API with a narrow foundation surface: health, auth, tenant, tenant-domain, and industry modules imported from the transition backend.
+- Added Platform API service standards, contract, and extraction docs covering naming, ownership, dependency direction, module shape, API rules, database rules, verification, and migration phases.
+- Added Platform API dev preflight support, `PLATFORM_API_PORT` / `PLATFORM_API_PUBLIC_URL` env samples, and a MariaDB-backed smoke-test harness for `/health`.
+- Documented Platform API deployment preparation in the container guide without enabling it as a default cloud service yet.
+- Consolidated Assist architecture guidance around one repo, multiple backend services, Platform API first, Billing API second, and app-owned schema groups.
+- Added service boundary documentation and developer module docs for Platform API, Billing App, Ecommerce App, CRM App, Sites App, and CXSync App.
+- Moved the superseded one-server multi-app context into `assist/trash` for safe review instead of deleting it.
+- Updated workspace, verification, PR, and server-module guidance to include Platform API, `packages/ui`, CXSync workspaces, CodeIT workspaces, and current service-split rules.
 ## v-1.0.128
 
 ### [v 1.0.128] 2026-06-24 8:17 am - CXSync all-tenant fleet upgrade preparation

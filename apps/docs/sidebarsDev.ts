@@ -18,6 +18,18 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'Modules',
       items: [
+        {
+          type: 'category',
+          label: 'Service Split',
+          items: [
+            'modules/platform-api',
+            'modules/billing-app',
+            'modules/ecommerce-app',
+            'modules/crm-app',
+            'modules/sites-app',
+            'modules/cxsync-app',
+          ],
+        },
         'modules/auth',
         'modules/tenant',
         'modules/tenant-domain',

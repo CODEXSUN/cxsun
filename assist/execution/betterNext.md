@@ -317,7 +317,7 @@ The BetterNext checklist is marked complete and both frontend/server typechecks 
    - Gap: BetterNext says backend/report tables should be the source of truth for totals.
    - Next work: add backend summary APIs for sales, purchase, receipt, payment, cash, bank, and monthly movement totals, then switch dashboard to those APIs.
 
-3. Replace client-derived Sales detail/open/monthly queries with server-owned endpoints.
+3. Replace client-derived Sales detail/open/monthly queries with owning-backend endpoints.
    - Current state: Sales `detail`, `monthly`, and `openInvoices` query factories exist, but they derive from `listSalesEntries`.
    - Gap: this is acceptable for now, but not true route/module data ownership.
    - Next work: add backend endpoints for Sales detail, open invoices, and monthly summaries and wire query factories to them.

@@ -7,12 +7,13 @@
 - Backend: `apps/server` (`@cxsun/server`), Node.js + Fastify with a custom decorator/bootstrap layer.
 - Frontend: `apps/frontend` (`@cxsun/frontend`), React + Vite.
 - Shared package: `packages/shared` (`@cxsun/shared`), for framework-free shared types, constants, and pure utilities.
+- Shared UI package: `packages/ui` (`@cxsun/ui`), for reusable UI primitives, rich components, dashboard shell pieces, and design-system helpers.
 - Workflow helpers: `apps/cli` (`@cxsun/cli`).
 
 Reserved platform packages exist under `packages/` for future channels:
 
 - `packages/web` (`@cxsun/web`) is a placeholder and is not the active Vite frontend.
-- `packages/desktop` (`@cxsun/desktop`) is a minimal Electron placeholder.
+- `packages/desktop` (`@cxsun/desktop`) is the active Electron desktop application.
 - `packages/mobile` (`@cxsun/mobile`) is a placeholder Expo package.
 
 ## Monorepo Structure
@@ -44,13 +45,14 @@ cxsun/
 
 ## Key Principles
 
-- Active development targets `apps/server` and `apps/frontend` unless the user explicitly asks for a reserved package.
-- The server owns business logic and exposes APIs consumed by clients.
-- Client apps must not duplicate server-owned domain logic.
-- Keep the platform as one repo and one backend server unless a future ownership/security/scale decision explicitly changes it. Different owned products and industry products may run as separate app surfaces on separate dev ports/domains, but they share server-owned engines and services.
+- Current combined app development targets `apps/server` and `apps/frontend` unless the user explicitly asks for another workspace.
+- `apps/server` is a temporary combined backend. Keep it stable while preparing Platform API first and Billing API second for service extraction.
+- The owning backend service owns business logic and exposes APIs consumed by clients.
+- Client apps must not duplicate service-owned domain logic.
+- Keep the platform as one repo. The current active backend is `apps/server`, but the target cleanup direction is multiple independently deployable backend services inside the same repo: Core, Billing, Ecommerce, CRM, Sites, and CXSync. Different owned products and industry products may run as separate app surfaces on separate dev ports/domains, and they must share behavior through Core/services/contracts instead of direct table writes.
 - `@cxsun/shared` must stay framework-free: types, constants, and pure utilities only.
 - Keep apps deployable independently. Share through `@cxsun/shared`, APIs, and documented contracts.
-- Multi-tenant behavior belongs in server-side infrastructure and domain/application services.
+- Multi-tenant behavior belongs in backend infrastructure and domain/application services. In the future split, Platform API owns shared tenant resolution and app services use documented Platform API contracts.
 - Tenant-owned APIs must resolve through `TenantContextService` before touching tenant-local data.
 - Platform/master APIs use the master MariaDB database directly and must not accidentally read tenant-local tables.
 
@@ -111,7 +113,8 @@ Avoid direct cross-module imports. Use explicit public module exports, applicati
 - Put framework runtime, decorators, DI, guards, and platform/core modules under `apps/server/src/core`.
 - Put small backend-only shared helpers under `apps/server/src/shared`; do not use `src/common` for this because `modules/common` is a business module boundary.
 - Put reusable engines and compatibility registries under `apps/server/src/modules/foundation`.
-- Put stable cross-product business engines/services under clear server-owned module boundaries when they emerge. Billing, accounting, compliance, mail, files, CRM, sites/blog, tenant/company, subscription, and ZETRO capabilities should be reused by app modules instead of copied into ecommerce, auditor, sports, learning, welfare, B2B Connect, or industry modules.
+- Put stable cross-product business engines/services under clear service-owned module boundaries when they emerge. Platform API owns common platform behavior. Billing, accounting, compliance, mail, files, CRM, sites/blog, tenant/company, subscription, and ZETRO capabilities should be reused by app modules through contracts instead of copied into ecommerce, auditor, sports, learning, welfare, B2B Connect, or industry modules.
+- For new service-split work, follow `assist/rules/service-boundaries.md`: Platform API owns common platform needs, app services own only their business schema, and cross-app work goes through APIs/events.
 - Put every common business module under `apps/server/src/modules/common/<group>/<module>`.
 - Put standalone master modules under `apps/server/src/modules/master/<module>`.
 - Put tenant transaction/entry modules under `apps/server/src/modules/entries/<module>`.
@@ -232,25 +235,36 @@ Keep UI feature code in `apps/frontend` until a separate reusable package is int
 
 ## Cross-App Communication
 
-```
-frontend / future clients
+```text
+frontend / product clients
           |
           | HTTP/WS
           v
-apps/server
+current: apps/server transition backend
+target: platform-api + app-owned APIs
           |
           v
-database / infrastructure
-
-@cxsun/shared supplies shared types, constants, and pure utilities only.
+tenant database table groups / infrastructure
 ```
+
+`@cxsun/shared` supplies shared types, constants, and pure utilities only. `@cxsun/ui` supplies shared UI primitives and rich components.
 
 Cross-app transaction rule:
 
 - App modules and public app surfaces must not write another app's transaction tables directly.
-- Ecommerce, B2B Connect, auditor, sports, learning, welfare, brand storefront, and industry apps must call server-owned services/engines for billing, accounting, compliance, inventory, mail, files, and reporting.
+- Ecommerce, B2B Connect, auditor, sports, learning, welfare, brand storefront, and industry apps must call the owning service/engine for billing, accounting, compliance, inventory, mail, files, and reporting.
 - Correct shape: `app use case -> shared service/engine -> tenant module tables/postings`.
 - Wrong shape: `app use case -> direct insert into another app's ledger/invoice/posting tables`.
+
+Target service-split rule:
+
+- Platform API owns shared foundation: auth, tenant, users, companies, accounting years, RBAC, mail, notifications, files, audit, and app enablement.
+- Billing API owns only billing workflows and `billing_*` tenant tables.
+- Ecommerce API owns only ecommerce workflows and `ecommerce_*` tenant tables.
+- CRM API owns only CRM workflows and `crm_*` tenant tables.
+- Sites API owns only site/content workflows and `sites_*` tenant tables.
+- CXSync API owns database maintenance, clone, mirror, and migration safety only.
+- Every tenant gets `core_*` tables by default. Optional app tables are created or activated according to tenant app enablement.
 
 ## TConnect and Tirupur Connect Boundary
 
@@ -281,7 +295,7 @@ Current default local ports:
 - Server: `6005`
 - Docs: `6020`
 - Product app shells: auditor `6030`, ecommerce `6031`, B2B Connect `6032`, sports `6033`, learning `6034`, welfare `6035`, CRM `6036`, sites `6037`, blog `6038`, ZETRO `6039`, textile lab `6040`, garment `6041`, UPVC `6042`.
-- Future public/product apps may run on separate local ports to avoid route/feature confusion while staying in one repo and one server-managed platform. See `assist/context/one-platform-multi-app.md` for the owned-domain/app port plan.
+- Future public/product apps may run on separate local ports to avoid route/feature confusion while staying in one repo. See `assist/context/one-repo-multi-backend.md` for the owned-domain/app/service direction.
 
 GST and domain deployment rules:
 

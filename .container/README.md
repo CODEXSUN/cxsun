@@ -12,6 +12,7 @@ Default services:
 
 - Public URL: `https://codexsun.com`
 - Backend container port: `6005`
+- Platform API container port: `6105` (prepared for split deployment; not yet part of the default full app runtime)
 - Frontend container port: `6010`
 - Docs container port: `6020`
 - Product app ports: `6030` through `6044`
@@ -45,6 +46,24 @@ Default cloud app surfaces:
 | UPVC | `6042` |
 | B2B Connect Admin | `6043` |
 | CXSync web console | `6044` |
+
+## Platform API Preparation
+
+Platform API is the first foundation service for the future split deployment. It is not yet wired as a default cloud container in this compose flow, but its standard runtime values are:
+
+- workspace: `apps/platform-api`
+- package: `@cxsun/platform-api`
+- port env: `PLATFORM_API_PORT`
+- default port: `6105`
+- shared database env: `DB_*`
+
+Local verification:
+
+```bash
+npm run typecheck:platform-api
+npm run build:platform-api
+npm -w apps/platform-api run test:smoke
+```
 
 The app list is controlled by `CLOUD_PRODUCT_APPS`, using `app-folder:port` pairs:
 

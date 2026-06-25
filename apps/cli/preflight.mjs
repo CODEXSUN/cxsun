@@ -14,6 +14,7 @@ const APP = process.argv[2]
 
 const APP_CONFIG = {
   server: { cwd: 'apps/server', envKey: 'PORT', port: 6005, kind: 'server' },
+  'platform-api': { cwd: 'apps/platform-api', envKey: 'PLATFORM_API_PORT', port: 6105, kind: 'server' },
   frontend: { cwd: 'apps/frontend', envKey: 'VITE_PORT', port: 6010, kind: 'vite' },
   docs: { cwd: 'apps/docs', envKey: 'PORT', port: 6020, kind: 'docs' },
   auditor: { cwd: 'apps/auditor', envKey: 'VITE_PORT', port: 6030, kind: 'vite' },
@@ -306,7 +307,7 @@ const port = (config.kind === 'vite' && APP !== 'frontend') || config.kind === '
   ? config.port
   : Number(process.env[config.envKey] || env[config.envKey]) || config.port
 
-if (APP === 'server') await checkServerDatabase(env)
+if (config.kind === 'server') await checkServerDatabase(env)
 await freePort(port)
 if (APP === 'server') {
   console.log(`  - Announcing backend API at http://localhost:${port}`)

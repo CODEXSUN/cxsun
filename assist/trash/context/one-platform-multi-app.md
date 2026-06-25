@@ -2,9 +2,11 @@
 
 ## Decision
 
-CXSun will stay as one repository and one server-managed platform. We will not split owned products, client-specific products, or industry apps into many repositories while the team is small.
+CXSun will stay as one repository. We will not split owned products, client-specific products, or industry apps into many repositories while the team is small.
 
-The intended shape is:
+The earlier shape was one backend server-managed platform. The newer deployment cleanup direction keeps the one repo, but allows multiple backend services and deploy units. See `assist/context/one-repo-multi-backend.md` for the service-split target.
+
+The current/live shape is:
 
 ```text
 one monorepo
@@ -13,6 +15,17 @@ one shared platform database layer
 tenant-isolated business databases
 multiple frontend/public apps on separate dev ports and production domains
 shared engines and services for common business logic
+```
+
+The target cleanup shape is:
+
+```text
+one monorepo
+multiple backend services
+multiple frontend apps
+one tenant database per tenant
+core tables always present
+optional app table groups per enabled app
 ```
 
 This lets one or two developers manage the whole platform without losing clean boundaries for future team growth.
@@ -137,7 +150,7 @@ industry app directly creates ledger postings
 
 ## Backend Placement
 
-Keep one backend app under `apps/server`, but leave clear space for reusable engines and app modules.
+The current code keeps one backend app under `apps/server`, but new work should leave clear space for reusable engines, service contracts, and future app-specific backend services.
 
 Recommended direction:
 
@@ -232,7 +245,7 @@ See `assist/context/tirupur-connect-boundary.md`.
 
 ## Team Growth Rule
 
-Because the current team is small, prefer one repo and one server deployment. To stay ready for a future team:
+Because the current team is small, prefer one repo. For deployment, prefer separate app/service deploy units once a boundary is stable. To stay ready for a future team:
 
 - Keep each app surface in its own folder or feature boundary.
 - Keep shared engines free from frontend UI.
@@ -240,6 +253,7 @@ Because the current team is small, prefer one repo and one server deployment. To
 - Keep app-specific styling, routing, and copy inside that app.
 - Keep billing/accounting/compliance state changes server-owned.
 - Use feature flags and app registry records to enable apps per tenant.
+- Split into separate backend services before splitting repositories.
 - Split into separate repositories only if a product later gets its own team, release cycle, ownership, security boundary, or high independent traffic.
 
 ## Summary Rule
@@ -248,6 +262,7 @@ Because the current team is small, prefer one repo and one server deployment. To
 Separate app for separate business experience.
 Shared engine for shared business logic.
 One repo.
-One backend core.
+Shared backend core.
+Separate backend services when needed.
 Different frontend ports/domains when needed.
 ```

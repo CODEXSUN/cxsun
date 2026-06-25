@@ -1,7 +1,7 @@
 # Tirupur Connect Boundary Implementation Plan
 
 **Prepared:** 2026-06-18  
-**Status:** Central backend implemented on 2026-06-18; legacy data migration and connector cutover remain controlled follow-up work
+**Status:** Central backend and `apps/b2b-connect-admin` workspace implemented on 2026-06-18; legacy data migration and connector cutover remain controlled follow-up work. This plan is retained as historical migration guidance where it does not conflict with `assist/context/tirupur-connect-boundary.md` or `assist/context/one-repo-multi-backend.md`.
 
 ## Current-State Findings
 
@@ -11,8 +11,8 @@ The current `apps/server/src/modules/tconnect` module combines both systems:
 - Marketplace pieces also exist in the same module: public supplier/product/RFQ reads, buyers, RFQs, memberships, verification concepts, review queues, events, news, messages, and analytics-oriented tables.
 - Marketplace ownership currently depends on a special tenant slug, `tconnect`.
 - The migration actively removes marketplace tables from non-marketplace tenant databases.
-- `apps/b2b-connect` already exists as the Tirupur Connect public application, but it is presently a mostly static public experience.
-- A dedicated `apps/b2b-connect-admin` workspace and a separate `modules/tirupur-connect` backend do not yet exist.
+- `apps/b2b-connect` exists as the Tirupur Connect public/member application.
+- `apps/b2b-connect-admin` and `apps/server/src/modules/tirupur-connect` now exist; treat any older "create this workspace/module" wording below as completed historical planning unless current code inspection proves a gap.
 
 ## Target Layout
 
@@ -38,7 +38,7 @@ apps/
 
 ### Phase 1 - Central Marketplace Foundation
 
-- Create `apps/server/src/modules/tirupur-connect` with domain, application, infrastructure, and HTTP interface boundaries.
+- Maintain `apps/server/src/modules/tirupur-connect` with domain, application, infrastructure, and HTTP interface boundaries while the combined server remains the transition backend.
 - Add central marketplace persistence in the platform/master database or a dedicated marketplace database connection.
 - Do not resolve marketplace-owned APIs through `TenantContextService`.
 - Introduce normalized company/product provenance with `billing_connector` and `web` source types.
@@ -62,7 +62,7 @@ apps/
 ### Phase 4 - Applications and Administration
 
 - Connect `apps/b2b-connect` to Tirupur Connect public/member APIs.
-- Create `apps/b2b-connect-admin` for marketplace staff.
+- Maintain `apps/b2b-connect-admin` for marketplace staff.
 - Implement review queues for connected-client submissions and web-only registrations.
 - Keep marketplace admin authentication separate from billing tenant dashboard authentication.
 

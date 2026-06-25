@@ -2600,6 +2600,26 @@ User prompt:
 ok next
 ```
 
+## 2026-06-25 - One repo, multiple backend services documentation
+
+User prompt:
+
+```text
+ok fine create required documentation first for assist ai rules and each modules and then we move next
+```
+
+## 2026-06-25 - Consolidate service split documentation
+
+User prompt:
+
+```text
+ok fine write this also with clean documentation and review our documentation and consolidate and show me what we done ,
+
+move drop or unwanted to new folder trash inside assist , so i can review and delete saftely
+
+consolidate assist documentation and app documentation
+```
+
 User prompt:
 
 ```text

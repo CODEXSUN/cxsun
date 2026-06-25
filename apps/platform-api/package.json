@@ -1,0 +1,27 @@
+{
+  "name": "@cxsun/platform-api",
+  "private": true,
+  "version": "1.0.129",
+  "type": "module",
+  "scripts": {
+    "dev": "node preflight.mjs",
+    "build": "tsc",
+    "start": "node ../../build/platform-api/platform-api/src/main.js",
+    "test:smoke": "node scripts/smoke.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cxsun/shared": "*",
+    "@cxsun/server": "*",
+    "@fastify/cors": "^11.2.0",
+    "fastify": "^5.8.5",
+    "kysely": "^0.29.0",
+    "mysql2": "^3.22.3",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.3"
+  }
+}

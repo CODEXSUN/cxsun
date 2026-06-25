@@ -1,5 +1,18 @@
 # Tasks
 
+## 2026-06-25 - One repo, multiple backend services documentation
+
+**Batch:** #129
+
+- [x] Add AI rulebook for Core, Billing, Ecommerce, CRM, Sites, and CXSync service boundaries.
+- [x] Add canonical context for one repo with multiple backend services and deploy units.
+- [x] Add execution plan for the service split transition.
+- [x] Document one tenant database with `core_*` default tables and optional app table groups.
+- [x] Add developer module docs for Platform API, Billing App, Ecommerce App, CRM App, Sites App, and CXSync App.
+- [x] Wire the new module docs into the developer docs index and sidebar.
+- [ ] Later: audit current tenant tables and classify them by target owner.
+- [ ] Later: implement Platform API plus Billing API as the first service split.
+
 ## 2026-06-24 - CXSync all-tenant fleet upgrade preparation
 
 **Batch:** #128

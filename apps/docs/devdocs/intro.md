@@ -20,6 +20,12 @@ This documentation app is the central map for the project. It is maintained as a
 
 ## Module Guides
 
+- [Platform API](./modules/platform-api.md)
+- [Billing App](./modules/billing-app.md)
+- [Ecommerce App](./modules/ecommerce-app.md)
+- [CRM App](./modules/crm-app.md)
+- [Sites App](./modules/sites-app.md)
+- [CXSync App](./modules/cxsync-app.md)
 - [Auth](./modules/auth.md)
 - [Tenant](./modules/tenant.md)
 - [Tenant Domain](./modules/tenant-domain.md)

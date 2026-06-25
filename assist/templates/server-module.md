@@ -1,6 +1,6 @@
 # Server Module Template
 
-Use this shape for new or expanded business modules under the correct `apps/server/src/modules` boundary.
+Use this shape for new or expanded business modules under the correct `apps/server/src/modules` boundary while `apps/server` remains the transition backend. For new Core/Billing split work, also follow `assist/rules/service-boundaries.md`.
 
 Choose placement before creating files:
 

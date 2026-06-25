@@ -780,19 +780,29 @@ Year targets:
 
 ## Deployment Architecture
 
-Current preferred shape:
+Historical shape at the time this plan was written:
 
 ```text
 tirupurconnect.com -> apps/b2b-connect frontend
 main app 6010/prod tenant app -> private B2B admin/supplier workspace
-apps/server -> one API/backend
-tconnect central tenant DB -> marketplace-owned records
+apps/server -> one transition API/backend
+tconnect central tenant DB -> legacy marketplace-owned records before extraction
 client tenant DBs -> source supplier/product records
+```
+
+Current canonical direction:
+
+```text
+tirupurconnect.com -> apps/b2b-connect frontend
+marketplace staff -> apps/b2b-connect-admin
+current transition backend -> apps/server/src/modules/tirupur-connect
+target backend service -> app-owned marketplace API/service inside the one-repo multi-backend architecture
+TConnect -> billing connector only
 ```
 
 Production:
 
-- same backend core
+- transition backend first, then app-owned service/API when split
 - domain routing through existing tenant/domain mapping
 - CDN/cache for public directory pages later
 - queue for notifications, matching, analytics rollup, search indexing
@@ -807,7 +817,7 @@ Production:
 - Moderate public posts, jobs, ads, and news.
 - Add report listing/report user workflow.
 - Avoid direct mutation of billing/accounting from B2B module.
-- Use tenant context on every private API.
+- Use tenant context on billing connector APIs. Tirupur Connect marketplace-owned APIs must follow the standalone marketplace boundary and must not pretend to be tenant billing APIs.
 - Add row-level ownership checks for buyer/supplier records.
 
 ## Implementation Phases

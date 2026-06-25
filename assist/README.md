@@ -1,18 +1,20 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.128
+**Project version:** 1.0.129
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
 For the product north star, read `assist/context/product-picture.md`. It describes the software we are building: public storefront/content, tenant business workspace, admin support desk, super-admin platform orchestration, and the new Versatile Agent OS direction.
 
-For owned-product and industry-app expansion, read `assist/context/one-platform-multi-app.md`. It records the one-repo, one-server, multi-app rule: separate app surfaces and ports/domains for different business experiences, shared engines/services for billing, accounting, mail, CRM, sites/blog, payments, files, auth, tenant/company, ZETRO, and GST/compliance.
+For owned-product and industry-app expansion, read `assist/context/one-repo-multi-backend.md`. It records the current target: one repo for development, multiple backend services for deployment, separate app surfaces and ports/domains for different business experiences, shared Platform API contracts, and tenant database table groups by app owner.
 
 For the marketplace boundary, read `assist/context/tirupur-connect-boundary.md`. It is the canonical rule that TConnect is the billing connector while Tirupur Connect is the standalone central marketplace.
 
 For the AI operating layer, read `assist/context/versatile-agent-os.md` and `ZRO/Vision/agent-os.md`. The agent direction is layered: Helper Agent first, then Operator, Workflow, Planner, Analytics, Router, Memory, and the full multi-agent ecosystem.
 
 For CXSync, read `assist/context/cxsync-fleet-maintenance.md`. CXSync is the private all-tenant database audit, full-data clone, migration rehearsal, and controlled-upgrade system; it is not a business-data synchronization product.
+
+For the deployment cleanup direction, read `assist/context/one-repo-multi-backend.md`. It records the target shape: one monorepo, multiple independently deployable backend services, shared Platform API, and one tenant database with separated `core_*`, `billing_*`, `ecommerce_*`, `crm_*`, and `sites_*` table groups. `apps/server` is now a temporary combined backend; extract Platform API first and Billing API second.
 
 ## Mandatory Reading Before Work
 
@@ -23,8 +25,9 @@ Before planning, coding, changing schemas, or editing product behavior, every AI
 3. All files under `assist/context/`
 4. `assist/execution/planning.md`
 5. `assist/execution/task.md`
-6. The execution document for the requested product or module
-7. The relevant module documentation under `apps/server`, `apps/frontend`, `apps/docs`, or the standalone product app
+6. `assist/execution/service-split-plan.md` for work that touches Billing, Ecommerce, CRM, Sites, Core, CXSync, deployment, tenant provisioning, or schema boundaries
+7. The execution document for the requested product or module
+8. The relevant module documentation under `apps/server`, `apps/frontend`, `apps/docs`, or the standalone product app
 
 For any TConnect or Tirupur Connect work, the following files are mandatory and must be read in this order:
 
@@ -60,15 +63,19 @@ Root scripts use the active apps:
 
 - `npm run dev` starts `apps/server`, `apps/frontend`, and `apps/docs` together with concurrent logs.
 - `npm run dev:server` starts only the backend.
+- `npm run dev:platform-api` starts the new Platform API extraction scaffold.
 - `npm run dev:frontend` starts only the frontend.
 - `npm run dev:desktop` starts the Electron shell against the configured frontend/API.
 - `npm run dev:docs` starts only the Docusaurus docs app.
-- `npm run dev:<product-app>` starts one scaffolded product app, such as `dev:auditor`, `dev:ecommerce`, `dev:b2b-connect`, `dev:sports`, `dev:learning`, `dev:welfare`, `dev:crm`, `dev:sites`, `dev:blog`, `dev:zetro`, `dev:textile-lab`, `dev:garment`, or `dev:upvc`.
+- `npm run dev:cxsync` starts CXSync Desktop and CXSync Cloud together.
+- `npm run dev:<product-app>` starts one scaffolded product app, such as `dev:auditor`, `dev:ecommerce`, `dev:b2b-connect`, `dev:b2b-connect-admin`, `dev:sports`, `dev:learning`, `dev:welfare`, `dev:crm`, `dev:sites`, `dev:blog`, `dev:zetro`, `dev:textile-lab`, `dev:garment`, or `dev:upvc`.
 - `npm run dev:product-apps` starts all scaffolded product app shells together.
+- `npm run codeit:run` starts the experimental CodeIT backend/frontend pair.
 - `npm run check` runs the standard assist verification script.
 - `npm run typecheck:active` typechecks all current workspaces.
 - `npm run typecheck:product-apps` typechecks all scaffolded product app shells.
 - `npm run build:active` builds the active backend and frontend apps.
+- `npm run build:platform-api` builds the new Platform API extraction scaffold.
 - `npm run build:desktop` builds the Windows Electron installer with bundled frontend assets.
 - `npm run e2e:desktop` builds the bundled frontend and verifies the Electron runtime API base defaults to `http://codexsun.local:6005`.
 - `npm run build:product-apps` builds all scaffolded product app shells.
@@ -92,7 +99,7 @@ Current backend boundary layout:
 - `apps/server/src/shared`: backend-only shared helpers such as filters, guards, and middleware.
 - `apps/server/src/infrastructure`: database, queue, tenant provisioning, auth helpers, and lifecycle adapters.
 - `apps/server/src/modules/foundation`: reusable engines and compatibility registries (`master-record`, `master-data`).
-- Future cross-product engines/services should stay server-owned and be reused by app modules. Ecommerce, auditor, sports, learning, welfare, B2B Connect, and industry apps must call shared billing/accounting/compliance services for invoices, receipts, vouchers, postings, mail, and reports instead of duplicating that logic.
+- Future cross-product engines/services should stay service-owned and be reused through contracts. Platform API owns shared platform needs such as auth, tenant, RBAC, mail, notification, files, app enablement, and audit. Billing, Ecommerce, CRM, Sites, and CXSync should become separately deployable backend services inside the monorepo, with each service owning only its app schema group.
 - `packages/app-shell`: shared frontend scaffold used by product app workspaces such as auditor, ecommerce, B2B Connect, sports, learning, welfare, CRM, sites, blog, ZETRO, textile lab, garment, and UPVC.
 - `apps/server/src/modules/common/<group>/<module>`: standalone common tenant modules.
 - `apps/server/src/modules/master/<module>`: standalone master modules (`company`, `contact`, `product`, `order`).
@@ -103,6 +110,9 @@ Current backend boundary layout:
 - `apps/server/src/modules/tirupur-connect`: standalone marketplace using `tirupur_connect_db`, never the master or tenant databases.
 - `apps/server/src/modules/mail`: tenant SMTP settings, queued messages, attachment metadata, events, and delivery.
 - `apps/server/src/modules/settings`: company software settings and document numbering.
+- `packages/ui`: reusable UI primitives, rich components, dashboard shell pieces, and design-system helpers used across app workspaces.
+- `apps/cxsync` and `apps/cxsync-cloud`: isolated CXSync maintenance apps for audit, clone, mirror, dump, diagnostics, and migration rehearsal.
+- `apps/codeit/backend` and `apps/codeit/frontend`: experimental CodeIT workspaces.
 
 Current important API surfaces:
 
@@ -182,7 +192,7 @@ At the start of each work session:
 
 - `assist/context/workspaces.md` maps each workspace to its role and commands.
 - `assist/context/product-picture.md` describes the product picture and implementation direction.
-- `assist/context/one-platform-multi-app.md` records the one-repo, one-server, many app surfaces, shared engine/service architecture for owned domains and industry products.
+- `assist/context/one-repo-multi-backend.md` records the newer target cleanup direction: one repo, multiple backend services, shared Platform API, separate deploy units, and tenant table groups.
 - `assist/context/tirupur-connect-boundary.md` defines TConnect connector ownership, Tirupur Connect marketplace ownership, source provenance, identity, APIs, and migration constraints.
 - `assist/execution/tirupur-connect-implementation-plan.md` defines the phased extraction, central marketplace foundation, immutable sync contract, administration, and data migration.
 - `assist/execution/b2b-connect.md` records the Tirupur Connect product and revenue plan under the corrected boundary.

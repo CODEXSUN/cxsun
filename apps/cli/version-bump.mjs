@@ -19,6 +19,7 @@ const VERSION_FILES = [
   'apps/ecommerce/package.json',
   'apps/garment/package.json',
   'apps/learning/package.json',
+  'apps/platform-api/package.json',
   'apps/sites/package.json',
   'apps/sports/package.json',
   'apps/textile-lab/package.json',
