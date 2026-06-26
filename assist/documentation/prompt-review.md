@@ -22,6 +22,21 @@ read assist/readme and prepare for work
 ## Current Prompt
 
 ```
+update assist guidance for billing with all  Billing-API.md and sub folders readme
+
+fix docs need a “Billing support routes mounted for workflow dependency” section, or these routes should move behind Platform API calls later.
+
+fix missing app-aware tenant provisioning.
+
+fix: Billing route ownership is native in apps/billing-api, but tenant migration ownership still lives/duplicates in packages/platform.
+
+fix: if Billing API standard is DDD, receipt/payment/accounts still need structure normalization later.
+fix: missing full Quotation backend module README with summary, done, gaps, future concepts.
+```
+
+## Current Prompt
+
+```
 read full structure of application and find any gap from assist to real project
 ```
 

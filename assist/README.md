@@ -29,6 +29,13 @@ Before planning, coding, changing schemas, or editing product behavior, every AI
 7. The execution document for the requested product or module
 8. The relevant module documentation under `apps/server`, `apps/frontend`, `apps/docs`, or the standalone product app
 
+For Billing API work, the following files are also mandatory because Billing now has native service ownership separate from the old combined backend:
+
+1. `apps/billing-api/BILLING-API.md` — standalone service boundary, mounted support routes, test commands, and transition rules.
+2. Every module document under `apps/billing-api/src/modules/**/*.md`, including the detailed entry documents such as `SALESENTRY.md`, `QUOTATIONENTRY.md`, `PURCHASEENTRY.md`, `RECEIPTENTRY.md`, `PAYMENTENTRY.md`, `ACCOUNTS.md`, and stock documents.
+3. `apps/docs/devdocs/modules/billing-api.md` when public/developer-facing API behavior changes.
+4. The matching frontend feature documentation under `apps/frontend/src/features/**` when a Billing route change affects the UI contract.
+
 For any TConnect or Tirupur Connect work, the following files are mandatory and must be read in this order:
 
 1. `assist/context/tirupur-connect-boundary.md` — canonical ownership and system boundary.

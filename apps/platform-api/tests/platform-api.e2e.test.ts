@@ -1,7 +1,7 @@
 import { sql } from 'kysely'
 import { closeDatabase, getDatabase } from '../src/infrastructure/database/connection.js'
 import { hashPassword } from '../src/infrastructure/auth/password-hash.js'
-import { closeTenantDatabase, dropTenantDatabase } from '../src/infrastructure/tenant-database/tenant-database.connection.js'
+import { closeTenantDatabase, dropTenantDatabase, getTenantDatabase } from '../src/infrastructure/tenant-database/tenant-database.connection.js'
 import { startPlatformApi } from '../src/runtime.js'
 
 const port = Number(process.env.PLATFORM_API_E2E_PORT ?? 6197)
@@ -84,6 +84,11 @@ try {
   assertEqual(setupStatus.database, `${tenantSlug}_db`, 'tenant database name')
 
   assertOk(await postJson(`/api/v1/tenants/${tenantId}/setup-client`, {}, auth), 'tenant core setup')
+  const tenantDatabase = getTenantDatabase(tenant as never)
+  assertEqual(await tenantTableExists(tenantDatabase, 'companies'), true, 'platform core tenant tables are provisioned')
+  assertEqual(await tenantTableExists(tenantDatabase, 'sales_entries'), false, 'platform setup does not own billing app tables')
+  assertEqual(await tenantTableExists(tenantDatabase, 'ecommerce_store_settings'), false, 'platform setup does not own ecommerce app tables')
+  assertEqual(await tenantTableExists(tenantDatabase, 'site_sliders'), false, 'platform setup does not own site app tables')
 
   const companies = await getJson(`/api/v1/tenants/${tenantId}/companies`, auth)
   assertOk(companies, 'tenant companies')
@@ -309,6 +314,16 @@ function assertTruthy(value: unknown, label: string) {
 
 function assertEqual(actual: unknown, expected: unknown, label: string) {
   if (actual !== expected) throw new Error(`Expected ${label} ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`)
+}
+
+async function tenantTableExists(database: ReturnType<typeof getTenantDatabase>, tableName: string) {
+  const result = await sql<{ table_count: number | string | bigint }>`
+    SELECT COUNT(*) AS table_count
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = ${tableName}
+  `.execute(database as never)
+  return Number(result.rows[0]?.table_count ?? 0) > 0
 }
 
 function objectValue(value: unknown, label: string): Record<string, unknown> {

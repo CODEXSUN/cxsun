@@ -52,3 +52,11 @@ sites_*      only if Sites is enabled
 ## Compatibility Rule
 
 Keep `apps/server` working during the transition. Do not break the live combined backend until the replacement Platform API and Billing API services are proven with build, typecheck, API smoke tests, and deployment path checks.
+
+## Billing Split Guidance
+
+- Billing route ownership is native in `apps/billing-api`; do not add new Billing workflow routes back into `apps/server`.
+- Billing support routes that are mounted only to complete Billing workflows, such as contacts, products, common lookups, GST, settings, media, and mail, are transitional dependencies. Document any new support mount in `apps/billing-api/BILLING-API.md`. Long term, either move those calls behind Platform API contracts or promote the shared contract into a documented package boundary.
+- Tenant provisioning must be app-aware. When `tenants.payload_settings.apps.enabled` exists, tenant database setup should migrate only the selected product/app schemas plus required shared foundation tables. When no explicit app list exists, provisioning may keep the legacy all-app behavior for backward compatibility.
+- Billing route ownership and tenant migration ownership are still not fully aligned: native route code lives in `apps/billing-api`, while mirrored migration exports still exist under `packages/platform` for the shared tenant database runner. Treat this as temporary migration bridge debt until the provisioning runner can delegate to service-owned migration bundles without importing app internals.
+- If Billing API keeps DDD-style modules as the standard, flat legacy/native modules such as Receipt, Payment, and Accounts must be normalized later into consistent domain/application/infrastructure/presentation folders.

@@ -22,6 +22,7 @@ New changelog entries must keep database-facing work and application code work s
 #### Database Changes
 
 - Database update: Yes (manual).
+- Made tenant database provisioning app-aware when `tenants.payload_settings.apps.enabled` is present, while preserving legacy all-app provisioning for tenants without an explicit app list.
 - Migrated tenant `common_pincodes` tables by backfilling `name` from the legacy Pincode code and removing country, state, district, city, code, and area columns.
 - Added tenant `contact_code_sequences` storage, initialized from existing `C-####` Contact codes, for transaction-safe code allocation.
 
@@ -60,6 +61,7 @@ New changelog entries must keep database-facing work and application code work s
 - Added a shared split-API runtime helper for validated API ports, explicit public/local URLs, and retrying loopback health checks so Platform, Billing, Ecommerce, Sites, CRM, Tally, Frappe, Task Manager, Auditor, Blog, and Agent OS APIs no longer duplicate startup readiness logic.
 - Added `/ready` database-readiness endpoints beside lightweight `/health` checks for Platform API and every API using the shared Platform runtime.
 - Added `x-request-id` response headers, request-id-aware local logs, production `JWT_SECRET` startup validation, strict numeric env parsing, and in-memory auth-login rate limiting for Platform/Billing API hardening.
+- Updated Billing assist guidance, Billing API service documentation, service-split notes, and module readmes to document transitional support-route mounts, native route ownership versus mirrored migration ownership, app-aware provisioning rules, Receipt/Payment/Accounts structure normalization debt, and the full Quotation backend module scope.
 
 ## v-1.0.130
 

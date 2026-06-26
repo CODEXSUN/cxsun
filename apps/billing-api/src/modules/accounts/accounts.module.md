@@ -21,6 +21,10 @@ This is part of the Billing API reports and pending-accounting extraction phase.
 
 The module still uses transitional compatibility dependencies for framework decorators, tenant context, auth repositories, document numbering, entry posting controls, and Sales entry types. Receipt, Payment, and Purchase posting services now use this native Accounts module. Sales can be switched after Sales Entry is moved natively.
 
+## Structure Gap
+
+Accounts is native Billing API code, but it is still a broad flat module covering ledgers, vouchers, books, reports, and posting controls. If DDD remains the Billing API standard, split Accounts later into clearer domain/application/infrastructure/interface folders, and consider separating ledger master, posting, reporting, and book workflows while preserving public route contracts.
+
 ## Verification
 
 ```bash

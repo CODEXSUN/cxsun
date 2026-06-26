@@ -24,6 +24,11 @@ try {
   await seedAdmin()
   tenant = await seedTenant()
   await setupTenantClientDatabase(tenant as never)
+  const tenantDatabase = getTenantDatabase(tenant as never)
+  assertEqual(await tenantTableExists(tenantDatabase, 'sales_entries'), true, 'billing tenant tables are provisioned')
+  assertEqual(await tenantTableExists(tenantDatabase, 'crm_pipelines'), false, 'disabled crm tables are not provisioned')
+  assertEqual(await tenantTableExists(tenantDatabase, 'ecommerce_store_settings'), false, 'disabled ecommerce tables are not provisioned')
+  assertEqual(await tenantTableExists(tenantDatabase, 'site_sliders'), false, 'disabled site tables are not provisioned')
   ;({ companyId, accountingYearId } = await defaultTenantContextIds())
   await ensureDefaultMoneyLedgers()
 
@@ -916,6 +921,16 @@ function assertOk(value: Record<string, unknown>, label: string) {
 
 function assertEqual(actual: unknown, expected: unknown, label: string) {
   if (actual !== expected) throw new Error(`Expected ${label} ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`)
+}
+
+async function tenantTableExists(database: ReturnType<typeof getTenantDatabase>, tableName: string) {
+  const result = await sql<{ table_count: number | string | bigint }>`
+    SELECT COUNT(*) AS table_count
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = ${tableName}
+  `.execute(database as never)
+  return Number(result.rows[0]?.table_count ?? 0) > 0
 }
 
 function assertTruthy(value: unknown, label: string) {

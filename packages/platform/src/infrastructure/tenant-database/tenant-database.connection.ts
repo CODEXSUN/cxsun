@@ -39,6 +39,10 @@ import { dbConfig } from '../../framework/config/index.js'
 import { settings } from '../../framework/config/settings.js'
 
 type TenantDatabase = Kysely<TenantDatabaseSchema>
+type TenantAppScope = {
+  enabledApps: Set<string>
+  hasExplicitAppSelection: boolean
+}
 
 const connections = new Map<string, TenantDatabase>()
 
@@ -158,30 +162,55 @@ export async function provisionTenantDatabase(
   await createCompanyChildTables(database)
   await createContactCommunicationTables(database)
   await migrateCommonModuleTables(database)
-  await migrateSalesEntryTables(database)
-  await migrateQuotationEntryTables(database)
-  await migrateExportSalesEntryTables(database)
-  await migratePurchaseEntryTables(database)
-  await migratePurchaseReceiptTables(database)
-  await migrateDeliveryNoteTables(database)
-  await migrateStockLedgerTables(database)
-  await migrateReceiptEntryTables(database)
-  await migratePaymentEntryTables(database)
-  await migrateAccountsTables(database as never)
+  const appScope = tenantAppScope(tenant)
+  if (tenantAppEnabled(appScope, 'billing', ['accounts', 'inventory'])) {
+    await migrateSalesEntryTables(database)
+    await migrateQuotationEntryTables(database)
+    await migrateExportSalesEntryTables(database)
+    await migratePurchaseEntryTables(database)
+    await migratePurchaseReceiptTables(database)
+    await migrateDeliveryNoteTables(database)
+    await migrateStockLedgerTables(database)
+    await migrateReceiptEntryTables(database)
+    await migratePaymentEntryTables(database)
+    await migrateAccountsTables(database as never)
+  }
   await migrateCompanySettingsTables(database)
   await migrateDocumentSettingsTables(database)
-  await migrateGstComplianceTables(database)
-  await migrateMediaTables(database as never)
-  await migrateMailTables(database)
-  await migrateTaskManagerTables(database as never)
-  await migrateCrmTables(database as never)
-  await migrateTallyTables(database as never)
-  await migrateFrappeTables(database as never)
-  await migrateTConnectTables(database, tenant)
-  await migrateEcommerceTables(database as never)
-  await migrateAuditorContactCredentialTables(database)
-  await migrateAuditorGstFilingTables(database)
-  await migrateSiteSliderTables(database as never)
+  if (tenantAppEnabled(appScope, 'billing', ['gst', 'gst-compliance'])) {
+    await migrateGstComplianceTables(database)
+  }
+  if (tenantAppEnabled(appScope, 'billing', ['media'])) {
+    await migrateMediaTables(database as never)
+  }
+  if (tenantAppEnabled(appScope, 'billing', ['mail'])) {
+    await migrateMailTables(database)
+  }
+  if (tenantAppEnabled(appScope, 'taskmanager', ['task-manager', 'tasks'])) {
+    await migrateTaskManagerTables(database as never)
+  }
+  if (tenantAppEnabled(appScope, 'crm')) {
+    await migrateCrmTables(database as never)
+  }
+  if (tenantAppEnabled(appScope, 'tally')) {
+    await migrateTallyTables(database as never)
+  }
+  if (tenantAppEnabled(appScope, 'frappe')) {
+    await migrateFrappeTables(database as never)
+  }
+  if (tenantAppEnabled(appScope, 'tconnect', ['tirupur-connect', 'b2b-connect'])) {
+    await migrateTConnectTables(database, tenant)
+  }
+  if (tenantAppEnabled(appScope, 'ecommerce', ['e-commerce'])) {
+    await migrateEcommerceTables(database as never)
+  }
+  if (tenantAppEnabled(appScope, 'auditor')) {
+    await migrateAuditorContactCredentialTables(database)
+    await migrateAuditorGstFilingTables(database)
+  }
+  if (tenantAppEnabled(appScope, 'sites', ['site'])) {
+    await migrateSiteSliderTables(database as never)
+  }
   await migrateContactMasterTable(database)
   await migrateProductMasterTable(database)
   await migrateOrderMasterTable(database)
@@ -224,7 +253,7 @@ export async function provisionTenantDatabase(
 
   if (options.schemaOnly) return
 
-  await seedTenantDatabase(database, tenant)
+  await seedTenantDatabase(database, tenant, tenantAppScope(tenant))
   await syncTenantCompanyMetrics(tenant)
 }
 
@@ -339,6 +368,39 @@ function toMetricNumber(value: number | string | bigint | null | undefined) {
   return Number.isFinite(numberValue) ? numberValue : 0
 }
 
+function tenantAppScope(tenant: Tenant): TenantAppScope {
+  try {
+    const settings = JSON.parse(tenant.payload_settings || '{}') as {
+      apps?: { enabled?: unknown }
+    }
+    const enabled = settings.apps?.enabled
+    if (!Array.isArray(enabled)) {
+      return { enabledApps: new Set(), hasExplicitAppSelection: false }
+    }
+    return {
+      enabledApps: new Set(enabled.map(normalizeTenantAppKey).filter(Boolean)),
+      hasExplicitAppSelection: true,
+    }
+  } catch {
+    return { enabledApps: new Set(), hasExplicitAppSelection: false }
+  }
+}
+
+function tenantAppEnabled(scope: TenantAppScope, appKey: string, aliases: string[] = []) {
+  if (!scope.hasExplicitAppSelection) {
+    return true
+  }
+  const keys = [appKey, ...aliases].map(normalizeTenantAppKey)
+  return keys.some((key) => scope.enabledApps.has(key))
+}
+
+function normalizeTenantAppKey(value: unknown) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replaceAll('_', '-')
+}
+
 function readTenantCompanies(tenant: Tenant) {
   try {
     const settings = JSON.parse(tenant.payload_settings || '{}') as {
@@ -364,9 +426,11 @@ function readTenantIndustryCode(tenant: Tenant) {
   }
 }
 
-async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant) {
+async function seedTenantDatabase(database: TenantDatabase, tenant: Tenant, appScope: TenantAppScope) {
   await seedCommonModuleTables(database)
-  await seedDefaultSiteSliders(database as never, tenant)
+  if (tenantAppEnabled(appScope, 'sites', ['site'])) {
+    await seedDefaultSiteSliders(database as never, tenant)
+  }
   await seedScopedCompanies(database, tenant)
   const years = await seedAccountingYears(database)
   const existingDefault = await database

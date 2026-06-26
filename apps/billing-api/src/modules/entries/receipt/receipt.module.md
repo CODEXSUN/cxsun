@@ -17,6 +17,10 @@ This is a Phase 2 native route-module extraction. The receipt controller, servic
 
 The module still uses transitional compatibility dependencies for framework decorators, tenant context, auth repositories, document numbering, mail, PDF rendering, entry posting control, and accounts posting. Do not remove those shared compatibility modules until Billing API has its own shared infrastructure boundary.
 
+## Structure Gap
+
+Receipt is native Billing API code, but its folder shape is still flatter than the preferred DDD-style Billing modules such as Sales, Purchase, Quotation, Export Sales, and stock vouchers. If DDD remains the Billing API standard, normalize Receipt later into domain/application/infrastructure/interface folders without changing route contracts.
+
 ## Verification
 
 ```bash
