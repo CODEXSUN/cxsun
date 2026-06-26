@@ -1,6 +1,6 @@
 # AI Agent Assist System
 
-**Project version:** 1.0.129
+**Project version:** 1.0.131
 
 This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
 
@@ -64,6 +64,11 @@ Root scripts use the active apps:
 - `npm run dev` starts `apps/server`, `apps/frontend`, and `apps/docs` together with concurrent logs.
 - `npm run dev:server` starts only the backend.
 - `npm run dev:platform-api` starts the new Platform API extraction scaffold.
+- `npm run dev:billing-api` starts the new Billing API extraction service on port `6205`.
+- `npm run dev:sites-api` starts the Sites API public-content service on port `6405`.
+- `npm run dev:billing-stack` starts Platform API, Billing API, Sites API, and the frontend together with labeled concurrent logs.
+- Dev preflight automatically stops an existing listener on the app's configured port, waits for the port to be released, and reuses the same port; set `CXSUN_DEV_PORT_POLICY=abort` to fail instead.
+- Local API logs use a compact readable format; set `CXSUN_LOG_FORMAT=json` to retain structured JSON during development. Production always uses JSON logs.
 - `npm run dev:frontend` starts only the frontend.
 - `npm run dev:desktop` starts the Electron shell against the configured frontend/API.
 - `npm run dev:docs` starts only the Docusaurus docs app.
@@ -76,6 +81,7 @@ Root scripts use the active apps:
 - `npm run typecheck:product-apps` typechecks all scaffolded product app shells.
 - `npm run build:active` builds the active backend and frontend apps.
 - `npm run build:platform-api` builds the new Platform API extraction scaffold.
+- `npm run build:billing-api` builds the new Billing API extraction service.
 - `npm run build:desktop` builds the Windows Electron installer with bundled frontend assets.
 - `npm run e2e:desktop` builds the bundled frontend and verifies the Electron runtime API base defaults to `http://codexsun.local:6005`.
 - `npm run build:product-apps` builds all scaffolded product app shells.
@@ -187,6 +193,13 @@ At the start of each work session:
 5. Copy the exact user prompt into `assist/documentation/prompt-review.md` before starting the requested work.
 6. Inspect the current implementation and Git worktree before making changes.
 7. Preserve unrelated user changes and follow the applicable verification rules.
+
+## Documentation And Version Discipline
+
+- Update relevant docs and `assist/documentation/CHANGELOG.md` at each meaningful stage of progress.
+- Keep changelog bullets specific and place them under the latest current-version entry unless the user explicitly asks for a version bump.
+- Never bump package/app versions, release tags, lockfile versions, or the changelog `Version State` block unless the user explicitly commands a version bump.
+- For the full rule, read `assist/rules/versioning.md` before implementation work.
 
 ## Key References
 

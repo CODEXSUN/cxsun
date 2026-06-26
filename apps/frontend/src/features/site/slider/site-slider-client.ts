@@ -1,4 +1,5 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { sitesApiBaseUrl } from "src/lib/api-base-url"
+import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { SliderItem, SliderOptions } from "src/components/blocks/slider/slider.types"
 
 export type SiteSliderStatus = "draft" | "published" | "archived"
@@ -62,13 +63,13 @@ export function emptySiteSlider(): SiteSliderInput {
 }
 
 export async function listSiteSliders(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/site/sliders`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${sitesApiBaseUrl}/api/v1/site/sliders`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Site slider list failed with status ${response.status}.`)
   return (await response.json()) as SiteSlider[]
 }
 
 export async function upsertSiteSlider(session: AuthSession, input: SiteSliderInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/site/sliders/upsert`, {
+  const response = await fetch(`${sitesApiBaseUrl}/api/v1/site/sliders/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -81,7 +82,7 @@ export async function upsertSiteSlider(session: AuthSession, input: SiteSliderIn
 }
 
 export async function deleteSiteSlider(session: AuthSession, slider: SiteSlider) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/site/sliders/${encodeURIComponent(slider.uuid)}/delete`, {
+  const response = await fetch(`${sitesApiBaseUrl}/api/v1/site/sliders/${encodeURIComponent(slider.uuid)}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

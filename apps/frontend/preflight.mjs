@@ -1,3 +1,3 @@
 #!/usr/bin/env node
-process.argv[2] = 'frontend'
+process.argv.splice(2, 0, 'frontend')
 await import('../cli/preflight.mjs')

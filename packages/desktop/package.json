@@ -1,6 +1,6 @@
 {
   "name": "@cxsun/desktop",
-  "version": "1.0.129",
+  "version": "1.0.131",
   "private": true,
   "type": "module",
   "description": "CXSun desktop application",

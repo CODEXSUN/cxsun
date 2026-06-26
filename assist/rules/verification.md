@@ -5,6 +5,7 @@ Run checks that match the files changed. Prefer targeted workspace checks during
 ## Standard Commands
 
 - Full active check: `npm run check`
+- Documentation/changelog policy check: `npm run check:docs-progress`
 - Active typechecks only: `npm run typecheck:active`
 - Active builds only: `npm run build:active`
 - Assist script equivalent: `bash assist/scripts/check.sh`
@@ -52,9 +53,17 @@ CXSync Desktop or CXSync Cloud changes:
 - `npm -w apps/cxsync run compile:electron`
 - Run `npm -w apps/cxsync-cloud run test:integration` against a configured live service and master tenant when transport, authentication, handshake, or report persistence changes.
 
+Platform API changes:
+
+- `npm run typecheck:platform-api`
+- `npm run build:platform-api`
+- `npm -w apps/platform-api run test:contract` when MariaDB is configured.
+- `npm -w apps/platform-api run test:e2e` when Platform API routes, auth, tenant, domain, industry, user-management, or service runtime behavior changes.
+
 Assist-only documentation changes:
 
 - Run `rg` scans for stale paths when architecture or workflow guidance changes.
+- Run `npm run check:docs-progress` when documentation, changelog, versioning, or workflow rules change.
 - Run `npm run check` when command guidance or package assumptions change.
 
 ## Notes

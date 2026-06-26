@@ -6,7 +6,7 @@ import { toast } from "sonner"
 import { Badge } from "src/components/ui/badge"
 import { Button } from "src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 type ProductApp = {
   capabilities: string[]
@@ -330,13 +330,13 @@ function localAppUrl(app: ProductApp) {
 }
 
 async function listRuntimeApps(session: AuthSession): Promise<{ apps: RuntimeApp[] }> {
-  const response = await fetch(`${apiBaseUrl}/api/system/app-runtime/apps`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${platformApiBaseUrl}/api/system/app-runtime/apps`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error("App runtime status failed")
   return response.json() as Promise<{ apps: RuntimeApp[] }>
 }
 
 async function startRuntimeApp(session: AuthSession, appId: string): Promise<{ app: RuntimeApp; message: string }> {
-  const response = await fetch(`${apiBaseUrl}/api/system/app-runtime/start`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/system/app-runtime/start`, {
     body: JSON.stringify({ appId }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -347,7 +347,7 @@ async function startRuntimeApp(session: AuthSession, appId: string): Promise<{ a
 }
 
 async function stopRuntimeApp(session: AuthSession, appId: string): Promise<{ app: RuntimeApp; message: string }> {
-  const response = await fetch(`${apiBaseUrl}/api/system/app-runtime/stop`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/system/app-runtime/stop`, {
     body: JSON.stringify({ appId }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -358,7 +358,7 @@ async function stopRuntimeApp(session: AuthSession, appId: string): Promise<{ ap
 }
 
 async function restartRuntimeApp(session: AuthSession, appId: string): Promise<{ app: RuntimeApp; message: string }> {
-  const response = await fetch(`${apiBaseUrl}/api/system/app-runtime/restart`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/system/app-runtime/restart`, {
     body: JSON.stringify({ appId }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

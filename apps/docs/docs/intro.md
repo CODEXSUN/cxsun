@@ -12,6 +12,7 @@ Codexsun is a daily business workspace for billing, accounts-ready entries, mast
 ## What Is Included
 
 - **Workspace access:** login, company selection, accounting year, and dashboard navigation.
+- **Shared foundation:** common tenant, company, permission, and app access behavior across current and future app surfaces.
 - **Common records:** reusable values such as units, taxes, HSN codes, locations, terms, and product groups.
 - **Master records:** company profile, customers, suppliers, products, and work orders.
 - **Billing entries:** quotations, sales invoices, purchase bills, receipts, and payments.
@@ -31,13 +32,14 @@ Codexsun is a daily business workspace for billing, accounts-ready entries, mast
 1. [Login And Workspace](./getting-started/login-and-workspace.md)
 2. [Dashboard Basics](./getting-started/dashboard-basics.md)
 3. [Company And Master Data](./getting-started/company-and-master-data.md)
-4. [Sales Entry](./entries/sales.md)
-5. [Purchase Entry](./entries/purchase.md)
-6. [Receipt Entry](./entries/receipt.md)
-7. [Payment Entry](./entries/payment.md)
-8. [Cash Book Entry](./entries/cash-book.md)
-9. [Bank Book Entry](./entries/bank-book.md)
-10. [Customer Statement](./reports/customer-statement.md)
+4. [Workspace Foundation](./platform/workspace-foundation.md)
+5. [Sales Entry](./entries/sales.md)
+6. [Purchase Entry](./entries/purchase.md)
+7. [Receipt Entry](./entries/receipt.md)
+8. [Payment Entry](./entries/payment.md)
+9. [Cash Book Entry](./entries/cash-book.md)
+10. [Bank Book Entry](./entries/bank-book.md)
+11. [Customer Statement](./reports/customer-statement.md)
 
 ## Daily Flow
 
@@ -55,6 +57,7 @@ Most work follows this simple path:
 - [Login And Workspace](./getting-started/login-and-workspace.md)
 - [Dashboard Basics](./getting-started/dashboard-basics.md)
 - [Company And Master Data](./getting-started/company-and-master-data.md)
+- [Workspace Foundation](./platform/workspace-foundation.md)
 - [Sales Entry](./entries/sales.md)
 - [Quotation Entry](./entries/quotation.md)
 - [Purchase Entry](./entries/purchase.md)

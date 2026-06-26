@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 export interface IndustryRecord {
   id: number
@@ -24,7 +24,7 @@ export interface IndustryUpsertInput {
 }
 
 export async function listIndustries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/industries`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/industries`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -37,7 +37,7 @@ export async function listIndustries(session: AuthSession) {
 }
 
 export async function upsertIndustry(session: AuthSession, input: IndustryUpsertInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/industries/upsert`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/industries/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -69,7 +69,7 @@ export async function restoreIndustry(session: AuthSession, id: number) {
 }
 
 async function mutateIndustry(session: AuthSession, id: number, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/industries/${id}/${action}`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/industries/${id}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: {

@@ -1,21 +1,14 @@
 import 'reflect-metadata'
-import { CxApp } from '../../server/src/core/bootstrap.js'
-import { initializeDatabase } from '../../server/src/infrastructure/database/connection.js'
-import { PlatformApiModule } from './platform-api.module.js'
+import { waitForHealth } from './core/runtime/api-runtime.js'
+import { resolvePlatformApiPort, startPlatformApi } from './runtime.js'
 
-const port = Number(process.env.PLATFORM_API_PORT ?? process.env.CORE_API_PORT ?? 6105)
-
-await initializeDatabase()
-
-const app = await CxApp.create(PlatformApiModule, { port })
+const port = resolvePlatformApiPort()
 
 try {
-  await app.start()
+  const runtime = await startPlatformApi({ port })
 
-  const healthUrl = `http://localhost:${port}/health`
-  const res = await fetch(healthUrl)
-  const body = await res.json()
-  console.log(`  ok Platform API health check: ${JSON.stringify(body)}`)
+  const body = await waitForHealth(runtime.localHealthUrl)
+  console.log(`  ok Platform API ready: ${body.status ?? 'unknown'} | v${body.version ?? 'unknown'} | ${runtime.publicUrl}`)
 } catch (err) {
   console.error(err)
   process.exit(1)

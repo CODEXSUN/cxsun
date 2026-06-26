@@ -1,4 +1,4 @@
-import { Bug, Building2, ChevronRight, HandCoins, Headset, Network, RefreshCw, ReceiptIndianRupee, ReceiptText, Send, ShieldCheck, ShoppingBag, UserRoundCheck } from "lucide-react"
+import { Bug, Building2, ChevronRight, Database, HandCoins, Headset, Network, ReceiptIndianRupee, ReceiptText, Send, ShieldCheck, ShoppingBag, UserRoundCheck } from "lucide-react"
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Card, CardContent, CardHeader, CardTitle } from "src/components/ui/card"
@@ -19,29 +19,29 @@ const dashboardCopy = {
     title: "Super admin control",
     description: "Work from two clean areas: platform/master database modules and tenant-database modules.",
     metrics: [
-      { label: "Master Modules", value: "5", trend: "Tenant, domain, industry, updates, admin users", description: "MariaDB-backed platform control data", direction: "up" as const },
+      { label: "Master Modules", value: "5", trend: "Tenant, domain, industry, apps, admin users", description: "MariaDB-backed platform control data", direction: "up" as const },
       { label: "Tenant Database", value: "Company", trend: "Tenant-owned data lane", description: "Company records resolve into tenant database context", direction: "up" as const },
       { label: "Platform Masters", value: "Live", trend: "Industries and admin users available", description: "MariaDB-backed orchestration data", direction: "up" as const },
       { label: "Security Surface", value: "JWT", trend: "Tenant runtime requires auth", description: "Company APIs use tenant context", direction: "up" as const },
     ],
     cards: [
-      { title: "Platform / Master Database", body: "Manage tenants, domains, industries, system updates, and admin users.", Icon: Network },
+      { title: "Platform / Master Database", body: "Manage tenants, domains, industries, runtime apps, and admin users.", Icon: Network },
       { title: "Tenant Database", body: "Keep tenant-owned modules such as Company in the tenant database lane so ownership is obvious.", Icon: ShieldCheck },
       { title: "Provisioning Control", body: "Startup prepares each configured tenant database before the API accepts traffic.", Icon: Building2 },
     ],
   },
   admin: {
     title: "Admin software desk",
-    description: "Support users who operate this software, triage bugs, help clients, and monitor release/update activity.",
+    description: "Support users who operate this software, triage bugs, help clients, and monitor operational activity.",
     metrics: [
       { label: "Helpdesk", value: "Ready", trend: "Support desk separated", description: "Software operators stay outside tenant data", direction: "up" as const },
       { label: "Bugs", value: "Triage", trend: "Issue flow prepared", description: "Bug handling has its own admin lane", direction: "up" as const },
-      { label: "Updates", value: "Live", trend: "System update view available", description: "Admin can monitor runtime update flow", direction: "up" as const },
+      { label: "Operations", value: "Live", trend: "Queue and database views available", description: "Admin can monitor runtime operations", direction: "up" as const },
     ],
     cards: [
       { title: "Helpdesk", body: "Track support questions and operational help without entering isolated tenant company records.", Icon: Headset },
       { title: "Bug Triage", body: "Keep software bugs separate from tenant business data so support work stays clean.", Icon: Bug },
-      { title: "Release Care", body: "Use system update tools for maintenance, restart checks, and deployment readiness.", Icon: RefreshCw },
+      { title: "Operations Care", body: "Use queue and database tools for maintenance visibility and restore readiness.", Icon: Database },
     ],
   },
   tenant: {
@@ -55,7 +55,7 @@ const dashboardCopy = {
     cards: [
       { title: "Companies", body: "Create and maintain company records inside the selected workspace database.", Icon: Building2 },
       { title: "Roles", body: "Workspace-local roles and policy assignments live in the workspace database.", Icon: ShieldCheck },
-      { title: "Clean Boundary", body: "Workspace users do not see platform setup, industry, admin-user manager, or update orchestration pages.", Icon: Network },
+      { title: "Clean Boundary", body: "Workspace users do not see platform setup, industry, admin-user manager, or orchestration pages.", Icon: Network },
     ],
   },
 }

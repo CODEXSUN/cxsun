@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card'
 import { TooltipProvider } from './components/ui/tooltip'
 import { clearAuthCache, getStoredSession, type AuthSession } from './features/auth/auth-client'
 import { APP_NAME } from './lib/branding'
-import { apiBaseUrl } from './lib/api-base-url'
+import { apiBaseUrl, platformApiBaseUrl, sitesApiBaseUrl } from './lib/api-base-url'
 
 type View =
   | 'landing'
@@ -212,7 +212,7 @@ function pushRoute(route: AppRoute) {
 }
 
 async function fetchSiteContent() {
-  const response = await fetch(`${apiBaseUrl}/api/site`)
+  const response = await fetch(`${sitesApiBaseUrl}/api/site`)
   if (!response.ok) {
     throw new Error(`Site content failed with status ${response.status}.`)
   }
@@ -221,7 +221,7 @@ async function fetchSiteContent() {
 
 async function fetchTenantStaticSite() {
   const domain = window.location.host
-  const response = await fetch(`${apiBaseUrl}/api/site/tenant-static?domain=${encodeURIComponent(domain)}`)
+  const response = await fetch(`${sitesApiBaseUrl}/api/site/tenant-static?domain=${encodeURIComponent(domain)}`)
   if (!response.ok) {
     throw new Error(`Tenant static site failed with status ${response.status}.`)
   }
@@ -229,7 +229,7 @@ async function fetchTenantStaticSite() {
 }
 
 async function fetchHealth() {
-  const response = await fetch(`${apiBaseUrl}/health`)
+  const response = await fetch(`${platformApiBaseUrl}/health`)
   if (!response.ok) {
     throw new Error(`Health check failed with status ${response.status}.`)
   }
@@ -243,10 +243,6 @@ function App() {
   const [tenantSession, setTenantSession] = useState<AuthSession | null>(() => getStoredSession('tenant'))
   const activePage = route.page
   const activeView = route.view
-  const isPlatformView = activeView === 'admin-dashboard'
-    || activeView === 'admin-login'
-    || activeView === 'super-admin-dashboard'
-    || activeView === 'super-admin-login'
   const isPublicSiteView = activeView === 'landing'
 
   const siteQuery = useQuery({
@@ -258,7 +254,7 @@ function App() {
   const tenantSiteQuery = useQuery({
     queryKey: ['tenant-static-site', window.location.host],
     queryFn: fetchTenantStaticSite,
-    enabled: !isPlatformView && activeView !== 'zetro-read',
+    enabled: isPublicSiteView,
   })
   const healthQuery = useQuery({
     queryKey: ['health'],

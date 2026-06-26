@@ -26,12 +26,12 @@ import {
 } from "src/components/blocks/lists/master-list"
 import type { AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
-import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
 import { cn } from "src/lib/utils"
 import {
   emptyCustomerProfile,
   emptyProductPublication,
   getEcommerceWorkspace,
+  listEcommerceSourceRecords,
   saveEcommerceSettings,
   upsertEcommerceCustomer,
   upsertEcommerceProduct,
@@ -97,9 +97,9 @@ export function EcommercePage({ session, view = "dashboard" }: { session: AuthSe
   const [customerView, setCustomerView] = useState<CustomerProfileView>({ mode: "list" })
   const [settingsDialog, setSettingsDialog] = useState<Partial<EcommerceSettings> | null>(null)
   const workspaceQuery = useQuery({ queryKey: ["ecommerce-workspace", session.selectedTenant.slug], queryFn: () => getEcommerceWorkspace(session) })
-  const productsQuery = useQuery({ queryKey: ["ecommerce-products-source", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "products") })
-  const contactsQuery = useQuery({ queryKey: ["ecommerce-contacts-source", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contacts") })
-  const categoriesQuery = useQuery({ queryKey: ["ecommerce-categories-source", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "productCategories") })
+  const productsQuery = useQuery({ queryKey: ["ecommerce-products-source", session.selectedTenant.slug], queryFn: () => listEcommerceSourceRecords(session, "products") })
+  const contactsQuery = useQuery({ queryKey: ["ecommerce-contacts-source", session.selectedTenant.slug], queryFn: () => listEcommerceSourceRecords(session, "contacts") })
+  const categoriesQuery = useQuery({ queryKey: ["ecommerce-categories-source", session.selectedTenant.slug], queryFn: () => listEcommerceSourceRecords(session, "productCategories") })
   const workspace = workspaceQuery.data ?? emptyWorkspace()
 
   const settingsMutation = useMutation({ mutationFn: (input: Partial<EcommerceSettings>) => saveEcommerceSettings(session, input) })

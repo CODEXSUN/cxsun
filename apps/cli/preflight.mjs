@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync, spawn, spawnSync } from 'child_process'
+import { execFileSync, execSync, spawn, spawnSync } from 'child_process'
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs'
 import { createInterface } from 'readline'
 import { resolve } from 'path'
@@ -15,6 +15,16 @@ const APP = process.argv[2]
 const APP_CONFIG = {
   server: { cwd: 'apps/server', envKey: 'PORT', port: 6005, kind: 'server' },
   'platform-api': { cwd: 'apps/platform-api', envKey: 'PLATFORM_API_PORT', port: 6105, kind: 'server' },
+  'billing-api': { cwd: 'apps/billing-api', envKey: 'BILLING_API_PORT', port: 6205, kind: 'server' },
+  'ecommerce-api': { cwd: 'apps/ecommerce-api', envKey: 'ECOMMERCE_API_PORT', port: 6305, kind: 'server' },
+  'sites-api': { cwd: 'apps/sites-api', envKey: 'SITES_API_PORT', port: 6405, kind: 'server' },
+  'crm-api': { cwd: 'apps/crm-api', envKey: 'CRM_API_PORT', port: 6505, kind: 'server' },
+  'tally-api': { cwd: 'apps/tally-api', envKey: 'TALLY_API_PORT', port: 6515, kind: 'server' },
+  'frappe-api': { cwd: 'apps/frappe-api', envKey: 'FRAPPE_API_PORT', port: 6525, kind: 'server' },
+  'task-manager-api': { cwd: 'apps/task-manager-api', envKey: 'TASK_MANAGER_API_PORT', port: 6535, kind: 'server' },
+  'auditor-api': { cwd: 'apps/auditor-api', envKey: 'AUDITOR_API_PORT', port: 6545, kind: 'server' },
+  'blog-api': { cwd: 'apps/blog-api', envKey: 'BLOG_API_PORT', port: 6555, kind: 'server' },
+  'agent-os-api': { cwd: 'apps/agent-os-api', envKey: 'AGENT_OS_API_PORT', port: 6565, kind: 'server' },
   frontend: { cwd: 'apps/frontend', envKey: 'VITE_PORT', port: 6010, kind: 'vite' },
   docs: { cwd: 'apps/docs', envKey: 'PORT', port: 6020, kind: 'docs' },
   auditor: { cwd: 'apps/auditor', envKey: 'VITE_PORT', port: 6030, kind: 'vite' },
@@ -93,53 +103,60 @@ function readServerState(maxAgeMs = 60_000) {
   }
 }
 
-function isPortInUse(port) {
-  try {
-    const cmd = process.platform === 'win32'
-      ? `netstat -ano | findstr "\\<${port}\\>" | findstr LISTENING`
-      : `lsof -ti :${port} 2>/dev/null || ss -tlnp | grep ":${port} "`
-    execSync(cmd, { stdio: 'pipe' })
-    return true
-  } catch {
-    return false
-  }
-}
-
 function getPidsOnPort(port) {
   try {
     if (process.platform === 'win32') {
-      const out = execSync(`netstat -ano | findstr "\\<${port}\\>" | findstr LISTENING`, { encoding: 'utf8' })
-      return Array.from(new Set(out.split(/\r?\n/).filter(Boolean).map((line) => Number(line.trim().split(/\s+/).pop())).filter(Boolean)))
+      const out = execFileSync('netstat', ['-ano', '-p', 'tcp'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+      return Array.from(new Set(
+        out
+          .split(/\r?\n/)
+          .map((line) => line.trim().split(/\s+/))
+          .filter((parts) => parts.length >= 5 && parts[3] === 'LISTENING' && portFromAddress(parts[1]) === port)
+          .map((parts) => Number(parts[4]))
+          .filter((pid) => Number.isInteger(pid) && pid > 0 && pid !== process.pid),
+      ))
     }
-    const out = execSync(`lsof -ti :${port} 2>/dev/null`, { encoding: 'utf8' })
-    return Array.from(new Set(out.split(/\s+/).map(Number).filter(Boolean)))
+    const out = execFileSync('lsof', ['-ti', `:${port}`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    return Array.from(new Set(
+      out
+        .split(/\s+/)
+        .map(Number)
+        .filter((pid) => Number.isInteger(pid) && pid > 0 && pid !== process.pid),
+    ))
   } catch {
     return []
   }
 }
 
+function portFromAddress(address) {
+  const match = String(address).match(/:(\d+)$/)
+  return match ? Number(match[1]) : null
+}
+
 function killPid(pid) {
-  const command = process.platform === 'win32' ? `taskkill /pid ${pid} /t /f` : `kill -TERM ${pid}`
-  execSync(command, { stdio: 'pipe' })
+  if (process.platform === 'win32') {
+    execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    return
+  }
+  process.kill(pid, 'SIGTERM')
 }
 
 async function freePort(port) {
   console.log(`  - Checking port ${port}`)
-  if (!isPortInUse(port)) return
   const pids = getPidsOnPort(port)
+  if (!pids.length) return
   console.log(`\n  ! Port ${port} is already in use${pids.length ? ` (PID ${pids.join(', ')})` : ''}`)
 
-  if (process.stdin.isTTY && process.env.CXSUN_DEV_PORT_POLICY !== 'kill') {
-    const answer = await ask('     (K)ill and restart | (A)bort [K/a]: ')
-    const choice = answer.trim().toLowerCase() || 'k'
-    if (choice !== 'k' && choice !== 'kill') {
-      console.log('  Cancelled.\n')
-      process.exit(1)
-    }
-  }
-
-  if (!pids.length) {
-    console.error(`  x Could not find PID for port ${port}. Stop it manually and retry.\n`)
+  if (process.env.CXSUN_DEV_PORT_POLICY === 'abort') {
+    console.error(`  x Port policy is abort. Stop PID ${pids.join(', ')} or change CXSUN_DEV_PORT_POLICY.\n`)
     process.exit(1)
   }
 
@@ -152,7 +169,17 @@ async function freePort(port) {
       process.exit(1)
     }
   }
-  console.log('')
+
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (!getPidsOnPort(port).length) {
+      console.log(`  ok Port ${port} is ready for restart\n`)
+      return
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100))
+  }
+
+  console.error(`  x Port ${port} was not released after stopping PID ${pids.join(', ')}.\n`)
+  process.exit(1)
 }
 
 function ask(query) {
@@ -166,7 +193,29 @@ function ask(query) {
 }
 
 async function waitForServerState(env) {
-  if (APP === 'server') return
+  if (config.kind === 'server') return
+  if (process.argv.includes('--skip-api-wait')) {
+    const requiredServicesArg = process.argv.find((arg) => arg.startsWith('--required-api-services='))
+    env.VITE_API_BASE_URL ||= process.env.VITE_API_BASE_URL || 'http://localhost:6005'
+    env.VITE_PLATFORM_API_BASE_URL ||= process.env.VITE_PLATFORM_API_BASE_URL || 'http://localhost:6105'
+    env.VITE_BILLING_API_BASE_URL ||= process.env.VITE_BILLING_API_BASE_URL || 'http://localhost:6205'
+    env.VITE_SITES_API_BASE_URL ||= process.env.VITE_SITES_API_BASE_URL || 'http://localhost:6405'
+    env.VITE_CRM_API_BASE_URL ||= process.env.VITE_CRM_API_BASE_URL || 'http://localhost:6505'
+    env.VITE_TALLY_API_BASE_URL ||= process.env.VITE_TALLY_API_BASE_URL || 'http://localhost:6515'
+    env.VITE_FRAPPE_API_BASE_URL ||= process.env.VITE_FRAPPE_API_BASE_URL || 'http://localhost:6525'
+    env.VITE_TASK_MANAGER_API_BASE_URL ||= process.env.VITE_TASK_MANAGER_API_BASE_URL || 'http://localhost:6535'
+    env.VITE_AUDITOR_API_BASE_URL ||= process.env.VITE_AUDITOR_API_BASE_URL || 'http://localhost:6545'
+    env.VITE_BLOG_API_BASE_URL ||= process.env.VITE_BLOG_API_BASE_URL || 'http://localhost:6555'
+    env.VITE_AGENT_OS_API_BASE_URL ||= process.env.VITE_AGENT_OS_API_BASE_URL || 'http://localhost:6565'
+    env.VITE_REQUIRED_API_SERVICES ||= process.env.VITE_REQUIRED_API_SERVICES || requiredServicesArg?.split('=').slice(1).join('=') || 'platform,billing,sites'
+    env.VITE_REQUIRE_EXTRACTED_SERVICES = 'true'
+    console.log(`  - Skipping backend announcement wait; fallback API target: ${env.VITE_API_BASE_URL}`)
+    console.log(`  - Platform API target: ${env.VITE_PLATFORM_API_BASE_URL}`)
+    console.log(`  - Billing API target: ${env.VITE_BILLING_API_BASE_URL}`)
+    console.log(`  - Sites API target: ${env.VITE_SITES_API_BASE_URL}`)
+    console.log(`  - Required service health checks: ${env.VITE_REQUIRED_API_SERVICES}`)
+    return
+  }
   if (process.env.VITE_API_BASE_URL) {
     console.log(`  - API target from environment: ${process.env.VITE_API_BASE_URL}`)
     return

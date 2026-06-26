@@ -1,265 +1,223 @@
 # Tasks
 
-## 2026-06-25 - One repo, multiple backend services documentation
+## 2026-06-25 - Contact and address follow-up
 
-**Batch:** #129
+**Batch:** #131
+**Owner:** Billing API, Contact frontend
 
-- [x] Add AI rulebook for Core, Billing, Ecommerce, CRM, Sites, and CXSync service boundaries.
-- [x] Add canonical context for one repo with multiple backend services and deploy units.
-- [x] Add execution plan for the service split transition.
-- [x] Document one tenant database with `core_*` default tables and optional app table groups.
-- [x] Add developer module docs for Platform API, Billing App, Ecommerce App, CRM App, Sites App, and CXSync App.
-- [x] Wire the new module docs into the developer docs index and sidebar.
-- [ ] Later: audit current tenant tables and classify them by target owner.
-- [ ] Later: implement Platform API plus Billing API as the first service split.
+### Completed
 
-## 2026-06-24 - CXSync all-tenant fleet upgrade preparation
+- [x] Make Pincode independent from Country, State, District, and City.
+- [x] Persist selected and inline-created Pincode IDs on Contact addresses.
+- [x] Preserve Country -> State -> District -> City parent IDs during inline creation.
+- [x] Reorder Contact list columns and simplify Contact row display.
+- [x] Add tenant-aware next Contact code preview and save fallback.
+- [x] Refine Contact details and address form layouts.
+- [x] Remove changing text from global startup loaders.
+- [x] Add Billing API mutation e2e coverage that creates Country, State, District, City, Pincode, and Contact, then reloads the Contact and verifies every saved address reference.
+- [x] Make Contact code allocation concurrency-safe with a tenant-database sequence and transaction row lock.
+- [x] Add focused protected-route coverage for `GET /api/v1/contacts/next-code`.
+- [x] Verify simultaneous Contact creates allocate distinct sequential codes in MariaDB mutation e2e.
 
-**Batch:** #128
+### Next Missing Work
 
-- [x] Correct CXSync scope to database maintenance, audit, clone, migration rehearsal, and controlled upgrades only.
-- [x] Record the corrected boundary in durable memory and canonical assist context.
-- [x] Add protected active-MariaDB tenant fleet inventory.
-- [x] Add idempotent release-batch persistence with deterministic candidate databases.
-- [x] Enforce canary-first, serial, stop-on-failure fleet preparation.
-- [x] Add a disabled-by-default server-side clone execution gate.
-- [x] Add consistent full-data logical dump and candidate restore preparation.
-- [x] Verify exact source/candidate row parity before migration.
-- [x] Run reviewed tenant migrations against the candidate database only.
-- [x] Verify retained existing-table row counts after migration.
-- [x] Keep production cutover and source/candidate deletion entirely outside automatic preparation.
-- [x] Add the CXSync Cloud Fleet Upgrades operator page.
-- [x] Add contract and live integration coverage for fleet inventory and batch preparation.
-- [x] Add an isolated CXSync maintenance container, image, workspace volume, and host ports.
-- [x] Ensure maintenance startup bypasses normal database setup, shared platform migrations/seeds, tenant provisioning, Redis, and the main application runtime.
-- [x] Add a fail-closed expected-release check and initial-deploy clone lock.
-- [x] Add an isolated deployment/stop script and split Nginx web/API proxy configuration.
-- [x] Add matching Desktop and Cloud Full SQL Dump pages with database credential entry and table inventory.
-- [x] Require every table checkbox before backup so every run remains a complete database dump.
-- [x] Add Desktop native folder selection and Cloud storage-restricted folder selection.
-- [x] Run dumps in the background with byte progress, completion/failure state, and final location.
-- [x] Publish completed SQL files atomically and keep credentials out of command arguments and persistent application storage.
-- [x] Replace the single-database form with a server-connected database list excluding MariaDB system schemas.
-- [x] Add a database show page with table, row-estimate, and size details.
-- [x] Add database selection and serial bulk dump queues with per-item progress and results.
-- [x] Add a read-only Desktop-to-Cloud diagnostic sequence for API, release, MariaDB, tenant DB, storage, tool, and safety checks.
-- [x] Add redacted deployment/reinstall recommendations without running database mutation paths.
-- [x] Split CXSync into isolated Maintenance Upgrade and Mirror modes in documentation and navigation.
-- [x] Add Maintenance Upgrade as a dedicated app page that keeps full clone/upgrade/verify/cutover-later work separate from daily sync.
-- [x] Add Mirror as a dedicated app page with protected Cloud foundation status while keeping the scheduler unarmed.
-- [x] Add separate Desktop and Cloud mirror operational tables for mirror jobs and cursors.
-- [x] Add manual Mirror Full Sync: Cloud creates a full tenant dump, Desktop downloads it, restores into a dedicated local mirror database, verifies table/row counts, and records a full-dump cursor.
-- [x] Harden Mirror Full Sync with `cxmirror_` target enforcement, per-table row verification, persisted Desktop history, persisted Cloud evidence/expiry metadata, and recent job history in the Mirror page.
-- [x] Add all-tenant Mirror full-sync queue that runs saved tenant connections serially and reports completed/failed counts.
-- [x] Add local daily Mirror schedule for the office server; it runs all tenants only while CXSync Desktop is open and skips runs when another queue is active.
-- [x] Add manual Mirror incremental pull for eligible tables with a single primary key and `updated_at`, upsert changed rows into `cxmirror_*`, and persist per-table `updated-at-json` cursors.
-- [x] Add all-tenant Mirror incremental queue and schedule mode selection for daily full bootstrap or daily incremental pull.
-- [x] Harden incremental Mirror with required full-dump bootstrap cursor, source database cursor persistence, recent incremental history, and summary evidence.
-- [x] Add and run repeatable Mirror E2E smoke for protected full dump, disposable local restore, per-table row verification, incremental upsert check, and cleanup.
-- [x] Complete Mirror flow with table coverage reporting, skipped-table reasons, paged incremental catch-up, page safety cap, and Desktop audit JSON export support.
-- [x] Close the current Mirror release baseline as complete for safe online-to-offline office replication.
-- [x] Split CXSync into breadcrumb-switchable Sync and Mirror desks with separate side menus.
-- [x] Rework CXSync Mirror into clean tenant list and tenant show pages with focused forms and visual cards.
-- [x] Rework Mirror schedule into a clean upsert card with enable/disable switch.
-- [x] Move Mirror schedule upsert to a separate Mirror Settings page.
-- [x] Add Mirror Sync top controls for full sync, start, pause, stop, and refresh.
-- [x] Add tenant progress cards with status details and progress bars, removing remaining/queued wording from the queue display.
-- [x] Convert Mirror Sync tenant display to a Super Admin-style one-row table and remove count cards.
-- [x] Add compact colored runtime/schedule indicators and icon-led short status pills.
-- [ ] Run the first approved VPS canary clone with `CXSYNC_FLEET_CLONE_ENABLED=true`.
-- [ ] Review canary evidence before preparing the remaining live tenants.
-- [ ] Design and approve the separate production cutover/rollback operation after all candidates validate.
-- [x] Add safe delete propagation through explicit tenant `cxsync_mirror_tombstones` outbox and report `missing-tombstone-outbox` when the source has not enabled it.
+- [ ] Seed or create a disposable tenant login and run an authenticated browser smoke for Contact create/edit, inline location creation, Pincode persistence, list layout, and the text-free loader.
+- [ ] Decide whether to implement the existing Contact GST-details collection UI next; its data types and persistence exist but the upsert form does not expose it.
+- [ ] Plan merge/deduplication, CSV import/export, independent ledger selection, and contact grouping as separate product slices now that the Contact save path has dedicated automated coverage.
 
-## 2026-06-24 - CXSync Cloud audit ownership and verification
+## 2026-06-25 - Service split completion path
 
-**Batch:** #127
+**Batch:** #130
+**Owner:** Platform API, Billing API
+**Rule:** Update docs and changelog at every meaningful stage. Do not bump version unless explicitly commanded.
 
-- [x] Trace the Desktop, tenant-backend, and CXSync Cloud report paths.
-- [x] Keep the tenant billing backend CXSync API snapshot-only.
-- [x] Move sync-audit report ingestion to CXSync Cloud.
-- [x] Resolve report identity against the master tenant registry.
-- [x] Make repeated `(tenant, jobId)` uploads return the original report.
-- [x] Add Cloud report listing for verification and administration.
-- [x] Add a focused contract test.
-- [x] Add a live service-key-protected integration smoke harness.
-- [x] Update CXSync and execution documentation.
-- [x] Run the integration smoke against a running CXSync Cloud and the Aaran Associates master tenant.
-- [x] Complete the full Desktop schema drift, backup, repair, and audit-upload drill against an isolated schema clone.
-- [x] Restore the tenant connection to `codexsun_db` and remove the temporary drill database.
-- [x] Build the CXSync 1.0.127 Windows installer and smoke-test the unpacked application.
-- [ ] Install and validate the CXSync Windows package on a separate clean workstation.
+### Done In Current Platform API Slice
 
-## 2026-06-21 - CXSync schema baseline decorator runtime
+- [x] Create `apps/platform-api` as the shared foundation backend service.
+- [x] Add Platform API runtime, preflight, root scripts, env samples, and service docs.
+- [x] Add event primitives and sync tags.
+- [x] Add native Health module.
+- [x] Add native Auth module.
+- [x] Add native Tenant module.
+- [x] Add native Tenant Domain module.
+- [x] Add native Industry module.
+- [x] Add MariaDB-backed contract test suite.
+- [x] Add MariaDB-backed e2e test suite with isolated cleanup.
+- [x] Add documentation/changelog progress guard.
+- [x] Add frontend Platform API base URL and route platform-owned frontend clients to Platform API with combined-backend fallback.
 
-- [x] Trace the codebase baseline scratch-schema launcher.
-- [x] Pass the server decorator-enabled `tsconfig.json` explicitly to TSX.
-- [x] Verify CXSync typecheck and Electron compilation.
-- [x] Verify the scratch builder reaches environment validation without decorator transform errors.
+### Next Implementation Tasks
 
-## 2026-06-21 - Tirupur Connect company moderation
+- [x] Extract shared backend framework/runtime from `apps/server/src/core` into a clean Platform-owned runtime boundary.
+- [x] Extract shared infrastructure adapters used by Platform API: database connection, auth JWT/password helpers, tenant database connector, queue service, and config.
+- [x] Make Platform API source and tests stop depending on `apps/server` imports.
+- [x] Decide and document temporary allowed imports from `apps/server/src/core` and `apps/server/src/infrastructure`: none are allowed inside Platform API.
+- [x] Implement native RBAC module for platform policies, tenant policy toggles, and role-policy checks.
+- [x] Implement native Company and Accounting Year platform contracts.
+- [x] Implement native App Registry and tenant app enablement module.
+- [x] Implement service-token authentication for future Billing, Ecommerce, CRM, Sites, and CXSync service calls.
+- [x] Implement audit event writer and read contracts.
+- [x] Implement notification contract foundation.
+- [x] Implement mail contract foundation without moving tenant business mail internals into Platform API.
+- [x] Implement file/media metadata contract foundation.
+- [x] Add durable outbox/queue processing for cross-service platform events where needed.
+- [x] Add OpenAPI or equivalent route contract documentation for stable service consumers.
+- [x] Add Docker/container entry for Platform API as a separately deployable backend.
+- [x] Add deployment notes for Platform API port, env, health check, and dependency order.
 
-- [x] Add protected admin company detail API.
-- [x] Add company moderation list with search, status/source filters, and refresh.
-- [x] Add a complete company inspection view for profile, provenance, categories, products, and verification evidence.
-- [x] Add explicit reviewed publication decisions with optional notes.
-- [x] Lazy-load the company workflow from the B2B admin shell.
-- [x] Verify server and B2B admin typechecks/builds.
+### Required Test Expansion
 
-## 2026-06-21 - Tirupur Connect RFQ moderation
+- [ ] Keep `npm -w apps/platform-api run test:contract` green after each module change.
+- [ ] Keep `npm -w apps/platform-api run test:e2e` green after route/auth/module changes.
+- [x] Add RBAC e2e coverage when RBAC module is implemented.
+- [x] Add service-token contract/e2e coverage when service tokens are implemented.
+- [x] Add company/accounting-year e2e coverage when those contracts are implemented.
+- [x] Add app-registry e2e coverage when app enablement is implemented.
+- [x] Add audit/notification/mail/files focused contract tests as each module lands.
+- [ ] Run `npm run check:docs-progress` before final response on every meaningful change.
 
-- [x] Add protected admin RFQ detail API.
-- [x] Add RFQ moderation list with search, status/privacy filters, and refresh.
-- [x] Add full requirement review with buyer context, attachments, supplier quotations, and lead activity.
-- [x] Add audited RFQ lifecycle decisions with optional review notes.
-- [x] Lazy-load the RFQ workflow from the B2B admin shell.
-- [x] Verify server and B2B admin typechecks/builds plus marketplace contract tests.
+### Verification Commands
 
-## 2026-06-18 - Electron desktop application
+```bash
+npm run check:docs-progress
+npm run typecheck:platform-api
+npm run build:platform-api
+npm -w apps/platform-api run test:contract
+npm -w apps/platform-api run test:e2e
+npm -w apps/docs run build
+```
 
-- [x] Audit the reserved desktop workspace.
-- [x] Implement the secure Electron main and preload processes.
-- [x] Package and serve frontend assets locally for no-internet UI startup.
-- [x] Add configurable desktop API discovery.
-- [x] Add root development/build commands and Electron Builder configuration.
-- [x] Verify desktop/frontend typechecks and an unpacked Windows launch.
-- [x] Build the distributable Windows installer.
-- [x] Switch the desktop default API base to `http://codexsun.local:6005`.
-- [x] Add a desktop E2E smoke script that verifies the runtime API base.
-- [x] Open the packaged desktop UI with `codexsun.local` instead of `127.0.0.1`.
-- [x] Replace the default Electron frame/installer icon with a CXSun desktop icon.
-- [x] Add Super Admin login to the user nav and open it in a separate app window.
-- [x] Add first-run desktop host diagnostics for missing `codexsun.local` hosts mapping.
-- [x] Add a frontend desktop connection panel for API health and tenant-domain lookup failures.
+### Not In This Slice
 
-## 2026-06-18 - TConnect / Tirupur Connect boundary
+- [ ] Do not start Billing API until Platform API service contracts are stable.
+- [ ] Do not move Ecommerce, CRM, Sites, or CXSync business tables into Platform API.
+- [ ] Do not provision tenant business app schemas from Platform API except approved `core_*` platform tables.
+- [ ] Do not bump version without explicit user command.
 
-- [x] Read the corrected boundary supplied by the user.
-- [x] Audit the existing TConnect server module and Tirupur Connect app.
-- [x] Add the boundary to the architecture rulebook.
-- [x] Add canonical AI context documentation.
-- [x] Mark conflicting legacy execution guidance as superseded.
-- [x] Update developer-facing TConnect documentation.
-- [x] Prepare the implementation and data-migration plan.
-- [x] Implement central marketplace tables and defaults.
-- [x] Implement marketplace authentication and guards.
-- [x] Implement public, member, admin, and sync APIs.
-- [x] Implement immutable submission/revision review.
-- [x] Verify backend typecheck, build, and contract tests.
-- [ ] Migrate legacy tenant 115 marketplace data after count/reconciliation tooling is prepared.
-- [ ] Change the existing TConnect connector publish command to use signed sync.
+### Server Cleanup Safety Result
 
-## Versatile Agent OS Documentation
+- [x] Checked old `apps/server/src/core` platform folders for safe deletion.
+- [x] Kept them in place because the combined backend and business modules still import tenant context, tenant repositories, tenant-domain resolution, industry, and health modules until Billing API and other business services are extracted.
+- [x] Removed Platform API's unused package dependency on `@cxsun/server` / `@cxsun/shared` instead.
 
-- [x] Inspect repository structure and current app boundaries.
-- [x] Read ZRO templates and assist architecture/product context.
-- [x] Replace ZRO overview and guide with CXSun / Versatile OS direction.
-- [x] Replace ZRO core vision and architecture with concrete Agent OS plan.
-- [x] Add `ZRO/Vision/agent-os.md`.
-- [x] Add Agent OS roadmap, phase map, shipped inventory, and checklist.
-- [x] Add ZRO session log.
-- [x] Add `assist/context/versatile-agent-os.md`.
-- [x] Update assist README, product picture, and architecture context.
+## 2026-06-25 - Billing API first extraction row
 
-## Next Slice
+**Batch:** #130
+**Owner:** Billing API
+**Rule:** Keep behavior safe first. Native module cleanup can happen after the standalone service and frontend route are proven.
 
-- [x] Implement P1 Helper Agent backend module base.
-- [x] Add `conversations`, `agent_logs`, and `knowledge_documents`.
-- [x] Add mini Agent icon and tenant dashboard app entry.
-- [x] Add Agent OS base frontend page.
-- [x] Rename visible product surface to ZETRO.
-- [x] Add switchable model config and selector.
-- [x] Add universal ZETRO chat window shell.
-- [x] Add base chat endpoint with conversation/log writes.
-- [x] Add OpenRouter-compatible model client.
-- [x] Configure free models first and premium models through env/API keys.
-- [x] Connect ZETRO to the dedicated role-filtered `ZRO/ZETRO/docs` system.
-- [x] Add ZETRO read-only public screen at `/zetro`.
-- [x] Add adaptive markdown search and learn/index function.
-- [x] Add API connection status and one-time OpenRouter key test endpoint.
-- [x] Add ZETRO dashboard API panel and chat shortcut.
-- [x] Add recommended updates to ZETRO surfaces.
-- [x] Add encrypted provider key persistence for OpenRouter, OpenAI, Gemini, OpenCode Zen, and custom OpenAI-compatible providers.
-- [x] Make ZETRO chat use the active saved provider connection.
-- [x] Change provider tests to perform real chat/generateContent checks.
-- [x] Refresh OpenRouter free model choices from the live model catalog and avoid stale discontinued `:free` slugs.
-- [x] Make ZETRO dashboard status cards and multi-agent stack dynamic from backend status.
-- [x] Polish ZETRO reply behavior and chat rendering for compact markdown answers.
-- [x] Make the dashboard switchable model card interactive and persist default model changes.
-- [x] Constrain ZETRO model dropdown height so it scrolls internally.
-- [x] Add chat fallback when a selected free model is rate-limited or temporarily unavailable.
-- [x] Add AI platform manager UI for OpenRouter, OpenAI/GPT, Gemini, OpenCode Zen, and custom providers.
-- [x] Add optional env fallback keys for OpenAI/GPT, Gemini, OpenCode Zen, and custom providers.
-- [x] Add ZETRO chat history memory with full-window history view, dated saved chats, load previous chat, new chat from history, clear current, and clear all.
-- [x] Polish ZETRO chat box with adaptive glass UI, signature hero, rotating empty-state prompt, bottom model picker, and auto-scroll to newest messages.
-- [x] Split ZETRO behavior into restricted user/super-admin audiences with hidden model/provider details for all non-super-admin roles and super-admin-only recommended updates.
-- [x] Add legal/compliance/secret restriction behavior and dedicated policy docs.
-- [x] Restrict ZETRO runtime search to the dedicated `ZRO/ZETRO` docs boundary.
-- [x] Add tenant-aware read-only sales and purchase summary query tools.
-- [x] Add super-admin query-insights review for repeated client questions and mapped intents.
-- [x] Split the super-admin ZETRO base screen into focused pages for Base, Providers, Knowledge, Agents, Queries, and Updates.
-- [x] Fix ZETRO fetch/learn flow errors by restoring backend startup, bounding tenant provisioning, and surfacing failed Learn/API payloads.
-- [x] Expand approved read-only tenant query tools for customer balances, supplier balances, sales bill details, and purchase bill details.
-- [x] Add a database-backed ZETRO Query Registry for approved tools, aliases, mappings, and business-query usage logs.
-- [x] Add super-admin mapping candidates from recent ZETRO chat logs.
-- [ ] Verify with platform FAQ prompts after docs are indexed.
-- [x] Verify a live provider response through the saved OpenRouter connection.
+### Done In Current Billing API Slice
 
-## 2026-06-18 - Sales manual invoice override numbering
+- [x] Created `apps/billing-api` as a separately runnable backend service.
+- [x] Kept `apps/server` intact and mounted proven billing/accounting modules from the compatibility backend to avoid behavior loss.
+- [x] Added Billing API runtime, preflight, root scripts, env samples, and app-local docs.
+- [x] Added Docker Compose service and container entrypoint mode for `CXSUN_RUNTIME_MODE=billing-api`.
+- [x] Routed frontend sales, purchase, quotation, export sales, receipt, payment, accounts, purchase receipt, delivery note, and stock ledger clients through `VITE_BILLING_API_BASE_URL`.
+- [x] Added MariaDB-backed Billing API contract and e2e tests.
+- [x] Added per-module billing test entrypoints for sales, quotation, export sales, purchase, receipt, payment, accounts, purchase receipt, delivery note, and stock ledger.
+- [x] Added central developer docs for Billing API.
 
-- [x] Trace Sales invoice resolution and document-number reconciliation.
-- [x] Stop manual Sales overrides from advancing the automatic sequence.
-- [x] Reject duplicate manual Sales invoice numbers without consuming a new number.
-- [x] Preserve numbering gaps by reconciling only consecutive used numbers.
-- [x] Update Sales and Document Settings documentation.
-- [x] Verify focused Sales numbering assertions, diff checks, and docs build.
-- [ ] Re-run server typecheck/build after the unrelated Tirupur Connect compile errors are resolved.
+### Required Billing API Verification
 
-## 2026-06-18 - Manual override numbering across entries
+- [x] `npm -w @cxsun/platform run typecheck`
+- [x] `npm -w @cxsun/platform run build`
+- [x] `npm run typecheck:billing-api`
+- [x] `npm run build:billing-api`
+- [x] `npm -w apps/billing-api run test:contract`
+- [x] `npm -w apps/billing-api run test:modules`
+- [x] `npm -w apps/billing-api run test:e2e`
+- [x] `npm -w apps/billing-api run test:mutations`
+- [x] `npm -w apps/frontend run typecheck`
+- [x] `npm -w apps/frontend run build`
+- [x] `npm -w apps/server run typecheck`
+- [x] `npm -w apps/server run build`
+- [x] `npm -w apps/docs run build`
+- [x] `npm run check:docs-progress`
+- [x] `rg "server/src|@cxsun/server" apps/billing-api -n` returns no matches.
 
-- [x] Apply exact manual override behavior to Purchase, Export Sales, Receipt, and Payment.
-- [x] Apply exact manual override behavior to Journal, Contra, Cash Book, and Bank Book.
-- [x] Add duplicate protection and collision-safe automatic numbering to Purchase Receipt and Delivery Note.
-- [x] Remove sequence advancement from manual document overrides.
-- [x] Verify server typecheck/build, focused numbering checks, and documentation build.
+### Next Safe Move After This Row
 
-## 2026-06-18 - Inline product HSN mapping
+- [x] Start Phase 2 by moving Receipt Entry into native `apps/billing-api/src/modules/entries/receipt`.
+- [x] Continue Phase 2 by moving Payment Entry into native `apps/billing-api/src/modules/entries/payment`.
+- [x] Continue Phase 2 by moving Purchase Entry into native `apps/billing-api/src/modules/entries/purchase`.
+- [x] Continue Phase 2 by moving Export Sales Entry into native `apps/billing-api/src/modules/entries/export-sales`.
+- [x] Move Accounts and Billing Reports into native `apps/billing-api/src/modules/accounts`.
+- [x] Expand Billing API route tests to include accounts reports, cash/bank books, and period locks.
+- [x] Rewire native Receipt, Payment, and Purchase modules to use native Billing API Accounts posting providers.
+- [x] Move Sales Entry into native `apps/billing-api/src/modules/entries/sales`.
+- [x] Move Quotation Entry into native `apps/billing-api/src/modules/entries/quotation`.
+- [x] Extract shared reusable backend runtime into `packages/platform`.
+- [x] Rewire Billing API away from all `apps/server/src` and `@cxsun/server` imports.
+- [x] Include Platform package, Platform API, and Billing API in active build/typecheck paths.
+- [x] Move Purchase Receipt into native `apps/billing-api/src/modules/stock/inward/purchase-receipt`.
+- [x] Move Delivery Note into native `apps/billing-api/src/modules/stock/outward/delivery-note`.
+- [x] Move Stock Ledger into native `apps/billing-api/src/modules/stock/ledger`.
+- [x] Remove Billing API module mounts for sales, quotation, purchase receipt, delivery note, and stock ledger from compatibility server imports.
+- [x] Route purchase receipt, delivery note, and stock ledger frontend clients to Billing API.
+- [x] Add deeper Billing API mutation e2e coverage for create/update/get/list flows against a disposable MariaDB tenant database.
+- [x] Remove old combined-server billing route implementations after Billing API native route ownership is proven.
+- [x] Keep only server-side billing migration bridge exports required by tenant database provisioning.
+- [x] Add focused allocation mutation e2e for Receipt and Payment settlement flows.
+- [x] Finalize Billing API go-live row with no remaining Billing API route ownership blockers.
 
-- [x] Trace the shared Product Autocomplete create-and-select flow.
-- [x] Preserve selected HSN, Unit, and GST records during inline product creation.
-- [x] Map the created product directly into Sales, Purchase, and Quotation line drafts.
-- [x] Refresh dependent lookup caches after product creation.
-- [x] Verify frontend typecheck/build.
+### Future Shared Runtime Work
 
-## 2026-06-18 - Secondary address create-and-populate
+The remaining shared framework/helper dependencies are deferred to the platform shared-runtime consolidation. They are not Billing API route ownership blockers because Billing API now owns the mounted billing modules, frontend traffic path, Docker runtime, MariaDB e2e coverage, mutation coverage, and old combined-server billing route cleanup.
 
-- [x] Trace Sales, Purchase, and Quotation secondary-address dialogs.
-- [x] Return the persisted address instead of only a stale formatted string.
-- [x] Resolve fresh country/state/district/city/pincode labels after save.
-- [x] Immediately populate address and state/tax fields before contact refetch completes.
-- [x] Verify frontend typecheck/build.
+## 2026-06-25 - Independent Billing deployment
 
-## 2026-06-18 - Entry workflow documentation
+**Batch:** #131
+**Owner:** Platform API, Billing API, Billing frontend
+**Rule:** Package Billing first. Ecommerce and later products receive their own deployment units in later tasks.
 
-- [x] Capture original live screenshots for Sales, Purchase, Quotation, Receipt, Payment, Cash Book, and Bank Book.
-- [x] Write separate clean step-by-step guides for all seven entry workflows.
-- [x] Document preparation, entry order, allocation/address behavior, verification, and common mistakes.
-- [x] Update the Docusaurus Entries sidebar.
-- [x] Verify docs typecheck/build and rendered pages.
+- [x] Add an isolated `.container/billing` Compose project.
+- [x] Add independent Platform API, Billing API, and Billing frontend Docker images.
+- [x] Keep MariaDB, Redis, Docker network, and media storage external to the Billing deployment.
+- [x] Add health-gated dependency order and per-service redeploy commands.
+- [x] Compile the current shared frontend with only Platform and Billing readiness requirements.
+- [x] Validate Compose interpolation/configuration.
+- [x] Build/typecheck Platform API, Billing API, and frontend.
+- [x] Build all three Billing deployment Docker images and verify API runtime imports.
+- [x] Run documentation progress checks.
 
-## 2026-06-19 - Sales e-invoice GST 400 handling
+### 2026-06-26 Local Billing stack follow-up
 
-- [x] Trace Sales IRN generation through the GST compliance client and backend settings gate.
-- [x] Show the backend GST error message instead of the generic HTTP 400 toast.
-- [x] Retry Sales GST operations against the alternate environment only when the active environment settings are not enabled.
-- [x] Persist the working GST API environment after a successful fallback.
-- [x] Verify frontend typecheck and production build.
+- [x] Add `billing-stack.sh` for local Docker setup and verification.
+- [x] Add local env sample with frontend on `6011`, Platform API on `6105`, and Billing API on `6205`.
+- [x] Reuse/start existing MariaDB and Redis containers without invoking the old full `.container/setup-local.sh`.
+- [x] Verify Platform API, Billing API, and Billing frontend containers are healthy locally.
+- [x] Fix fresh Billing API Docker build failure caused by test-only `unknown` address typing.
 
-## 2026-06-19 - Sales E-Way Bill print page
+## 2026-06-25 - Ecommerce API first extraction row
 
-- [x] Inspect the referenced E-Way Bill PDF layout and text structure.
-- [x] Add a dedicated Sales E-Way Bill print component with QR, Part A, Part B, and barcode sections.
-- [x] Add GST compliance document lookup for saved E-Way validity fields.
-- [x] Add Invoice/E-way print switch and download action on the Sales show page.
-- [x] Verify existing Sales invoice print view still renders when no E-Way Bill exists.
-- [x] Verify frontend typecheck and production build.
+**Batch:** #130
+**Owner:** Ecommerce API
+**Rule:** Prove the standalone service path before moving or deleting combined-server ecommerce code.
+
+### Done In Current Ecommerce API Slice
+
+- [x] Created `apps/ecommerce-api` as a separately runnable backend service.
+- [x] Mounted the proven combined-server ecommerce module first to avoid behavior loss.
+- [x] Added Ecommerce API runtime, preflight, root scripts, env samples, and app-local docs.
+- [x] Added Docker Compose service and container entrypoint mode for `CXSUN_RUNTIME_MODE=ecommerce-api`.
+- [x] Routed frontend ecommerce workspace/settings/product/customer clients through `VITE_ECOMMERCE_API_BASE_URL`.
+- [x] Added MariaDB-backed Ecommerce API contract and e2e route-protection tests.
+- [x] Added central developer docs for Ecommerce API.
+
+### Required Ecommerce API Verification
+
+- [x] `npm run typecheck:ecommerce-api`
+- [x] `npm run build:ecommerce-api`
+- [x] `npm -w apps/ecommerce-api run test:contract`
+- [x] `npm -w apps/ecommerce-api run test:e2e`
+- [x] `npm -w apps/frontend run typecheck`
+- [x] `npm -w apps/frontend run build`
+- [x] `npm -w apps/docs run build`
+- [x] `docker compose -f .container/docker-compose.yml config`
+- [x] `npm run check:docs-progress`
+
+### Next Safe Move After This Row
+
+- [ ] Native-move Ecommerce module into `apps/ecommerce-api/src/modules/ecommerce`.
+- [ ] Add a mutation e2e that provisions a disposable tenant database and verifies settings/product publication/customer profile create/update flows.
+- [ ] Only remove combined-server ecommerce route implementation after standalone Ecommerce API traffic is proven.

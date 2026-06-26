@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { blogApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface BlogCategory {
   id: number
@@ -190,7 +190,7 @@ export function emptyImage(): Partial<BlogImage> {
 }
 
 export async function getBlogWorkspace(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Blog workspace failed with status ${response.status}.`)
   return (await response.json()) as BlogWorkspace
 }
@@ -204,13 +204,13 @@ export async function listBlogPosts(session: AuthSession, query?: { status?: str
   if (query?.limit) params.set("limit", query.limit)
   if (query?.offset) params.set("offset", query.offset)
   const qs = params.toString()
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog/posts${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog/posts${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Blog posts list failed with status ${response.status}.`)
   return (await response.json()) as BlogPost[]
 }
 
 async function blogPost(session: AuthSession, path: string, input: unknown, fallback: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog/${path}`, {
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog/${path}`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -250,7 +250,7 @@ export async function listBlogComments(session: AuthSession, query?: { post_id?:
   if (query?.is_approved) params.set("is_approved", query.is_approved)
   if (query?.search) params.set("search", query.search)
   const qs = params.toString()
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog/comments${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog/comments${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Blog comments list failed with status ${response.status}.`)
   return (await response.json()) as BlogComment[]
 }
@@ -271,7 +271,7 @@ export async function listBlogImages(session: AuthSession, query?: { post_id?: s
   const params = new URLSearchParams()
   if (query?.post_id) params.set("post_id", query.post_id)
   const qs = params.toString()
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog/images${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog/images${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Blog images list failed with status ${response.status}.`)
   return (await response.json()) as BlogImage[]
 }
@@ -293,7 +293,7 @@ export async function deleteBlogRating(session: AuthSession, rating: BlogRating)
 }
 
 export async function getBlogPostRating(session: AuthSession, postId: number) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog/ratings/${postId}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog/ratings/${postId}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Blog rating fetch failed with status ${response.status}.`)
   return (await response.json()) as { avg: number; count: number }
 }
@@ -310,7 +310,7 @@ export async function listBlogShares(session: AuthSession, query?: { post_id?: s
   const params = new URLSearchParams()
   if (query?.post_id) params.set("post_id", query.post_id)
   const qs = params.toString()
-  const response = await fetch(`${apiBaseUrl}/api/v1/blog/shares${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${blogApiBaseUrl}/api/v1/blog/shares${qs ? `?${qs}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Blog shares list failed with status ${response.status}.`)
   return (await response.json()) as BlogShare[]
 }

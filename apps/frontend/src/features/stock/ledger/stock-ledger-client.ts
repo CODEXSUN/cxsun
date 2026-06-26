@@ -1,4 +1,5 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl } from "src/lib/api-base-url"
 
 export type StockBarcodeMode = "readable" | "numeric"
 export type StockSerializationMode = "partial" | "full" | "single"
@@ -113,19 +114,19 @@ export interface StockLiveBalance {
 }
 
 export async function getStockLedgerSettings(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/settings`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/settings`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Stock settings failed with status ${response.status}.`)
   return (await response.json()) as StockLedgerSettings
 }
 
 export async function listStockLedgerEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/entries`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/entries`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Stock ledger list failed with status ${response.status}.`)
   return (await response.json()) as StockLedgerEntry[]
 }
 
 export async function upsertStockLedgerEntry(session: AuthSession, input: StockLedgerEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/entries/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/entries/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -138,7 +139,7 @@ export async function upsertStockLedgerEntry(session: AuthSession, input: StockL
 }
 
 export async function upsertStockLedgerSettings(session: AuthSession, input: Partial<StockLedgerSettings>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/settings`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/settings`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -151,7 +152,7 @@ export async function upsertStockLedgerSettings(session: AuthSession, input: Par
 }
 
 export async function getPurchaseReceiptIntake(session: AuthSession, receiptIdOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/purchase-receipts/${encodeURIComponent(receiptIdOrUuid)}/intake`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/purchase-receipts/${encodeURIComponent(receiptIdOrUuid)}/intake`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -169,7 +170,7 @@ export async function generateStockSerialization(session: AuthSession, input: {
   warehouse_name?: string | null
   batch_no?: string | null
 }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/serializations/generate`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/serializations/generate`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -182,7 +183,7 @@ export async function generateStockSerialization(session: AuthSession, input: {
 }
 
 export async function verifyStockSerialization(session: AuthSession, serializationUuid: string, barcodes: string[]) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/serializations/${encodeURIComponent(serializationUuid)}/verify`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/serializations/${encodeURIComponent(serializationUuid)}/verify`, {
     body: JSON.stringify({ barcodes }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -195,7 +196,7 @@ export async function verifyStockSerialization(session: AuthSession, serializati
 }
 
 export async function postStockSerialization(session: AuthSession, serializationUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/serializations/${encodeURIComponent(serializationUuid)}/post`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/serializations/${encodeURIComponent(serializationUuid)}/post`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -208,7 +209,7 @@ export async function postStockSerialization(session: AuthSession, serialization
 }
 
 export async function dropStockSerialization(session: AuthSession, serializationUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/serializations/${encodeURIComponent(serializationUuid)}/drop`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/serializations/${encodeURIComponent(serializationUuid)}/drop`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -220,7 +221,7 @@ export async function dropStockSerialization(session: AuthSession, serialization
 }
 
 export async function listStockLiveBalances(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/ledger/balances`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/ledger/balances`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Stock balances failed with status ${response.status}.`)
   return (await response.json()) as StockLiveBalance[]
 }

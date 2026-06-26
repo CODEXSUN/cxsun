@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
 
@@ -156,7 +156,7 @@ export function emptyQuotationItem(): QuotationEntryItem {
 }
 
 export async function listQuotationEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -185,7 +185,7 @@ export async function listQuotationCommonLookups(session: AuthSession, moduleKey
 }
 
 export async function getQuotationEntry(session: AuthSession, idOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation/${encodeURIComponent(idOrUuid)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation/${encodeURIComponent(idOrUuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -194,7 +194,7 @@ export async function getQuotationEntry(session: AuthSession, idOrUuid: string) 
 }
 
 export async function upsertQuotationEntry(session: AuthSession, input: QuotationEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -215,7 +215,7 @@ export async function restoreQuotationEntry(session: AuthSession, entry: Quotati
 }
 
 export async function addQuotationComment(session: AuthSession, entry: QuotationEntry, body: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation/${entry.uuid}/comments`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation/${entry.uuid}/comments`, {
     body: JSON.stringify({ body }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -228,7 +228,7 @@ export async function addQuotationComment(session: AuthSession, entry: Quotation
 }
 
 export async function runQuotationTool(session: AuthSession, entry: QuotationEntry, tool: string, printHtml?: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation/${entry.uuid}/tools`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation/${entry.uuid}/tools`, {
     body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -245,7 +245,7 @@ export async function downloadQuotationPdf(session: AuthSession, entry: Quotatio
 }
 
 export async function generateInvoiceFromQuotations(session: AuthSession, quotationIds: string[]) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation/generate-invoice`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation/generate-invoice`, {
     body: JSON.stringify({ quotationIds }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -261,7 +261,7 @@ export async function generateInvoiceFromQuotations(session: AuthSession, quotat
 }
 
 async function mutateQuotationEntry(session: AuthSession, idOrUuid: string, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/quotation/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/quotation/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -282,7 +282,7 @@ async function readErrorMessage(response: Response) {
 }
 
 async function listLookupRecords(session: AuthSession, endpoint: string) {
-  const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const response = await fetch(`${billingApiBaseUrl}${endpoint}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

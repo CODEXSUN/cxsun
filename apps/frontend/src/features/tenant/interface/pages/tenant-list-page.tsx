@@ -31,7 +31,7 @@ import {
 } from "src/components/blocks/lists/master-list"
 import { dashboardApps, type DashboardAppId } from "src/components/blocks/dashboard/dashboard-apps"
 import { cn } from "src/lib/utils"
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 import {
   buildTenantColumnOptions,
   compareTenantRecords,
@@ -75,7 +75,7 @@ interface TenantDomainRecord {
 }
 
 async function listTenantDomains(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/tenant-domains`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

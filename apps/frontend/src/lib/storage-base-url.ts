@@ -1,7 +1,7 @@
-import { apiBaseUrl } from "./api-base-url"
+import { platformApiBaseUrl } from "./api-base-url"
 
 const configuredStorageBaseUrl = import.meta.env.VITE_STORAGE_BASE_URL ?? ""
 
-export const storageBaseUrl = (configuredStorageBaseUrl || apiBaseUrl)
+export const storageBaseUrl = (configuredStorageBaseUrl || platformApiBaseUrl)
   .replace(/\/storage\/?$/, "")
   .replace(/\/$/, "")

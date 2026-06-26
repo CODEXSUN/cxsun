@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { agentOsApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface AgentOsStatus {
   ok: boolean
@@ -284,7 +284,7 @@ export interface ZetroQueryRegistryResponse {
 }
 
 export async function getAgentOsStatus(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/status`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/status`, {
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session) },
   })
@@ -297,7 +297,7 @@ export async function getAgentOsStatus(session: AuthSession) {
 }
 
 export async function getZetroRead() {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/read`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/read`, {
     cache: "no-store",
   })
 
@@ -319,7 +319,7 @@ export async function searchZetroGuide(query: string) {
   }
   params.set("limit", "8")
 
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/search?${params.toString()}`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/search?${params.toString()}`, {
     cache: "no-store",
   })
 
@@ -335,7 +335,7 @@ export async function searchZetroGuide(query: string) {
 }
 
 export async function getZetroApiConnection(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/api-connection`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/api-connection`, {
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session) },
   })
@@ -355,7 +355,7 @@ export async function testZetroApiConnection(
   session: AuthSession,
   input: { apiKey?: string; providerKey?: string; model?: string },
 ) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/api-connection/test`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/api-connection/test`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session), "Content-Type": "application/json" },
@@ -388,7 +388,7 @@ export async function saveZetroApiConnection(
     testAfterSave?: boolean
   },
 ) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/api-connection/save`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/api-connection/save`, {
     body: JSON.stringify({ ...input, audience: zetroAudience(session), userRole: session.selectedTenant.role }),
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session), "Content-Type": "application/json" },
@@ -411,7 +411,7 @@ export async function sendZetroChat(
   session: AuthSession,
   input: { businessTenantSlug?: string; message: string; model: string; providerKey?: string; conversationUuid?: string | null },
 ) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/chat`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/chat`, {
     body: JSON.stringify({
       conversationUuid: input.conversationUuid,
       message: input.message,
@@ -443,7 +443,7 @@ export async function sendZetroChat(
 }
 
 export async function listZetroConversations(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations?limit=20`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/conversations?limit=20`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -456,7 +456,7 @@ export async function listZetroConversations(session: AuthSession) {
 }
 
 export async function getZetroConversation(session: AuthSession, uuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations/${encodeURIComponent(uuid)}`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/conversations/${encodeURIComponent(uuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -473,7 +473,7 @@ export async function getZetroConversation(session: AuthSession, uuid: string) {
 }
 
 export async function clearZetroConversation(session: AuthSession, uuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations/${encodeURIComponent(uuid)}`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/conversations/${encodeURIComponent(uuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
     method: "DELETE",
@@ -487,7 +487,7 @@ export async function clearZetroConversation(session: AuthSession, uuid: string)
 }
 
 export async function clearZetroConversations(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/conversations`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/conversations`, {
     cache: "no-store",
     headers: authHeaders(session),
     method: "DELETE",
@@ -501,7 +501,7 @@ export async function clearZetroConversations(session: AuthSession) {
 }
 
 export async function learnZetroDocs(session: AuthSession, query?: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/learn`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/learn`, {
     body: JSON.stringify({ audience: zetroAudience(session), query: query?.trim() || undefined, userRole: session.selectedTenant.role }),
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session), "Content-Type": "application/json" },
@@ -520,7 +520,7 @@ export async function learnZetroDocs(session: AuthSession, query?: string) {
 }
 
 export async function getZetroQueryInsights(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/query-insights`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/query-insights`, {
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session) },
   })
@@ -537,7 +537,7 @@ export async function getZetroQueryInsights(session: AuthSession) {
 }
 
 export async function getZetroQueryRegistry(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/query-registry`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/query-registry`, {
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session) },
   })
@@ -557,7 +557,7 @@ export async function saveZetroQueryMapping(
   session: AuthSession,
   input: { phrase: string; toolKey: string; matchType: string },
 ) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/agent-os/query-registry/mappings`, {
+  const response = await fetch(`${agentOsApiBaseUrl}/api/v1/agent-os/query-registry/mappings`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), ...zetroAudienceHeaders(session), "Content-Type": "application/json" },

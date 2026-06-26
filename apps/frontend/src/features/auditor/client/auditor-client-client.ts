@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { auditorApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface AuditorClientRecord {
   id: number
@@ -89,13 +89,13 @@ export function emptyAuditorClient(): AuditorClientInput {
 }
 
 export async function listAuditorClients(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/clients`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/clients`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Auditor client list failed with status ${response.status}.`)
   return ((await response.json()) as RawAuditorClient[]).map(normalizeAuditorClient)
 }
 
 export async function upsertAuditorClient(session: AuthSession, input: AuditorClientInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/clients/upsert`, {
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/clients/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -116,7 +116,7 @@ export async function restoreAuditorClient(session: AuthSession, record: Auditor
 }
 
 async function mutateAuditorClient(session: AuthSession, uuid: string, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/clients/${encodeURIComponent(uuid)}/${action}`, {
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/clients/${encodeURIComponent(uuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

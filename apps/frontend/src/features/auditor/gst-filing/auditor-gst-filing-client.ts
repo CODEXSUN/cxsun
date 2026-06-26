@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { auditorApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface AuditorGstFilingRecord {
   id: number
@@ -56,13 +56,13 @@ export async function listAuditorGstFilings(session: AuthSession, filters: { con
   if (filters.contactId) query.set("contactId", String(filters.contactId))
   if (filters.monthName) query.set("monthName", filters.monthName)
   if (filters.accountingYearName) query.set("accountingYearName", filters.accountingYearName)
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/gst-filings?${query}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/gst-filings?${query}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`GST filing list failed with status ${response.status}.`)
   return ((await response.json()) as RawAuditorGstFiling[]).map(normalizeAuditorGstFiling)
 }
 
 export async function upsertAuditorGstFiling(session: AuthSession, input: AuditorGstFilingInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/gst-filings/upsert`, {
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/gst-filings/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -75,7 +75,7 @@ export async function upsertAuditorGstFiling(session: AuthSession, input: Audito
 }
 
 export async function deleteAuditorGstFiling(session: AuthSession, record: AuditorGstFilingRecord) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/gst-filings/${encodeURIComponent(record.uuid)}/destroy`, {
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/gst-filings/${encodeURIComponent(record.uuid)}/destroy`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

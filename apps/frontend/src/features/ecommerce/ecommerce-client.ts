@@ -1,4 +1,6 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
+import { ecommerceApiBaseUrl } from "src/lib/api-base-url"
 
 export interface EcommerceSettings {
   id: number
@@ -125,9 +127,18 @@ export type EcommerceView =
   | "tax-settings"
 
 export async function getEcommerceWorkspace(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/ecommerce`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${ecommerceApiBaseUrl}/api/v1/ecommerce`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Ecommerce workspace failed with status ${response.status}.`)
   return (await response.json()) as EcommerceWorkspace
+}
+
+export async function listEcommerceSourceRecords(session: AuthSession, moduleKey: "contacts" | "products" | "productCategories") {
+  const response = await fetch(`${ecommerceApiBaseUrl}${ecommerceSourceEndpoint(moduleKey)}`, {
+    cache: "no-store",
+    headers: authHeaders(session),
+  })
+  if (!response.ok) throw new Error(`Ecommerce source ${moduleKey} failed with status ${response.status}.`)
+  return (await response.json()) as MasterDataRecord[]
 }
 
 export async function saveEcommerceSettings(session: AuthSession, input: Partial<EcommerceSettings>) {
@@ -143,7 +154,7 @@ export async function upsertEcommerceCustomer(session: AuthSession, input: Parti
 }
 
 async function ecommerceRequest(session: AuthSession, path: string, input: unknown, fallback: string, method = "POST") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/ecommerce/${path}`, {
+  const response = await fetch(`${ecommerceApiBaseUrl}/api/v1/ecommerce/${path}`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -153,6 +164,12 @@ async function ecommerceRequest(session: AuthSession, path: string, input: unkno
   const result = (await response.json()) as { ok: boolean; workspace?: EcommerceWorkspace; error?: string }
   if (!result.ok || !result.workspace) throw new Error(result.error ?? fallback)
   return result.workspace
+}
+
+function ecommerceSourceEndpoint(moduleKey: "contacts" | "products" | "productCategories") {
+  if (moduleKey === "contacts") return "/api/v1/contacts"
+  if (moduleKey === "products") return "/api/v1/products"
+  return "/api/v1/common/productCategories"
 }
 
 export function emptyProductPublication(): Partial<EcommerceProductPublication> {

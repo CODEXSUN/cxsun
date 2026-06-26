@@ -30,6 +30,7 @@ import { CityAutocompleteLookup } from "src/features/master-data/interface/compo
 import { CommonRecordAutocompleteLookup, getCommonRecordName } from "src/features/master-data/interface/components/common-record-autocomplete-lookup"
 import { CountryAutocompleteLookup } from "src/features/master-data/interface/components/country-autocomplete-lookup"
 import { DistrictAutocompleteLookup } from "src/features/master-data/interface/components/district-autocomplete-lookup"
+import { PincodeAutocompleteLookup } from "src/features/master-data/interface/components/pincode-autocomplete-lookup"
 import { StateAutocompleteLookup } from "src/features/master-data/interface/components/state-autocomplete-lookup"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
@@ -689,11 +690,11 @@ function buildCompanyUpsertTabs({
               <CommonRecordAutocompleteLookup className="md:col-span-2" label="Address Type" moduleKey="addressTypes" session={session} value={address.addressTypeId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, addressTypeId: value === null ? null : String(value) } : item)))} />
               <TextField label="Address" value={address.addressLine1} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, addressLine1: value } : item)))} />
               <TextField label="Area / Location" value={address.addressLine2} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, addressLine2: value || null } : item)))} />
-              <CountryAutocompleteLookup session={session} value={address.countryId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, countryId: value === null ? null : String(value), stateId: null, districtId: null, cityId: null, pincodeId: null } : item)))} />
-              <StateAutocompleteLookup countryId={address.countryId} session={session} value={address.stateId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, stateId: value === null ? null : String(value), districtId: null, cityId: null, pincodeId: null } : item)))} />
-              <DistrictAutocompleteLookup session={session} stateId={address.stateId} value={address.districtId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, districtId: value === null ? null : String(value), cityId: null, pincodeId: null } : item)))} />
-              <CityAutocompleteLookup districtId={address.districtId} session={session} value={address.cityId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, cityId: value === null ? null : String(value), pincodeId: null } : item)))} />
-              <CommonRecordAutocompleteLookup label="Pincode" moduleKey="pincodes" optionFilter={(record) => matchesReference(record.city_id, address.cityId)} placeholder="Search pincode" session={session} value={address.pincodeId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, pincodeId: value === null ? null : String(value) } : item)))} />
+              <CountryAutocompleteLookup session={session} value={address.countryId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, countryId: value === null ? null : String(value), stateId: null, districtId: null, cityId: null } : item)))} />
+              <StateAutocompleteLookup countryId={address.countryId} session={session} value={address.stateId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, stateId: value === null ? null : String(value), districtId: null, cityId: null } : item)))} />
+              <DistrictAutocompleteLookup session={session} stateId={address.stateId} value={address.districtId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, districtId: value === null ? null : String(value), cityId: null } : item)))} />
+              <CityAutocompleteLookup districtId={address.districtId} session={session} value={address.cityId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, cityId: value === null ? null : String(value) } : item)))} />
+              <PincodeAutocompleteLookup session={session} value={address.pincodeId} onChange={(value) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, pincodeId: value === null ? null : String(value) } : item)))} />
               <SwitchField checked={address.isDefault} label="Default address" onChange={(isDefault) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => ({ ...item, isDefault: itemIndex === index ? isDefault : false })))} />
               <SwitchField checked={address.isActive} label="Active" onChange={(isActive) => setFormField(setForm, "addresses", form.addresses.map((item, itemIndex) => (itemIndex === index ? { ...item, isActive } : item)))} />
             </>
@@ -1170,10 +1171,6 @@ function dateInputValue(value: string | null) {
 function formatDate(value: string | null) {
   if (!value) return "Not set"
   return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value))
-}
-
-function matchesReference(recordValue: unknown, selectedValue: unknown) {
-  return selectedValue === null || selectedValue === undefined || selectedValue === "" || String(recordValue) === String(selectedValue)
 }
 
 function useCommonRecordLabels(session: AuthSession) {

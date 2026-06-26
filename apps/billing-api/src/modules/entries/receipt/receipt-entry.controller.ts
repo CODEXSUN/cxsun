@@ -1,0 +1,68 @@
+import type { FastifyReply } from 'fastify'
+import { Body, Headers, Param, Res } from '@cxsun/platform/core/decorators/http-params.js'
+import { Controller, Get, Post } from '@cxsun/platform/core/decorators/controller.js'
+import { Inject } from '@cxsun/platform/core/decorators/inject.js'
+import type { TenantRequestHeaders } from '@cxsun/platform/core/tenant/tenant-context.service.js'
+import type { CreateCorrectionCommand, ReverseDocumentCommand } from '@cxsun/platform/modules/entries/shared/entry-command.dto.js'
+import { ReceiptEntryService } from './receipt-entry.service.js'
+import type { ReceiptEntryInput } from './receipt-entry.types.js'
+
+@Controller('api/v1/entries/receipt')
+export class ReceiptEntryController {
+  constructor(@Inject(ReceiptEntryService) private readonly receipts: ReceiptEntryService) {}
+
+  @Get()
+  list(@Headers() headers: TenantRequestHeaders) {
+    return this.receipts.list(headers)
+  }
+
+  @Get(':idOrUuid')
+  get(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
+    return this.receipts.get(headers, idOrUuid)
+  }
+
+  @Post('upsert')
+  upsert(@Headers() headers: TenantRequestHeaders, @Body() body: ReceiptEntryInput) {
+    return this.receipts.upsert(headers, body)
+  }
+
+  @Post(':idOrUuid/destroy')
+  destroy(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
+    return this.receipts.destroy(headers, idOrUuid)
+  }
+
+  @Post(':idOrUuid/restore')
+  restore(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string) {
+    return this.receipts.restore(headers, idOrUuid)
+  }
+
+  @Post(':idOrUuid/correction')
+  correction(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: CreateCorrectionCommand) {
+    return this.receipts.correction(headers, idOrUuid, body ?? {})
+  }
+
+  @Post(':idOrUuid/reversal')
+  reversal(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: ReverseDocumentCommand) {
+    return this.receipts.reversal(headers, idOrUuid, body ?? {})
+  }
+
+  @Post(':idOrUuid/comments')
+  addComment(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: { body?: string }) {
+    return this.receipts.addComment(headers, idOrUuid, body.body ?? '')
+  }
+
+  @Post(':idOrUuid/tools')
+  runTool(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: { printHtml?: unknown; tool?: string }) {
+    return this.receipts.runTool(headers, idOrUuid, body.tool ?? '', body.printHtml)
+  }
+
+  @Post(':idOrUuid/pdf')
+  async pdf(@Headers() headers: TenantRequestHeaders, @Param('idOrUuid') idOrUuid: string, @Body() body: { printHtml?: unknown }, @Res() reply: FastifyReply) {
+    const result = await this.receipts.pdf(headers, idOrUuid, body.printHtml)
+    return reply
+      .header('Content-Type', 'application/pdf')
+      .header('Content-Length', result.file.length)
+      .header('Content-Disposition', `attachment; filename="${result.fileName.replace(/"/g, '')}"`)
+      .send(result.file)
+  }
+}

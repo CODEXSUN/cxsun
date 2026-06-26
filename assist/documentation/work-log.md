@@ -1,5 +1,32 @@
 # Work Log
 
+## 2026-06-25
+
+- Completed the standalone Billing API boundary and frontend routing through `VITE_BILLING_API_BASE_URL`.
+- Added `packages/platform` for shared backend runtime capabilities and removed Billing API dependencies on the legacy combined server.
+- Removed proven duplicate Billing routes from `apps/server` while retaining tenant-provisioning migration bridges.
+- Verified Billing API with local MariaDB-backed contract, e2e, module, and mutation suites plus frontend and container checks.
+- Re-ran Platform API and Billing API E2E suites and verified live frontend traffic reaches the standalone services on ports `6105` and `6205`.
+- Added the root `dev:billing-stack` command for concurrent Platform API, Billing API, and frontend development.
+- Updated shared dev preflight to kill stale configured-port listeners and reuse the same ports during restart.
+- Added an immediate frontend startup screen that is visible until React mounts.
+- Fixed local frontend authentication and Billing requests from falling back to legacy port `6005` during extracted-stack development.
+- Removed unnecessary legacy tenant-static and health requests from login/dashboard startup.
+- Added a visible Platform/Billing readiness gate so frontend interaction follows backend health while preserving immediate first paint.
+- Made concurrent Platform/Billing development logs compact and readable while preserving production JSON logging.
+- Added standalone Sites API and routed public tenant pages/contact submissions to port `6405`.
+- Routed dashboard company context and billing settings clients to standalone Billing API.
+- Cleaned remaining extracted-stack frontend mappings so quotation master lookups, contact, media, mail, print-PDF, and site slider calls no longer fall back to legacy port `6005`.
+- Set the shared shadcn radius token to medium for cleaner input/control corners.
+- Added standalone CRM, Tally, Frappe, Task Manager, Auditor, Blog, and Agent OS API workspaces using `@cxsun/platform`, with root scripts, preflight ports, service docs, frontend base URLs, and no `apps/server` source dependency.
+- Routed the requested frontend feature clients away from the generic server base and added `dev:extracted-stack` with configurable readiness checks.
+- Moved GST compliance calls and module ownership to Billing API, and moved subscription, app setup, app runtime, and storage helper ownership to Platform API; System Update remains pending on the legacy server by decision.
+- Rewired Ecommerce API to the shared platform runtime with no direct legacy server source dependency.
+- Routed Ecommerce page source product/contact/category lookups through Ecommerce API.
+- Added Ecommerce API to the extracted-stack dev command and readiness gate.
+- Removed System Update from active server mounting and frontend navigation/rendering; database backup/restore remains available through Database Manager.
+- Bumped the workspace to version `1.0.130`.
+
 ## 2026-06-09
 
 - Added a repo-owned Python Nginx tenant CLI under `.container/cli` for repeated cloud domain setup.
@@ -62,3 +89,18 @@
 - Added product-oriented common seed data for HSN codes, taxes, units, categories, types, groups, brands, colours, sizes, and styles.
 - Reworked contact, company, and product frontend pages for cleaner list, show, and upsert flows.
 - Added standalone product feature page routing and documented the rule that module pages must be feature-owned standalone pages.
+## 2026-06-25 11:05 pm - Independent Billing deployment
+
+- Added `.container/billing` as the first product-level deployment unit with Platform API, Billing API, and Billing frontend services.
+- Kept MariaDB, Redis, the shared Docker network, and media storage external to the application Compose lifecycle.
+- Added separate multi-stage Dockerfiles, health checks, build-time frontend service URLs, an Nginx SPA runtime, environment sample, setup helper, and deployment guide.
+- Verified Compose config, shell syntax, Platform/Billing/frontend typechecks and builds, documentation progress policy, all three Docker image builds, and API runtime imports.
+- Final image sizes: Platform API 408 MB, Billing API 409 MB, Billing frontend 98 MB.
+
+## 2026-06-26 08:52 am - Local Billing stack verification
+
+- Added `.container/billing/billing-stack.sh` as the local-only runner for MariaDB, Redis, Platform API, Billing API, and Billing frontend.
+- Added `.container/billing/.env.local.sample` with local URLs and moved the local Billing frontend to `6011` because `6010` can already be occupied by the existing local frontend.
+- Made Billing deployment scripts work from WSL on Windows by auto-selecting Docker Desktop's `docker.exe` and converting Compose file/env paths.
+- Fixed fresh Billing API Docker builds by using a production-only `tsconfig.build.json` for image compilation and typing the mutation e2e `arrayValue()` helper.
+- Verified `bash .container/billing/billing-stack.sh up`, container health, and Windows `curl.exe` health checks for Platform API `6105`, Billing API `6205`, and Billing frontend `6011`.

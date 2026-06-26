@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface MailSettings {
   tenant_id: number
@@ -62,13 +62,13 @@ export interface MailComposeInput {
 }
 
 export async function getMailSettings(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/mail/settings`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/mail/settings`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Mail settings failed with status ${response.status}.`)
   return (await response.json()) as MailSettings
 }
 
 export async function saveMailSettings(session: AuthSession, input: Partial<MailSettings>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/mail/settings`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/mail/settings`, {
     body: JSON.stringify({
       provider: input.provider,
       host: input.host,
@@ -93,13 +93,13 @@ export async function listMailMessages(session: AuthSession, filters: { status?:
   const params = new URLSearchParams()
   if (filters.status && filters.status !== "all") params.set("status", filters.status)
   if (filters.search) params.set("search", filters.search)
-  const response = await fetch(`${apiBaseUrl}/api/v1/mail/messages${params.size ? `?${params}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/mail/messages${params.size ? `?${params}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Mail list failed with status ${response.status}.`)
   return (await response.json()) as MailMessage[]
 }
 
 export async function sendMailMessage(session: AuthSession, input: MailComposeInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/mail/messages`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/mail/messages`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

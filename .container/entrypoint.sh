@@ -6,8 +6,14 @@ GIT_BRANCH="${GIT_BRANCH:-main}"
 CXSUN_RUNTIME_MODE="${CXSUN_RUNTIME_MODE:-application}"
 FRONTEND_PORT="${VITE_PORT:-6010}"
 SERVER_PORT="${PORT:-6005}"
+PLATFORM_API_PORT="${PLATFORM_API_PORT:-6105}"
+BILLING_API_PORT="${BILLING_API_PORT:-6205}"
+ECOMMERCE_API_PORT="${ECOMMERCE_API_PORT:-6305}"
 DOCS_PORT="${DOCS_PORT:-6020}"
 API_BASE_URL="${VITE_API_BASE_URL:-https://codexsun.com}"
+PLATFORM_API_BASE_URL="${VITE_PLATFORM_API_BASE_URL:-$API_BASE_URL}"
+BILLING_API_BASE_URL="${VITE_BILLING_API_BASE_URL:-$API_BASE_URL}"
+ECOMMERCE_API_BASE_URL="${VITE_ECOMMERCE_API_BASE_URL:-$API_BASE_URL}"
 STORAGE_BASE_URL="${VITE_STORAGE_BASE_URL:-$API_BASE_URL}"
 MEDIA_MANAGER_URL="${VITE_MEDIA_MANAGER_URL:-http://localhost:6050}"
 FRONTEND_APP_URL="${FRONTEND_URL:-https://codexsun.com}"
@@ -163,9 +169,15 @@ if [ -z "$AUTH_JWT_SECRET" ]; then
 fi
 
 set_env_value "PORT" "$SERVER_PORT"
+set_env_value "PLATFORM_API_PORT" "$PLATFORM_API_PORT"
+set_env_value "BILLING_API_PORT" "$BILLING_API_PORT"
+set_env_value "ECOMMERCE_API_PORT" "$ECOMMERCE_API_PORT"
 set_env_value "VITE_PORT" "$FRONTEND_PORT"
 set_env_value "DOCS_PORT" "$DOCS_PORT"
 set_env_value "VITE_API_BASE_URL" "$API_BASE_URL"
+set_env_value "VITE_PLATFORM_API_BASE_URL" "$PLATFORM_API_BASE_URL"
+set_env_value "VITE_BILLING_API_BASE_URL" "$BILLING_API_BASE_URL"
+set_env_value "VITE_ECOMMERCE_API_BASE_URL" "$ECOMMERCE_API_BASE_URL"
 set_env_value "VITE_STORAGE_BASE_URL" "$STORAGE_BASE_URL"
 set_env_value "VITE_MEDIA_MANAGER_URL" "$MEDIA_MANAGER_URL"
 set_env_value "FRONTEND_URL" "$FRONTEND_APP_URL"
@@ -208,9 +220,15 @@ set_env_value "CXSYNC_FLEET_DUMP_PATH" "$CXSYNC_FLEET_DUMP_PATH"
 set_env_value "CXSYNC_FLEET_CLIENT_PATH" "$CXSYNC_FLEET_CLIENT_PATH"
 
 export PORT="$SERVER_PORT"
+export PLATFORM_API_PORT="$PLATFORM_API_PORT"
+export BILLING_API_PORT="$BILLING_API_PORT"
+export ECOMMERCE_API_PORT="$ECOMMERCE_API_PORT"
 export VITE_PORT="$FRONTEND_PORT"
 export DOCS_PORT="$DOCS_PORT"
 export VITE_API_BASE_URL="$API_BASE_URL"
+export VITE_PLATFORM_API_BASE_URL="$PLATFORM_API_BASE_URL"
+export VITE_BILLING_API_BASE_URL="$BILLING_API_BASE_URL"
+export VITE_ECOMMERCE_API_BASE_URL="$ECOMMERCE_API_BASE_URL"
 export VITE_STORAGE_BASE_URL="$STORAGE_BASE_URL"
 export VITE_MEDIA_MANAGER_URL="$MEDIA_MANAGER_URL"
 export FRONTEND_URL="$FRONTEND_APP_URL"
@@ -252,7 +270,7 @@ export CXSYNC_FLEET_SOURCE_QUIESCED="$CXSYNC_FLEET_SOURCE_QUIESCED"
 export CXSYNC_FLEET_DUMP_PATH="$CXSYNC_FLEET_DUMP_PATH"
 export CXSYNC_FLEET_CLIENT_PATH="$CXSYNC_FLEET_CLIENT_PATH"
 
-echo "Configured ports: backend=$SERVER_PORT frontend=$FRONTEND_PORT api=$API_BASE_URL storage=$STORAGE_BASE_URL media=$MEDIA_MANAGER_URL"
+echo "Configured ports: backend=$SERVER_PORT platform-api=$PLATFORM_API_PORT billing-api=$BILLING_API_PORT ecommerce-api=$ECOMMERCE_API_PORT frontend=$FRONTEND_PORT api=$API_BASE_URL platformApi=$PLATFORM_API_BASE_URL billingApi=$BILLING_API_BASE_URL ecommerceApi=$ECOMMERCE_API_BASE_URL storage=$STORAGE_BASE_URL media=$MEDIA_MANAGER_URL"
 echo "Configured docs: enabled=$CLOUD_DOCS_ENABLED port=$DOCS_PORT"
 echo "Configured product apps: $CLOUD_PRODUCT_APPS"
 echo "Configured CXSync Cloud: enabled=$CLOUD_CXSYNC_CLOUD_ENABLED port=$CXSYNC_CLOUD_PORT"
@@ -354,6 +372,111 @@ if [ "$CXSUN_RUNTIME_MODE" = "cxsync-maintenance" ]; then
 
   wait -n "$CXSYNC_CLOUD_PID" "$CXSYNC_WEB_PID"
   maintenance_shutdown
+  exit 1
+fi
+
+if [ "$CXSUN_RUNTIME_MODE" = "platform-api" ]; then
+  log_step "Starting isolated Platform API runtime"
+  run_step "Cleaning Platform API build output" rm -rf build/platform-api apps/platform-api/dist
+  run_step "Building Platform API" npm run build:platform-api
+
+  log_step "Starting Platform API on port $PLATFORM_API_PORT"
+  PLATFORM_API_PORT="$PLATFORM_API_PORT" HOST="${HOST:-0.0.0.0}" npm -w apps/platform-api run start &
+  PLATFORM_API_PID="$!"
+
+  platform_api_shutdown() {
+    echo "Stopping isolated Platform API runtime"
+    kill "$PLATFORM_API_PID" 2>/dev/null || true
+    wait "$PLATFORM_API_PID" 2>/dev/null || true
+  }
+  trap platform_api_shutdown INT TERM
+
+  log_step "Waiting for Platform API health"
+  for attempt in $(seq 1 "$HEALTH_WAIT_SECONDS"); do
+    if curl -fsS "http://127.0.0.1:${PLATFORM_API_PORT}/health" >/dev/null 2>&1; then
+      echo "Platform API runtime ready."
+      break
+    fi
+    if [ "$attempt" -eq "$HEALTH_WAIT_SECONDS" ]; then
+      echo "Platform API health failed." >&2
+      platform_api_shutdown
+      exit 1
+    fi
+    sleep 1
+  done
+
+  wait "$PLATFORM_API_PID"
+  platform_api_shutdown
+  exit 1
+fi
+
+if [ "$CXSUN_RUNTIME_MODE" = "billing-api" ]; then
+  log_step "Starting isolated Billing API runtime"
+  run_step "Cleaning Billing API build output" rm -rf build/billing-api apps/billing-api/dist
+  run_step "Building Billing API" npm run build:billing-api
+
+  log_step "Starting Billing API on port $BILLING_API_PORT"
+  BILLING_API_PORT="$BILLING_API_PORT" HOST="${HOST:-0.0.0.0}" npm -w apps/billing-api run start &
+  BILLING_API_PID="$!"
+
+  billing_api_shutdown() {
+    echo "Stopping isolated Billing API runtime"
+    kill "$BILLING_API_PID" 2>/dev/null || true
+    wait "$BILLING_API_PID" 2>/dev/null || true
+  }
+  trap billing_api_shutdown INT TERM
+
+  log_step "Waiting for Billing API health"
+  for attempt in $(seq 1 "$HEALTH_WAIT_SECONDS"); do
+    if curl -fsS "http://127.0.0.1:${BILLING_API_PORT}/health" >/dev/null 2>&1; then
+      echo "Billing API runtime ready."
+      break
+    fi
+    if [ "$attempt" -eq "$HEALTH_WAIT_SECONDS" ]; then
+      echo "Billing API health failed." >&2
+      billing_api_shutdown
+      exit 1
+    fi
+    sleep 1
+  done
+
+  wait "$BILLING_API_PID"
+  billing_api_shutdown
+  exit 1
+fi
+
+if [ "$CXSUN_RUNTIME_MODE" = "ecommerce-api" ]; then
+  log_step "Starting isolated Ecommerce API runtime"
+  run_step "Cleaning Ecommerce API build output" rm -rf build/ecommerce-api apps/ecommerce-api/dist
+  run_step "Building Ecommerce API" npm run build:ecommerce-api
+
+  log_step "Starting Ecommerce API on port $ECOMMERCE_API_PORT"
+  ECOMMERCE_API_PORT="$ECOMMERCE_API_PORT" HOST="${HOST:-0.0.0.0}" npm -w apps/ecommerce-api run start &
+  ECOMMERCE_API_PID="$!"
+
+  ecommerce_api_shutdown() {
+    echo "Stopping isolated Ecommerce API runtime"
+    kill "$ECOMMERCE_API_PID" 2>/dev/null || true
+    wait "$ECOMMERCE_API_PID" 2>/dev/null || true
+  }
+  trap ecommerce_api_shutdown INT TERM
+
+  log_step "Waiting for Ecommerce API health"
+  for attempt in $(seq 1 "$HEALTH_WAIT_SECONDS"); do
+    if curl -fsS "http://127.0.0.1:${ECOMMERCE_API_PORT}/health" >/dev/null 2>&1; then
+      echo "Ecommerce API runtime ready."
+      break
+    fi
+    if [ "$attempt" -eq "$HEALTH_WAIT_SECONDS" ]; then
+      echo "Ecommerce API health failed." >&2
+      ecommerce_api_shutdown
+      exit 1
+    fi
+    sleep 1
+  done
+
+  wait "$ECOMMERCE_API_PID"
+  ecommerce_api_shutdown
   exit 1
 fi
 

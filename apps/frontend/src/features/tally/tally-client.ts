@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { tallyApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface TallySettings {
   id: number
@@ -144,7 +144,7 @@ export interface TallyEntrySyncRow {
 export type TallySettingsInput = Omit<Partial<TallySettings>, "settings"> & { settings?: unknown }
 
 export async function getTallyWorkspace(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tally`, {
+  const response = await fetch(`${tallyApiBaseUrl}/api/v1/tally`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -153,7 +153,7 @@ export async function getTallyWorkspace(session: AuthSession) {
 }
 
 export async function saveTallySettings(session: AuthSession, input: TallySettingsInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tally/settings`, {
+  const response = await fetch(`${tallyApiBaseUrl}/api/v1/tally/settings`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -164,7 +164,7 @@ export async function saveTallySettings(session: AuthSession, input: TallySettin
 }
 
 export async function validateTallyConnection(session: AuthSession, input: TallySettingsInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tally/validate-connection`, {
+  const response = await fetch(`${tallyApiBaseUrl}/api/v1/tally/validate-connection`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -175,7 +175,7 @@ export async function validateTallyConnection(session: AuthSession, input: Tally
 }
 
 export async function createTallySyncJob(session: AuthSession, input: { job_type?: string; direction?: string; payload?: unknown } = {}) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tally/sync-jobs`, {
+  const response = await fetch(`${tallyApiBaseUrl}/api/v1/tally/sync-jobs`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -190,7 +190,7 @@ export async function getTallySyncList<TRecord>(
   resource: TallySyncResource,
   query: { search?: string; status?: string; classification?: string } = {},
 ) {
-  const url = new URL(`${apiBaseUrl}/api/v1/tally/sync/${resource}`)
+  const url = new URL(`${tallyApiBaseUrl}/api/v1/tally/sync/${resource}`)
   for (const [key, value] of Object.entries(query)) {
     if (!value) continue
     url.searchParams.set(key, value)
@@ -204,7 +204,7 @@ export async function getTallySyncList<TRecord>(
 }
 
 export async function runTallySync(session: AuthSession, resource: TallySyncResource, ids: string[]) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tally/sync/${resource}`, {
+  const response = await fetch(`${tallyApiBaseUrl}/api/v1/tally/sync/${resource}`, {
     body: JSON.stringify({ ids }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

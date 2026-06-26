@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
 
@@ -158,7 +158,7 @@ export function emptyExportSalesItem(): ExportSalesEntryItem {
 }
 
 export async function listExportSalesEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/export-sales`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/export-sales`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -187,7 +187,7 @@ export async function listExportSalesCommonLookups(session: AuthSession, moduleK
 }
 
 export async function getExportSalesEntry(session: AuthSession, idOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/export-sales/${encodeURIComponent(idOrUuid)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/export-sales/${encodeURIComponent(idOrUuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -196,7 +196,7 @@ export async function getExportSalesEntry(session: AuthSession, idOrUuid: string
 }
 
 export async function upsertExportSalesEntry(session: AuthSession, input: ExportSalesEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/export-sales/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/export-sales/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -217,7 +217,7 @@ export async function restoreExportSalesEntry(session: AuthSession, entry: Expor
 }
 
 export async function addExportSalesComment(session: AuthSession, entry: ExportSalesEntry, body: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/export-sales/${entry.uuid}/comments`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/export-sales/${entry.uuid}/comments`, {
     body: JSON.stringify({ body }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -230,7 +230,7 @@ export async function addExportSalesComment(session: AuthSession, entry: ExportS
 }
 
 export async function runExportSalesTool(session: AuthSession, entry: ExportSalesEntry, tool: string, printHtml?: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/export-sales/${entry.uuid}/tools`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/export-sales/${entry.uuid}/tools`, {
     body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -247,7 +247,7 @@ export async function downloadExportSalesPdf(session: AuthSession, entry: Export
 }
 
 async function mutateExportSalesEntry(session: AuthSession, idOrUuid: string, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/export-sales/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/export-sales/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -259,7 +259,7 @@ async function mutateExportSalesEntry(session: AuthSession, idOrUuid: string, ac
 }
 
 async function listLookupRecords(session: AuthSession, endpoint: string) {
-  const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const response = await fetch(`${billingApiBaseUrl}${endpoint}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

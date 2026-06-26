@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { responseApiError } from "src/shared/api/api-error"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
@@ -101,19 +101,19 @@ export function emptyReceiptAllocation(): ReceiptAllocation {
 }
 
 export async function listReceiptEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/receipt`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Receipt list failed with status ${response.status}.`)
   return (await response.json()) as ReceiptEntry[]
 }
 
 export async function getReceiptEntry(session: AuthSession, idOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt/${encodeURIComponent(idOrUuid)}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/receipt/${encodeURIComponent(idOrUuid)}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Receipt detail failed with status ${response.status}.`)
   return (await response.json()) as ReceiptEntry
 }
 
 export async function upsertReceiptEntry(session: AuthSession, input: ReceiptEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/receipt/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -142,7 +142,7 @@ export async function createReceiptReversal(session: AuthSession, entry: Receipt
 }
 
 export async function addReceiptComment(session: AuthSession, entry: ReceiptEntry, body: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt/${entry.uuid}/comments`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/receipt/${entry.uuid}/comments`, {
     body: JSON.stringify({ body }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -155,7 +155,7 @@ export async function addReceiptComment(session: AuthSession, entry: ReceiptEntr
 }
 
 export async function runReceiptTool(session: AuthSession, entry: ReceiptEntry, tool: string, printHtml?: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt/${entry.uuid}/tools`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/receipt/${entry.uuid}/tools`, {
     body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -172,7 +172,7 @@ export async function downloadReceiptPdf(session: AuthSession, entry: ReceiptEnt
 }
 
 export async function listReceiptContactLookups(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/contacts`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/contacts`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Contact lookup failed with status ${response.status}.`)
   const records = (await response.json()) as MasterDataRecord[]
   return records.map((record) => {
@@ -183,7 +183,7 @@ export async function listReceiptContactLookups(session: AuthSession) {
 }
 
 async function mutateReceiptEntry(session: AuthSession, idOrUuid: string, action: "correction" | "destroy" | "restore" | "reversal") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/receipt/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/receipt/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

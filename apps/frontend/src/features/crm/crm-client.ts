@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { crmApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface CrmPipelineStage {
   id: number
@@ -103,7 +103,7 @@ export function emptyStage(pipeline: CrmPipeline): Partial<CrmPipelineStage> {
 }
 
 export async function getCrmWorkspace(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/crm`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${crmApiBaseUrl}/api/v1/crm`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`CRM workspace failed with status ${response.status}.`)
   return (await response.json()) as CrmWorkspace
 }
@@ -137,7 +137,7 @@ export async function upsertCrmStage(session: AuthSession, pipeline: CrmPipeline
 }
 
 async function crmWorkspacePost(session: AuthSession, path: string, input: unknown, fallback: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/crm/${path}`, {
+  const response = await fetch(`${crmApiBaseUrl}/api/v1/crm/${path}`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

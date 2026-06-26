@@ -40,9 +40,6 @@ const ForgotPasswordForm = lazy(() =>
 const SupportPage = lazy(() =>
   import('./support-pages').then((module) => ({ default: module.SupportPage })),
 )
-const SystemUpdateView = lazy(() =>
-  import('./system-update-view').then((module) => ({ default: module.SystemUpdateView })),
-)
 const QueueManagerPage = lazy(() =>
   import('src/features/system/queue-manager-page').then((module) => ({ default: module.default })),
 )
@@ -84,6 +81,9 @@ const MySubscriptionPage = lazy(() =>
 )
 const UserManagerPage = lazy(() =>
   import('src/features/user-manager/user-manager-page').then((module) => ({ default: module.UserManagerPage })),
+)
+const PlatformFoundationPage = lazy(() =>
+  import('src/features/platform-foundation/platform-foundation-page').then((module) => ({ default: module.PlatformFoundationPage })),
 )
 const CommonDataPage = lazy(() =>
   import('src/features/master-data/interface/pages/common-module-pages').then((module) => ({ default: module.CommonDataPage })),
@@ -238,12 +238,12 @@ function dashboardPageFromPath(basePath: string, pathname = window.location.path
     page === "industry" ||
     page === "company-industry" ||
     page === "company" ||
-    page === "system-update" ||
     page === "gst-api" ||
     page === "gst-api-test" ||
     page === "queue-manager" ||
     page === "database-manager" ||
     page === "user-manager" ||
+    page === "platform-foundation" ||
     page === "helpdesk" ||
     page === "bugs" ||
     page === "tenant-roles"
@@ -270,8 +270,8 @@ function defaultPageForApp(appId: DashboardAppId): DashboardPage {
 const crossSurfaceAppPages: DashboardPage[] = ["app-agent-os-base"]
 
 const pageAccess: Record<DashboardMode, DashboardPage[]> = {
-  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "subscription", "industry", "company-industry", "company", "app-runtime", "system-update", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
-  admin: ["overview", "company", "helpdesk", "bugs", "system-update", ...crossSurfaceAppPages],
+  "super-admin": ["overview", "setup", "tenant", "tenant-domain", "subscription", "industry", "company-industry", "company", "app-runtime", "platform-foundation", "gst-api", "gst-api-test", "queue-manager", "database-manager", "devdocs", "user-manager", ...agentOsPages],
+  admin: ["overview", "company", "helpdesk", "bugs", ...crossSurfaceAppPages],
   tenant: ["overview", "company", "tenant-roles", ...appModulePages],
 }
 
@@ -289,13 +289,13 @@ const pageLabels: Partial<Record<DashboardPage, string>> = {
   "industry": "Industries",
   "company-industry": "Company Industry",
   "company": "Companies",
-  "system-update": "System Update",
   "gst-api": "GST API",
   "gst-api-test": "GST API Test",
   "queue-manager": "Queue Manager",
   "database-manager": "Database Manager",
   "devdocs": "Dev Docs",
   "user-manager": "Admin User Manager",
+  "platform-foundation": "Platform Foundation",
   "helpdesk": "Helpdesk",
   "bugs": "Bugs",
   "tenant-roles": "Tenant Roles",
@@ -839,8 +839,6 @@ export function DashboardView({
               onChangeLandingApp={changeLandingApp}
               isSaving={landingMutation.isPending}
             />
-          ) : visiblePage === "system-update" ? (
-            <SystemUpdateView session={session} />
           ) : visiblePage === "gst-api" ? (
             <GstProviderSettingsPage session={session} />
           ) : visiblePage === "gst-api-test" ? (
@@ -853,6 +851,8 @@ export function DashboardView({
             <ProjectDocsPage session={session} />
           ) : visiblePage === "user-manager" ? (
             <UserManagerPage session={session} mode="platform" />
+          ) : visiblePage === "platform-foundation" ? (
+            <PlatformFoundationPage session={session} />
           ) : visiblePage === "helpdesk" ? (
             <SupportPage type="helpdesk" />
           ) : visiblePage === "bugs" ? (

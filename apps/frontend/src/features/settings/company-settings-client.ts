@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type CompanySettingKey = "apps" | "software" | "mail"
 
@@ -16,7 +16,7 @@ export async function getCompanySetting<TValues>(
   options?: { signal?: AbortSignal },
 ) {
   const params = companyId ? `?companyId=${encodeURIComponent(String(companyId))}` : ""
-  const response = await fetch(`${apiBaseUrl}/api/v1/company-settings/${key}${params}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/company-settings/${key}${params}`, {
     cache: "no-store",
     headers: authHeaders(session),
     signal: options?.signal,
@@ -37,7 +37,7 @@ export async function saveCompanySetting<TValues>(
   options?: { signal?: AbortSignal },
 ) {
   const params = companyId ? `?companyId=${encodeURIComponent(String(companyId))}` : ""
-  const response = await fetch(`${apiBaseUrl}/api/v1/company-settings/${key}${params}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/company-settings/${key}${params}`, {
     body: JSON.stringify({ values }),
     cache: "no-store",
     headers: {
@@ -54,4 +54,3 @@ export async function saveCompanySetting<TValues>(
 
   return (await response.json()) as CompanySettingRecord<TValues>
 }
-

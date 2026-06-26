@@ -26,7 +26,7 @@ import {
 } from 'lucide-react'
 import { useState, type ComponentType } from 'react'
 import { toast } from 'sonner'
-import { apiBaseUrl } from 'src/lib/api-base-url'
+import { sitesApiBaseUrl } from 'src/lib/api-base-url'
 
 import { BrandLogo } from 'src/components/blocks/branding/brand-logo'
 import { ThemeToggle } from 'src/components/blocks/theme/theme-toggle'
@@ -832,7 +832,7 @@ function ContactForm({ domain }: { domain: string }) {
 
     setLoading(true)
     try {
-      const response = await fetch(`${apiBaseUrl}/api/site/contact`, {
+      const response = await fetch(`${sitesApiBaseUrl}/api/site/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

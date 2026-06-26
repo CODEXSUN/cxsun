@@ -23,6 +23,8 @@ const sidebars: SidebarsConfig = {
           label: 'Service Split',
           items: [
             'modules/platform-api',
+            'modules/billing-api',
+            'modules/ecommerce-api',
             'modules/billing-app',
             'modules/ecommerce-app',
             'modules/crm-app',

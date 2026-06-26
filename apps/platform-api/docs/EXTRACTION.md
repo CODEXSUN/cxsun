@@ -1,17 +1,22 @@
 # Platform API Extraction Plan
 
-Platform API starts by importing selected foundation modules from `apps/server`. This keeps the live combined backend safe while the new deployable unit is prepared.
+Platform API is now a standalone deployable unit with local runtime/core/infrastructure and local foundation modules. The live combined backend remains available separately while callers migrate.
 
 ## Phase 1 - Scaffold
 
 - Create `apps/platform-api`.
 - Boot health, auth, tenant, tenant-domain, and industry only.
 - Add separate port, docs, typecheck, build, and smoke scripts.
+- Add MariaDB-backed contract tests from the start.
+- Add event and sync-tag primitives before extracting business-facing contracts.
+- Migrate `health`, `auth`, `tenant`, `tenant-domain`, and `industry` into native Platform API modules.
+- Move framework/runtime, config, database, auth, queue, and tenant-database infrastructure into Platform API.
+- Remove direct `apps/server` imports from Platform API source and tests.
 - Keep all existing live routes in `apps/server`.
 
 ## Phase 2 - Own Runtime
 
-- Move or share the bootstrap/runtime layer without importing all of `apps/server`.
+- Promote duplicated framework/runtime pieces into a shared package only when reuse becomes stable.
 - Move Platform-owned modules into `apps/platform-api/src/modules`.
 - Keep compatibility exports in `apps/server` while callers migrate.
 
@@ -33,6 +38,6 @@ Do not remove a module from `apps/server` until:
 
 - Platform API typecheck passes.
 - Platform API build passes.
-- Smoke test passes against configured MariaDB.
+- Contract and e2e tests pass against configured MariaDB.
 - Existing combined server checks still pass.
 - Frontend/API callers are migrated or a compatibility adapter exists.

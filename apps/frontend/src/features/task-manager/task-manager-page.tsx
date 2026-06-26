@@ -35,7 +35,7 @@ import {
   MasterListToolbarCard,
   buildMasterListShowingLabel,
 } from "src/components/blocks/lists/master-list"
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { taskManagerApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import { fileToBase64, linkMediaAsset, uploadMediaAsset } from "src/features/media/media-client"
 import type { MasterDataRecord, MasterDataUpsertInput } from "src/features/master-data/domain/master-data"
 import { listMasterDataRecords, upsertMasterDataRecord } from "src/features/master-data/infrastructure/master-data-client"
@@ -959,7 +959,7 @@ function AttachmentListRow({ attachment, disabled, onDelete, serial, session }: 
       setPreviewUrl("")
       return
     }
-    void fetch(`${apiBaseUrl}/api/v1/media/${encodeURIComponent(attachment.storage_key)}/content`, { cache: "no-store", headers: authHeaders(session) })
+    void fetch(`${taskManagerApiBaseUrl}/api/v1/media/${encodeURIComponent(attachment.storage_key)}/content`, { cache: "no-store", headers: authHeaders(session) })
       .then((response) => response.ok ? response.blob() : null)
       .then((blob) => {
         if (!blob) return

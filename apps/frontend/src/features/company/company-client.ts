@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
 
@@ -130,7 +130,7 @@ export type CompanyUpsertInput = Omit<
 > & { id?: number; industryId?: number | null }
 
 export async function listCompanies(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/companies`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/companies`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -143,7 +143,7 @@ export async function listCompanies(session: AuthSession) {
 }
 
 export async function getDefaultCompanyContext(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/companies/default-context`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/companies/default-context`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -156,7 +156,7 @@ export async function getDefaultCompanyContext(session: AuthSession) {
 }
 
 export async function updateDefaultCompanyContext(session: AuthSession, input: { companyId: number; accountingYearId: number; landingApp?: string }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/companies/default-context`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/companies/default-context`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -180,7 +180,7 @@ export async function updateDefaultCompanyContext(session: AuthSession, input: {
 }
 
 export async function getCompany(session: AuthSession, id: number) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/companies/${id}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/companies/${id}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -193,7 +193,7 @@ export async function getCompany(session: AuthSession, id: number) {
 }
 
 export async function upsertCompany(session: AuthSession, input: CompanyUpsertInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/companies/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/companies/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -225,7 +225,7 @@ export async function restoreCompany(session: AuthSession, id: number) {
 }
 
 async function mutateCompany(session: AuthSession, id: number, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/companies/${id}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/companies/${id}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: {

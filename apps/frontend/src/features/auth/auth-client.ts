@@ -1,4 +1,15 @@
-import { apiBaseUrl } from "src/lib/api-base-url"
+import {
+  agentOsApiBaseUrl,
+  apiBaseUrl,
+  auditorApiBaseUrl,
+  billingApiBaseUrl,
+  blogApiBaseUrl,
+  crmApiBaseUrl,
+  frappeApiBaseUrl,
+  platformApiBaseUrl,
+  tallyApiBaseUrl,
+  taskManagerApiBaseUrl,
+} from "src/lib/api-base-url"
 
 export interface AuthTenant {
   id: number
@@ -21,7 +32,18 @@ export interface AuthSession {
 
 export type AuthSurface = "tenant" | "admin" | "super-admin"
 
-export { apiBaseUrl }
+export {
+  agentOsApiBaseUrl,
+  apiBaseUrl,
+  auditorApiBaseUrl,
+  billingApiBaseUrl,
+  blogApiBaseUrl,
+  crmApiBaseUrl,
+  frappeApiBaseUrl,
+  platformApiBaseUrl,
+  tallyApiBaseUrl,
+  taskManagerApiBaseUrl,
+}
 
 function sessionKey(surface: AuthSurface = "tenant") {
   return `cxsun.auth.${surface}.session`
@@ -115,7 +137,7 @@ export async function login(
   input: { corporateId?: string; email: string; password: string },
   surface: AuthSurface = "tenant",
 ) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/auth/login`, {
     body: JSON.stringify({ ...input, surface }),
     cache: "no-store",
     headers: {
@@ -146,7 +168,7 @@ export async function login(
 }
 
 export async function refreshSession(session: AuthSession, surface: AuthSurface = "tenant") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auth/session`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/auth/session`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

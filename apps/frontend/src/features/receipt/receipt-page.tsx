@@ -27,7 +27,7 @@ import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
 import type { CompanyRecord } from "src/features/company/company-client"
 import { LetterheadBuilder } from "src/features/company/letterhead-builder"
-import { emptyContact, upsertContact, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
+import { emptyContact, getNextContactCode, upsertContact, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
 import { LedgerAutocompleteLookup } from "src/features/accounts/accounts-book-page"
 import type { AccountLedger } from "src/features/accounts/accounts-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
@@ -746,9 +746,19 @@ function prepareReceiptInput(input: ReceiptEntryInput): ReceiptEntryInput {
 }
 
 function ReceiptContactCreateDialog({ contacts, initialName, onClose, onCreated, session }: { contacts: ReceiptLookupOption[]; initialName: string; onClose(): void; onCreated(contact: ReceiptLookupOption): void; session: AuthSession }) {
-  const [draft, setDraft] = useState<ContactInput>(() => ({ ...emptyContact(), code: normalizeContactCode(initialName), contactTypeId: "contact-type:customer", ledgerId: "ledger:sundry-debitors", ledgerName: "Customer", legalName: initialName, name: initialName }))
+  const autoContactCode = nextCustomerContactCode(contacts)
+  const [draft, setDraft] = useState<ContactInput>(() => ({ ...emptyContact(), code: autoContactCode, contactTypeId: "contact-type:customer", ledgerId: "ledger:sundry-debitors", ledgerName: "Customer", legalName: titleCaseName(initialName), name: initialName }))
   const [error, setError] = useState<string | null>(null)
   const contactTypesQuery = useQuery(receiptQueries.contactTypesDialog(session))
+  const nextCodeQuery = useQuery({ queryKey: ["receipt-contact-next-code", session.selectedTenant.slug], queryFn: () => getNextContactCode(session) })
+  const nextContactCode = nextCustomerContactCode(contacts, nextCodeQuery.data)
+  useEffect(() => {
+    setDraft((current) => {
+      const currentCode = String(current.code ?? "").trim()
+      if (currentCode && currentCode !== autoContactCode) return current
+      return { ...current, code: nextContactCode }
+    })
+  }, [autoContactCode, nextContactCode])
   const createMutation = useMutation({
     mutationFn: (input: ContactInput) => upsertContact(session, input),
     onSuccess: (contact) => {
@@ -770,7 +780,7 @@ function ReceiptContactCreateDialog({ contacts, initialName, onClose, onCreated,
     }
     const contactTypes = contactTypesQuery.data ?? (await contactTypesQuery.refetch()).data ?? []
     setError(null)
-    await createMutation.mutateAsync({ ...draft, code: String(draft.code ?? "").trim() || normalizeContactCode(name), contactTypeId: stockContactTypeId(contactTypes, "customer"), gstin, ledgerId: draft.ledgerId ?? "ledger:sundry-debitors", ledgerName: draft.ledgerName ?? "Customer", legalName: String(draft.legalName ?? "").trim() || name, name })
+    await createMutation.mutateAsync({ ...draft, code: String(draft.code ?? "").trim() || nextContactCode, contactTypeId: stockContactTypeId(contactTypes, "customer"), gstin, ledgerId: draft.ledgerId ?? "ledger:sundry-debitors", ledgerName: draft.ledgerName ?? "Customer", legalName: String(draft.legalName ?? "").trim() || titleCaseName(name), name })
   }
 
   return (
@@ -784,14 +794,14 @@ function ReceiptContactCreateDialog({ contacts, initialName, onClose, onCreated,
           <Button size="icon" variant="ghost" onClick={onClose} type="button"><X className="size-4" /></Button>
         </div>
         <div className="grid gap-4 p-5 md:grid-cols-2">
-          <Field label="Customer name *" value={String(draft.name ?? "")} onChange={(name) => setDraft((current) => ({ ...current, name, legalName: current.legalName || name }))} />
+          <Field label="Customer name *" value={String(draft.name ?? "")} onChange={(name) => setDraft((current) => ({ ...current, name, legalName: shouldAutoFillReceiptLegalName(current) ? titleCaseName(name) : current.legalName }))} />
           <Field label="Code" value={String(draft.code ?? "")} onChange={(code) => setDraft((current) => ({ ...current, code: normalizeContactCode(code) }))} />
           <Field label="Legal name" value={String(draft.legalName ?? "")} onChange={(legalName) => setDraft((current) => ({ ...current, legalName }))} />
           <Field label="GSTIN" value={String(draft.gstin ?? "")} onChange={(gstin) => setDraft((current) => ({ ...current, gstin: gstin.toUpperCase(), gstDetails: gstin.trim() ? [{ gstin: gstin.toUpperCase(), state: "", isDefault: true, isActive: true }] : [] }))} />
         </div>
         {error ? <p className="px-5 pb-3 text-sm font-medium text-destructive">{error}</p> : null}
         <div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-5 py-4">
-          <Button disabled={createMutation.isPending} onClick={() => void save()} type="button" className="rounded-md"><Save className={cn("size-4", createMutation.isPending && "animate-spin")} />Save contact</Button>
+          <Button disabled={createMutation.isPending} onClick={() => void save().catch((error: unknown) => setError(error instanceof Error ? error.message : "Contact save failed."))} type="button" className="rounded-md"><Save className={cn("size-4", createMutation.isPending && "animate-spin")} />Save contact</Button>
           <Button disabled={createMutation.isPending} onClick={onClose} type="button" variant="outline" className="rounded-md"><X className="size-4" />Cancel</Button>
         </div>
       </div>
@@ -925,7 +935,30 @@ function MasterAutocompleteLookup({ createLabel, inputRef, label, onCreate, onPi
 }
 
 function normalizeContactCode(value: string) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40)
+  return value.trim().toUpperCase().replace(/[^A-Z0-9-]+/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 40)
+}
+
+function nextCustomerContactCode(contacts: ReceiptLookupOption[], contactNextCode?: string) {
+  const numbers = contacts
+    .map((contact) => prefixedCodeNumber(String(contact.code ?? contact.record.code ?? ""), "C"))
+    .filter((value): value is number => value !== null)
+  const contactSequenceNumber = prefixedCodeNumber(String(contactNextCode ?? ""), "C")
+  if (contactSequenceNumber !== null) numbers.push(contactSequenceNumber - 1)
+  const nextNumber = Math.max(0, ...numbers) + 1
+  return `C-${String(nextNumber).padStart(4, "0")}`
+}
+
+function prefixedCodeNumber(value: string, prefix: string) {
+  const match = new RegExp(`^${prefix}-(\\d+)$`, "i").exec(value.trim())
+  return match ? Number(match[1]) : null
+}
+
+function shouldAutoFillReceiptLegalName(contact: ContactInput) {
+  return !String(contact.legalName ?? "").trim() || String(contact.legalName ?? "") === titleCaseName(String(contact.name ?? ""))
+}
+
+function titleCaseName(value: string) {
+  return value.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 }
 
 function DecimalInput({ onChange, placeholder, value }: { onChange(value: string): void; placeholder?: string; value: string }) {

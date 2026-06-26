@@ -14,6 +14,7 @@ import {
   Headset,
   LayoutGrid,
   ListRestart,
+  Network,
   RefreshCw,
   Send,
   UserRoundCog,
@@ -60,13 +61,13 @@ export type DashboardPage =
   | "industry"
   | "company-industry"
   | "company"
-  | "system-update"
   | "gst-api"
   | "gst-api-test"
   | "queue-manager"
   | "database-manager"
   | "devdocs"
   | "user-manager"
+  | "platform-foundation"
   | "helpdesk"
   | "bugs"
   | "tenant-roles"
@@ -83,6 +84,7 @@ const superAdminNav = [
       { title: "Domain", url: "#", icon: Globe2 },
       { title: "Subscription", url: "#", icon: CreditCard },
       { title: "Apps", url: "#", icon: LayoutGrid },
+      { title: "Platform Foundation", url: "#", icon: Network },
       { title: "Industry", url: "#", icon: Factory },
       { title: "Company Industry", url: "#", icon: Building2 },
       { title: "Admin User Manager", url: "#", icon: UserRoundCog },
@@ -115,7 +117,6 @@ const superAdminNav = [
     url: "#",
     icon: RefreshCw,
     items: [
-      { title: "System Update", url: "#", icon: RefreshCw },
       { title: "Queue Manager", url: "#", icon: ListRestart },
       { title: "Database Manager", url: "#", icon: Database },
       { title: "Dev Docs", url: "#", icon: BookOpenText },
@@ -132,7 +133,6 @@ const adminNav = [
     items: [
       { title: "Helpdesk", url: "#", icon: Headset },
       { title: "Bugs", url: "#", icon: Bug },
-      { title: "System Update", url: "#", icon: RefreshCw },
     ],
   },
 ] as const
@@ -154,12 +154,12 @@ function pageFromTitle(title: string): DashboardPage | undefined {
     Roles: "tenant-roles",
     Setup: "setup",
     "GST API": "gst-api",
-    "System Update": "system-update",
     "GST API Test": "gst-api-test",
     "Queue Manager": "queue-manager",
     "Database Manager": "database-manager",
     "Dev Docs": "devdocs",
     Apps: "app-runtime",
+    "Platform Foundation": "platform-foundation",
     Tenant: "tenant",
     "Admin User Manager": "user-manager",
   }

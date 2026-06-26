@@ -14,6 +14,13 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Platform',
+      items: [
+        'platform/workspace-foundation',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Entries',
       items: [
         'entries/sales',

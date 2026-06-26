@@ -1,9 +1,8 @@
 import type { AuthSession } from "src/features/auth/auth-client"
-import type { MasterDataRecord, MasterDataUpsertInput } from "../../domain/master-data"
+import type { MasterDataRecord } from "../../domain/master-data"
 import { CommonRecordAutocompleteLookup, buildCommonRecordLookup, commonRecordLookupQueryKey, getCommonRecordName } from "./common-record-autocomplete-lookup"
 
 export interface PincodeAutocompleteLookupProps {
-  cityId?: unknown
   className?: string
   disabled?: boolean
   label?: string
@@ -15,7 +14,6 @@ export interface PincodeAutocompleteLookupProps {
 }
 
 export function PincodeAutocompleteLookup({
-  cityId,
   className,
   disabled,
   label = "Pincode",
@@ -28,23 +26,17 @@ export function PincodeAutocompleteLookup({
   return (
     <CommonRecordAutocompleteLookup
       className={className}
-      createInput={(name) => buildPincodeCreateInput(name, cityId)}
       createLabel="pincode"
       disabled={disabled}
       label={label}
       moduleKey="pincodes"
       onChange={onChange}
       onOptionsChange={onOptionsChange}
-      optionFilter={(record) => matchesReference(record.city_id, cityId)}
       placeholder={placeholder}
       session={session}
       value={value}
     />
   )
-}
-
-function matchesReference(recordValue: unknown, selectedValue: unknown) {
-  return selectedValue === null || selectedValue === undefined || selectedValue === "" || String(recordValue) === String(selectedValue)
 }
 
 export function pincodeLookupQueryKey(session: AuthSession) {
@@ -57,12 +49,4 @@ export function buildPincodeLookup(records: MasterDataRecord[]) {
 
 export function getPincodeName(record: MasterDataRecord) {
   return getCommonRecordName(record)
-}
-
-function buildPincodeCreateInput(name: string, cityId: unknown): MasterDataUpsertInput {
-  return {
-    city_id: cityId === null || cityId === undefined || cityId === "" ? 1 : Number(cityId),
-    is_active: true,
-    name,
-  }
 }

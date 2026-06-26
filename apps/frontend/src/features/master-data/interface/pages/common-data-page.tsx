@@ -21,7 +21,6 @@ import type { AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataColumnDefinition, MasterDataModuleDefinition, MasterDataRecord, MasterDataUpsertInput } from "../../domain/master-data"
 import { buildDraft, formatDate, formatValue, isActive, validateDraft } from "../../application/master-data-service"
 import { destroyMasterDataRecord, listMasterDataModules, listMasterDataRecords, restoreMasterDataRecord, upsertMasterDataRecord } from "../../infrastructure/master-data-client"
-import { CityAutocompleteLookup, buildCityLookup, cityLookupQueryKey } from "../components/city-autocomplete-lookup"
 import { CountryAutocompleteLookup, buildCountryLookup, countryLookupQueryKey } from "../components/country-autocomplete-lookup"
 import { DistrictAutocompleteLookup, buildDistrictLookup, districtLookupQueryKey } from "../components/district-autocomplete-lookup"
 import { StateAutocompleteLookup, buildStateLookup, stateLookupQueryKey } from "../components/state-autocomplete-lookup"
@@ -278,18 +277,6 @@ function EditorField({ column, definition, draft, session, setDraft }: {
     )
   }
 
-  if (definition.key === "pincodes" && column.key === "city_id") {
-    return (
-      <CityAutocompleteLookup
-        label={column.label}
-        placeholder="Search city name"
-        session={session}
-        value={draft[column.key]}
-        onChange={(cityId) => setDraft((current) => ({ ...current, [column.key]: cityId }))}
-      />
-    )
-  }
-
   return (
     <div className="grid w-full gap-3">
       <Label className="text-sm font-medium">{column.label}</Label>
@@ -362,7 +349,6 @@ function referenceLookupModuleKey(moduleKey: string) {
   if (moduleKey === "states") return "countries"
   if (moduleKey === "districts") return "states"
   if (moduleKey === "cities") return "districts"
-  if (moduleKey === "pincodes") return "cities"
   return null
 }
 
@@ -370,7 +356,6 @@ function buildReferenceLookup(moduleKey: string | null, records: MasterDataRecor
   if (moduleKey === "countries") return buildCountryLookup(records)
   if (moduleKey === "states") return buildStateLookup(records)
   if (moduleKey === "districts") return buildDistrictLookup(records)
-  if (moduleKey === "cities") return buildCityLookup(records)
   return new Map<string, string>()
 }
 
@@ -386,7 +371,6 @@ function referenceLookupQueryKey(session: AuthSession, moduleKey: string | null)
   if (moduleKey === "countries") return countryLookupQueryKey(session)
   if (moduleKey === "states") return stateLookupQueryKey(session)
   if (moduleKey === "districts") return districtLookupQueryKey(session)
-  if (moduleKey === "cities") return cityLookupQueryKey(session)
   return ["master-data-records", session.selectedTenant.slug, "none", "lookup"] as const
 }
 

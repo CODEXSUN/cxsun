@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { frappeApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface FrappeSettings {
   id: number
@@ -84,7 +84,7 @@ export interface FrappeConnectionValidation {
 export type FrappeSettingsInput = Omit<Partial<FrappeSettings>, "settings"> & { settings?: unknown }
 
 export async function getFrappeWorkspace(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/frappe`, {
+  const response = await fetch(`${frappeApiBaseUrl}/api/v1/frappe`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -93,7 +93,7 @@ export async function getFrappeWorkspace(session: AuthSession) {
 }
 
 export async function saveFrappeSettings(session: AuthSession, input: FrappeSettingsInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/frappe/settings`, {
+  const response = await fetch(`${frappeApiBaseUrl}/api/v1/frappe/settings`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -104,7 +104,7 @@ export async function saveFrappeSettings(session: AuthSession, input: FrappeSett
 }
 
 export async function validateFrappeConnection(session: AuthSession, input: FrappeSettingsInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/frappe/validate-connection`, {
+  const response = await fetch(`${frappeApiBaseUrl}/api/v1/frappe/validate-connection`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -115,7 +115,7 @@ export async function validateFrappeConnection(session: AuthSession, input: Frap
 }
 
 export async function getFrappeRecords(session: AuthSession, input: { doctype: string; limit: number; fields?: string }) {
-  const url = new URL(`${apiBaseUrl}/api/v1/frappe/records`)
+  const url = new URL(`${frappeApiBaseUrl}/api/v1/frappe/records`)
   url.searchParams.set("doctype", input.doctype)
   url.searchParams.set("limit", String(input.limit))
   if (input.fields) url.searchParams.set("fields", input.fields)
@@ -128,7 +128,7 @@ export async function getFrappeRecords(session: AuthSession, input: { doctype: s
 }
 
 export async function postFrappeRecord(session: AuthSession, input: { doctype: string; data: unknown }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/frappe/records`, {
+  const response = await fetch(`${frappeApiBaseUrl}/api/v1/frappe/records`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -139,7 +139,7 @@ export async function postFrappeRecord(session: AuthSession, input: { doctype: s
 }
 
 export async function createFrappeSyncJob(session: AuthSession, input: { job_type?: string; direction?: string; payload?: unknown } = {}) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/frappe/sync-jobs`, {
+  const response = await fetch(`${frappeApiBaseUrl}/api/v1/frappe/sync-jobs`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

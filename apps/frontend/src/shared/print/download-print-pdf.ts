@@ -1,7 +1,7 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export async function downloadPrintPdf(session: AuthSession, endpoint: string, printHtml: string, fallbackFileName: string) {
-  const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const response = await fetch(`${billingApiBaseUrl}${endpoint}`, {
     body: JSON.stringify({ printHtml }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

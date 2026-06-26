@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type DocumentEntryKind = "bankBook" | "cashBook" | "contra" | "deliveryNote" | "exportSales" | "journal" | "payment" | "purchase" | "purchaseReceipt" | "receipt" | "sales"
 
@@ -49,7 +49,7 @@ export const documentNumberLabels: Record<DocumentEntryKind, string> = {
 export const documentNumberKindOrder: readonly DocumentEntryKind[] = ["sales", "exportSales", "purchase", "purchaseReceipt", "deliveryNote", "payment", "receipt", "cashBook", "bankBook"]
 
 export async function listDocumentNumberSettings(session: AuthSession, options?: { signal?: AbortSignal }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/document-settings/numbers`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/document-settings/numbers`, {
     cache: "no-store",
     headers: authHeaders(session),
     signal: options?.signal,
@@ -67,7 +67,7 @@ export async function saveDocumentNumberSettings(
   settings: readonly DocumentNumberSettingInput[],
   options?: { signal?: AbortSignal },
 ) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/document-settings/numbers`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/document-settings/numbers`, {
     body: JSON.stringify({ settings }),
     cache: "no-store",
     headers: {
@@ -86,7 +86,7 @@ export async function saveDocumentNumberSettings(
 }
 
 export async function nextDocumentNumberSetting(session: AuthSession, kind: DocumentEntryKind, options?: { signal?: AbortSignal }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/document-settings/numbers/${kind}/next`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/document-settings/numbers/${kind}/next`, {
     cache: "no-store",
     headers: authHeaders(session),
     signal: options?.signal,

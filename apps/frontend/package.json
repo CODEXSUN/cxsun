@@ -1,10 +1,12 @@
 {
   "name": "@cxsun/frontend",
   "private": true,
-  "version": "1.0.129",
+  "version": "1.0.131",
   "type": "module",
   "scripts": {
     "dev": "node preflight.mjs",
+    "dev:billing-stack": "node preflight.mjs --skip-api-wait",
+    "dev:extracted-stack": "node preflight.mjs --skip-api-wait --required-api-services=platform,billing,ecommerce,sites,crm,tally,frappe,task-manager,auditor,blog,agent-os",
     "build": "node ../../apps/cli/build-frontend.mjs",
     "preview": "vite preview",
     "lint": "eslint .",

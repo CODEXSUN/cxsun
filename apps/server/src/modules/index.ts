@@ -7,16 +7,6 @@ import { MasterDataModule } from './foundation/master-data/index.js'
 import { OrdersModule } from './master/order/index.js'
 import { ProductsModule } from './master/product/index.js'
 import { SiteModule } from './site/index.js'
-import { SalesEntryModule } from './entries/sales/index.js'
-import { QuotationEntryModule } from './entries/quotation/index.js'
-import { ExportSalesEntryModule } from './entries/export-sales/index.js'
-import { PurchaseEntryModule } from './entries/purchase/index.js'
-import { ReceiptEntryModule } from './entries/receipt/index.js'
-import { PaymentEntryModule } from './entries/payment/index.js'
-import { AccountsModule } from './accounts/index.js'
-import { PurchaseReceiptModule } from './stock/inward/purchase-receipt/index.js'
-import { DeliveryNoteModule } from './stock/outward/delivery-note/index.js'
-import { StockLedgerModule } from './stock/ledger/index.js'
 import { CompanySettingsModule } from './settings/company-settings/index.js'
 import { DocumentSettingsModule } from './settings/document-settings/index.js'
 import { GstComplianceModule } from './gst/gst-compliance/index.js'
@@ -35,7 +25,6 @@ import { AuditorContactCredentialModule } from './auditor/contact-credential/ind
 import { AuditorGstFilingModule } from './auditor/gst-filing/index.js'
 import { BlogModule } from './blog/index.js'
 import { CxSyncModule } from './cxsync/index.js'
-import { SystemUpdateModule } from '../core/system/system-update/system-update.module.js'
 import { QueueManagerModule } from '../core/system/queue-manager/queue-manager.module.js'
 import { DatabaseManagerModule } from '../core/system/database-manager/database-manager.module.js'
 import { AppRuntimeModule } from '../core/system/app-runtime/app-runtime.module.js'
@@ -55,7 +44,6 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     HomeModule,
     HealthModule,
     SiteModule,
-    SystemUpdateModule,
     QueueManagerModule,
     DatabaseManagerModule,
     AppRuntimeModule,
@@ -69,16 +57,6 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     ContactsModule,
     ProductsModule,
     OrdersModule,
-    SalesEntryModule,
-    QuotationEntryModule,
-    ExportSalesEntryModule,
-    PurchaseEntryModule,
-    PurchaseReceiptModule,
-    DeliveryNoteModule,
-    StockLedgerModule,
-    ReceiptEntryModule,
-    PaymentEntryModule,
-    AccountsModule,
     CompanySettingsModule,
     DocumentSettingsModule,
     GstComplianceModule,

@@ -3,7 +3,7 @@ import { Clock, Mail, MapPin, Phone, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { ScrollReveal } from 'src/features/site/motion/scroll-reveal'
 import type { SiteContent, TenantStaticSiteContent } from 'src/features/site/domain/site-content'
-import { apiBaseUrl } from 'src/lib/api-base-url'
+import { sitesApiBaseUrl } from 'src/lib/api-base-url'
 
 interface PublicContactPageProps {
   content: SiteContent
@@ -135,7 +135,7 @@ function ContactForm({ domain }: { domain: string }) {
 
     setLoading(true)
     try {
-      const response = await fetch(`${apiBaseUrl}/api/site/contact`, {
+      const response = await fetch(`${sitesApiBaseUrl}/api/site/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

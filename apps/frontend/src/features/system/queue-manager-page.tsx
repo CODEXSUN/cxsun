@@ -21,7 +21,7 @@ import {
 } from "./system-manager-client"
 
 const statuses = ["all", "pending", "processing", "completed", "failed", "cancelled"]
-const queueNames = ["all", "events", "mail", "reports", "database-backup", "system-update", "tenant-maintenance"]
+const queueNames = ["all", "events", "mail", "reports", "database-backup", "tenant-maintenance"]
 
 export default function QueueManagerPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()

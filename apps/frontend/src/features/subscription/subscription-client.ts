@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 export interface SubscriptionApp {
   id: number
@@ -156,7 +156,7 @@ export async function confirmMyRazorpaySubscriptionPayment(session: AuthSession,
 }
 
 async function request<T>(session: AuthSession, path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await fetch(`${platformApiBaseUrl}${path}`, {
     ...init,
     cache: "no-store",
     headers: {

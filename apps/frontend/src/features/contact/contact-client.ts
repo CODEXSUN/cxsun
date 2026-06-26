@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export interface ContactAddress {
   id?: string
@@ -141,14 +141,21 @@ export function emptyAddress(): ContactAddress {
 }
 
 export async function listContacts(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/contacts`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/contacts`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Contact list failed with status ${response.status}.`)
   const records = (await response.json()) as RawContactRecord[]
   return records.map(normalizeContactRecord)
 }
 
+export async function getNextContactCode(session: AuthSession) {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/contacts/next-code`, { cache: "no-store", headers: authHeaders(session) })
+  if (!response.ok) throw new Error(`Next contact code failed with status ${response.status}.`)
+  const result = (await response.json()) as { code?: unknown }
+  return String(result.code ?? "")
+}
+
 export async function upsertContact(session: AuthSession, input: ContactInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/contacts/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/contacts/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -169,7 +176,7 @@ export async function restoreContact(session: AuthSession, contact: ContactRecor
 }
 
 async function mutateContact(session: AuthSession, idOrUuid: string, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/contacts/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/contacts/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

@@ -10,21 +10,19 @@ const ringTransition = {
 export function GlobalLoader({
   className,
   fullScreen = true,
-  label = "Loading",
 }: {
   className?: string
   fullScreen?: boolean
-  label?: string
 }) {
   return (
     <div
       className={cn(
-        "z-[100] flex items-center justify-center bg-background/80 p-6 text-foreground backdrop-blur-sm",
+        "z-[100] flex flex-col items-center justify-center gap-4 bg-background/55 p-6 text-foreground backdrop-blur-md",
         fullScreen ? "fixed inset-0 min-h-svh" : "min-h-[320px] w-full",
         className,
       )}
     >
-      <div className="relative size-42 shrink-0" role="status" aria-label={label}>
+      <div className="relative size-42 shrink-0" role="status" aria-label="Loading">
         <div
           className="absolute inset-[22%] rounded-full border border-border/70 shadow-sm"
           style={{

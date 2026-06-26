@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type MediaVisibility = "private" | "public"
 
@@ -54,13 +54,13 @@ export async function listMediaAssets(session: AuthSession, filters: { folder?: 
   if (filters.folder) params.set("folder", filters.folder)
   if (filters.search) params.set("search", filters.search)
   if (filters.visibility && filters.visibility !== "all") params.set("visibility", filters.visibility)
-  const response = await fetch(`${apiBaseUrl}/api/v1/media${params.size ? `?${params}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/media${params.size ? `?${params}` : ""}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Media list failed with status ${response.status}.`)
   return (await response.json()) as MediaAsset[]
 }
 
 export async function uploadMediaAsset(session: AuthSession, input: MediaUploadInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/media/upload`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/media/upload`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -71,7 +71,7 @@ export async function uploadMediaAsset(session: AuthSession, input: MediaUploadI
 }
 
 export async function deleteMediaAsset(session: AuthSession, asset: MediaAsset) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/media/${asset.uuid}/delete`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/media/${asset.uuid}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -81,7 +81,7 @@ export async function deleteMediaAsset(session: AuthSession, asset: MediaAsset) 
 }
 
 export async function shareMediaAsset(session: AuthSession, asset: MediaAsset) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/media/${asset.uuid}/share`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/media/${asset.uuid}/share`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -92,7 +92,7 @@ export async function shareMediaAsset(session: AuthSession, asset: MediaAsset) {
 }
 
 export async function linkMediaAsset(session: AuthSession, asset: MediaAsset, input: { linkedModule: string; linkedRecordId: string; purpose: string }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/media/${asset.uuid}/link`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/media/${asset.uuid}/link`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -103,7 +103,7 @@ export async function linkMediaAsset(session: AuthSession, asset: MediaAsset, in
 }
 
 export async function mediaContentBlobUrl(session: AuthSession, asset: MediaAsset) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/media/${asset.uuid}/content`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/media/${asset.uuid}/content`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) return ""
   const blob = await response.blob()
   return URL.createObjectURL(blob)

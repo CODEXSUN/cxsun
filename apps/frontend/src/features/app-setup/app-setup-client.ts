@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 export interface AppSetupInput {
   code: string
@@ -37,7 +37,7 @@ export interface AppSetupResult {
 }
 
 export async function createAppSetup(session: AuthSession, input: AppSetupInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/setup/apps`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/setup/apps`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {

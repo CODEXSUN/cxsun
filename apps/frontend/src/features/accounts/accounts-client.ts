@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import { responseApiError } from "src/shared/api/api-error"
 
 export type AccountBookType = "cash" | "bank"
@@ -269,7 +269,7 @@ export function emptyAccountBookEntry(): AccountBookEntryInput {
 }
 
 export async function listAccountLedgers(session: AuthSession, type: AccountBookType) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/ledgers/${type}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/ledgers/${type}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -278,7 +278,7 @@ export async function listAccountLedgers(session: AuthSession, type: AccountBook
 }
 
 export async function listAllAccountLedgers(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/ledgers`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/ledgers`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -287,7 +287,7 @@ export async function listAllAccountLedgers(session: AuthSession) {
 }
 
 export async function listAccountGroups(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/chart/groups`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/chart/groups`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -296,7 +296,7 @@ export async function listAccountGroups(session: AuthSession) {
 }
 
 export async function listAccountVouchers(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/vouchers`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/vouchers`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -305,7 +305,7 @@ export async function listAccountVouchers(session: AuthSession) {
 }
 
 export async function upsertAccountVoucher(session: AuthSession, input: AccountVoucherInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/vouchers/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/vouchers/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -326,7 +326,7 @@ export async function cancelAccountVoucher(session: AuthSession, voucher: Accoun
 }
 
 export async function listAccountDayBook(session: AuthSession, accountingYearId?: number | null) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/reports/day-book${accountingYearQuery(accountingYearId)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/reports/day-book${accountingYearQuery(accountingYearId)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -335,7 +335,7 @@ export async function listAccountDayBook(session: AuthSession, accountingYearId?
 }
 
 export async function listAccountPostingBook(session: AuthSession, bookType: AccountBookType, accountingYearId?: number | null) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/books/${bookType}${accountingYearQuery(accountingYearId)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/books/${bookType}${accountingYearQuery(accountingYearId)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -344,7 +344,7 @@ export async function listAccountPostingBook(session: AuthSession, bookType: Acc
 }
 
 export async function listAccountTrialBalance(session: AuthSession, accountingYearId?: number | null) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/reports/trial-balance${accountingYearQuery(accountingYearId)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/reports/trial-balance${accountingYearQuery(accountingYearId)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -353,7 +353,7 @@ export async function listAccountTrialBalance(session: AuthSession, accountingYe
 }
 
 export async function listAccountProfitLoss(session: AuthSession, accountingYearId?: number | null) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/reports/profit-loss${accountingYearQuery(accountingYearId)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/reports/profit-loss${accountingYearQuery(accountingYearId)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -362,7 +362,7 @@ export async function listAccountProfitLoss(session: AuthSession, accountingYear
 }
 
 export async function listAccountBalanceSheet(session: AuthSession, accountingYearId?: number | null) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/reports/balance-sheet${accountingYearQuery(accountingYearId)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/reports/balance-sheet${accountingYearQuery(accountingYearId)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -371,7 +371,7 @@ export async function listAccountBalanceSheet(session: AuthSession, accountingYe
 }
 
 export async function recalculateAccountReports(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/reports/recalculate`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/reports/recalculate`, {
     body: JSON.stringify({ report: "all", source: "api" }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -384,7 +384,7 @@ export async function recalculateAccountReports(session: AuthSession) {
 }
 
 export async function listAccountingPeriodLocks(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/period-locks`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/period-locks`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -393,7 +393,7 @@ export async function listAccountingPeriodLocks(session: AuthSession) {
 }
 
 export async function createAccountingPeriodLock(session: AuthSession, input: AccountingPeriodLockInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/period-locks`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/period-locks`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -406,7 +406,7 @@ export async function createAccountingPeriodLock(session: AuthSession, input: Ac
 }
 
 export async function releaseAccountingPeriodLock(session: AuthSession, lock: AccountingPeriodLock) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/period-locks/${lock.uuid}/release`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/period-locks/${lock.uuid}/release`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -419,7 +419,7 @@ export async function releaseAccountingPeriodLock(session: AuthSession, lock: Ac
 }
 
 async function accountVoucherAction(session: AuthSession, voucher: AccountVoucher, action: "post" | "cancel") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/vouchers/${voucher.uuid}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/vouchers/${voucher.uuid}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -436,7 +436,7 @@ function accountingYearQuery(accountingYearId?: number | null) {
 }
 
 export async function upsertAccountLedger(session: AuthSession, type: AccountLedgerType, input: AccountLedgerInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/ledgers/${type}/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/ledgers/${type}/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -449,7 +449,7 @@ export async function upsertAccountLedger(session: AuthSession, type: AccountLed
 }
 
 export async function listAccountBookEntries(session: AuthSession, bookType: AccountBookType) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/${bookPath(bookType)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/${bookPath(bookType)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -458,7 +458,7 @@ export async function listAccountBookEntries(session: AuthSession, bookType: Acc
 }
 
 export async function upsertAccountBookEntry(session: AuthSession, bookType: AccountBookType, input: AccountBookEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -471,7 +471,7 @@ export async function upsertAccountBookEntry(session: AuthSession, bookType: Acc
 }
 
 export async function destroyAccountBookEntry(session: AuthSession, bookType: AccountBookType, entry: AccountBookEntry) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/${entry.uuid}/destroy`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/${entry.uuid}/destroy`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -481,7 +481,7 @@ export async function destroyAccountBookEntry(session: AuthSession, bookType: Ac
 }
 
 export async function restoreAccountBookEntry(session: AuthSession, bookType: AccountBookType, entry: AccountBookEntry) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/${entry.uuid}/restore`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/${entry.uuid}/restore`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -499,7 +499,7 @@ export async function runAccountBookTool(session: AuthSession, bookType: Account
 }
 
 async function accountBookAction(session: AuthSession, bookType: AccountBookType, entry: AccountBookEntry, action: "comment" | "tool", body: Record<string, unknown>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/${entry.uuid}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/accounts/${bookPath(bookType)}/${entry.uuid}/${action}`, {
     body: JSON.stringify(body),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

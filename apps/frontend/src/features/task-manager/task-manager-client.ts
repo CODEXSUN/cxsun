@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { taskManagerApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type TaskManagerPriority = string
 export type TaskManagerStatus = "new" | "todo" | "in_progress" | "review" | "completed" | "cancelled"
@@ -266,13 +266,13 @@ export function emptyTaskManagerTask(): TaskManagerTaskInput {
 }
 
 export async function listTaskManagerTasks(session: AuthSession, scope: TaskManagerScope = "all") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager?scope=${encodeURIComponent(scope)}`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager?scope=${encodeURIComponent(scope)}`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task list failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerTask[]
 }
 
 export async function upsertTaskManagerTask(session: AuthSession, input: TaskManagerTaskInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -285,7 +285,7 @@ export async function upsertTaskManagerTask(session: AuthSession, input: TaskMan
 }
 
 export async function changeTaskManagerStatus(session: AuthSession, task: TaskManagerTask, status: TaskManagerStatus) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/status`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/status`, {
     body: JSON.stringify({ status }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -298,7 +298,7 @@ export async function changeTaskManagerStatus(session: AuthSession, task: TaskMa
 }
 
 export async function deleteTaskManagerTask(session: AuthSession, task: TaskManagerTask) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -308,7 +308,7 @@ export async function deleteTaskManagerTask(session: AuthSession, task: TaskMana
 }
 
 export async function forceDeleteTaskManagerTask(session: AuthSession, task: TaskManagerTask) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/force-delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/force-delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -318,7 +318,7 @@ export async function forceDeleteTaskManagerTask(session: AuthSession, task: Tas
 }
 
 export async function addTaskManagerComment(session: AuthSession, task: TaskManagerTask, input: { body: string; parent_comment_id?: number | null }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/comments`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/comments`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -331,7 +331,7 @@ export async function addTaskManagerComment(session: AuthSession, task: TaskMana
 }
 
 export async function updateTaskManagerComment(session: AuthSession, task: TaskManagerTask, comment: TaskManagerComment, input: { body: string }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/comments/${encodeURIComponent(comment.uuid)}/update`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/comments/${encodeURIComponent(comment.uuid)}/update`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -344,7 +344,7 @@ export async function updateTaskManagerComment(session: AuthSession, task: TaskM
 }
 
 export async function deleteTaskManagerComment(session: AuthSession, task: TaskManagerTask, comment: TaskManagerComment) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/comments/${encodeURIComponent(comment.uuid)}/delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/comments/${encodeURIComponent(comment.uuid)}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -357,7 +357,7 @@ export async function deleteTaskManagerComment(session: AuthSession, task: TaskM
 }
 
 export async function upsertTaskManagerSubtask(session: AuthSession, task: TaskManagerTask, input: Partial<TaskManagerSubtask>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/subtasks/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/subtasks/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -370,7 +370,7 @@ export async function upsertTaskManagerSubtask(session: AuthSession, task: TaskM
 }
 
 export async function deleteTaskManagerSubtask(session: AuthSession, task: TaskManagerTask, subtask: TaskManagerSubtask) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/subtasks/${encodeURIComponent(subtask.uuid)}/delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/subtasks/${encodeURIComponent(subtask.uuid)}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -390,7 +390,7 @@ export async function addTaskManagerAttachment(session: AuthSession, task: TaskM
   file_size?: number
   attachment_type?: string
 }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/attachments`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/attachments`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -403,7 +403,7 @@ export async function addTaskManagerAttachment(session: AuthSession, task: TaskM
 }
 
 export async function deleteTaskManagerAttachment(session: AuthSession, task: TaskManagerTask, attachment: TaskManagerAttachment) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/attachments/${encodeURIComponent(attachment.uuid)}/delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/attachments/${encodeURIComponent(attachment.uuid)}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -416,7 +416,7 @@ export async function deleteTaskManagerAttachment(session: AuthSession, task: Ta
 }
 
 export async function upsertTaskManagerEvent(session: AuthSession, task: TaskManagerTask, input: Partial<TaskManagerEvent>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/events/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/events/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -429,7 +429,7 @@ export async function upsertTaskManagerEvent(session: AuthSession, task: TaskMan
 }
 
 export async function deleteTaskManagerEvent(session: AuthSession, task: TaskManagerTask, event: TaskManagerEvent) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/events/${encodeURIComponent(event.uuid)}/delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/${encodeURIComponent(task.uuid)}/events/${encodeURIComponent(event.uuid)}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -442,13 +442,13 @@ export async function deleteTaskManagerEvent(session: AuthSession, task: TaskMan
 }
 
 export async function listTaskManagerCategories(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/categories`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/categories`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task categories failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerLookupRecord[]
 }
 
 export async function upsertTaskManagerCategory(session: AuthSession, input: Partial<TaskManagerLookupRecord>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/categories/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/categories/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -461,13 +461,13 @@ export async function upsertTaskManagerCategory(session: AuthSession, input: Par
 }
 
 export async function listTaskManagerTags(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/tags`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/tags`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task tags failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerLookupRecord[]
 }
 
 export async function upsertTaskManagerTag(session: AuthSession, input: Partial<TaskManagerLookupRecord>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/tags/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/tags/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -480,13 +480,13 @@ export async function upsertTaskManagerTag(session: AuthSession, input: Partial<
 }
 
 export async function getTaskManagerSettings(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/settings`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/settings`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task settings failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerSettings
 }
 
 export async function upsertTaskManagerSettings(session: AuthSession, input: Partial<TaskManagerSettings>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/settings/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/settings/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -499,13 +499,13 @@ export async function upsertTaskManagerSettings(session: AuthSession, input: Par
 }
 
 export async function listTaskManagerTemplates(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/templates`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/templates`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task templates failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerTemplate[]
 }
 
 export async function upsertTaskManagerTemplate(session: AuthSession, input: Partial<TaskManagerTemplate>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/templates/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/templates/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -516,13 +516,13 @@ export async function upsertTaskManagerTemplate(session: AuthSession, input: Par
 }
 
 export async function listTaskManagerCampaigns(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task campaigns failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerCampaign[]
 }
 
 export async function upsertTaskManagerCampaign(session: AuthSession, input: Partial<TaskManagerCampaign>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -539,7 +539,7 @@ export async function createSalesVerificationCampaign(session: AuthSession, inpu
   assigned_to?: string | null
   reminder_at?: string | null
 }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/sales-verification`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/sales-verification`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -555,7 +555,7 @@ export async function createContactCleanupCampaign(session: AuthSession, input: 
   reminder_at?: string | null
   include_only_missing?: boolean
 }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/contact-cleanup`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/contact-cleanup`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -566,7 +566,7 @@ export async function createContactCleanupCampaign(session: AuthSession, input: 
 }
 
 export async function setTaskManagerCampaignStatus(session: AuthSession, campaign: TaskManagerCampaign, status: "open" | "closed" | "reset" | "archived") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/status`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/status`, {
     body: JSON.stringify({ status }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -577,7 +577,7 @@ export async function setTaskManagerCampaignStatus(session: AuthSession, campaig
 }
 
 export async function deleteTaskManagerCampaign(session: AuthSession, campaign: TaskManagerCampaign) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/delete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/delete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -588,7 +588,7 @@ export async function deleteTaskManagerCampaign(session: AuthSession, campaign: 
 }
 
 export async function upsertTaskManagerCampaignItem(session: AuthSession, campaign: TaskManagerCampaign, input: TaskManagerCampaignItemInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/items/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/items/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -599,7 +599,7 @@ export async function upsertTaskManagerCampaignItem(session: AuthSession, campai
 }
 
 export async function createTaskFromCampaignItem(session: AuthSession, campaign: TaskManagerCampaign, item: TaskManagerCampaignItem, input: TaskManagerCampaignItemTaskInput = {}) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/items/${item.uuid}/create-task`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/campaigns/${campaign.uuid}/items/${item.uuid}/create-task`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -610,13 +610,13 @@ export async function createTaskFromCampaignItem(session: AuthSession, campaign:
 }
 
 export async function listTaskManagerReminders(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/reminders`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/reminders`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Task reminders failed with status ${response.status}.`)
   return (await response.json()) as TaskManagerReminder[]
 }
 
 export async function upsertTaskManagerReminder(session: AuthSession, input: Partial<TaskManagerReminder>) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/reminders/upsert`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/reminders/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -627,7 +627,7 @@ export async function upsertTaskManagerReminder(session: AuthSession, input: Par
 }
 
 export async function completeTaskManagerReminder(session: AuthSession, reminder: TaskManagerReminder) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/task-manager/reminders/${reminder.uuid}/complete`, {
+  const response = await fetch(`${taskManagerApiBaseUrl}/api/v1/task-manager/reminders/${reminder.uuid}/complete`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

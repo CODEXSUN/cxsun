@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataKind, MasterDataModuleDefinition, MasterDataRecord, MasterDataUpsertInput } from "../domain/master-data"
 
 export async function listMasterDataModules(session: AuthSession, kind?: MasterDataKind) {
@@ -11,7 +11,7 @@ export async function listMasterDataModules(session: AuthSession, kind?: MasterD
   }
 
   const params = kind ? `?kind=${encodeURIComponent(kind)}` : ""
-  const response = await fetch(`${apiBaseUrl}/api/v1/master-data/modules${params}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/master-data/modules${params}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -24,7 +24,7 @@ export async function listMasterDataModules(session: AuthSession, kind?: MasterD
 }
 
 export async function listMasterDataRecords(session: AuthSession, moduleKey: string) {
-  const response = await fetch(`${apiBaseUrl}${moduleEndpoint(moduleKey)}`, {
+  const response = await fetch(`${billingApiBaseUrl}${moduleEndpoint(moduleKey)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -37,7 +37,7 @@ export async function listMasterDataRecords(session: AuthSession, moduleKey: str
 }
 
 export async function upsertMasterDataRecord(session: AuthSession, moduleKey: string, input: MasterDataUpsertInput) {
-  const response = await fetch(`${apiBaseUrl}${moduleEndpoint(moduleKey)}/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}${moduleEndpoint(moduleKey)}/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -69,7 +69,7 @@ export async function restoreMasterDataRecord(session: AuthSession, moduleKey: s
 }
 
 async function mutateMasterDataRecord(session: AuthSession, moduleKey: string, idOrUuid: string, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}${moduleEndpoint(moduleKey)}/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}${moduleEndpoint(moduleKey)}/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: {
@@ -91,7 +91,7 @@ async function mutateMasterDataRecord(session: AuthSession, moduleKey: string, i
 }
 
 async function getStandaloneMasterDefinition(session: AuthSession, moduleKey: "contacts" | "products" | "orders") {
-  const response = await fetch(`${apiBaseUrl}${moduleEndpoint(moduleKey)}/definition`, {
+  const response = await fetch(`${billingApiBaseUrl}${moduleEndpoint(moduleKey)}/definition`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

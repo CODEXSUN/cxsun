@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 import type { TenantRecord, TenantUpsertInput } from "../domain/tenant"
 
 interface TenantApiRecord {
@@ -51,7 +51,7 @@ export interface TenantSetupResult {
 const tenantApiPath = "/api/v1/tenants"
 
 export async function listTenants(session: AuthSession, options?: { signal?: AbortSignal }) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}`, {
     cache: "no-store",
     headers: authHeaders(session),
     signal: options?.signal,
@@ -66,7 +66,7 @@ export async function listTenants(session: AuthSession, options?: { signal?: Abo
 }
 
 export async function upsertTenant(session: AuthSession, input: TenantUpsertInput) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/upsert`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -90,7 +90,7 @@ export async function upsertTenant(session: AuthSession, input: TenantUpsertInpu
 }
 
 export async function softDeleteTenant(session: AuthSession, tenantId: number) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/destroy`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}/${tenantId}/destroy`, {
     body: "{}",
     cache: "no-store",
     headers: {
@@ -112,7 +112,7 @@ export async function softDeleteTenant(session: AuthSession, tenantId: number) {
 }
 
 export async function restoreTenant(session: AuthSession, tenantId: number) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/restore`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}/${tenantId}/restore`, {
     body: "{}",
     cache: "no-store",
     headers: {
@@ -134,7 +134,7 @@ export async function restoreTenant(session: AuthSession, tenantId: number) {
 }
 
 export async function getTenantSetupStatus(session: AuthSession, tenantId: number, options?: { signal?: AbortSignal }) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/setup-status`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}/${tenantId}/setup-status`, {
     cache: "no-store",
     headers: authHeaders(session),
     signal: options?.signal,
@@ -153,7 +153,7 @@ export async function getTenantSetupStatus(session: AuthSession, tenantId: numbe
 }
 
 export async function setupTenantClient(session: AuthSession, tenantId: number) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/setup-client`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}/${tenantId}/setup-client`, {
     body: "{}",
     cache: "no-store",
     headers: {
@@ -176,7 +176,7 @@ export async function setupTenantClient(session: AuthSession, tenantId: number) 
 }
 
 export async function resetTenantDatabase(session: AuthSession, tenantId: number, confirmation: string) {
-  const response = await fetch(`${apiBaseUrl}${tenantApiPath}/${tenantId}/reset-database`, {
+  const response = await fetch(`${platformApiBaseUrl}${tenantApiPath}/${tenantId}/reset-database`, {
     body: JSON.stringify({ confirmation }),
     cache: "no-store",
     headers: {

@@ -34,7 +34,7 @@ import { listIndustries, type IndustryRecord } from "src/features/industry/indus
 import type { TenantRecord } from "src/features/tenant/domain/tenant"
 import { listTenants } from "src/features/tenant/infrastructure/tenant-api"
 import { cn } from "src/lib/utils"
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 type TenantDomainStatus = "active" | "not_active" | "suspend"
 type TenantDomainRoute =
@@ -69,7 +69,7 @@ interface TenantDomainForm {
 }
 
 async function listDomains(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/tenant-domains`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -82,7 +82,7 @@ async function listDomains(session: AuthSession) {
 }
 
 async function upsertDomain(session: AuthSession, input: TenantDomainForm) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains/upsert`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/tenant-domains/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -108,7 +108,7 @@ async function upsertDomain(session: AuthSession, input: TenantDomainForm) {
 }
 
 async function deleteDomain(session: AuthSession, input: { domain: TenantDomainRecord; force: boolean; confirmation: string }) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/tenant-domains/${input.domain.id}`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/tenant-domains/${input.domain.id}`, {
     body: JSON.stringify({
       force: input.force,
       confirmation: input.confirmation,

@@ -15,7 +15,8 @@ DDD-structured master data engine handling "common" (shared reference tables: co
 - `interface/components/state-autocomplete-lookup.tsx` — Filters by `country_id`, auto-generates unique short code.
 - `interface/components/district-autocomplete-lookup.tsx` — Filters by `state_id`.
 - `interface/components/city-autocomplete-lookup.tsx` — Filters by `district_id` and `state_id`.
-- `interface/components/pincode-autocomplete-lookup.tsx` — Filters by `city_id`.
+- `interface/components/pincode-autocomplete-lookup.tsx` — Independent Pincode lookup with inline creation wherever Pincode is referenced.
+- Country, State, District, and City inline creation preserves the selected hierarchy: a new State uses the active Country, a new District uses the active State, and a new City uses the active District. Child creation is unavailable until its parent is selected.
 - `interface/components/product-autocomplete.tsx` — Dedicated product combobox with `ProductCreateDialog` (name, code, product type, HSN code, unit, GST %, active switch). Returns `ProductCommonLookup` with tax rate, unit, HSN code.
 - `interface/components/work-order-autocomplete.tsx` — Dedicated work order (orders) combobox with `WorkOrderCreateDialog` (name, code, description).
 

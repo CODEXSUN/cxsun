@@ -27,7 +27,7 @@ import { ModuleListSkeleton } from "src/components/blocks/module-loading"
 import { cn } from "src/lib/utils"
 import { capturePrintDocument } from "src/shared/print/capture-print-document"
 import type { AuthSession } from "src/features/auth/auth-client"
-import { emptyAddress, emptyContact, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
+import { emptyAddress, emptyContact, getNextContactCode, upsertContact, type ContactAddress, type ContactInput, type ContactRecord } from "src/features/contact/contact-client"
 import { resolveCreatedContactAddress, type CreatedContactAddress } from "src/features/contact/contact-address-create"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { CityAutocompleteLookup } from "src/features/master-data/interface/components/city-autocomplete-lookup"
@@ -1239,7 +1239,7 @@ function PurchaseAddressCreateDialog({ contact, initialText, kind, onClose, onCr
           <StateAutocompleteLookup countryId={draft.countryId} label="State" session={session} value={draft.stateId} onChange={(stateId) => setDraft((current) => ({ ...current, stateId: stateId === null ? null : String(stateId), districtId: null, cityId: null, pincodeId: null }))} />
           <DistrictAutocompleteLookup label="District" session={session} stateId={draft.stateId} value={draft.districtId} onChange={(districtId) => setDraft((current) => ({ ...current, districtId: districtId === null ? null : String(districtId), cityId: null, pincodeId: null }))} />
           <CityAutocompleteLookup districtId={draft.districtId} label="City" session={session} value={draft.cityId} onChange={(cityId) => setDraft((current) => ({ ...current, cityId: cityId === null ? null : String(cityId), pincodeId: null }))} />
-          <PincodeAutocompleteLookup cityId={draft.cityId} label="Pincode" session={session} value={draft.pincodeId} onChange={(pincodeId) => setDraft((current) => ({ ...current, pincodeId: pincodeId === null ? null : String(pincodeId) }))} />
+          <PincodeAutocompleteLookup label="Pincode" session={session} value={draft.pincodeId} onChange={(pincodeId) => setDraft((current) => ({ ...current, pincodeId: pincodeId === null ? null : String(pincodeId) }))} />
         </div>
         <div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-5 py-4">
           <Button className="rounded-md" disabled={saveMutation.isPending || !draft.addressLine1.trim()} onClick={() => void saveMutation.mutateAsync()} type="button"><Save className={cn("size-4", saveMutation.isPending && "animate-spin")} />Finalise</Button>
@@ -1495,17 +1495,27 @@ function PurchaseContactCreateDialog({ contacts, initialName, onClose, onCreated
   onCreated(contact: PurchaseLookupOption): void
   session: AuthSession
 }) {
+  const autoSupplierCode = nextSupplierContactCode(contacts)
   const [draft, setDraft] = useState<ContactInput>(() => ({
     ...emptyContact(),
-    code: normalizeContactCode(initialName),
+    code: autoSupplierCode,
     contactTypeId: "contact-type:supplier",
     ledgerId: "ledger:sundry-creditors",
     ledgerName: "Supplier",
-    legalName: initialName,
+    legalName: titleCaseName(initialName),
     name: initialName,
   }))
   const [error, setError] = useState<string | null>(null)
   const contactTypesQuery = useQuery({ queryKey: ["Purchase-contact-types", session.selectedTenant.slug], queryFn: () => listMasterDataRecords(session, "contactTypes") })
+  const nextCodeQuery = useQuery({ queryKey: ["Purchase-contact-next-code", session.selectedTenant.slug], queryFn: () => getNextContactCode(session) })
+  const nextSupplierCode = nextSupplierContactCode(contacts, nextCodeQuery.data)
+  useEffect(() => {
+    setDraft((current) => {
+      const currentCode = String(current.code ?? "").trim()
+      if (currentCode && currentCode !== autoSupplierCode) return current
+      return { ...current, code: nextSupplierCode }
+    })
+  }, [autoSupplierCode, nextSupplierCode])
   const createMutation = useMutation({
     mutationFn: (input: ContactInput) => upsertContact(session, input),
     onSuccess: (contact) => {
@@ -1538,12 +1548,12 @@ function PurchaseContactCreateDialog({ contacts, initialName, onClose, onCreated
     setError(null)
     await createMutation.mutateAsync({
       ...draft,
-      code: String(draft.code ?? "").trim() || normalizeContactCode(name),
+      code: String(draft.code ?? "").trim() || nextSupplierCode,
       contactTypeId: stockContactTypeId(contactTypes, "supplier"),
       gstin,
       ledgerId: draft.ledgerId ?? "ledger:sundry-creditors",
       ledgerName: draft.ledgerName ?? "Supplier",
-      legalName: String(draft.legalName ?? "").trim() || name,
+      legalName: String(draft.legalName ?? "").trim() || titleCaseName(name),
       name,
     })
   }
@@ -1566,7 +1576,7 @@ function PurchaseContactCreateDialog({ contacts, initialName, onClose, onCreated
               label: "Details",
               content: (
                 <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Supplier name *" value={String(draft.name ?? "")} onChange={(name) => setDraft((current) => ({ ...current, name, legalName: current.legalName || name }))} />
+                  <Field label="Supplier name *" value={String(draft.name ?? "")} onChange={(name) => setDraft((current) => ({ ...current, name, legalName: shouldAutoFillPurchaseLegalName(current) ? titleCaseName(name) : current.legalName }))} />
                   <Field label="Code" value={String(draft.code ?? "")} onChange={(code) => setDraft((current) => ({ ...current, code: normalizeContactCode(code) }))} />
                   <Field label="Legal name" value={String(draft.legalName ?? "")} onChange={(legalName) => setDraft((current) => ({ ...current, legalName }))} />
                   <Field label="GSTIN" value={String(draft.gstin ?? "")} onChange={(gstin) => setDraft((current) => ({ ...current, gstin: gstin.toUpperCase(), gstDetails: gstin.trim() ? [{ gstin: gstin.toUpperCase(), state: "", isDefault: true, isActive: true }] : [] }))} />
@@ -1586,7 +1596,7 @@ function PurchaseContactCreateDialog({ contacts, initialName, onClose, onCreated
                   <StateAutocompleteLookup countryId={draft.addresses[0]?.countryId ?? null} label="State" session={session} value={draft.addresses[0]?.stateId ?? null} onChange={(stateId) => setDraft((current) => ({ ...current, addresses: [{ ...(current.addresses[0] ?? emptyAddress()), stateId: stateId === null ? null : String(stateId), districtId: null, cityId: null, pincodeId: null, isDefault: true }] }))} />
                   <DistrictAutocompleteLookup label="District" session={session} stateId={draft.addresses[0]?.stateId ?? null} value={draft.addresses[0]?.districtId ?? null} onChange={(districtId) => setDraft((current) => ({ ...current, addresses: [{ ...(current.addresses[0] ?? emptyAddress()), districtId: districtId === null ? null : String(districtId), cityId: null, pincodeId: null, isDefault: true }] }))} />
                   <CityAutocompleteLookup districtId={draft.addresses[0]?.districtId ?? null} label="City" session={session} value={draft.addresses[0]?.cityId ?? null} onChange={(cityId) => setDraft((current) => ({ ...current, addresses: [{ ...(current.addresses[0] ?? emptyAddress()), cityId: cityId === null ? null : String(cityId), pincodeId: null, isDefault: true }] }))} />
-                  <PincodeAutocompleteLookup cityId={draft.addresses[0]?.cityId ?? null} label="Pincode" session={session} value={draft.addresses[0]?.pincodeId ?? null} onChange={(pincodeId) => setDraft((current) => ({ ...current, addresses: [{ ...(current.addresses[0] ?? emptyAddress()), pincodeId: pincodeId === null ? null : String(pincodeId), isDefault: true }] }))} />
+                  <PincodeAutocompleteLookup label="Pincode" session={session} value={draft.addresses[0]?.pincodeId ?? null} onChange={(pincodeId) => setDraft((current) => ({ ...current, addresses: [{ ...(current.addresses[0] ?? emptyAddress()), pincodeId: pincodeId === null ? null : String(pincodeId), isDefault: true }] }))} />
                 </div>
               ),
             },
@@ -1594,7 +1604,7 @@ function PurchaseContactCreateDialog({ contacts, initialName, onClose, onCreated
         />
         {error ? <p className="px-5 pb-3 text-sm font-medium text-destructive">{error}</p> : null}
         <div className="flex flex-wrap items-center gap-3 border-t border-border/70 bg-muted/20 px-5 py-4">
-          <Button disabled={createMutation.isPending} onClick={() => void save()} type="button" className="rounded-md"><Save className={cn("size-4", createMutation.isPending && "animate-spin")} />Save contact</Button>
+          <Button disabled={createMutation.isPending} onClick={() => void save().catch((error: unknown) => setError(error instanceof Error ? error.message : "Contact save failed."))} type="button" className="rounded-md"><Save className={cn("size-4", createMutation.isPending && "animate-spin")} />Save contact</Button>
           <Button disabled={createMutation.isPending} onClick={onClose} type="button" variant="outline" className="rounded-md"><X className="size-4" />Cancel</Button>
         </div>
       </div>
@@ -1603,7 +1613,35 @@ function PurchaseContactCreateDialog({ contacts, initialName, onClose, onCreated
 }
 
 function normalizeContactCode(value: string) {
-  return value.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40)
+  return value.trim().toUpperCase().replace(/[^A-Z0-9-]+/g, "_").replace(/^[_-]+|[_-]+$/g, "").slice(0, 40)
+}
+
+function nextSupplierContactCode(contacts: PurchaseLookupOption[], contactNextCode?: string) {
+  const numbers = contacts
+    .map((contact) => supplierCodeNumber(String(contact.code ?? contact.record.code ?? "")))
+    .filter((value): value is number => value !== null)
+  const contactSequenceNumber = contactNextCodeNumber(contactNextCode)
+  if (contactSequenceNumber !== null) numbers.push(contactSequenceNumber - 1)
+  const nextNumber = Math.max(0, ...numbers) + 1
+  return `S-${String(nextNumber).padStart(4, "0")}`
+}
+
+function supplierCodeNumber(value: string) {
+  const match = /^S-(\d+)$/i.exec(value.trim())
+  return match ? Number(match[1]) : null
+}
+
+function contactNextCodeNumber(value?: string) {
+  const match = /^[A-Z]-(\d+)$/i.exec(String(value ?? "").trim())
+  return match ? Number(match[1]) : null
+}
+
+function shouldAutoFillPurchaseLegalName(contact: ContactInput) {
+  return !String(contact.legalName ?? "").trim() || String(contact.legalName ?? "") === titleCaseName(String(contact.name ?? ""))
+}
+
+function titleCaseName(value: string) {
+  return value.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase())
 }
 
 function generatePreviewIrn() {

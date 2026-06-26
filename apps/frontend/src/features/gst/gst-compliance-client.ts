@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, billingApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 export const gstComplianceOperations = [
   "authenticate",
@@ -169,7 +169,7 @@ export interface GstComplianceTokenStatus {
 }
 
 export async function runGstComplianceOperation(session: AuthSession, operation: GstComplianceOperation, input: GstComplianceOperationInput, options?: GstComplianceRequestOptions) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/operations/${encodeURIComponent(operation)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/operations/${encodeURIComponent(operation)}`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...gstHeaders(session, options), "Content-Type": "application/json" },
@@ -197,7 +197,7 @@ async function gstComplianceResponseError(response: Response, fallback: string) 
 }
 
 export async function getGstComplianceTokenStatus(session: AuthSession, options?: GstComplianceRequestOptions) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/token${gstQuery(options)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/token${gstQuery(options)}`, {
     cache: "no-store",
     headers: gstHeaders(session, options),
   })
@@ -206,7 +206,7 @@ export async function getGstComplianceTokenStatus(session: AuthSession, options?
 }
 
 export async function getGstComplianceSettings(session: AuthSession, options?: GstComplianceRequestOptions) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/settings${gstQuery(options)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/settings${gstQuery(options)}`, {
     cache: "no-store",
     headers: gstHeaders(session, options),
   })
@@ -215,7 +215,7 @@ export async function getGstComplianceSettings(session: AuthSession, options?: G
 }
 
 export async function getGstProviderGlobalSettings(session: AuthSession, environment: "production" | "sandbox" = "production", purpose: GstProviderPurpose = "einvoice_eway") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/global-settings${gstQuery({ environment, purpose })}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/global-settings${gstQuery({ environment, purpose })}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -224,7 +224,7 @@ export async function getGstProviderGlobalSettings(session: AuthSession, environ
 }
 
 export async function saveGstProviderGlobalSettings(session: AuthSession, input: GstProviderGlobalSettingsInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/global-settings`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/global-settings`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -235,7 +235,7 @@ export async function saveGstProviderGlobalSettings(session: AuthSession, input:
 }
 
 export async function saveGstComplianceSettings(session: AuthSession, input: GstComplianceSettingsInput, options?: GstComplianceRequestOptions) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/settings`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/settings`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...gstHeaders(session, options), "Content-Type": "application/json" },
@@ -246,7 +246,7 @@ export async function saveGstComplianceSettings(session: AuthSession, input: Gst
 }
 
 export async function listGstComplianceOperations(session: AuthSession, options?: GstComplianceRequestOptions) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/operations${gstQuery(options)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/operations${gstQuery(options)}`, {
     cache: "no-store",
     headers: gstHeaders(session, options),
   })
@@ -255,7 +255,7 @@ export async function listGstComplianceOperations(session: AuthSession, options?
 }
 
 export async function listGstComplianceDocuments(session: AuthSession, options?: GstComplianceRequestOptions) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/gst-compliance/documents${gstQuery(options)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/gst-compliance/documents${gstQuery(options)}`, {
     cache: "no-store",
     headers: gstHeaders(session, options),
   })

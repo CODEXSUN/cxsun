@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, platformApiBaseUrl, type AuthSession } from "src/features/auth/auth-client"
 
 export type AdminUserStatus = "active" | "inactive" | "suspend"
 export type AdminUserRole = "super-admin" | "software-admin" | "support-admin" | "helpdesk-admin"
@@ -60,7 +60,7 @@ export interface TenantUserUpsertInput {
 }
 
 export async function listAdminUsers(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/admin-users`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/admin-users`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -69,7 +69,7 @@ export async function listAdminUsers(session: AuthSession) {
 }
 
 export async function upsertAdminUser(session: AuthSession, input: AdminUserUpsertInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/admin-users/upsert`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/admin-users/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {
@@ -85,7 +85,7 @@ export async function upsertAdminUser(session: AuthSession, input: AdminUserUpse
 }
 
 export async function listTenantUsers(session: AuthSession, tenantId: number) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/users/tenant/${tenantId}`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/users/tenant/${tenantId}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -94,7 +94,7 @@ export async function listTenantUsers(session: AuthSession, tenantId: number) {
 }
 
 export async function listTenantUserSummaries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/users/tenant-summary`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/users/tenant-summary`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -103,7 +103,7 @@ export async function listTenantUserSummaries(session: AuthSession) {
 }
 
 export async function upsertTenantUser(session: AuthSession, input: TenantUserUpsertInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/users/upsert`, {
+  const response = await fetch(`${platformApiBaseUrl}/api/v1/users/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: {

@@ -1,0 +1,50 @@
+import { Controller, Get, Post } from '../../core/decorators/controller.js'
+import { UseGuards } from '../../core/decorators/guards.js'
+import { Body, Headers, Param } from '../../core/decorators/http-params.js'
+import { Inject } from '../../core/decorators/inject.js'
+import { AuthAnyGuard } from '../.././core/guards/auth-any.guard.js'
+import { AuthGuard } from '../.././core/guards/auth.guard.js'
+import type { AdminUserUpsertInput, PlatformUserUpsertInput } from './auth.types.js'
+import type { TenantRequestHeaders } from './tenant-context.service.js'
+import { UserManagerService } from './user-manager.service.js'
+
+@Controller('api/v1/users')
+@UseGuards(AuthAnyGuard)
+export class UsersV1Controller {
+  constructor(
+    @Inject(UserManagerService) private readonly userManager: UserManagerService,
+  ) {}
+
+  @Get('tenant-summary')
+  listTenantSummaries(@Headers() headers: TenantRequestHeaders) {
+    return this.userManager.listTenantSummaries(headers)
+  }
+
+  @Get('tenant/:tenantId')
+  listTenantUsers(@Headers() headers: TenantRequestHeaders, @Param('tenantId') tenantId: string) {
+    return this.userManager.listTenantUsers(headers, Number(tenantId))
+  }
+
+  @Post('upsert')
+  upsert(@Headers() headers: TenantRequestHeaders, @Body() body: PlatformUserUpsertInput) {
+    return this.userManager.upsert(headers, body)
+  }
+}
+
+@Controller('api/v1/admin-users')
+@UseGuards(AuthGuard)
+export class AdminUsersV1Controller {
+  constructor(
+    @Inject(UserManagerService) private readonly userManager: UserManagerService,
+  ) {}
+
+  @Get()
+  list(@Headers() headers: TenantRequestHeaders) {
+    return this.userManager.listAdminUsers(headers)
+  }
+
+  @Post('upsert')
+  upsert(@Headers() headers: TenantRequestHeaders, @Body() body: AdminUserUpsertInput) {
+    return this.userManager.upsertAdminUser(headers, body)
+  }
+}

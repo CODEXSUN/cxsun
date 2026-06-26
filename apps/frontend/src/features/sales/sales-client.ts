@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { responseApiError } from "src/shared/api/api-error"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
@@ -170,7 +170,7 @@ export function emptySalesItem(): SalesEntryItem {
 }
 
 export async function listSalesEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/sales`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -199,7 +199,7 @@ export async function listSalesCommonLookups(session: AuthSession, moduleKey: Sa
 }
 
 export async function getSalesEntry(session: AuthSession, idOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales/${encodeURIComponent(idOrUuid)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/sales/${encodeURIComponent(idOrUuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -208,7 +208,7 @@ export async function getSalesEntry(session: AuthSession, idOrUuid: string) {
 }
 
 export async function upsertSalesEntry(session: AuthSession, input: SalesEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/sales/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -237,7 +237,7 @@ export async function createSalesReversal(session: AuthSession, entry: SalesEntr
 }
 
 export async function addSalesComment(session: AuthSession, entry: SalesEntry, body: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales/${entry.uuid}/comments`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/sales/${entry.uuid}/comments`, {
     body: JSON.stringify({ body }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -250,7 +250,7 @@ export async function addSalesComment(session: AuthSession, entry: SalesEntry, b
 }
 
 export async function runSalesTool(session: AuthSession, entry: SalesEntry, tool: string, printHtml?: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales/${entry.uuid}/tools`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/sales/${entry.uuid}/tools`, {
     body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -267,7 +267,7 @@ export async function downloadSalesPdf(session: AuthSession, entry: SalesEntry, 
 }
 
 async function mutateSalesEntry(session: AuthSession, idOrUuid: string, action: "correction" | "destroy" | "restore" | "reversal") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/sales/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/sales/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -280,7 +280,7 @@ async function mutateSalesEntry(session: AuthSession, idOrUuid: string, action: 
 }
 
 async function listLookupRecords(session: AuthSession, endpoint: string) {
-  const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const response = await fetch(`${billingApiBaseUrl}${endpoint}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

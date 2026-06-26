@@ -8,7 +8,7 @@ import { getDatabase } from '../database/connection.js'
 import { nowIso } from '../database/database-module.js'
 import { dispatchQueuedMail } from '../../modules/mail/mail.dispatcher.js'
 
-export type HybridQueueName = 'events' | 'mail' | 'reports' | 'database-backup' | 'system-update' | 'tenant-maintenance'
+export type HybridQueueName = 'events' | 'mail' | 'reports' | 'database-backup' | 'tenant-maintenance'
 export type QueueRuntimeMode = 'database' | 'redis'
 
 interface HybridJobPayload {
@@ -109,7 +109,6 @@ export async function startHybridQueueWorkers() {
     startWorker('database-backup', processDatabaseBackupJob)
     startWorker('mail', processMailJob)
     startWorker('reports', processPlaceholderJob)
-    startWorker('system-update', processPlaceholderJob)
     startWorker('tenant-maintenance', processPlaceholderJob)
     startWorker('events', processPlaceholderJob)
     await scheduleDatabaseBackups()
@@ -133,7 +132,7 @@ export async function getHybridQueueCounts() {
   if (await getQueueRuntimeMode() === 'database') return []
   if (!(await isRedisAvailable())) return []
 
-  const names: HybridQueueName[] = ['events', 'mail', 'reports', 'database-backup', 'system-update', 'tenant-maintenance']
+  const names: HybridQueueName[] = ['events', 'mail', 'reports', 'database-backup', 'tenant-maintenance']
   const counts = []
 
   for (const name of names) {
@@ -449,7 +448,6 @@ function queueNameForType(type: string): HybridQueueName {
   if (type.startsWith('mail.') || type.startsWith('email.')) return 'mail'
   if (type.startsWith('report.')) return 'reports'
   if (type.startsWith('database.backup') || type.startsWith('backup.')) return 'database-backup'
-  if (type.startsWith('system.update')) return 'system-update'
   if (type.startsWith('tenant.')) return 'tenant-maintenance'
   return 'events'
 }

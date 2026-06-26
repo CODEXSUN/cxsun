@@ -16,6 +16,12 @@ services:
       APP_DIR: /workspace/cxsun
       HOST: 0.0.0.0
       PORT: ${PORT:-6005}
+      PLATFORM_API_PORT: ${PLATFORM_API_PORT:-6105}
+      BILLING_API_PORT: ${BILLING_API_PORT:-6205}
+      ECOMMERCE_API_PORT: ${ECOMMERCE_API_PORT:-6305}
+      VITE_PLATFORM_API_BASE_URL: ${VITE_PLATFORM_API_BASE_URL:-https://platform-api.codexsun.com}
+      VITE_BILLING_API_BASE_URL: ${VITE_BILLING_API_BASE_URL:-https://billing-api.codexsun.com}
+      VITE_ECOMMERCE_API_BASE_URL: ${VITE_ECOMMERCE_API_BASE_URL:-https://ecommerce-api.codexsun.com}
       VITE_PORT: ${VITE_PORT:-6010}
       DOCS_PORT: ${DOCS_PORT:-6020}
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-https://codexsun.com}
@@ -69,6 +75,111 @@ services:
       - "${CXSYNC_CLOUD_PORT:-6077}:${CXSYNC_CLOUD_PORT:-6077}"
     volumes:
       - cxsun-volume:/workspace
+      - cxmedia-storage:/workspace/cxsun/storage
+    networks:
+      - codexion-network
+
+  platform-api:
+    build:
+      context: ..
+      dockerfile: .container/Dockerfile
+    image: cxsun:platform-api
+    container_name: cxsun-platform-api
+    restart: unless-stopped
+    environment:
+      CXSUN_RUNTIME_MODE: platform-api
+      GIT_REPO_URL: ${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}
+      GIT_BRANCH: ${GIT_BRANCH:-main}
+      GIT_PULL_ON_START: ${GIT_PULL_ON_START:-true}
+      APP_DIR: /workspace/cxsun
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-http-header-size=65536}
+      HOST: 0.0.0.0
+      PLATFORM_API_PORT: ${PLATFORM_API_PORT:-6105}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-cxsun_master}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-DbPass1@@}
+      JWT_SECRET: ${JWT_SECRET:-}
+      SUPER_ADMIN_NAME: ${SUPER_ADMIN_NAME:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-}
+      SOFTWARE_ADMIN_NAME: ${SOFTWARE_ADMIN_NAME:-}
+      SOFTWARE_ADMIN_EMAIL: ${SOFTWARE_ADMIN_EMAIL:-}
+      SOFTWARE_ADMIN_PASSWORD: ${SOFTWARE_ADMIN_PASSWORD:-}
+      TENANT_ADMIN_NAME: ${TENANT_ADMIN_NAME:-}
+      TENANT_ADMIN_EMAIL: ${TENANT_ADMIN_EMAIL:-}
+      TENANT_ADMIN_PASSWORD: ${TENANT_ADMIN_PASSWORD:-}
+      SKIP_MARIADB_WAIT: ${SKIP_MARIADB_WAIT:-true}
+      HEALTH_WAIT_SECONDS: ${HEALTH_WAIT_SECONDS:-900}
+    ports:
+      - "${PLATFORM_API_PORT:-6105}:${PLATFORM_API_PORT:-6105}"
+    volumes:
+      - cxsun-platform-api-workspace:/workspace
+      - cxmedia-storage:/workspace/cxsun/storage
+    networks:
+      - codexion-network
+
+  billing-api:
+    build:
+      context: ..
+      dockerfile: .container/Dockerfile
+    image: cxsun:billing-api
+    container_name: cxsun-billing-api
+    restart: unless-stopped
+    environment:
+      CXSUN_RUNTIME_MODE: billing-api
+      GIT_REPO_URL: ${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}
+      GIT_BRANCH: ${GIT_BRANCH:-main}
+      GIT_PULL_ON_START: ${GIT_PULL_ON_START:-true}
+      APP_DIR: /workspace/cxsun
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-http-header-size=65536}
+      HOST: 0.0.0.0
+      BILLING_API_PORT: ${BILLING_API_PORT:-6205}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-cxsun_master}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-DbPass1@@}
+      JWT_SECRET: ${JWT_SECRET:-}
+      SKIP_MARIADB_WAIT: ${SKIP_MARIADB_WAIT:-true}
+      HEALTH_WAIT_SECONDS: ${HEALTH_WAIT_SECONDS:-900}
+    ports:
+      - "${BILLING_API_PORT:-6205}:${BILLING_API_PORT:-6205}"
+    volumes:
+      - cxsun-billing-api-workspace:/workspace
+      - cxmedia-storage:/workspace/cxsun/storage
+    networks:
+      - codexion-network
+
+  ecommerce-api:
+    build:
+      context: ..
+      dockerfile: .container/Dockerfile
+    image: cxsun:ecommerce-api
+    container_name: cxsun-ecommerce-api
+    restart: unless-stopped
+    environment:
+      CXSUN_RUNTIME_MODE: ecommerce-api
+      GIT_REPO_URL: ${GIT_REPO_URL:-https://github.com/CODEXSUN/cxsun.git}
+      GIT_BRANCH: ${GIT_BRANCH:-main}
+      GIT_PULL_ON_START: ${GIT_PULL_ON_START:-true}
+      APP_DIR: /workspace/cxsun
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-http-header-size=65536}
+      HOST: 0.0.0.0
+      ECOMMERCE_API_PORT: ${ECOMMERCE_API_PORT:-6305}
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-cxsun_master}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-DbPass1@@}
+      JWT_SECRET: ${JWT_SECRET:-}
+      SKIP_MARIADB_WAIT: ${SKIP_MARIADB_WAIT:-true}
+      HEALTH_WAIT_SECONDS: ${HEALTH_WAIT_SECONDS:-900}
+    ports:
+      - "${ECOMMERCE_API_PORT:-6305}:${ECOMMERCE_API_PORT:-6305}"
+    volumes:
+      - cxsun-ecommerce-api-workspace:/workspace
       - cxmedia-storage:/workspace/cxsun/storage
     networks:
       - codexion-network
@@ -140,6 +251,12 @@ volumes:
     name: cxsun-volume
   cxsync-maintenance-workspace:
     name: cxsync-maintenance-workspace
+  cxsun-platform-api-workspace:
+    name: cxsun-platform-api-workspace
+  cxsun-billing-api-workspace:
+    name: cxsun-billing-api-workspace
+  cxsun-ecommerce-api-workspace:
+    name: cxsun-ecommerce-api-workspace
   cxsync-maintenance-storage:
     name: cxsync-maintenance-storage
   cxmedia-storage:

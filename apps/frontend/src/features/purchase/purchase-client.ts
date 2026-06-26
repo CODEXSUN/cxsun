@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { responseApiError } from "src/shared/api/api-error"
 import { downloadPrintPdf } from "src/shared/print/download-print-pdf"
@@ -168,7 +168,7 @@ export function emptyPurchaseItem(): PurchaseEntryItem {
 }
 
 export async function listPurchaseEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/purchase`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -197,7 +197,7 @@ export async function listPurchaseCommonLookups(session: AuthSession, moduleKey:
 }
 
 export async function getPurchaseEntry(session: AuthSession, idOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase/${encodeURIComponent(idOrUuid)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/purchase/${encodeURIComponent(idOrUuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -206,7 +206,7 @@ export async function getPurchaseEntry(session: AuthSession, idOrUuid: string) {
 }
 
 export async function upsertPurchaseEntry(session: AuthSession, input: PurchaseEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/purchase/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -235,7 +235,7 @@ export async function createPurchaseReversal(session: AuthSession, entry: Purcha
 }
 
 export async function addPurchaseComment(session: AuthSession, entry: PurchaseEntry, body: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase/${entry.uuid}/comments`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/purchase/${entry.uuid}/comments`, {
     body: JSON.stringify({ body }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -248,7 +248,7 @@ export async function addPurchaseComment(session: AuthSession, entry: PurchaseEn
 }
 
 export async function runPurchaseTool(session: AuthSession, entry: PurchaseEntry, tool: string, printHtml?: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase/${entry.uuid}/tools`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/purchase/${entry.uuid}/tools`, {
     body: JSON.stringify({ printHtml, tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -265,7 +265,7 @@ export async function downloadPurchasePdf(session: AuthSession, entry: PurchaseE
 }
 
 async function mutatePurchaseEntry(session: AuthSession, idOrUuid: string, action: "correction" | "destroy" | "restore" | "reversal") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/entries/purchase/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/entries/purchase/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -278,7 +278,7 @@ async function mutatePurchaseEntry(session: AuthSession, idOrUuid: string, actio
 }
 
 async function listLookupRecords(session: AuthSession, endpoint: string) {
-  const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const response = await fetch(`${billingApiBaseUrl}${endpoint}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

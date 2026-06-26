@@ -1,4 +1,4 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { auditorApiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
 
 export type CredentialServiceKey = "gst" | "einvoice" | "eway" | "einvoiceApi" | "ewayApi" | "emailAccount"
 
@@ -48,13 +48,13 @@ type RawCredential = Partial<AuditorContactCredentialRecord> & {
 }
 
 export async function listAuditorContactCredentials(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/contact-credentials`, { cache: "no-store", headers: authHeaders(session) })
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/contact-credentials`, { cache: "no-store", headers: authHeaders(session) })
   if (!response.ok) throw new Error(`Contact credential list failed with status ${response.status}.`)
   return ((await response.json()) as RawCredential[]).map(normalizeCredential)
 }
 
 export async function upsertAuditorContactCredential(session: AuthSession, input: AuditorContactCredentialInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auditor/contact-credentials/upsert`, {
+  const response = await fetch(`${auditorApiBaseUrl}/api/v1/auditor/contact-credentials/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },

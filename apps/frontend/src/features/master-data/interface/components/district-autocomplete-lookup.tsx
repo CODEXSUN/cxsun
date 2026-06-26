@@ -1,6 +1,7 @@
 import type { AuthSession } from "src/features/auth/auth-client"
-import type { MasterDataRecord, MasterDataUpsertInput } from "../../domain/master-data"
+import type { MasterDataRecord } from "../../domain/master-data"
 import { CommonRecordAutocompleteLookup, buildCommonRecordLookup, commonRecordLookupQueryKey, getCommonRecordName } from "./common-record-autocomplete-lookup"
+import { buildDistrictCreateInput, hasSelectedLocationParent } from "./location-create-input"
 
 export interface DistrictAutocompleteLookupProps {
   className?: string
@@ -27,8 +28,9 @@ export function DistrictAutocompleteLookup({
 }: DistrictAutocompleteLookupProps) {
   return (
     <CommonRecordAutocompleteLookup
+      allowCreate={hasSelectedLocationParent(stateId)}
       className={className}
-      createInput={buildDistrictCreateInput}
+      createInput={(name) => buildDistrictCreateInput(name, stateId)}
       createLabel="district"
       disabled={disabled}
       label={label}
@@ -57,12 +59,4 @@ export function buildDistrictLookup(records: MasterDataRecord[]) {
 
 export function getDistrictName(record: MasterDataRecord) {
   return getCommonRecordName(record)
-}
-
-function buildDistrictCreateInput(name: string): MasterDataUpsertInput {
-  return {
-    is_active: true,
-    name,
-    state_id: 1,
-  }
 }

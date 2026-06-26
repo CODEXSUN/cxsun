@@ -2600,6 +2600,179 @@ User prompt:
 ok next
 ```
 
+## 2026-06-26 - Platform and Billing API hardening
+
+User prompt:
+
+```text
+any improvement in billing and platform api
+```
+
+User prompt:
+
+```text
+ok fine implement all
+```
+
+## 2026-06-26 - Local dev port and env audit
+
+User prompt:
+
+```text
+check all ports and .env and .env.sample  is having correct value
+```
+
+## 2026-06-26 - Billing stack startup health check socket failure
+
+User prompt:
+
+```text
+"C:\Program Files\nodejs\npm.cmd" run dev:billing-stack
+
+> cxsun@1.0.131 dev:billing-stack
+...
+[platform] [TypeError: fetch failed] {
+[platform]   [cause]: SocketError: other side closed
+[platform]     code: 'UND_ERR_SOCKET',
+[platform]     socket: {
+[platform]       localAddress: '::1',
+[platform]       remoteAddress: '::1',
+[platform]       remotePort: 6105,
+[platform]       remoteFamily: 'IPv6',
+[platform]       bytesWritten: 175,
+[platform]       bytesRead: 0
+```
+
+## 2026-06-26 - Purchase contact popup supplier code and legal name behavior
+
+User prompt:
+
+```text
+on purchase when create new contact on pop up it is showing name as code change this to s-0001 format next no and Legal name to capitalised and can override buy user
+```
+
+User prompt:
+
+```text
+make the same for sales contact , receipt , payment, export sales , quotation
+```
+
+User pasted browser console output showing:
+
+```text
+GET http://localhost:6205/api/v1/contacts/next-code 500 (Internal Server Error)
+POST http://localhost:6205/api/v1/contacts/upsert 500 (Internal Server Error)
+contact-client.ts:164 Uncaught (in promise) Error: Internal Server Error
+```
+
+User pasted billing server error:
+
+```text
+Internal Server Error; Table 'codexsun_db.contact_code_sequences' doesn't exist in ContactMasterRepository.synchronizeCode during POST /api/v1/contacts/upsert.
+```
+
+User prompt:
+
+```text
+create full set of test suit for sale, purchase and test it e2e
+
+make create all pop up except eway and einvoice
+
+test rest of all and finalise any error
+```
+
+User pasted browser console output:
+
+```text
+localhost:6105/api/v1/auth/login:1 Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+```
+
+User prompt:
+
+```text
+ok fine record this in out assist/execution/futureNotes.md
+```
+
+User prompt:
+
+```text
+there is two global spinner running at load make it one keep this
+```
+
+User clarification:
+
+```text
+don't change global spinner
+```
+
+User prompt:
+
+```text
+in global spinner make backdrop little transparent so it show blured app
+```
+
+User prompt:
+
+```text
+ok fine do all pending what you can do now
+```
+
+## 2026-06-25 - Standalone Billing API release
+
+User prompt:
+
+```text
+create log in changelog with version bump
+```
+
+User prompt:
+
+```text
+run and test that platform-api and billing-api is wired to frontend and working fine with e2e testing
+```
+
+User prompt:
+
+```text
+make this concurrently script on package.json to run concurrently
+```
+
+User prompt:
+
+```text
+add preflight to check already port is used if so kill existing and reuse this on restart
+```
+
+User prompt:
+
+```text
+check at this frontend is taking too much time fix this make first paint as soon as possible and then load some content or load loader that we can understand app is running
+```
+
+User-reported browser error:
+
+```text
+localhost:6005/api/v1/auth/login:1 Failed to load resource: net::ERR_CONNECTION_REFUSED
+```
+
+User prompt:
+
+```text
+can we make this log in readable formatted look
+```
+
+User prompt:
+
+```text
+public pages are not displayed how to solve this
+```
+
+User prompt:
+
+```text
+in side dashboard is using existing for can fix this alos
+```
+
 ## 2026-06-25 - One repo, multiple backend services documentation
 
 User prompt:
@@ -2819,6 +2992,116 @@ User prompt:
 
 ```text
 Error invoking remote method 'cxsync:tenants:schema-baseline:capture-codebase': Error: Expected schema build failed: Parameter decorators only work when experimental decorators are enabled
+```
+
+## 2026-06-25 - Extracted service old-mapping cleanup
+
+User prompts:
+
+```text
+public pages are not displayed how to solve this
+```
+
+```text
+in side dashboard is using existing for can fix this alos
+```
+
+```text
+check for any older maping
+```
+
+User prompt:
+
+```text
+can make separate same as billing-api for crm ,tally , frappe , task manager , auditor , blog , agent os and maintain server no dependent
+```
+
+User prompt:
+
+```text
+move GST compliance to billing and subscription, app setup/runtime, storage helper to platform-api and at present leave system update
+```
+
+User prompt:
+
+```text
+clean up do Ecommerce  and system update migration from server  don't want system update here and test all full live browser test
+```
+
+User prompt:
+
+```text
+create log in changelog and update version
+```
+
+User prompt:
+
+```text
+ok fine we check from first in this contact when save new contact pincode is not save when create , disconnect pincode with any other
+
+trim table and keep only pincode
+
+id
+name => pincode
+is active
+
+and also have create options in all autocomplete where ever it refered
+```
+
+User prompt:
+
+```text
+in this chain creation is not working when create new country it is creating and then create state means it is saved under default so we would create multiple times to create unexpectedly so fix this flow
+
+from this window or pop we create contact address
+
+from top map to following when created new with coupling from country to city
+```
+
+User prompt:
+
+```text
+in contact list move contact to first and then show code  and show only  contact no legal name on second line it is also confusing client
+
+and when upsert get auto code of next record automatic instead of showing placeholder c-0001 auto generated
+and make legal name to capitalised always , can user can override to lower case and in this make active to right side fit
+```
+
+User prompt:
+
+```text
+in address move address line 1 to second row full and address 2 as third full and then country and state next row district and city
+next row pincode and default address
+```
+
+User prompt:
+
+```text
+global loader is show two types of text remove all text show only spinner and logo
+
+text
+
+loading..
+codexsun wo..
+
+remove these and keep plain so it would not shift
+```
+
+User prompt:
+
+```text
+what is next in this missing and log in changelog
+```
+
+User prompt:
+
+```text
+in this repo we have split apps so we want to split deployment also so make new deployment docker files for new
+
+1. billing application => has platform + billing-api + frontend
+2. ecommerce  => platform + ecommerce-api + storefront
+
+like wise it extended so first build billing app later on we move one by one
 ```
 
 ## 2026-06-24 - CXSync Cloud audit ownership and integration verification

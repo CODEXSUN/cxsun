@@ -2,9 +2,9 @@
 
 ## Version State
 
-- **Current version:** `1.0.129`
-- **Release tag:** `v-1.0.129`
-- **Changelog label:** `v 1.0.129`
+- **Current version:** `1.0.131`
+- **Release tag:** `v-1.0.131`
+- **Changelog label:** `v 1.0.131`
 
 Historical changelog entries are immutable. A version bump may update this `Version State` block and add a new entry, but it must not rewrite old entry labels.
 
@@ -14,6 +14,97 @@ New changelog entries must keep database-facing work and application code work s
 - `#### App Codebase Changes` records UI, API, service logic, tooling, and documentation changes.
 
 ---
+
+## v-1.0.131
+
+### [v 1.0.131] 2026-06-25 9:57 pm - Extracted backend service stack
+
+#### Database Changes
+
+- Database update: Yes (manual).
+- Migrated tenant `common_pincodes` tables by backfilling `name` from the legacy Pincode code and removing country, state, district, city, code, and area columns.
+- Added tenant `contact_code_sequences` storage, initialized from existing `C-####` Contact codes, for transaction-safe code allocation.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.131
+- Released the extracted backend service stack with standalone Platform, Billing, Ecommerce, Sites, CRM, Tally, Frappe, Task Manager, Auditor, Blog, and Agent OS API workspaces.
+- Kept extracted services independent from `apps/server` by using the shared `@cxsun/platform` runtime and service-specific frontend API base URLs.
+- Added concurrent Billing and full extracted-stack development commands, health/readiness checks, container runtime modes, and service-aware local preflight behavior.
+- Completed native Billing API ownership of billing, accounts, settlement, and billing-linked stock routes, with the legacy combined-server route implementations removed.
+- Moved GST compliance into Billing API and moved subscription, app setup/runtime, storage, and shared platform contracts into Platform API.
+- Migrated Ecommerce API away from combined-server imports and removed System Update from the active server, frontend navigation, and dashboard route tree.
+- Decoupled Pincode from the location hierarchy across common-module definitions, Contact persistence, Company/Contact forms, Auditor, and billing document address editors.
+- Fixed new Contact saves so the exact selected or inline-created Pincode ID is persisted without a city-linked fallback.
+- Standardized every Pincode reference on the shared autocomplete with inline “Create Pincode” support.
+- Fixed cascading address lookup creation so new States, Districts, and Cities use the Country, State, and District selected in the current form instead of silently attaching to default record ID `1`.
+- Prevented child lookup creation until the required parent is selected, avoiding duplicate records created while trying to repair an incorrectly linked address chain.
+- Reordered the Contact list to show Contact before Code and removed the confusing Legal name/identifier second line from Contact cells.
+- Added tenant-aware sequential Contact codes with a live next-code endpoint and prefilled new-contact Code values such as `C-0001`.
+- Kept Legal name title-cased while it follows Name, preserved manual lowercase/custom overrides, and moved the Active switch into a compact right-aligned control.
+- Reordered Contact address entry rows into full-width Address line 1 and Address line 2 rows, followed by Country/State, District/City, and Pincode/Default address pairs.
+- Removed changing text from both the immediate HTML startup screen and React global loader, leaving a stable logo-and-spinner-only loading surface without layout shift.
+- Added Billing API mutation coverage for the full Country → State → District → City chain, independent Pincode creation, Contact save, Contact reload, and exact address-reference persistence.
+- Made automatic Contact code allocation concurrency-safe with a tenant-database sequence and transaction row lock; manual sequential codes also advance the allocator safely.
+- Added contract/e2e protection checks for `GET /api/v1/contacts/next-code` and a MariaDB mutation test proving concurrent Contact creates receive distinct `C-####` values.
+- Added Sales/Purchase popup-backed Billing API mutation e2e coverage for create Contact, append Contact address, create Transport, create HSN/Unit/Tax/Product/Work Order masters, and persist full Sales/Purchase entries without exercising E-way or E-invoice generation.
+- Kept the authenticated frontend browser smoke as the remaining Contact verification step requiring a disposable tenant UI login.
+- Deferred Contact GST-details UI, merge/deduplication, bulk import/export, independent ledger selection, and grouping enhancements until the Contact create/edit path has dedicated automated coverage.
+- Added an independent Billing deployment under `.container/billing` with separately buildable Platform API, Billing API, and Billing frontend images.
+- Kept MariaDB, Redis, the shared Docker network, and media storage outside the Billing Compose lifecycle so application redeploys cannot recreate database infrastructure.
+- Added health-gated service ordering, Billing-only frontend readiness configuration, per-service redeploy commands, and deployment environment documentation.
+- Reduced the production API images from the initial 1.78 GB monorepo copy to focused 408-409 MB runtime images containing only compiled service code, the shared Platform package, and required production dependencies; the Billing frontend image is 98 MB.
+- Added a Billing-only local Docker orchestrator at `.container/billing/billing-stack.sh` with local env defaults, MariaDB/Redis readiness checks, Docker Desktop/WSL path handling, and post-start health verification.
+- Moved the local Billing frontend default to port `6011` to avoid colliding with the existing all-in-one local frontend on `6010`.
+- Added a Billing API production TypeScript build config for Docker images and tightened mutation e2e helper typing so fresh container builds no longer compile-fail on test-only `unknown` address values.
+- Added a shared split-API runtime helper for validated API ports, explicit public/local URLs, and retrying loopback health checks so Platform, Billing, Ecommerce, Sites, CRM, Tally, Frappe, Task Manager, Auditor, Blog, and Agent OS APIs no longer duplicate startup readiness logic.
+- Added `/ready` database-readiness endpoints beside lightweight `/health` checks for Platform API and every API using the shared Platform runtime.
+- Added `x-request-id` response headers, request-id-aware local logs, production `JWT_SECRET` startup validation, strict numeric env parsing, and in-memory auth-login rate limiting for Platform/Billing API hardening.
+
+## v-1.0.130
+
+### [v 1.0.130] 2026-06-25 2:40 pm - Standalone Billing API and shared platform runtime
+
+#### Database Changes
+
+- Database update: No (manual).
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.130
+- Completed Billing API as an independently runnable backend on port `6205`, with native ownership of sales, quotation, export sales, purchase, receipt, payment, accounts, purchase receipt, delivery note, and stock ledger routes.
+- Added `packages/platform` as the shared backend runtime boundary for framework, infrastructure, queue, mail, PDF, tenant, and helper capabilities used by extracted services.
+- Added `packages/platform` to lockstep version automation so future workspace bumps keep the shared runtime manifest aligned.
+- Removed Billing API dependencies on `apps/server/src` and `@cxsun/server`, and added a boundary check that fails when those references return.
+- Routed Billing and billing-linked inventory frontend clients through `VITE_BILLING_API_BASE_URL` while retaining the configured fallback for controlled deployment transition.
+- Removed the old combined-server Billing route implementations after native Billing API ownership was proven, retaining only migration bridge exports still required by tenant provisioning.
+- Verified the standalone release with Platform package build/typecheck, Billing API build/typecheck, MariaDB-backed contract/e2e/module/mutation suites, frontend build/typecheck, Docker configuration, and documentation policy checks.
+- Re-ran the live standalone stack on frontend `6010`, Platform API `6105`, and Billing API `6205`; verified browser super-admin login and Platform Foundation reads through Platform API, tenant login and Billing Overview/Sales reads through Billing API, healthy `1.0.130` service responses, and no browser console warnings or errors.
+- Added `npm run dev:billing-stack` to start Platform API, Billing API, and the frontend together through `concurrently` with labeled `platform`, `billing`, and `web` output.
+- Hardened shared dev preflight to detect configured-port listeners, automatically terminate their process trees, wait for socket release, and restart on the same port; `CXSUN_DEV_PORT_POLICY=abort` remains available for fail-closed startup.
+- Added a Billing-stack frontend preflight mode that skips the legacy combined-backend announcement wait while retaining `http://localhost:6005` as the fallback API target for routes not yet extracted.
+- Added an HTML-level Codexsun startup screen so the browser paints a clear running/loading state immediately, before React and the application module graph finish loading.
+- Fixed extracted-service URL precedence so local Platform API `6105` and Billing API `6205` are selected before the legacy `VITE_API_BASE_URL` fallback, and made billing-stack preflight inject both service targets explicitly.
+- Stopped login and dashboard routes from requesting legacy tenant-static content, and routed the public health indicator through Platform API so extracted-stack startup no longer emits connection-refused errors for port `6005`.
+- Added an extracted-stack frontend readiness gate: the immediate HTML first paint remains available, React reports which backend is still starting, and login/dashboard interaction begins only after both Platform API and Billing API health checks pass.
+- Replaced raw Fastify JSON output with compact colored `pino-pretty` logs during local Platform/Billing development, shortened service-ready messages, and retained structured JSON logging for production or `CXSUN_LOG_FORMAT=json`.
+- Collapsed development request logging into one method/path/status/duration line and suppressed successful health polling plus CORS preflight noise.
+- Added standalone `apps/sites-api` on port `6405` for tenant public content, domain-resolved static pages, sliders, and public contact submissions.
+- Added Sites API to the concurrent billing stack, active build/typecheck paths, preflight targets, environment samples, and command-only version automation.
+- Routed frontend public site reads and contact submissions through `VITE_SITES_API_BASE_URL`, removing the public-page dependency on the legacy combined backend at port `6005`.
+- Extended the frontend readiness gate to wait for Platform, Billing, and Sites APIs while keeping the immediate HTML first paint.
+- Routed tenant dashboard Company/default-context, Company Settings, and Document Settings clients through Billing API, matching the modules already mounted by the standalone service and removing their legacy port `6005` dependency.
+- Removed additional old frontend mappings from standalone Billing/Sites flows by routing master-data, contact, media, mail, print-PDF, and site-slider clients to their extracted service bases, and removed a stale Platform API TypeScript include of `apps/server/src`.
+- Set the shared shadcn frontend radius token to medium so inputs and related controls render with more restrained rounded corners.
+- Added standalone no-server-dependency API workspaces for CRM, Tally, Frappe, Task Manager, Auditor, Blog, and Agent OS using `@cxsun/platform` modules, dedicated ports, root scripts, preflight registration, build/typecheck automation, service docs, and command-only version automation.
+- Routed the matching frontend feature clients to `VITE_CRM_API_BASE_URL`, `VITE_TALLY_API_BASE_URL`, `VITE_FRAPPE_API_BASE_URL`, `VITE_TASK_MANAGER_API_BASE_URL`, `VITE_AUDITOR_API_BASE_URL`, `VITE_BLOG_API_BASE_URL`, and `VITE_AGENT_OS_API_BASE_URL`, removing their dependency on the generic combined-server API base.
+- Added an expanded `dev:extracted-stack` startup path and configurable frontend health-gate service list so Billing-only development can stay focused while the larger extracted stack can wait for all newly split APIs.
+- Moved GST compliance ownership into standalone Billing API, and moved subscription, app setup, app runtime, and storage URL/static serving ownership into Platform API while intentionally leaving System Update on the legacy server for now.
+- Added Platform API metadata compatibility for shared `@cxsun/platform` modules so Platform API can mount extracted shared modules without copying them into the app service.
+- Rewired Ecommerce API to use `@cxsun/platform` instead of the legacy combined server, removed its `../server/src` TypeScript include, refreshed the lockfile, and verified Ecommerce API contract/e2e/build against MariaDB.
+- Routed Ecommerce workspace source lookups for products, contacts, and product categories through Ecommerce API so the Ecommerce page no longer reads those lists from Billing API.
+- Added Ecommerce API to `dev:extracted-stack` and the matching frontend readiness gate so full extracted-stack browser verification includes Ecommerce service health.
+- Removed System Update from the active combined-server module mount, queue list, Super Admin/Admin navigation, dashboard access map, and frontend render tree, leaving database backup/restore as the maintenance surface.
 
 ## v-1.0.129
 
@@ -31,11 +122,60 @@ New changelog entries must keep database-facing work and application code work s
 - Started Platform API with a narrow foundation surface: health, auth, tenant, tenant-domain, and industry modules imported from the transition backend.
 - Added Platform API service standards, contract, and extraction docs covering naming, ownership, dependency direction, module shape, API rules, database rules, verification, and migration phases.
 - Added Platform API dev preflight support, `PLATFORM_API_PORT` / `PLATFORM_API_PUBLIC_URL` env samples, and a MariaDB-backed smoke-test harness for `/health`.
+- Added reusable Platform API runtime creation, an initial MariaDB-backed contract test, event primitives, and online/offline sync tags so future modules start with maintainable service and sync conventions.
+- Documented Platform API queue rules: use MariaDB-backed queues by default and introduce queue processing only for slow, retryable, scheduled, external-provider, fan-out, or cross-service work.
+- Added Platform API module documentation standards so every future module keeps local implementation notes and centralizes user/client-facing guidance in the Docusaurus docs app from the start.
+- Migrated the first native Platform API modules, Health and Industry, under `apps/platform-api/src/modules` with local module docs, MariaDB repository usage, event emission, and sync tags while leaving the live combined server modules intact.
+- Migrated Tenant Domain into a native Platform API module with local docs, domain resolution, MariaDB repository access, safety checks, platform events, and online-only sync tags while preserving the combined server copy.
+- Migrated Tenant into a native Platform API module with local docs, MariaDB repository access, tenant context diagnostics, setup/reset commands, tenant policy bootstrap, platform events, and queued database provisioning while preserving the combined server copy.
+- Migrated Auth into a native Platform API module with local docs, platform admin login/session support, tenant-aware login, admin user management, tenant user management, and MariaDB-backed repositories while preserving the combined server copy.
+- Strengthened Assist and Platform API documentation rules so every meaningful implementation stage updates local docs, central docs when needed, and the current-version changelog, while version bumps remain command-only.
+- Added a reusable documentation/changelog policy check and wired it into `npm run check` with a Windows/Git Bash fallback so current-version changelog consistency, command-only version discipline, and Platform API module docs are verified during normal workflow.
+- Expanded the Platform API MariaDB contract test to cover native route registration, safe public/session/context behavior, and forbidden guard behavior for Auth, Tenant, Tenant Domain, Industry, and user-management routes when credentials are missing.
+- Added a MariaDB-backed Platform API e2e suite covering real super-admin login/session, protected admin access, Industry create/list/suspend/restore, Tenant create/setup-status/context, Tenant Domain create/resolve/delete, stale e2e row cleanup, and isolated test-row cleanup.
+- Replaced the active execution plan and task checklist with a clean Platform API completion plan covering shared runtime extraction, remaining platform modules, event/outbox hardening, deployment boundaries, required tests, and command-only version discipline.
+- Connected the frontend to Platform API through `VITE_PLATFORM_API_BASE_URL`, routing platform-owned Auth, Industry, Tenant, Tenant Domain, Admin User, and tenant user-management clients to the new service while keeping business APIs on the combined backend fallback.
 - Documented Platform API deployment preparation in the container guide without enabling it as a default cloud service yet.
 - Consolidated Assist architecture guidance around one repo, multiple backend services, Platform API first, Billing API second, and app-owned schema groups.
 - Added service boundary documentation and developer module docs for Platform API, Billing App, Ecommerce App, CRM App, Sites App, and CXSync App.
 - Moved the superseded one-server multi-app context into `assist/trash` for safe review instead of deleting it.
 - Updated workspace, verification, PR, and server-module guidance to include Platform API, `packages/ui`, CXSync workspaces, CodeIT workspaces, and current service-split rules.
+- Made Platform API standalone from `apps/server` by adding local framework/runtime, config, database, auth, queue, and tenant-database infrastructure, rewriting Platform API source/tests to local imports, and documenting that no direct server imports are allowed inside Platform API.
+- Completed the Platform API foundation row with native RBAC, tenant company/accounting-year context, app registry, tenant app enablement, service-token verification, audit, notification, mail request, file metadata, and durable queue processing contracts backed by MariaDB.
+- Expanded Platform API e2e coverage to provision a disposable tenant database, verify company/accounting-year contracts, exercise RBAC/app/service-token/audit/notification/mail/file/outbox flows, and clean up test rows plus the disposable tenant database.
+- Wired a Super Admin Platform Foundation frontend page to Platform API for live-preparation checks, service-token creation, app/policy seeding, outbox processing, and contract row visibility.
+- Added a dedicated Platform API Docker Compose service and entrypoint runtime mode, removed Platform API's package dependency on `@cxsun/server` / `@cxsun/shared`, and verified the old server platform folders cannot be safely deleted yet because the combined backend still depends on them.
+- Added `apps/billing-api` as the standalone Billing API service boundary, mounting proven billing/accounting modules from the compatibility backend first so no live billing behavior is lost during extraction.
+- Routed frontend sales, purchase, quotation, export sales, receipt, payment, and accounts clients through `VITE_BILLING_API_BASE_URL` with a transition fallback to the combined backend.
+- Added Billing API root scripts, env samples, CLI preflight support, Docker Compose service wiring, and container entrypoint runtime mode for separate local/cloud deployment on port `6205`.
+- Added Billing API contract/e2e suites backed by MariaDB plus per-module billing test entrypoints for sales, quotation, export sales, purchase, receipt, payment, and accounts route protection.
+- Added Billing API service docs in the app workspace and central developer docs, and extended the documentation progress guard to track the Billing API workspace version.
+- Started Billing API Phase 2 by native-moving the Receipt Entry module into `apps/billing-api/src/modules/entries/receipt`, keeping route contracts unchanged and leaving shared compatibility dependencies in place for the later infrastructure phase.
+- Added a Billing API module test script and a receipt module contract guard that verifies Billing API mounts the native receipt module instead of the compatibility server receipt module.
+- Continued Billing API Phase 2 by native-moving the Payment Entry module into `apps/billing-api/src/modules/entries/payment`, preserving the existing payment route contract and compatibility shared dependencies.
+- Added a payment module contract guard that verifies Billing API mounts the native payment module instead of the compatibility server payment module.
+- Continued Billing API Phase 2 by native-moving the Purchase Entry module into `apps/billing-api/src/modules/entries/purchase`, preserving its aggregate/domain/event structure and existing route contract.
+- Added a purchase module contract guard that verifies Billing API mounts the native purchase module instead of the compatibility server purchase module.
+- Continued Billing API Phase 2 by native-moving the Export Sales Entry module into `apps/billing-api/src/modules/entries/export-sales`, preserving its aggregate/domain/event structure and existing route contract.
+- Added an export sales module contract guard that verifies Billing API mounts the native export sales module instead of the compatibility server export sales module.
+- Native-moved Accounts and Billing Reports into `apps/billing-api/src/modules/accounts`, covering ledgers, vouchers, day book, cash/bank books, trial balance, profit/loss, balance sheet, period locks, and posting/recalculation commands.
+- Expanded Billing API contract/e2e route checks to include the key accounts report endpoints and added an accounts module guard verifying Billing API mounts the native accounts/report module.
+- Rewired native Receipt, Payment, and Purchase modules to use Billing API's native Accounts posting providers instead of the compatibility server Accounts providers.
+- Completed the remaining Billing API native module extraction for Sales Entry, Quotation Entry, Purchase Receipt, Delivery Note, and Stock Ledger, mounting all current billing route families from `apps/billing-api/src/modules`.
+- Extended Billing API module guards to verify sales, quotation, purchase receipt, delivery note, and stock ledger no longer mount through compatibility server module imports while keeping shared framework/helper dependencies transitional.
+- Routed the purchase receipt, delivery note, and stock ledger frontend clients through `billingApiBaseUrl` so billing-linked stock workflows follow the standalone Billing API deployment path.
+- Added a Billing API mutation e2e suite that provisions a disposable MariaDB tenant database, then verifies create/update/get/list flows for Sales, Quotation, Export Sales, Purchase, Purchase Receipt, Delivery Note, and Stock Ledger through Billing API HTTP routes.
+- Removed the old combined-server billing route implementations and stopped mounting billing modules in `apps/server`, leaving only billing migration bridge exports needed for tenant database provisioning.
+- Reworked Tally sales/purchase sync reads to use tenant tables directly so Tally no longer depends on old server Sales/Purchase repositories.
+- Expanded the Billing API mutation e2e suite to cover Receipt and Payment settlement allocations against posted Sales/Purchase documents, including update-to-posted flow and rejected over-allocation attempts.
+- Finalized the Billing API go-live row by documenting that remaining shared framework/helper imports belong to future shared-runtime consolidation and are not Billing API route ownership blockers.
+- Added `packages/platform` as the shared backend runtime package for extracted services, containing the reusable framework, core, infrastructure, queue, mail, PDF, tenant, and helper runtime previously consumed from `apps/server`.
+- Rewired Billing API source and tests to depend on `@cxsun/platform` instead of `@cxsun/server` or direct `apps/server/src` imports, removed the `../server/src` TypeScript include, and added a hard dependency scan showing no server references under `apps/billing-api`.
+- Added Platform package, Platform API, and Billing API into the active build/typecheck path so standalone backend services are covered by normal release checks.
+- Verified Billing API zero-server-dependency readiness with Platform package typecheck/build, Billing API typecheck/build, Billing API contract/e2e/modules/mutation tests, frontend typecheck/build, and documentation policy checks.
+- Added `apps/ecommerce-api` as the standalone Ecommerce API service boundary, mounting the proven ecommerce module from the compatibility backend first so storefront/product/customer behavior is preserved during extraction.
+- Routed frontend ecommerce workspace, settings, product publication, and customer profile clients through `VITE_ECOMMERCE_API_BASE_URL` with transition fallback to the combined backend.
+- Added Ecommerce API root scripts, env samples, CLI preflight support, Docker Compose service wiring, container entrypoint runtime mode, app docs, central devdocs, and MariaDB-backed contract/e2e route-protection tests.
 ## v-1.0.128
 
 ### [v 1.0.128] 2026-06-24 8:17 am - CXSync all-tenant fleet upgrade preparation

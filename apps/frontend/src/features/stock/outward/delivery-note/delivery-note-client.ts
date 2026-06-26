@@ -1,4 +1,5 @@
-import { apiBaseUrl, authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { authHeaders, type AuthSession } from "src/features/auth/auth-client"
+import { billingApiBaseUrl } from "src/lib/api-base-url"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { filterStockContactsByRole } from "src/features/stock/contact-role-filter"
 
@@ -155,7 +156,7 @@ export function emptyDeliveryNoteItem(): DeliveryNoteEntryItem {
 }
 
 export async function listDeliveryNoteEntries(session: AuthSession) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/outward/delivery-notes`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/outward/delivery-notes`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -187,7 +188,7 @@ export async function listDeliveryNoteCommonLookups(session: AuthSession, module
 }
 
 export async function getDeliveryNoteEntry(session: AuthSession, idOrUuid: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/outward/delivery-notes/${encodeURIComponent(idOrUuid)}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/outward/delivery-notes/${encodeURIComponent(idOrUuid)}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })
@@ -196,7 +197,7 @@ export async function getDeliveryNoteEntry(session: AuthSession, idOrUuid: strin
 }
 
 export async function upsertDeliveryNoteEntry(session: AuthSession, input: DeliveryNoteEntryInput) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/outward/delivery-notes/upsert`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/outward/delivery-notes/upsert`, {
     body: JSON.stringify(input),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -217,7 +218,7 @@ export async function restoreDeliveryNoteEntry(session: AuthSession, entry: Deli
 }
 
 export async function addDeliveryNoteComment(session: AuthSession, entry: DeliveryNoteEntry, body: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/outward/delivery-notes/${entry.uuid}/comments`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/outward/delivery-notes/${entry.uuid}/comments`, {
     body: JSON.stringify({ body }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -230,7 +231,7 @@ export async function addDeliveryNoteComment(session: AuthSession, entry: Delive
 }
 
 export async function runDeliveryNoteTool(session: AuthSession, entry: DeliveryNoteEntry, tool: string) {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/outward/delivery-notes/${entry.uuid}/tools`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/outward/delivery-notes/${entry.uuid}/tools`, {
     body: JSON.stringify({ tool }),
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -243,7 +244,7 @@ export async function runDeliveryNoteTool(session: AuthSession, entry: DeliveryN
 }
 
 async function mutateDeliveryNoteEntry(session: AuthSession, idOrUuid: string, action: "destroy" | "restore") {
-  const response = await fetch(`${apiBaseUrl}/api/v1/stock/outward/delivery-notes/${encodeURIComponent(idOrUuid)}/${action}`, {
+  const response = await fetch(`${billingApiBaseUrl}/api/v1/stock/outward/delivery-notes/${encodeURIComponent(idOrUuid)}/${action}`, {
     body: "{}",
     cache: "no-store",
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
@@ -255,7 +256,7 @@ async function mutateDeliveryNoteEntry(session: AuthSession, idOrUuid: string, a
 }
 
 async function listLookupRecords(session: AuthSession, endpoint: string) {
-  const response = await fetch(`${apiBaseUrl}${endpoint}`, {
+  const response = await fetch(`${billingApiBaseUrl}${endpoint}`, {
     cache: "no-store",
     headers: authHeaders(session),
   })

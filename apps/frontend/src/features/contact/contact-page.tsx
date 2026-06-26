@@ -25,13 +25,14 @@ import {
 } from "src/components/blocks/lists/master-list"
 import { cn } from "src/lib/utils"
 import type { AuthSession } from "src/features/auth/auth-client"
-import { contactEmailTypes, contactPhoneTypes, destroyContact, emptyAddress, emptyContact, listContacts, restoreContact, upsertContact, type ContactAddress, type ContactBankAccount, type ContactEmail, type ContactEmailType, type ContactInput, type ContactPhone, type ContactPhoneType, type ContactRecord, type ContactSocialLink } from "./contact-client"
+import { contactEmailTypes, contactPhoneTypes, destroyContact, emptyAddress, emptyContact, getNextContactCode, listContacts, restoreContact, upsertContact, type ContactAddress, type ContactBankAccount, type ContactEmail, type ContactEmailType, type ContactInput, type ContactPhone, type ContactPhoneType, type ContactRecord, type ContactSocialLink } from "./contact-client"
 import { runTallySync } from "src/features/tally/tally-client"
 import { formatDate } from "src/features/master-data/application/master-data-service"
 import { CityAutocompleteLookup } from "src/features/master-data/interface/components/city-autocomplete-lookup"
 import { CommonRecordAutocompleteLookup, getCommonRecordName } from "src/features/master-data/interface/components/common-record-autocomplete-lookup"
 import { CountryAutocompleteLookup } from "src/features/master-data/interface/components/country-autocomplete-lookup"
 import { DistrictAutocompleteLookup } from "src/features/master-data/interface/components/district-autocomplete-lookup"
+import { PincodeAutocompleteLookup } from "src/features/master-data/interface/components/pincode-autocomplete-lookup"
 import { StateAutocompleteLookup } from "src/features/master-data/interface/components/state-autocomplete-lookup"
 import type { MasterDataRecord } from "src/features/master-data/domain/master-data"
 import { listMasterDataRecords } from "src/features/master-data/infrastructure/master-data-client"
@@ -63,8 +64,8 @@ const defaultContactColumnVisibility: Record<ContactColumnId, boolean> = {
   status: true,
 }
 const contactColumnCatalog: Array<{ id: ContactColumnId; label: string }> = [
-  { id: "code", label: "Code" },
   { id: "contact", label: "Contact" },
+  { id: "code", label: "Code" },
   { id: "ledger", label: "Ledger" },
   { id: "phone", label: "Phone" },
   { id: "email", label: "Email" },
@@ -82,6 +83,7 @@ export function ContactPage({ session }: { session: AuthSession }) {
   const [rowsPerPage, setRowsPerPage] = useState(100)
   const queryKey = ["contacts", session.selectedTenant.slug]
   const contactsQuery = useQuery({ queryKey, queryFn: () => listContacts(session) })
+  const nextCodeQuery = useQuery({ queryKey: [...queryKey, "next-code"], queryFn: () => getNextContactCode(session) })
   const upsertMutation = useMutation({ mutationFn: (input: ContactInput) => upsertContact(session, input) })
   const destroyMutation = useMutation({ mutationFn: (contact: ContactRecord) => destroyContact(session, contact) })
   const restoreMutation = useMutation({ mutationFn: (contact: ContactRecord) => restoreContact(session, contact) })
@@ -118,6 +120,7 @@ export function ContactPage({ session }: { session: AuthSession }) {
         }
       }
       await refresh()
+      await queryClient.invalidateQueries({ queryKey: [...queryKey, "next-code"] })
       setView({ mode: "show", contact })
     } catch (error) {
       toast.error("Contact save failed", { description: error instanceof Error ? error.message : "Unable to save contact." })
@@ -137,7 +140,7 @@ export function ContactPage({ session }: { session: AuthSession }) {
   }
 
   if (view.mode === "upsert") {
-    return <ContactUpsertPage contact={view.contact} isSaving={upsertMutation.isPending} session={session} onBack={() => setView(view.contact ? { mode: "show", contact: view.contact } : { mode: "list" })} onSubmit={save} />
+    return <ContactUpsertPage contact={view.contact} isSaving={upsertMutation.isPending} nextCode={nextCodeQuery.data ?? ""} session={session} onBack={() => setView(view.contact ? { mode: "show", contact: view.contact } : { mode: "list" })} onSubmit={save} />
   }
 
   if (view.mode === "show") {
@@ -177,12 +180,12 @@ export function ContactPage({ session }: { session: AuthSession }) {
       <MasterListTableCard>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[960px] border-collapse text-sm">
-            <thead className="bg-muted/50"><tr>{visibleColumns.code ? <ListHeader>Code</ListHeader> : null}{visibleColumns.contact ? <ListHeader>Contact</ListHeader> : null}{visibleColumns.ledger ? <ListHeader>Ledger</ListHeader> : null}{visibleColumns.phone ? <ListHeader>Phone</ListHeader> : null}{visibleColumns.email ? <ListHeader>Email</ListHeader> : null}{visibleColumns.gstin ? <ListHeader>GSTIN</ListHeader> : null}{visibleColumns.status ? <ListHeader>Status</ListHeader> : null}<ListHeader className="text-right">Action</ListHeader></tr></thead>
+            <thead className="bg-muted/50"><tr>{visibleColumns.contact ? <ListHeader>Contact</ListHeader> : null}{visibleColumns.code ? <ListHeader>Code</ListHeader> : null}{visibleColumns.ledger ? <ListHeader>Ledger</ListHeader> : null}{visibleColumns.phone ? <ListHeader>Phone</ListHeader> : null}{visibleColumns.email ? <ListHeader>Email</ListHeader> : null}{visibleColumns.gstin ? <ListHeader>GSTIN</ListHeader> : null}{visibleColumns.status ? <ListHeader>Status</ListHeader> : null}<ListHeader className="text-right">Action</ListHeader></tr></thead>
             <tbody>
               {pageContacts.map((contact) => (
                 <tr key={contact.uuid} className={cn("border-b border-border/70", !contact.isActive && "bg-muted/20 text-muted-foreground")}>
+                  {visibleColumns.contact ? <td className="px-4 py-2"><button className="font-semibold hover:underline" type="button" onClick={() => setView({ mode: "show", contact })}>{contact.name}</button></td> : null}
                   {visibleColumns.code ? <td className="px-4 py-2 font-mono text-xs">{contact.code}</td> : null}
-                  {visibleColumns.contact ? <td className="px-4 py-2"><button className="font-semibold hover:underline" type="button" onClick={() => setView({ mode: "show", contact })}>{contact.name}</button><div className="text-xs text-muted-foreground">{contact.legalName || contact.gstin || contact.uuid}</div></td> : null}
                   {visibleColumns.ledger ? <td className="px-4 py-2">{contact.ledgerName || contactTypeLabel(contact.contactTypeId)}</td> : null}
                   {visibleColumns.phone ? <td className="px-4 py-2">{contact.primaryPhone || "-"}</td> : null}
                   {visibleColumns.email ? <td className="px-4 py-2">{contact.primaryEmail || "-"}</td> : null}
@@ -228,8 +231,8 @@ function ContactShowPage({ contact, onBack, onEdit, onRestore, onSuspend, sessio
   )
 }
 
-function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { contact: ContactRecord | null; isSaving: boolean; onBack(): void; onSubmit(input: ContactInput, options?: { resyncToTally?: boolean }): Promise<void>; session: AuthSession }) {
-  const [form, setForm] = useState<ContactInput>(() => contact ? contactToInput(contact) : emptyContact())
+function ContactUpsertPage({ contact, isSaving, nextCode, onBack, onSubmit, session }: { contact: ContactRecord | null; isSaving: boolean; nextCode: string; onBack(): void; onSubmit(input: ContactInput, options?: { resyncToTally?: boolean }): Promise<void>; session: AuthSession }) {
+  const [form, setForm] = useState<ContactInput>(() => contact ? contactToInput(contact) : { ...emptyContact(), code: nextCode })
   const [resyncToTally, setResyncToTally] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const nameError = submitted && !String(form.name ?? "").trim()
@@ -238,6 +241,12 @@ function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { c
     nameError ? "Name" : null,
     contactTypeError ? "Contact Type" : null,
   ].filter(Boolean)
+
+  useEffect(() => {
+    if (!contact && nextCode) {
+      setForm((current) => current.code ? current : { ...current, code: nextCode })
+    }
+  }, [contact, nextCode])
 
   function submitContact() {
     setSubmitted(true)
@@ -252,7 +261,7 @@ function ContactUpsertPage({ contact, isSaving, onBack, onSubmit, session }: { c
     <MasterListPageFrame title={contact ? "Edit contact" : "New contact"} description="Update contact identity, tax, communication, address, and finance details." technicalName="page.master.contacts.upsert" action={<Button type="button" variant="outline" onClick={onBack} className="h-10 rounded-md px-4"><ArrowLeft className="size-4" />Back</Button>}>
       {missingFields.length ? <ValidationBanner missingFields={missingFields} /> : null}
       <MasterListUpsertLayout><MasterListUpsertCard className="overflow-hidden p-0 [&>div]:p-0"><form onSubmit={(event) => { event.preventDefault(); submitContact() }}><AnimatedTabs className="[&>div:first-child]:rounded-none [&>div:first-child]:border-x-0 [&>div:first-child]:border-t-0 [&>div:first-child]:border-b [&>div:first-child]:border-border/70 [&>div:first-child]:bg-card [&>div:first-child]:px-4 [&>div:first-child]:py-0.5 [&>div:first-child]:shadow-none md:[&>div:first-child]:px-6 [&>div:first-child_button]:min-h-8 [&>div:first-child_button]:py-1 [&>div:last-child]:mx-auto [&>div:last-child]:mt-6 [&>div:last-child]:w-full [&>div:last-child]:px-4 [&>div:last-child]:pb-4 md:[&>div:last-child]:px-6" tabs={[
-        { value: "details", label: "Details", content: <TabPanel><div className="grid gap-5 md:grid-cols-2"><Field error={nameError} label="Name *" value={form.name ?? ""} onChange={(value) => setForm((current) => ({ ...current, name: value, legalName: shouldAutoFillLegalName(current) ? titleCaseName(value) : current.legalName }))} /><Field label="Code" value={form.code ?? ""} placeholder="C-0001 auto generated" onChange={(value) => setForm((current) => ({ ...current, code: value.toUpperCase() }))} /><Field label="Legal name" value={form.legalName ?? ""} onChange={(value) => setForm((current) => ({ ...current, legalName: value }))} /><ContactTypeLookup error={contactTypeError} session={session} value={form.contactTypeId ?? ""} onChange={(value, label) => setForm((current) => ({ ...current, contactTypeId: value, ledgerId: value, ledgerName: label }))} /><Field numeric label="Opening balance" value={String(form.openingBalance ?? 0)} onChange={(value) => setForm((current) => ({ ...current, openingBalance: Number(value || 0) }))} /><Field numeric label="Credit limit" value={String(form.creditLimit ?? 0)} onChange={(value) => setForm((current) => ({ ...current, creditLimit: Number(value || 0) }))} /><div className="md:col-span-2"><ToggleCard checked={Boolean(form.isActive)} label="Active" onChange={(checked) => setForm((current) => ({ ...current, isActive: checked }))} /></div></div></TabPanel> },
+        { value: "details", label: "Details", content: <TabPanel><div className="grid gap-5 md:grid-cols-2"><Field error={nameError} label="Name *" value={form.name ?? ""} onChange={(value) => setForm((current) => ({ ...current, name: value, legalName: shouldAutoFillLegalName(current) ? titleCaseName(value) : current.legalName }))} /><Field label="Code" value={form.code ?? ""} onChange={(value) => setForm((current) => ({ ...current, code: value.toUpperCase() }))} /><Field label="Legal name" value={form.legalName ?? ""} onChange={(value) => setForm((current) => ({ ...current, legalName: value }))} /><ContactTypeLookup error={contactTypeError} session={session} value={form.contactTypeId ?? ""} onChange={(value, label) => setForm((current) => ({ ...current, contactTypeId: value, ledgerId: value, ledgerName: label }))} /><Field numeric label="Opening balance" value={String(form.openingBalance ?? 0)} onChange={(value) => setForm((current) => ({ ...current, openingBalance: Number(value || 0) }))} /><Field numeric label="Credit limit" value={String(form.creditLimit ?? 0)} onChange={(value) => setForm((current) => ({ ...current, creditLimit: Number(value || 0) }))} /><div className="flex justify-end md:col-start-2"><div className="w-full md:max-w-52"><ToggleCard checked={Boolean(form.isActive)} label="Active" onChange={(checked) => setForm((current) => ({ ...current, isActive: checked }))} /></div></div></div></TabPanel> },
         { value: "tax", label: "Tax Details", content: <TabPanel><div className="grid gap-5 md:grid-cols-2"><Field label="GSTIN" value={form.gstin ?? ""} onChange={(value) => setForm((current) => ({ ...current, gstin: value.toUpperCase(), gstDetails: [] }))} /><Field label="PAN" value={form.pan ?? ""} onChange={(value) => setForm((current) => ({ ...current, pan: value.toUpperCase() }))} /><Field label="MSME No" value={form.msmeNo ?? ""} onChange={(value) => setForm((current) => ({ ...current, msmeNo: value }))} /><SelectField label="MSME Category" value={form.msmeType ?? ""} placeholder="Select MSME category" options={msmeOptions} onChange={(value) => setForm((current) => ({ ...current, msmeType: value }))} /><Field label="TAN No" value={form.tan ?? ""} onChange={(value) => setForm((current) => ({ ...current, tan: value.toUpperCase() }))} /><div className="grid gap-4 self-end md:grid-cols-2"><ToggleCard checked={Boolean(form.tdsAvailable)} label="TDS Available" description="Enable TDS applicability." onChange={(checked) => setForm((current) => ({ ...current, tdsAvailable: checked }))} /><ToggleCard checked={Boolean(form.tcsAvailable)} label="TCS Available" description="Enable TCS applicability." onChange={(checked) => setForm((current) => ({ ...current, tcsAvailable: checked }))} /></div></div></TabPanel> },
         { value: "communication", label: "Communication", content: <TabPanel><Collection title="Contact Emails" onAdd={() => setForm((current) => ({ ...current, emails: [...current.emails, { email: "", emailType: "primary", isPrimary: current.emails.length === 0 }] }))}>{form.emails.map((item, index) => <EmailRow key={index} item={item} onChange={(patch) => setForm((current) => ({ ...current, emails: updateAt(current.emails, index, patch) }))} onRemove={() => setForm((current) => ({ ...current, emails: current.emails.filter((_, itemIndex) => itemIndex !== index) }))} />)}</Collection><Collection title="Contact Phones" onAdd={() => setForm((current) => ({ ...current, phones: [...current.phones, { phoneNumber: "", phoneType: "mobile", isPrimary: current.phones.length === 0 }] }))}>{form.phones.map((item, index) => <PhoneRow key={index} item={item} onChange={(patch) => setForm((current) => ({ ...current, phones: updateAt(current.phones, index, patch) }))} onRemove={() => setForm((current) => ({ ...current, phones: current.phones.filter((_, itemIndex) => itemIndex !== index) }))} />)}</Collection></TabPanel> },
         { value: "addresses", label: "Addresses", content: <TabPanel><Collection title="Addresses" onAdd={() => setForm((current) => ({ ...current, addresses: [...current.addresses, { ...emptyAddress(), isDefault: current.addresses.length === 0 }] }))}>{form.addresses.map((item, index) => <AddressRow key={index} item={item} session={session} onChange={(patch) => setForm((current) => ({ ...current, addresses: updateAt(current.addresses, index, patch) }))} onRemove={() => setForm((current) => ({ ...current, addresses: current.addresses.filter((_, itemIndex) => itemIndex !== index) }))} />)}</Collection></TabPanel> },
@@ -275,8 +284,8 @@ function ValidationBanner({ missingFields }: { missingFields: Array<string | nul
   )
 }
 
-function Field({ error = false, label, numeric = false, onChange, placeholder, value }: { error?: boolean; label: string; numeric?: boolean; onChange(value: string): void; placeholder?: string; value: string }) {
-  return <div className="grid gap-2"><Label className={cn("text-sm font-medium text-muted-foreground", error && "text-destructive")}>{label}</Label><Input aria-invalid={error} className={cn("h-11 rounded-xl", numeric && "text-right", error && "border-destructive ring-2 ring-destructive/25 focus-visible:ring-destructive/40")} inputMode={numeric ? "decimal" : undefined} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} /></div>
+function Field({ className, error = false, label, numeric = false, onChange, placeholder, value }: { className?: string; error?: boolean; label: string; numeric?: boolean; onChange(value: string): void; placeholder?: string; value: string }) {
+  return <div className={cn("grid gap-2", className)}><Label className={cn("text-sm font-medium text-muted-foreground", error && "text-destructive")}>{label}</Label><Input aria-invalid={error} className={cn("h-11 rounded-xl", numeric && "text-right", error && "border-destructive ring-2 ring-destructive/25 focus-visible:ring-destructive/40")} inputMode={numeric ? "decimal" : undefined} placeholder={placeholder} value={value} onChange={(event) => onChange(event.target.value)} /></div>
 }
 function TextField({ label, onChange, value }: { label: string; onChange(value: string): void; value: string }) {
   return <div className="grid gap-2 md:col-span-2"><Label className="text-sm font-medium text-muted-foreground">{label}</Label><Textarea className="min-h-28 rounded-xl" value={value} onChange={(event) => onChange(event.target.value)} /></div>
@@ -316,13 +325,13 @@ function AddressRow({ item, onChange, onRemove, session }: { item: ContactAddres
   return (
     <Row columns={2} onRemove={onRemove}>
       <CommonRecordAutocompleteLookup label="Address Type" moduleKey="addressTypes" session={session} value={item.addressTypeId} onChange={(value) => onChange({ addressTypeId: value === null ? null : String(value) })} />
-      <Field label="Address line 1" value={item.addressLine1} onChange={(addressLine1) => onChange({ addressLine1 })} />
-      <Field label="Address line 2" value={item.addressLine2 ?? ""} onChange={(addressLine2) => onChange({ addressLine2 })} />
-      <CountryAutocompleteLookup session={session} value={item.countryId} onChange={(value) => onChange({ countryId: value === null ? null : String(value), stateId: null, districtId: null, cityId: null, pincodeId: null })} />
-      <StateAutocompleteLookup countryId={item.countryId} session={session} value={item.stateId} onChange={(value) => onChange({ stateId: value === null ? null : String(value), districtId: null, cityId: null, pincodeId: null })} />
-      <DistrictAutocompleteLookup session={session} stateId={item.stateId} value={item.districtId} onChange={(value) => onChange({ districtId: value === null ? null : String(value), cityId: null, pincodeId: null })} />
-      <CityAutocompleteLookup districtId={item.districtId} session={session} value={item.cityId} onChange={(value) => onChange({ cityId: value === null ? null : String(value), pincodeId: null })} />
-      <CommonRecordAutocompleteLookup label="Pincode" moduleKey="pincodes" optionFilter={(record) => matchesReference(record.city_id, item.cityId)} placeholder="Search pincode" session={session} value={item.pincodeId} onChange={(value) => onChange({ pincodeId: value === null ? null : String(value) })} />
+      <Field className="md:col-span-2" label="Address line 1" value={item.addressLine1} onChange={(addressLine1) => onChange({ addressLine1 })} />
+      <Field className="md:col-span-2" label="Address line 2" value={item.addressLine2 ?? ""} onChange={(addressLine2) => onChange({ addressLine2 })} />
+      <CountryAutocompleteLookup session={session} value={item.countryId} onChange={(value) => onChange({ countryId: value === null ? null : String(value), stateId: null, districtId: null, cityId: null })} />
+      <StateAutocompleteLookup countryId={item.countryId} session={session} value={item.stateId} onChange={(value) => onChange({ stateId: value === null ? null : String(value), districtId: null, cityId: null })} />
+      <DistrictAutocompleteLookup session={session} stateId={item.stateId} value={item.districtId} onChange={(value) => onChange({ districtId: value === null ? null : String(value), cityId: null })} />
+      <CityAutocompleteLookup districtId={item.districtId} session={session} value={item.cityId} onChange={(value) => onChange({ cityId: value === null ? null : String(value) })} />
+      <PincodeAutocompleteLookup session={session} value={item.pincodeId} onChange={(value) => onChange({ pincodeId: value === null ? null : String(value) })} />
       <Primary checked={item.isDefault} label="Default address" onChange={(isDefault) => onChange({ isDefault })} />
     </Row>
   )
@@ -367,10 +376,6 @@ function formatMoney(value: number) { return new Intl.NumberFormat(undefined, { 
 function shouldAutoFillLegalName(contact: ContactInput) { return !String(contact.legalName ?? "").trim() || String(contact.legalName ?? "") === titleCaseName(String(contact.name ?? "")) }
 function titleCaseName(value: string) { return value.toLowerCase().replace(/\b[a-z]/g, (letter) => letter.toUpperCase()) }
 function labelizeEnum(value: string) { return value.replace(/[_-]+/g, " ").replace(/\b[a-z]/g, (letter) => letter.toUpperCase()) }
-
-function matchesReference(recordValue: unknown, selectedValue: unknown) {
-  return selectedValue === null || selectedValue === undefined || selectedValue === "" || String(recordValue) === String(selectedValue)
-}
 
 function useCommonRecordLabels(session: AuthSession) {
   const modules = ["addressTypes", "contactTypes", "countries", "states", "districts", "cities", "pincodes"] as const

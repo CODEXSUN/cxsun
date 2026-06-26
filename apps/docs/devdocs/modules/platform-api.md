@@ -49,21 +49,50 @@ core_audit_logs
 
 ## Current Scaffold
 
-The first `apps/platform-api` scaffold imports existing transition-backend modules from `apps/server` and starts only the foundation API surface:
+The first `apps/platform-api` service owns its runtime/core/infrastructure locally and starts only the foundation API surface:
 
-- Health
-- Auth
+- Health, now native under `apps/platform-api/src/modules/health`
+- Auth, now native under `apps/platform-api/src/modules/auth`
+- Tenant, now native under `apps/platform-api/src/modules/tenant`
+- Tenant Domain, now native under `apps/platform-api/src/modules/tenant-domain`
+- Industry, now native under `apps/platform-api/src/modules/industry`
+- Platform Foundation, now native under `apps/platform-api/src/modules/platform-foundation`
+
+Platform Foundation includes RBAC, app registry, tenant app enablement, service-token verification, company/accounting-year context, audit, notifications, mail requests, file metadata, and durable queue processing.
+
+Do not remove matching compatibility modules from the combined backend until Platform API and Billing API are both verified, but Platform API itself must not import from `apps/server`.
+
+## Frontend Connection
+
+The active frontend can call Platform API separately from the current combined backend.
+
+- `VITE_API_BASE_URL` remains the combined backend / business API base.
+- `VITE_PLATFORM_API_BASE_URL` points to Platform API. Development sample: `http://localhost:6105`.
+- If `VITE_PLATFORM_API_BASE_URL` is not set, platform-owned clients fall back to `VITE_API_BASE_URL` for transition safety.
+
+Frontend clients that use Platform API when configured:
+
+- Auth login/session
+- Industry
 - Tenant
 - Tenant Domain
-- Industry
+- Admin Users and tenant user-management
 
-Do not remove these modules from `apps/server` until Platform API and Billing API are both verified.
+Business modules such as Billing entries, CRM, Sites content, Accounts, Inventory, and other tenant business APIs still use `VITE_API_BASE_URL` until their backend services are extracted.
+
+The Super Admin dashboard includes a Platform Foundation page for live-preparation checks and service-token creation.
 
 ## Standards Documents
 
 - `apps/platform-api/docs/STANDARDS.md`
 - `apps/platform-api/docs/CONTRACTS.md`
 - `apps/platform-api/docs/EXTRACTION.md`
+- `apps/platform-api/docs/MODULE-DOCS.md`
+- `apps/platform-api/docs/OPENAPI.md`
+
+## Documentation Rule
+
+Each future Platform API module should keep a local module note beside code and publish user-visible guidance into the central docs app. Client-facing docs belong under `apps/docs/docs`, while developer/service docs belong under `apps/docs/devdocs`.
 
 ## App Contract
 

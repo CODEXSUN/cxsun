@@ -8,5 +8,5 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false
   },
-  "include": ["src", "../server/src"]
+  "include": ["src"]
 }

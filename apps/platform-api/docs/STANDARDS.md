@@ -53,21 +53,69 @@ platform-api -> sites-api
 
 Platform API can publish contracts and events. It should not import app internals.
 
+## Event Standard
+
+Use events for state changes that other services may care about.
+
+Keep event names explicit:
+
+```text
+platform.tenant.created
+platform.tenant.updated
+platform.user.created
+platform.rbac.policy.changed
+```
+
+Event payloads must include enough public identifiers for other services to react without reading private Platform tables directly.
+
+Use `src/events.ts` for the initial in-process event shape. Move to a durable outbox/queue only when a workflow needs retries, delayed execution, fan-out, or cross-service delivery.
+
+## Sync Tag Standard
+
+Every future contract that may participate in online/offline behavior should declare sync tags from the start:
+
+- `online-only`: normal cloud-only platform action.
+- `offline-capable`: can be mirrored or replayed later.
+- `mirror-evidence`: used for audit/mirror evidence rather than business mutation.
+
+Use `src/sync-tags.ts` as the initial code-level source of truth.
+
+## Queue Standard
+
+Do not put every action into a queue. Use a queue only when work is:
+
+- slow or retryable
+- cross-service
+- scheduled
+- external-provider dependent
+- fan-out notification/event delivery
+
+MariaDB-backed queues are the default baseline. Redis/BullMQ can be enabled later for throughput, but no Platform API feature should require in-memory-only state.
+
 ## Module Shape
 
 Use this shape for new Platform-owned modules:
 
 ```text
 src/modules/<module>/
-  domain/
-  application/
-  infrastructure/
-  interface/http/
   <module>.module.ts
+  <module>.module.md
   index.ts
 ```
 
-During transition, Platform API may import selected existing modules from `apps/server`. That is temporary compatibility, not the final structure.
+Do not create deep folders for a single tiny file. Add `domain/`, `application/`, `infrastructure/`, and `interface/http/` when the module has enough behavior to need them.
+
+Platform API must not import from `apps/server`. If shared behavior is needed, copy it into Platform API temporarily or promote it into an explicit shared package later.
+
+## Documentation Standard
+
+Every Platform-owned module must include a local `<module>.module.md` note from the start. When the feature is visible to users or support staff, also add a curated central docs page under `apps/docs/docs`.
+
+Use `apps/platform-api/docs/MODULE-DOCS.md` as the source standard.
+
+Documentation must move with each implementation stage. When a Platform API module gains routes, events, queues, sync tags, tables, tests, or boundary changes, update the local module doc and the central dev/client docs in the same stage.
+
+Do not bump package versions for Platform API work unless the user explicitly asks for a version bump. Record normal progress in the latest current-version changelog entry instead.
 
 ## API Rules
 
@@ -99,8 +147,15 @@ npm run typecheck:platform-api
 npm run build:platform-api
 ```
 
-When a configured MariaDB is available:
+For contract tests, use MariaDB. Do not use in-memory databases for Platform API behavior:
 
 ```bash
+npm -w apps/platform-api run test:contract
 npm -w apps/platform-api run test:smoke
+```
+
+For e2e tests, also use MariaDB and isolated cleanup:
+
+```bash
+npm -w apps/platform-api run test:e2e
 ```

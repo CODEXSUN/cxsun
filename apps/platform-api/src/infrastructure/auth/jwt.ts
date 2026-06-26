@@ -1,0 +1,44 @@
+import { createHmac, timingSafeEqual } from 'crypto'
+import { settings } from '../../framework/config/index.js'
+
+export interface AuthTokenPayload {
+  sub: number
+  email: string
+  role: string
+  tenantCode: string
+  identitySource?: 'tenant' | 'platform'
+  superAdmin?: boolean
+  iat?: number
+  exp?: number
+}
+
+export function signJwt(payload: AuthTokenPayload, expiresInSeconds = 24 * 60 * 60) {
+  const issuedAt = Math.floor(Date.now() / 1000)
+  const body = { ...payload, iat: issuedAt, exp: issuedAt + expiresInSeconds }
+  const unsigned = `${base64UrlJson({ alg: 'HS256', typ: 'JWT' })}.${base64UrlJson(body)}`
+  return `${unsigned}.${signature(unsigned)}`
+}
+
+export function verifyJwt(token?: string): AuthTokenPayload | undefined {
+  if (!token) return undefined
+  const [header, body, received] = token.split('.')
+  if (!header || !body || !received) return undefined
+
+  const expected = signature(`${header}.${body}`)
+  const expectedBuffer = Buffer.from(expected)
+  const receivedBuffer = Buffer.from(received)
+  if (expectedBuffer.length !== receivedBuffer.length || !timingSafeEqual(expectedBuffer, receivedBuffer)) return undefined
+
+  const payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')) as AuthTokenPayload
+  if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return undefined
+  return payload
+}
+
+function base64UrlJson(value: unknown) {
+  return Buffer.from(JSON.stringify(value)).toString('base64url')
+}
+
+function signature(unsigned: string) {
+  if (!settings.auth.jwtSecret) throw new Error('JWT_SECRET environment variable is required')
+  return createHmac('sha256', settings.auth.jwtSecret).update(unsigned).digest('base64url')
+}
