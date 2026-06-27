@@ -22,6 +22,7 @@ const commonColumnContracts: Record<string, string[]> = {
   hsnCodes: ['code', 'description'],
   pincodes: ['name'],
   priorities: ['name', 'colour', 'tag'],
+  salesAccountTypes: ['name', 'description'],
   states: ['name', 'code', 'country_id'],
   taxes: ['rate_percent', 'description'],
   transports: ['name', 'gst', 'vehicle_no', 'address', 'contact_no', 'contact_person'],

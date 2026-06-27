@@ -26,21 +26,6 @@ const APP_CONFIG = {
   'blog-api': { cwd: 'apps/blog-api', envKey: 'BLOG_API_PORT', port: 6555, kind: 'server' },
   'agent-os-api': { cwd: 'apps/agent-os-api', envKey: 'AGENT_OS_API_PORT', port: 6565, kind: 'server' },
   frontend: { cwd: 'apps/frontend', envKey: 'VITE_PORT', port: 6010, kind: 'vite' },
-  docs: { cwd: 'apps/docs', envKey: 'PORT', port: 6020, kind: 'docs' },
-  auditor: { cwd: 'apps/auditor', envKey: 'VITE_PORT', port: 6030, kind: 'vite' },
-  ecommerce: { cwd: 'apps/ecommerce', envKey: 'VITE_PORT', port: 6031, kind: 'vite' },
-  'b2b-connect': { cwd: 'apps/b2b-connect', envKey: 'VITE_PORT', port: 6032, kind: 'vite' },
-  'b2b-connect-admin': { cwd: 'apps/b2b-connect-admin', envKey: 'VITE_PORT', port: 6043, kind: 'vite' },
-  sports: { cwd: 'apps/sports', envKey: 'VITE_PORT', port: 6033, kind: 'vite' },
-  learning: { cwd: 'apps/learning', envKey: 'VITE_PORT', port: 6034, kind: 'vite' },
-  welfare: { cwd: 'apps/welfare', envKey: 'VITE_PORT', port: 6035, kind: 'vite' },
-  crm: { cwd: 'apps/crm', envKey: 'VITE_PORT', port: 6036, kind: 'vite' },
-  sites: { cwd: 'apps/sites', envKey: 'VITE_PORT', port: 6037, kind: 'vite' },
-  blog: { cwd: 'apps/blog', envKey: 'VITE_PORT', port: 6038, kind: 'vite' },
-  zetro: { cwd: 'apps/zetro', envKey: 'VITE_PORT', port: 6039, kind: 'vite' },
-  'textile-lab': { cwd: 'apps/textile-lab', envKey: 'VITE_PORT', port: 6040, kind: 'vite' },
-  garment: { cwd: 'apps/garment', envKey: 'VITE_PORT', port: 6041, kind: 'vite' },
-  upvc: { cwd: 'apps/upvc', envKey: 'VITE_PORT', port: 6042, kind: 'vite' },
 }
 
 if (!APP || !APP_CONFIG[APP]) {
@@ -344,17 +329,11 @@ function commandForApp(port) {
     return { command: tsxCommand(), args: ['watch', 'src/main.ts'] }
   }
 
-  if (config.kind === 'docs') {
-    return { command: binCommand('docusaurus'), args: ['start', '--host', '0.0.0.0', '--port', String(port)] }
-  }
-
   return { command: binCommand('vite'), args: ['--host', '0.0.0.0', '--port', String(port), '--strictPort'] }
 }
 
 const env = loadDotEnv()
-const port = (config.kind === 'vite' && APP !== 'frontend') || config.kind === 'docs'
-  ? config.port
-  : Number(process.env[config.envKey] || env[config.envKey]) || config.port
+const port = Number(process.env[config.envKey] || env[config.envKey]) || config.port
 
 if (config.kind === 'server') await checkServerDatabase(env)
 await freePort(port)

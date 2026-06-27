@@ -2615,11 +2615,16 @@ User prompt:
 ok next
 ```
 
+<<<<<<< Updated upstream
 ## 2026-06-26 - Platform and Billing API hardening
+=======
+## 2026-06-26 - Billing workspace cleanup
+>>>>>>> Stashed changes
 
 User prompt:
 
 ```text
+<<<<<<< Updated upstream
 any improvement in billing and platform api
 ```
 
@@ -2806,6 +2811,9 @@ ok fine write this also with clean documentation and review our documentation an
 move drop or unwanted to new folder trash inside assist , so i can review and delete saftely
 
 consolidate assist documentation and app documentation
+=======
+ok fine clean up all un used and make work of this computer
+>>>>>>> Stashed changes
 ```
 
 User prompt:

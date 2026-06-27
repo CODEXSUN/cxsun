@@ -1,9 +1,7 @@
 import {
   ArrowRight,
   BookOpen,
-  Boxes,
   BriefcaseBusiness,
-  Building2,
   FileText,
   GraduationCap,
   Handshake,
@@ -20,7 +18,6 @@ import {
   ReceiptText,
   Rocket,
   ShieldCheck,
-  Store,
   Users,
   X,
 } from 'lucide-react'
@@ -77,17 +74,6 @@ type PublicProductCardDefinition = {
 
 const publicProductCards: readonly PublicProductCardDefinition[] = [
   { title: 'Billing', eyebrow: 'ERP Core', description: 'GST invoices, receipts, payments, cash book, bank book, and accounting-ready entry flow.', icon: ReceiptText, page: 'billing', port: 6010, route: '/billing', chips: ['GST billing', 'Receipts', 'Accounts'] },
-  { title: 'B2B Connect', eyebrow: 'Marketplace', description: 'Textile business directory, verified suppliers, RFQs, leads, memberships, and premium visibility.', icon: Handshake, port: 6032, route: '/app/b2b-connect', chips: ['Directory', 'RFQ', 'Leads'] },
-  { title: 'Ecommerce', eyebrow: 'Storefront', description: 'Catalog, orders, checkout handoff, customer portal, inventory handoff, and invoice generation.', icon: Store, port: 6031, route: '/app/ecommerce', chips: ['Catalog', 'Orders', 'Checkout'] },
-  { title: 'Auditor Portal', eyebrow: 'Client Office', description: 'Client filings, GST status, document requests, service billing, and auditor communication.', icon: ShieldCheck, port: 6030, route: '/app/auditor', chips: ['GST filing', 'Documents', 'Billing'] },
-  { title: 'Sports Club', eyebrow: 'Club OS', description: 'Members, coaching batches, events, fee receipts, attendance, and communication.', icon: Users, port: 6033, route: '/app/sports', chips: ['Members', 'Fees', 'Events'] },
-  { title: 'Learning Platform', eyebrow: 'Academy', description: 'Courses, batches, student fees, materials, notices, and learner communication.', icon: GraduationCap, port: 6034, route: '/app/learning', chips: ['Courses', 'Batches', 'Fees'] },
-  { title: 'Sites', eyebrow: 'Public Web', description: 'Public websites, pages, domains, media, lead forms, and publishing workflow.', icon: Building2, port: 6037, route: '/app/sites', chips: ['Pages', 'Domains', 'Forms'] },
-  { title: 'Blog', eyebrow: 'Content', description: 'Posts, categories, SEO content, media publishing, and customer education pages.', icon: Newspaper, port: 6038, route: '/app/blog', chips: ['Posts', 'SEO', 'Media'] },
-  { title: 'ZETRO', eyebrow: 'AI Workbench', description: 'Agent OS, approved tools, safe query actions, audit logs, and assistant workflows.', icon: Rocket, port: 6039, route: '/app/zetro', chips: ['Agents', 'Tools', 'Audit'] },
-  { title: 'Textile Lab', eyebrow: 'Industry', description: 'Test requests, certificates, service invoices, customer ledger, and lab reporting.', icon: FileText, port: 6040, route: '/app/textile-lab', chips: ['Tests', 'Certificates', 'Invoices'] },
-  { title: 'Garment Manufacturing', eyebrow: 'Industry', description: 'Production tracking, job work, inventory consumption, billing handoff, and reports.', icon: Boxes, port: 6041, route: '/app/garment', chips: ['Production', 'Job work', 'Stock'] },
-  { title: 'UPVC Manufacturing', eyebrow: 'Industry', description: 'Project quotation, inventory issue, receipts, customer ledger, and project reports.', icon: BriefcaseBusiness, port: 6042, route: '/app/upvc', chips: ['Projects', 'Quotes', 'Receipts'] },
 ] as const
 
 export function PublicSitePage({
@@ -161,7 +147,7 @@ export function PublicSitePage({
                     <div className="border-b bg-slate-50/80 p-6 lg:border-b-0 lg:border-r lg:p-7">
                       <p className="text-xs font-black uppercase tracking-[0.16em] text-sky-700">Product suite</p>
                       <p className="mt-4 text-sm leading-7 text-slate-600">
-                        Connected tools for the public website, billing desk, storefront, and daily control.
+                        Connected tools for the public website, billing desk, and daily control.
                       </p>
                       <button
                         className="mt-7 inline-flex items-center gap-2 rounded-md bg-slate-950 px-4 py-3 text-sm font-black uppercase tracking-wide text-white transition hover:bg-slate-800"
@@ -769,7 +755,7 @@ function PublicSubPage({
             {activePage === 'services' ? (
               <div className="mt-12 border-t border-slate-200 pt-12">
                 <h2 className="text-2xl font-black text-slate-950">Products</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">Public products and industry apps run as separate surfaces while sharing the same billing, accounting, CRM, mail, media, tenant, and platform engines.</p>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-600">The cleaned workspace keeps the active billing surface focused on invoices, receipts, payments, accounts, and tenant operations.</p>
                 <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                   {publicProductCards.map((product) => (
                     <PublicProductCard key={product.title} product={product} onOpen={() => onOpenProduct(product)} />

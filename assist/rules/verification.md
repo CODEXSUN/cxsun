@@ -8,7 +8,6 @@ Run checks that match the files changed. Prefer targeted workspace checks during
 - Documentation/changelog policy check: `npm run check:docs-progress`
 - Active typechecks only: `npm run typecheck:active`
 - Active builds only: `npm run build:active`
-- Assist script equivalent: `bash assist/scripts/check.sh`
 
 ## Required Checks By Change Type
 
@@ -34,6 +33,7 @@ Shared package changes under `packages/shared`:
 - `npm -w packages/shared run typecheck`
 - Also run affected app typechecks when shared exports are consumed by apps.
 
+<<<<<<< Updated upstream
 Shared UI changes under `packages/ui`:
 
 - `npm -w packages/ui run typecheck`
@@ -60,6 +60,8 @@ Platform API changes:
 - `npm -w apps/platform-api run test:contract` when MariaDB is configured.
 - `npm -w apps/platform-api run test:e2e` when Platform API routes, auth, tenant, domain, industry, user-management, or service runtime behavior changes.
 
+=======
+>>>>>>> Stashed changes
 Assist-only documentation changes:
 
 - Run `rg` scans for stale paths when architecture or workflow guidance changes.

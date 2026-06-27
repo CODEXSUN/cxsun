@@ -6,8 +6,7 @@ Tirupur Connect is the tenant-independent central marketplace. TConnect remains 
 
 - Module: `apps/server/src/modules/tirupur-connect`
 - Persistence: dedicated MariaDB database `tirupur_connect_db`
-- Public/member app: `apps/b2b-connect`
-- Admin app: `apps/b2b-connect-admin`
+- Public/member/admin UI: not active in this cleaned billing workspace
 - Tenant context: not required
 
 ## API Families
@@ -108,7 +107,7 @@ Frontend page configuration is versioned separately from editorial records. Supp
 
 Each release stores one JSON object payload and a stable SHA-256 checksum. Drafts may be edited. Published and archived releases are immutable. Activating a draft publishes it and archives the previous active release for that channel. Activating an archived release performs a rollback without deleting newer history.
 
-The admin UI is available under **Frontend > Releases** in `apps/b2b-connect-admin`. Public apps should request the active channel payload and retain their compiled static data as a fallback when no release has been published.
+When a dedicated marketplace UI is reintroduced, it should request the active channel payload and retain compiled static data as a fallback when no release has been published. No dedicated marketplace app workspace is active in the current cleaned billing repo.
 
 The admin UI also provides **Frontend > Designer** for structured page, section, and item content. The home slider is the first connected section. Its ten initial slides are seeded into the product database; active database items override the compiled frontend fallback.
 

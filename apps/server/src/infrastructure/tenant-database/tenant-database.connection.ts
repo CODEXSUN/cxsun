@@ -29,6 +29,7 @@ import { migrateTallyTables } from '../../modules/tally/index.js'
 import { migrateFrappeTables } from '../../modules/frappe/index.js'
 import { migrateTConnectTables } from '../../modules/tconnect/index.js'
 import { migrateEcommerceTables } from '../../modules/ecommerce/index.js'
+import { migrateAuditorClientTable } from '../../modules/auditor/client/index.js'
 import { migrateAuditorContactCredentialTables } from '../../modules/auditor/contact-credential/index.js'
 import { migrateAuditorGstFilingTables } from '../../modules/auditor/gst-filing/index.js'
 import { migrateSiteSliderTables, seedDefaultSiteSliders } from '../../modules/site/slider/database/site-slider.migration.js'
@@ -179,6 +180,7 @@ export async function provisionTenantDatabase(
   await migrateFrappeTables(database as never)
   await migrateTConnectTables(database, tenant)
   await migrateEcommerceTables(database as never)
+  await migrateAuditorClientTable(database)
   await migrateAuditorContactCredentialTables(database)
   await migrateAuditorGstFilingTables(database)
   await migrateSiteSliderTables(database as never)
@@ -791,6 +793,16 @@ async function createCompanyChildTables(database: TenantDatabase) {
     .addColumn('created_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .addColumn('updated_at', 'datetime', (col) => col.notNull().defaultTo(sql`CURRENT_TIMESTAMP`))
     .execute()
+
+  for (const [column, definition] of [
+    ['city_id', 'VARCHAR(80) NULL'],
+    ['district_id', 'VARCHAR(80) NULL'],
+    ['state_id', 'VARCHAR(80) NULL'],
+    ['country_id', 'VARCHAR(80) NULL'],
+    ['pincode_id', 'VARCHAR(80) NULL'],
+  ] as const) {
+    await sql.raw(`ALTER TABLE address_book ADD COLUMN IF NOT EXISTS ${column} ${definition}`).execute(database)
+  }
 
   await createCompanyLookupTable(database, 'company_emails', [
     ['email', 'VARCHAR(180) NOT NULL'],

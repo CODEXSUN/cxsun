@@ -2,6 +2,7 @@
 
 This file records the current project shape and decisions that should guide future AI-assisted work.
 
+<<<<<<< Updated upstream
 Read `assist/context/product-picture.md` alongside this file for the product-level picture of what CXSun is becoming.
 
 ## Decision Records
@@ -26,10 +27,13 @@ Read `assist/context/product-picture.md` alongside this file for the product-lev
 | 2026-06-18 | Default Electron API access to `codexsun.local:6005`. | Desktop should follow the same host/domain tenant-resolution path as browser deployments while still allowing `ELECTRON_API_BASE_URL` overrides per client machine. |
 | 2026-06-25 | Keep one repo but move toward multiple backend services and deploy units. | Billing, Ecommerce, CRM, Sites, Core, and CXSync need independent release paths so unfinished work in one area does not block a small safe fix in another area. |
 
+=======
+>>>>>>> Stashed changes
 ## Active Workspaces
 
 - `apps/server` (`@cxsun/server`): active backend API using Fastify and the custom `core/` decorator/bootstrap layer.
 - `apps/frontend` (`@cxsun/frontend`): active React + Vite frontend using Tailwind CSS and shadcn-style UI primitives.
+<<<<<<< Updated upstream
 - `apps/docs` (`@cxsun/docs`): active Docusaurus documentation app.
 - `apps/cxsync` (`@cxsun/cxsync`): active CXSync Desktop maintenance app.
 - `apps/cxsync-cloud` (`@cxsun/cxsync-cloud`): active isolated CXSync Cloud maintenance API.
@@ -38,16 +42,29 @@ Read `assist/context/product-picture.md` alongside this file for the product-lev
 - `packages/ui` (`@cxsun/ui`): shared UI primitives, rich components, dashboard shell pieces, and design-system helpers.
 - `packages/desktop` (`@cxsun/desktop`): active Electron client that packages the React frontend and connects to the configured CXSun API, defaulting to `http://codexsun.local:6005` for domain-based tenant resolution.
 - `apps/codeit/backend` and `apps/codeit/frontend`: experimental CodeIT app workspaces.
+=======
+- `apps/cli` (`@cxsun/cli`): local helper scripts such as preflight port checks, database backup helpers, build helpers, and GitHub helpers.
+- `packages/shared` (`@cxsun/shared`): shared framework-free types, constants, and pure utilities.
+>>>>>>> Stashed changes
 
-## Reserved Workspaces
+## Decision Records
 
-- `packages/web` (`@cxsun/web`): reserved package with minimal source.
-- `packages/mobile` (`@cxsun/mobile`): reserved Expo package with minimal source.
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-05-14 | Use `apps/server` as the only active backend workspace. | The runnable API lives under `apps/server`. |
+| 2026-05-14 | Use `apps/frontend` as the active React + Vite frontend. | The billing UI is under `apps/frontend`. |
+| 2026-05-14 | Keep `packages/shared` framework-free. | Shared code should stay portable between server and frontend. |
+| 2026-05-24 | Use MariaDB for both master/platform persistence and tenant-isolated databases. | One deployable database engine keeps platform and tenant persistence consistent. |
+| 2026-05-15 | Split dashboards into super-admin, admin, and tenant modes. | Platform orchestration, software support, and tenant business work have different responsibilities. |
+| 2026-05-16 | Keep framework/platform modules in `core`, reusable record engines in `modules/foundation`, and business modules in bounded module groups. | Clear backend boundaries make modules easier to reuse, drop, or enhance. |
+| 2026-05-16 | Use `id INT AUTO_INCREMENT PRIMARY KEY` plus `uuid CHAR(8) NOT NULL UNIQUE` on application tables. | Numeric IDs stay fast internally while short public UUIDs hide sequences in APIs and UI. |
+| 2026-06-26 | Remove unused product-app, docs, desktop, mobile, web, UI, app-shell, and CXSync workspaces from the active repo. | The computer should run the billing app without stale workspace commands or missing app folders. |
 
 ## Current Verification Pattern
 
 Run targeted checks during development, or `npm run check` before finalizing meaningful changes.
 
+<<<<<<< Updated upstream
 - `npm -w apps/server run typecheck`
 - `npm -w apps/frontend run typecheck`
 - `npm -w apps/docs run typecheck`
@@ -59,10 +76,19 @@ Run targeted checks during development, or `npm run check` before finalizing mea
 - `npm -w packages/mobile run typecheck`
 - `npm -w apps/server run build`
 - `npm -w apps/frontend run build`
+=======
+```bash
+npm -w apps/server run typecheck
+npm -w apps/frontend run typecheck
+npm -w packages/shared run typecheck
+npm run build:active
+```
+>>>>>>> Stashed changes
 
-## Implementation Notes
+## Backend Placement
 
 - Put server business modules under `apps/server/src/modules`.
+<<<<<<< Updated upstream
 - Put backend framework code and platform/core modules under `apps/server/src/core`.
 - Put backend cross-cutting shared helpers under `apps/server/src/shared`.
 - Put reusable generic module engines under `apps/server/src/modules/foundation`.
@@ -88,8 +114,29 @@ Run targeted checks during development, or `npm run check` before finalizing mea
 - Do not split owned products into separate repositories by default. Use separate app surfaces, dev ports, production domains, and eventually separate backend deploy units inside the monorepo.
 - The newer deployment cleanup target is one repo with multiple backend services: Core, Billing, Ecommerce, CRM, Sites, and CXSync. Keep `apps/server` stable while extracting by contracts. See `assist/context/one-repo-multi-backend.md` and `assist/rules/service-boundaries.md`.
 - Keep `modules/tconnect` limited to billing connector responsibilities. Put the central marketplace under `modules/tirupur-connect`; it must not depend on a special marketplace billing tenant. See `assist/context/tirupur-connect-boundary.md`.
+=======
+- Put framework runtime, decorators, DI, guards, and platform/core modules under `apps/server/src/core`.
+- Put backend cross-cutting helpers under `apps/server/src/shared`.
+- Put infrastructure configuration and lifecycle code under `apps/server/src/infrastructure`.
+- Put reusable generic engines under `apps/server/src/modules/foundation`.
+- Put standalone master modules under `apps/server/src/modules/master`.
+- Put common business modules under `apps/server/src/modules/common/<group>/<module>`.
+- Put tenant entries under `apps/server/src/modules/entries`.
+- Put settings and document numbering under `apps/server/src/modules/settings`.
+- Use `TenantContextService` for tenant-owned APIs.
+>>>>>>> Stashed changes
 
-## Tenant Flow Notes
+## Frontend Placement
+
+- Put active UI work under `apps/frontend/src`.
+- Route concrete module pages to standalone feature-owned pages under `apps/frontend/src/features/<module>`.
+- Keep frontend CSS under `apps/frontend/src/assets/css`.
+- Keep route families separate:
+  - `/app/*` for tenant/client users with `/login`.
+  - `/admin/*` for admin/helpdesk users with `/admin/login`.
+  - `/sa/*` for super admins with `/sg/login` and `/sa/login` alias.
+
+## Tenant Flow
 
 Current request flow for tenant-owned data:
 
@@ -102,80 +149,4 @@ URL host/domain
   -> tenant MariaDB database
 ```
 
-Scan status as of 2026-05-15:
-
-- `tenant-domain` resolves active domains against active tenants from the master MariaDB database.
-- `tenant` owns tenant records and `/api/v1/tenants/context`; this diagnostic endpoint now resolves by `x-tenant-code` or host/domain.
-- `auth` issues JWTs after validating platform users and selects the domain tenant when the login host maps to one of the user's tenants.
-- `industry` is platform master data and remains tenant-shared.
-- `company` is tenant-owned, lives under `modules/master/company`, and resolves through `TenantContextService` before reading or mutating tenant-local MariaDB tables.
-
-## Backend Boundary Map
-
-Current backend structure:
-
-```text
-apps/server/src/
-  core/
-    decorators/
-    exceptions/
-    guards/
-    health/
-    industry/
-    interfaces/
-    system/system-update/
-    tenant/
-    tenant-domain/
-  shared/
-    filters/
-    guards/
-    middleware/
-  infrastructure/
-    database/
-    queue/
-    tenant-database/
-  modules/
-    auth/
-    common/<group>/<module>/
-    entries/sales/
-    foundation/master-data/
-    foundation/master-record/
-    home/
-    master/company/
-    master/contact/
-    master/order/
-    master/product/
-    site/
-```
-
-Boundary rules:
-
-- `core` is for framework primitives and platform/core modules: tenant, tenant-domain, industry, health, auth guard, and system update.
-- `shared` is for backend helpers that are not business modules, such as filters, middleware, and simple reusable guards.
-- `foundation/master-record` is the reusable record engine: definition contracts, migration helpers, aggregate, repository, events, normalizer, and event bus.
-- `foundation/master-data` is the compatibility registry/API around common module definitions. It must not become the owner of standalone master modules.
-- `common/<group>/<module>` modules own common tenant tables and endpoints under `/api/v1/common/<moduleKey>`.
-- `master/<module>` modules own standalone master domains such as company, contact, product, and order.
-- `entries/sales` owns domestic tenant sales records.
-- `entries/export-sales` owns export invoices, separate numbering/tables, Common Currency references, print/mail workflows, comments, tools, and activity.
-- Company software settings own feature visibility such as `feature-export-sales`; disabled features must disappear from navigation, overview, direct routes, and related settings without deleting data.
-- Keep public HTTP routes stable when moving internal folders unless the user explicitly asks to change the API.
-
-## Dashboard Mode Notes
-
-- `super-admin`: split into two clear navigation areas. Platform / Master Database contains tenant, domain, industry, system update, and admin user manager. Tenant Database contains tenant-owned modules such as company.
-- `admin`: software operations; helpdesk, bug triage, and system update.
-- `tenant`: isolated client workspace with enabled application desks, selected default company/accounting year, tenant-local roles, and company feature settings.
-
-The frontend enforces this with dashboard mode route guards in `DashboardView` and separate sidebar menus in `AppSidebar`.
-
-Route map:
-
-- `/app/company`: tenant/client company surface using the selected tenant database.
-- `/admin/company`: admin/helpdesk company support desk, not tenant-local company management.
-- `/sa/company`: super-admin company surface.
-- `/login`: tenant/client login.
-- `/admin/login`: admin/helpdesk login.
-- `/sg/login`: super-admin login; `/sa/login` is accepted for consistency with the `/sa/*` route family.
-
-Auth sessions are stored separately by surface to avoid cross-surface unlocks.
+Platform/master data lives in the MariaDB database configured by `DB_*` environment variables. Tenant-local data lives in MariaDB databases described by each tenant row.

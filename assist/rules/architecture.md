@@ -2,7 +2,7 @@
 
 ## Overview
 
-`cxsun` is an ERP + ecommerce + multi-tenant platform built as a TypeScript monorepo. The current working runtime is:
+`cxsun` is a focused multi-tenant billing platform built as a TypeScript monorepo. The current working runtime is:
 
 - Backend: `apps/server` (`@cxsun/server`), Node.js + Fastify with a custom decorator/bootstrap layer.
 - Frontend: `apps/frontend` (`@cxsun/frontend`), React + Vite.
@@ -10,41 +10,31 @@
 - Shared UI package: `packages/ui` (`@cxsun/ui`), for reusable UI primitives, rich components, dashboard shell pieces, and design-system helpers.
 - Workflow helpers: `apps/cli` (`@cxsun/cli`).
 
+<<<<<<< Updated upstream
 Reserved platform packages exist under `packages/` for future channels:
 
 - `packages/web` (`@cxsun/web`) is a placeholder and is not the active Vite frontend.
 - `packages/desktop` (`@cxsun/desktop`) is the active Electron desktop application.
 - `packages/mobile` (`@cxsun/mobile`) is a placeholder Expo package.
 
+=======
+>>>>>>> Stashed changes
 ## Monorepo Structure
 
-```
+```text
 cxsun/
-├── .env                         # Root env vars, never commit secrets
-├── .env.sample                  # Template with required vars
-├── package.json                 # Workspace root and active scripts
-├── tsconfig.base.json           # Shared TS config
 ├── apps/
-│   ├── cli/                     # Local workflow scripts
-│   ├── frontend/                # Active React + Vite app
-│   │   ├── public/              # Static frontend assets
-│   │   └── src/                 # Frontend source
-│   └── server/                  # Active backend API
-│       └── src/
-│           ├── core/            # Framework/runtime and platform/core modules
-│           ├── shared/          # Shared backend filters, middleware, helpers
-│           ├── infrastructure/  # Database, queue, tenant provisioning, adapters
-│           └── modules/         # Business modules and foundation engines
+│   ├── cli/
+│   ├── frontend/
+│   └── server/
 ├── packages/
-│   ├── shared/                  # Types, constants, pure utilities only
-│   ├── web/                     # Placeholder package
-│   ├── desktop/                 # Placeholder Electron package
-│   └── mobile/                  # Placeholder Expo package
-└── assist/                      # AI agent rules, context, and docs
+│   └── shared/
+└── assist/
 ```
 
 ## Key Principles
 
+<<<<<<< Updated upstream
 - Current combined app development targets `apps/server` and `apps/frontend` unless the user explicitly asks for another workspace.
 - `apps/server` is a temporary combined backend. Keep it stable while preparing Platform API first and Billing API second for service extraction.
 - The owning backend service owns business logic and exposes APIs consumed by clients.
@@ -107,45 +97,49 @@ For new or expanded business modules, prefer:
 - `index.ts` for the module public API.
 
 Avoid direct cross-module imports. Use explicit public module exports, application contracts, or events where module boundaries are involved.
+=======
+- Active development targets `apps/server` and `apps/frontend`.
+- The server owns business logic and exposes APIs consumed by the frontend.
+- The frontend must not duplicate server-owned domain logic.
+- `@cxsun/shared` must stay framework-free: types, constants, and pure utilities only.
+- Keep tenant business data isolated in tenant databases.
+- Keep platform orchestration data in the master MariaDB database.
+- Add new workspaces only when they are truly runnable, documented, and included in verification.
+>>>>>>> Stashed changes
 
 ## Backend Placement Rules
 
 - Put framework runtime, decorators, DI, guards, and platform/core modules under `apps/server/src/core`.
-- Put small backend-only shared helpers under `apps/server/src/shared`; do not use `src/common` for this because `modules/common` is a business module boundary.
+- Put backend-only shared helpers under `apps/server/src/shared`.
+- Put database, queue, tenant provisioning, and lifecycle adapters under `apps/server/src/infrastructure`.
 - Put reusable engines and compatibility registries under `apps/server/src/modules/foundation`.
+<<<<<<< Updated upstream
 - Put stable cross-product business engines/services under clear service-owned module boundaries when they emerge. Platform API owns common platform behavior. Billing, accounting, compliance, mail, files, CRM, sites/blog, tenant/company, subscription, and ZETRO capabilities should be reused by app modules through contracts instead of copied into ecommerce, auditor, sports, learning, welfare, B2B Connect, or industry modules.
 - For new service-split work, follow `assist/rules/service-boundaries.md`: Platform API owns common platform needs, app services own only their business schema, and cross-app work goes through APIs/events.
 - Put every common business module under `apps/server/src/modules/common/<group>/<module>`.
+=======
+>>>>>>> Stashed changes
 - Put standalone master modules under `apps/server/src/modules/master/<module>`.
 - Put tenant transaction/entry modules under `apps/server/src/modules/entries/<module>`.
-- Put auditor-office modules under `apps/server/src/modules/auditor/<module>`; current contact-based modules include contact credentials and GST Filing.
+- Put every common business module under `apps/server/src/modules/common/<group>/<module>`.
 - Keep internal folder moves API-stable unless the user explicitly requests a route change.
 
-## Tenant Feature Visibility
+## Database Identity
 
-- Company software settings are persisted tenant-side and apply to the selected default company.
-- A feature switch must control every discoverable frontend surface for that feature: sidebar navigation, overview cards/tables, shortcuts, route access, and related settings.
-- Hidden frontend features must also reject or redirect direct route access. Do not rely only on removing a menu item.
-- Disabling a feature is a visibility/capability decision, not a data deletion operation. Preserve existing records unless deletion is explicitly requested.
-- Keep feature-specific data modules separate even when their screens begin from a copied workflow. Domestic Sales and Export Sales must not share entry tables or numbering sequences.
-
-## Database Identity Rules
-
-All application-owned tables must keep a compact internal primary key and a separate short public identifier:
+New application-owned tables must use:
 
 ```sql
 id INT AUTO_INCREMENT PRIMARY KEY,
 uuid CHAR(8) NOT NULL UNIQUE
 ```
 
-- Use `id` for internal joins, foreign keys, repository lookups, and database performance.
-- Use `uuid` for API payloads, frontend routing, public references, and anything exposed outside the persistence layer.
-- At present, public IDs are 8 uppercase alphanumeric characters generated through the shared public UUID helper. When scale or collision risk grows, move new public IDs to 16 characters with a planned migration.
-- Do not use the public `uuid` as the primary key unless the architecture rules are intentionally changed.
+- Use `id` for internal joins and foreign keys.
+- Use `uuid` for API payloads, frontend routing, and public references.
+- Generate public UUIDs through the shared public UUID helper.
 
-## Multi-Tenant Runtime
+## Tenant Runtime
 
-The current runtime follows this path for tenant-owned data:
+Tenant-owned requests follow this path:
 
 ```text
 request URL host/domain
@@ -156,73 +150,39 @@ request URL host/domain
   -> tenant-local tables
 ```
 
-Platform/master data lives in the MariaDB database configured by `DB_*` environment variables and is represented by `apps/server/src/infrastructure/database/schema.ts`. Platform database modules live beside their owning modules, then register through `apps/server/src/infrastructure/database/platform-modules.ts`.
-
-Tenant-local data lives in MariaDB databases described by each tenant row. Tenant connection/provisioning code lives under `apps/server/src/infrastructure/tenant-database/`. Tenant database schema types live in `tenant-database.schema.ts`.
-
-Current surface ownership:
-
-- `tenant-domain`: platform domain-to-tenant resolution.
-- `tenant`: platform tenant records, tenant diagnostics, startup provisioning input.
-- `auth`: platform users, user-tenant access, JWT issuance.
-- `industry`: platform master data shared across tenants.
-- `company`: tenant-owned data; must use `TenantContextService`.
-
-## Multi-Tenant Public Pages
-
-Public/static tenant pages must use the shared domain-resolution path instead of hand-rolled host checks in the frontend.
-
-```text
-browser host/domain
-  -> GET /api/site/tenant-static
-  -> DomainResolutionEngine
-  -> tenant_domains + tenants
-  -> tenant app settings
-  -> frontend public page scaffold
-```
-
-- Keep domain normalization and tenant app selection in `DomainResolutionEngine`.
-- Public tenant pages must fail closed when no active tenant domain is mapped. Do not fall back to platform content for tenant domain requests.
-- The frontend can render many tenant websites from one codebase, but it must not decide tenant identity by local string matching alone.
-- Tenant-owned private/business data still goes through authenticated tenant APIs and `TenantContextService`; public static pages are only the public entry surface.
-- Add new industry pages as feature-pack scaffolds first, then connect tenant-local APIs only when the authenticated tenant boundary is ready.
-- Treat every client as its own domain-scoped tenant, even when hosted under a shared `*.codexsun.com` wildcard.
-- Tenant capabilities come from tenant app options, industry settings, and optional customization metadata; avoid shared-domain behavior that mixes client scope.
+Tenant-owned APIs must resolve through `TenantContextService` before touching tenant-local data.
 
 ## Dashboard Boundaries
 
 Frontend dashboard routing must remain split by role:
 
-- `super-admin` is platform orchestration and can reach platform management surfaces.
-- `admin` is software operations and should focus on bugs, helpdesk, client notes, and updates.
-- Tenant users are isolated to enabled tenant-local application desks and their selected company/accounting-year context.
+- `super-admin`: platform orchestration and safe tenant diagnostics.
+- `admin`: software support, bugs, helpdesk, and update work.
+- Tenant users: isolated client workspaces with enabled application desks and selected company/accounting-year context.
 
-When adding a dashboard page, first decide which dashboard mode owns it. Avoid relying only on hidden menu items; route guards should also reject pages outside the active dashboard mode.
-
-Dashboard route families are:
+Route families:
 
 - `/app/*` for tenant/client users with `/login`.
 - `/admin/*` for admin/helpdesk users with `/admin/login`.
 - `/sa/*` for super admins with `/sg/login` and `/sa/login` as an alias.
 
-Each surface must keep its own auth storage key and auth gate. Do not let a tenant login unlock admin or super-admin routes.
+Each surface must keep its own auth storage key and auth gate.
 
 ## Frontend Structure
 
 The active frontend lives in `apps/frontend/src`.
 
-Preferred growth pattern:
-
-```
+```text
 apps/frontend/src/
-├── app/             # App shell, routing, providers
-├── features/        # User-facing feature areas
-├── components/      # Shared UI components
-├── assets/          # App-owned visual assets
+├── app/
+├── assets/
+├── components/
+├── features/
 ├── App.tsx
 └── main.tsx
 ```
 
+<<<<<<< Updated upstream
 Keep UI feature code in `apps/frontend` until a separate reusable package is intentionally introduced.
 
 ## Frontend Module Page Routing
@@ -279,20 +239,21 @@ Target service-split rule:
 - Connector synchronization never silently overwrites an approved public record. A source change creates a new reviewable revision.
 - Tirupur Connect may retain an opportunity/conversion reference, but imported quotations, sales orders, invoices, and accounting remain owned by the billing tenant.
 - Follow `assist/context/tirupur-connect-boundary.md` whenever older TConnect or B2B Connect documents conflict.
+=======
+- Keep UI feature code in `apps/frontend`.
+- Route module pages explicitly from the dashboard/router to feature-owned page components.
+- Do not grow generic pages with module-specific branches when a standalone feature page is clearer.
+>>>>>>> Stashed changes
 
 ## Environment Variables
 
-Root `.env` feeds local development. Never commit real secrets.
-
 - `VITE_*` is consumed by `apps/frontend`.
-- `EXPO_PUBLIC_*` is reserved for `packages/mobile`.
-- `ELECTRON_*` is reserved for `packages/desktop`.
 - Server variables are consumed by `apps/server`.
 
 Current default local ports:
 
-- Frontend: `6010`
 - Server: `6005`
+<<<<<<< Updated upstream
 - Docs: `6020`
 - Product app shells: auditor `6030`, ecommerce `6031`, B2B Connect `6032`, sports `6033`, learning `6034`, welfare `6035`, CRM `6036`, sites `6037`, blog `6038`, ZETRO `6039`, textile lab `6040`, garment `6041`, UPVC `6042`.
 - Future public/product apps may run on separate local ports to avoid route/feature confusion while staying in one repo. See `assist/context/one-repo-multi-backend.md` for the owned-domain/app/service direction.
@@ -303,3 +264,6 @@ GST and domain deployment rules:
 - Tenant GST settings own tenant-specific GST username, password, GSTIN, and sandbox/production selection.
 - `GSP_SANDBOX_BASE_URL` may remain an environment-level provider endpoint default; secrets must not be committed.
 - Cloud/Docker reinstall must not create tenant domains automatically unless `AUTO_SEED_TENANT_DOMAINS=true` is explicitly set.
+=======
+- Frontend: `6010`
+>>>>>>> Stashed changes

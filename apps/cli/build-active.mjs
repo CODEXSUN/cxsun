@@ -60,8 +60,5 @@ runNpm('Auditor API build', ['-w', 'apps/auditor-api', 'run', 'build'])
 runNpm('Blog API build', ['-w', 'apps/blog-api', 'run', 'build'])
 runNpm('Agent OS API build', ['-w', 'apps/agent-os-api', 'run', 'build'])
 runNpm('Frontend app build', ['-w', 'apps/frontend', 'run', 'build'])
-runNpm('CXSync Cloud build', ['-w', 'apps/cxsync-cloud', 'run', 'build'])
-runNpm('CXSync web build', ['-w', 'apps/cxsync', 'run', 'build:web'])
-runNpm('CXSync Electron compile', ['-w', 'apps/cxsync', 'run', 'compile:electron'])
 
 console.log(`\n[build] Active build completed in ${formatDuration(performance.now() - totalStartedAt)}`)

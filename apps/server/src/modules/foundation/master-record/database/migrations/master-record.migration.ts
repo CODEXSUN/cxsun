@@ -46,6 +46,14 @@ export async function migrateMasterRecordDefinition(
     )
   `).execute(database)
 
+  for (const column of definition.columns) {
+    const nullable = column.required || column.nullable === false ? 'NOT NULL' : 'NULL'
+    const defaultValue = defaultSql(column)
+    await sql.raw(
+      `ALTER TABLE \`${definition.tableName}\` ADD COLUMN IF NOT EXISTS \`${column.key}\` ${columnSqlType(column)} ${nullable}${defaultValue}`,
+    ).execute(database)
+  }
+
 }
 
 export { migrateMasterRecordDefinition as migrateMasterDataDefinition }

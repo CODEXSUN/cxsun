@@ -8,9 +8,9 @@ import { pathToFileURL } from 'url'
 const VERSION_FILES = [
   'package.json',
   'apps/cli/package.json',
-  'apps/docs/package.json',
   'apps/frontend/package.json',
   'apps/server/package.json',
+<<<<<<< Updated upstream
   'apps/auditor/package.json',
   'apps/b2b-connect/package.json',
   'apps/b2b-connect-admin/package.json',
@@ -40,9 +40,9 @@ const VERSION_FILES = [
   'packages/desktop/package.json',
   'packages/mobile/package.json',
   'packages/platform/package.json',
+=======
+>>>>>>> Stashed changes
   'packages/shared/package.json',
-  'packages/ui/package.json',
-  'packages/web/package.json',
 ]
 
 const DISPLAY_FILES = [

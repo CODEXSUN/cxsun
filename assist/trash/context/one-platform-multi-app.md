@@ -1,22 +1,25 @@
-# One Platform, Multi-App Architecture
+# Focused Billing Workspace
 
 ## Decision
 
+<<<<<<< Updated upstream:assist/trash/context/one-platform-multi-app.md
 CXSun will stay as one repository. We will not split owned products, client-specific products, or industry apps into many repositories while the team is small.
 
 The earlier shape was one backend server-managed platform. The newer deployment cleanup direction keeps the one repo, but allows multiple backend services and deploy units. See `assist/context/one-repo-multi-backend.md` for the service-split target.
 
 The current/live shape is:
+=======
+CXSun is currently maintained as one focused billing application:
+>>>>>>> Stashed changes:assist/context/one-platform-multi-app.md
 
 ```text
-one monorepo
 one backend server API
-one shared platform database layer
+one frontend billing workspace
+one shared framework-free package
 tenant-isolated business databases
-multiple frontend/public apps on separate dev ports and production domains
-shared engines and services for common business logic
 ```
 
+<<<<<<< Updated upstream:assist/trash/context/one-platform-multi-app.md
 The target cleanup shape is:
 
 ```text
@@ -29,23 +32,22 @@ optional app table groups per enabled app
 ```
 
 This lets one or two developers manage the whole platform without losing clean boundaries for future team growth.
+=======
+The repository previously carried many product-app scaffolds. Those have been removed from the active workspace so local development, install, typecheck, and build stay predictable on this computer.
+>>>>>>> Stashed changes:assist/context/one-platform-multi-app.md
 
-## App Boundary
+## Active Boundary
 
-Use separate apps or app surfaces when the product experience is different:
+- `apps/server` owns business logic, tenant resolution, billing, accounting, mail, settings, and platform orchestration APIs.
+- `apps/frontend` owns the public/login/dashboard UI for tenant, admin, and super-admin route families.
+- `packages/shared` owns only framework-free shared types, constants, and pure utilities.
+- `apps/cli` owns local helper scripts.
 
-| Product/domain | App surface | Purpose |
-|----------------|-------------|---------|
-| `tirupurdirect.com` | ecommerce storefront | Public ecommerce and order flow |
-| `tirupurconnect.com` | B2B Connect public app | B2B connection and marketplace flow |
-| `tenkasisports.com` | sports public/app surface | Club, students, fees, events, attendance |
-| `neot.in` | learning platform | Courses, learning, fees, student portal |
-| `aaran.org` | welfare site/app | Welfare organization, members, donations |
-| `horseclub.in` | ecommerce brand app | Branded t-shirt/product storefront |
-| `aaranassociates.com` | auditor portal/site | Auditor office, clients, filings, billing |
+## Future App Rule
 
-Use separate local ports during development so features and routes do not become tangled:
+Do not recreate product app workspaces by default. If a future product needs a separate UX, port, or domain, add it deliberately with:
 
+<<<<<<< Updated upstream:assist/trash/context/one-platform-multi-app.md
 ```text
 6010 main tenant ERP/billing workspace
 6020 docs
@@ -255,14 +257,25 @@ Because the current team is small, prefer one repo. For deployment, prefer separ
 - Use feature flags and app registry records to enable apps per tenant.
 - Split into separate backend services before splitting repositories.
 - Split into separate repositories only if a product later gets its own team, release cycle, ownership, security boundary, or high independent traffic.
+=======
+- a clear product owner and runtime purpose,
+- root scripts that typecheck/build correctly,
+- docs updated in `assist/README.md` and `assist/context/workspaces.md`,
+- shared business behavior routed through server-owned services instead of copied transaction logic.
+>>>>>>> Stashed changes:assist/context/one-platform-multi-app.md
 
 ## Summary Rule
 
 ```text
+<<<<<<< Updated upstream:assist/trash/context/one-platform-multi-app.md
 Separate app for separate business experience.
 Shared engine for shared business logic.
 One repo.
 Shared backend core.
 Separate backend services when needed.
 Different frontend ports/domains when needed.
+=======
+Keep the active billing app small.
+Add separate workspaces only when they are truly runnable and maintained.
+>>>>>>> Stashed changes:assist/context/one-platform-multi-app.md
 ```

@@ -2,29 +2,46 @@
 
 **Project version:** 1.0.131
 
-This directory is the working guide for AI agents on `cxsun`. It records project rules, current architecture, session plans, task tracking, and release notes.
+This directory is the working guide for AI agents on `cxsun`. The repository has been cleaned down to the active billing application.
 
-For the product north star, read `assist/context/product-picture.md`. It describes the software we are building: public storefront/content, tenant business workspace, admin support desk, super-admin platform orchestration, and the new Versatile Agent OS direction.
+## Current Application Shape
 
+<<<<<<< Updated upstream
 For owned-product and industry-app expansion, read `assist/context/one-repo-multi-backend.md`. It records the current target: one repo for development, multiple backend services for deployment, separate app surfaces and ports/domains for different business experiences, shared Platform API contracts, and tenant database table groups by app owner.
+=======
+```text
+cxsun/
+├── apps/
+│   ├── cli/        # local workflow scripts
+│   ├── frontend/   # active React + Vite billing frontend
+│   └── server/     # active Node.js/Fastify backend
+├── packages/
+│   └── shared/     # shared framework-free types, constants, and utilities
+└── assist/         # rules, context, and task notes
+```
+>>>>>>> Stashed changes
 
-For the marketplace boundary, read `assist/context/tirupur-connect-boundary.md`. It is the canonical rule that TConnect is the billing connector while Tirupur Connect is the standalone central marketplace.
+Root scripts use only the active workspaces:
 
-For the AI operating layer, read `assist/context/versatile-agent-os.md` and `ZRO/Vision/agent-os.md`. The agent direction is layered: Helper Agent first, then Operator, Workflow, Planner, Analytics, Router, Memory, and the full multi-agent ecosystem.
-
-For CXSync, read `assist/context/cxsync-fleet-maintenance.md`. CXSync is the private all-tenant database audit, full-data clone, migration rehearsal, and controlled-upgrade system; it is not a business-data synchronization product.
+- `npm run dev` starts `apps/server` and `apps/frontend`.
+- `npm run dev:server` starts only the backend.
+- `npm run dev:frontend` starts only the frontend.
+- `npm run typecheck:active` typechecks server, frontend, and shared.
+- `npm run build:active` builds server and frontend into the root `build/` folder.
+- `npm run check` runs active typechecks and builds.
 
 For the deployment cleanup direction, read `assist/context/one-repo-multi-backend.md`. It records the target shape: one monorepo, multiple independently deployable backend services, shared Platform API, and one tenant database with separated `core_*`, `billing_*`, `ecommerce_*`, `crm_*`, and `sites_*` table groups. `apps/server` is now a temporary combined backend; extract Platform API first and Billing API second.
 
 ## Mandatory Reading Before Work
 
-Before planning, coding, changing schemas, or editing product behavior, every AI agent must read:
+Before planning, coding, changing schemas, or editing product behavior, read:
 
 1. `assist/README.md`
 2. All files under `assist/rules/`
 3. All files under `assist/context/`
 4. `assist/execution/planning.md`
 5. `assist/execution/task.md`
+<<<<<<< Updated upstream
 6. `assist/execution/service-split-plan.md` for work that touches Billing, Ecommerce, CRM, Sites, Core, CXSync, deployment, tenant provisioning, or schema boundaries
 7. The execution document for the requested product or module
 8. The relevant module documentation under `apps/server`, `apps/frontend`, `apps/docs`, or the standalone product app
@@ -93,24 +110,29 @@ Root scripts use the active apps:
 - `npm run e2e:desktop` builds the bundled frontend and verifies the Electron runtime API base defaults to `http://codexsun.local:6005`.
 - `npm run build:product-apps` builds all scaffolded product app shells.
 - `npm run version:bump -- --title "<title>"` updates package/display versions and creates a changelog entry split into `Database Changes` and `App Codebase Changes`; use `--database-update` or `--no-database-update` when the automatic database check needs an override.
+=======
+6. Relevant module documentation under `apps/server` or `apps/frontend`
+
+Copy the exact user prompt into `assist/documentation/prompt-review.md` before starting implementation work.
+>>>>>>> Stashed changes
 
 ## Current Tenant Architecture
 
 The active backend separates platform data from tenant data.
 
-- Master MariaDB stores site content, industries, tenants, tenant domains, admin users, platform RBAC policy catalog, tenant policy toggles, and queue jobs.
-- Tirupur Connect uses its own `tirupur_connect_db` MariaDB database for marketplace, public/member/admin, frontend designer, content, and audit records.
-- Tenant MariaDB databases store tenant-local companies, company child tables, accounting years, default company selection, and tenant-local RBAC role-policy assignments.
-- Application tables keep `id INT AUTO_INCREMENT PRIMARY KEY` for internal joins and `uuid CHAR(8) NOT NULL UNIQUE` for public/API references. New public IDs are 8-character uppercase alphanumeric values from the shared public UUID helper; plan 16-character public IDs later when growth requires it.
-- The request path for tenant data is `URL host/domain -> tenant_domains -> tenants -> JWT/user_tenants check -> tenant database`.
-- `TenantContextService` is the runtime gateway for tenant-owned APIs. Company APIs already use it and require authenticated requests.
-- `TenantDatabaseProvisioner` runs on server startup and prepares every MariaDB-backed tenant database before the API starts listening.
+- Master MariaDB stores site content, industries, tenants, tenant domains, platform users, RBAC policy catalogs, tenant policy toggles, and queue jobs.
+- Tenant MariaDB databases store tenant-local companies, accounting years, default company selection, entries, accounts, settings, mail, and tenant-local RBAC role-policy assignments.
+- Application tables keep `id INT AUTO_INCREMENT PRIMARY KEY` for internal joins and `uuid CHAR(8) NOT NULL UNIQUE` for public/API references.
+- Tenant request path: `URL host/domain -> tenant_domains -> tenants -> JWT/user_tenants check -> tenant database`.
+- `TenantContextService` is the runtime gateway for tenant-owned APIs.
+- `TenantDatabaseProvisioner` prepares MariaDB-backed tenant databases during server startup.
 
-Current backend boundary layout:
+## Current Backend Boundary Layout
 
-- `apps/server/src/core`: framework/runtime primitives plus platform/core modules (`tenant`, `tenant-domain`, `industry`, `health`, `system/system-update`).
+- `apps/server/src/core`: framework/runtime primitives plus platform/core modules.
 - `apps/server/src/shared`: backend-only shared helpers such as filters, guards, and middleware.
 - `apps/server/src/infrastructure`: database, queue, tenant provisioning, auth helpers, and lifecycle adapters.
+<<<<<<< Updated upstream
 - `apps/server/src/modules/foundation`: reusable engines and compatibility registries (`master-record`, `master-data`).
 - Future cross-product engines/services should stay service-owned and be reused through contracts. Platform API owns shared platform needs such as auth, tenant, RBAC, mail, notification, files, app enablement, and audit. Billing, Ecommerce, CRM, Sites, and CXSync should become separately deployable backend services inside the monorepo, with each service owning only its app schema group.
 - `packages/app-shell`: shared frontend scaffold used by product app workspaces such as auditor, ecommerce, B2B Connect, sports, learning, welfare, CRM, sites, blog, ZETRO, textile lab, garment, and UPVC.
@@ -148,24 +170,23 @@ Current important API surfaces:
 - `GET/PATCH /api/v1/company-settings/<key>`
 - `GET/PATCH/POST /api/v1/gst-compliance/*`
 - `GET/PATCH/POST /api/v1/mail/*`
+=======
+- `apps/server/src/modules/foundation`: reusable engines and compatibility registries.
+- `apps/server/src/modules/common/<group>/<module>`: standalone common tenant modules.
+- `apps/server/src/modules/master/<module>`: standalone master modules.
+- `apps/server/src/modules/entries/<module>`: tenant-isolated transaction modules.
+- `apps/server/src/modules/accounts`: accounting engine, ledgers, vouchers, reports, and posting support.
+- `apps/server/src/modules/settings`: company settings and document numbering.
+- `apps/server/src/modules/mail`: tenant SMTP settings, queued messages, attachments, events, and delivery.
+>>>>>>> Stashed changes
 
 ## Dashboard Boundaries
 
-The active frontend dashboard is split by authenticated role:
+The frontend dashboard is split by authenticated role:
 
-- `super-admin` sees two orchestration areas: Platform / Master Database for tenant, domain, industry, system update, and admin user manager; Tenant Database for tenant-owned modules such as company.
-- `admin` sees the software operations dashboard for helpdesk, bugs, and update/support work.
-- Tenant roles (`admin`, `manager`, `staff`, and `user`) use isolated application desks such as Application, Billing, Accounts, Inventory, Mail, Media, Sites, and Task Manager according to enabled app and company feature settings. The `super-admin` role is reserved for the platform owner account.
-
-Billing desk behavior:
-
-- The selected default company and accounting year control billing lists, reports, overview totals, month summaries, and document numbering context.
-- Domestic Sales and Export Sales are separate entry modules and database tables.
-- Export Sales stores a selected Common Currency reference and saved currency name.
-- Sales Settings -> Features owns the company-level `feature-export-sales` switch. When disabled, Export Sales is hidden from navigation, shortcuts, overview totals/month table, direct routes, and document settings without deleting existing records.
-- Entry PDF email delivery captures the exact visible print document, queues it through tenant Mail, stores retryable temporary PDFs under `storage/<tenant>/public/pdf`, and removes them after successful delivery.
-
-Keep these boundaries explicit when adding pages. Do not add platform orchestration pages to the tenant dashboard.
+- `super-admin`: platform orchestration for tenant, domain, industry, system update, user manager, and tenant-owned diagnostics.
+- `admin`: software operations, support, bugs, and helpdesk work.
+- Tenant roles: isolated client application desks such as Billing, Accounts, Inventory, Mail, Media, Sites, and Task Manager according to enabled company settings.
 
 Route families:
 
@@ -175,8 +196,9 @@ Route families:
 
 Each route family uses its own browser session key and route guard.
 
-## Directory Structure
+## Billing Desk Behavior
 
+<<<<<<< Updated upstream
 ```
 assist/
 ├── README.md          # This file, system overview
@@ -224,11 +246,18 @@ At the start of each work session:
 - `assist/context/versatile-agent-os.md` describes how the Versatile Agent OS should be implemented inside the current monorepo.
 - `assist/rules/verification.md` describes required checks by change type.
 - `assist/templates/server-module.md` gives the preferred backend module layout.
+=======
+- Selected default company and accounting year control billing lists, reports, overview totals, month summaries, and document numbering context.
+- Domestic Sales and Export Sales are separate entry modules and database tables.
+- Export Sales stores a selected Common Currency reference and saved currency name.
+- Sales Settings -> Features owns the company-level `feature-export-sales` switch.
+- Entry PDF email delivery captures the visible print document, queues it through tenant Mail, stores retryable temporary PDFs under `storage/<tenant>/public/pdf`, and removes them after successful delivery.
+>>>>>>> Stashed changes
 
 ## Verification
 
-Use targeted workspace commands while developing, then run the standard check before finalizing meaningful changes:
+Use targeted workspace commands while developing, then run:
 
-```
+```bash
 npm run check
 ```

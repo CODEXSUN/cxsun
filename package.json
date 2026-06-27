@@ -4,9 +4,10 @@
   "version": "1.0.131",
   "type": "module",
   "workspaces": [
-    "packages/*",
-    "apps/*",
-    "apps/codeit/*"
+    "apps/cli",
+    "apps/frontend",
+    "apps/server",
+    "packages/shared"
   ],
   "scripts": {
     "dev": "concurrently -k -n server,web \"npm run dev:server\" \"npm run dev:frontend\"",
@@ -25,6 +26,7 @@
     "dev:ecommerce-api": "npm -w apps/ecommerce-api run dev",
     "dev:extracted-stack": "concurrently -k -n platform,billing,ecommerce,sites,crm,tally,frappe,task,auditor,blog,agent,web \"npm run dev:platform-api\" \"npm run dev:billing-api\" \"npm run dev:ecommerce-api\" \"npm run dev:sites-api\" \"npm run dev:crm-api\" \"npm run dev:tally-api\" \"npm run dev:frappe-api\" \"npm run dev:task-manager-api\" \"npm run dev:auditor-api\" \"npm run dev:blog-api\" \"npm run dev:agent-os-api\" \"npm -w apps/frontend run dev:extracted-stack\"",
     "dev:frontend": "npm -w apps/frontend run dev",
+<<<<<<< Updated upstream
     "dev:desktop": "npm -w packages/desktop run dev",
     "dev:docs": "npm -w apps/docs run dev",
     "dev:auditor": "npm -w apps/auditor run dev",
@@ -51,6 +53,11 @@
     "check:docs-progress": "node assist/scripts/check-doc-progress.mjs",
     "typecheck:active": "npm -w apps/server run typecheck && npm -w @cxsun/platform run typecheck && npm run typecheck:platform-api && npm run typecheck:billing-api && npm run typecheck:sites-api && npm run typecheck:extracted-apis && npm -w apps/frontend run typecheck && npm -w apps/docs run typecheck && npm -w packages/shared run typecheck && npm -w packages/ui run typecheck && npm -w packages/app-shell run typecheck && npm -w packages/web run typecheck && npm -w packages/desktop run typecheck && npm -w packages/mobile run typecheck && npm run typecheck:cxsync && npm run typecheck:cxsync-cloud && npm run typecheck:product-apps",
     "typecheck:product-apps": "npm -w apps/auditor run typecheck && npm -w apps/ecommerce run typecheck && npm -w apps/b2b-connect run typecheck && npm -w apps/b2b-connect-admin run typecheck && npm -w apps/sports run typecheck && npm -w apps/learning run typecheck && npm -w apps/welfare run typecheck && npm -w apps/crm run typecheck && npm -w apps/sites run typecheck && npm -w apps/blog run typecheck && npm -w apps/zetro run typecheck && npm -w apps/textile-lab run typecheck && npm -w apps/garment run typecheck && npm -w apps/upvc run typecheck",
+=======
+    "check": "npm run typecheck:active && npm run build:active",
+    "lint": "npm -w apps/server run lint && npm -w apps/frontend run lint && npm -w packages/shared run lint",
+    "typecheck:active": "npm -w apps/server run typecheck && npm -w apps/frontend run typecheck && npm -w packages/shared run typecheck",
+>>>>>>> Stashed changes
     "test:tenant-static": "npm -w apps/server run test:tenant-static",
     "test:tenant-isolation": "npm -w apps/server run test:tenant-isolation",
     "build:active": "node apps/cli/build-active.mjs",
@@ -69,6 +76,7 @@
     "build:agent-os-api": "npm -w apps/agent-os-api run build",
     "build:ecommerce-api": "npm -w apps/ecommerce-api run build",
     "build:frontend": "npm -w apps/frontend run build",
+<<<<<<< Updated upstream
     "build:desktop": "npm -w packages/desktop run build",
     "build:cxsync": "npm -w apps/cxsync run build",
     "build:cxsync-cloud": "npm -w apps/cxsync-cloud run build",
@@ -89,6 +97,8 @@
     "test:contract:ecommerce-api": "npm -w apps/ecommerce-api run test:contract",
     "test:modules:billing-api": "npm -w apps/billing-api run test:modules",
     "test:mutations:billing-api": "npm -w apps/billing-api run test:mutations",
+=======
+>>>>>>> Stashed changes
     "db:refresh": "npm -w apps/server run db:refresh --",
     "db:fresh": "npm -w apps/server run db:fresh --",
     "db:migrate": "npm -w apps/server run db:migrate --",
@@ -102,6 +112,9 @@
     "github:now": "node apps/cli/github-helper.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.3"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1"
   }
 }

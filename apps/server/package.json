@@ -30,13 +30,13 @@
     "ioredis": "^5.10.1",
     "kysely": "^0.29.0",
     "mysql2": "^3.22.3",
-    "nodemailer": "^8.0.10",
+    "nodemailer": "^9.0.1",
     "playwright": "^1.60.0",
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.4",
     "typescript": "~5.8.3"
   }
 }

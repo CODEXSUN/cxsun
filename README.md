@@ -1,14 +1,15 @@
-<p align="center">
-  <img src="apps/frontend/public/logo.svg" alt="CXSun Logo" width="120" />
-</p>
-
 # CXSun
 
+<<<<<<< Updated upstream
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 **Version:** 1.0.131
+=======
+**Version:** 1.0.128
+>>>>>>> Stashed changes
 
-CXSun is a comprehensive, enterprise-grade TypeScript monorepo designed for high-performance ERP, E-commerce, and Multi-tenant SaaS platforms. It provides a robust foundation for building scalable, AI-native applications with a focus on data isolation and modularity.
+CXSun is now kept as a focused billing workspace: one Fastify backend, one React/Vite frontend, one shared utility package, and local CLI helpers.
 
+<<<<<<< Updated upstream
 CXSun is intentionally managed as one repo. The current combined backend remains available while the platform moves toward separately deployable backend services. Platform API is the first foundation service, followed by Billing API and other app-owned services.
 
 ## 🚀 Overview
@@ -82,50 +83,62 @@ CXSun can be used as a foundation for various business applications:
 | `npm run build:product-apps` | Compile all scaffolded product app shells |
 
 ## 🏗️ Project Structure
+=======
+## Active Shape
+>>>>>>> Stashed changes
 
 ```text
 cxsun/
 ├── apps/
-│   ├── server/          # High-performance Fastify backend
-│   ├── frontend/        # Modern React + Vite frontend
-│   └── cli/             # Internal developer experience tools
+│   ├── cli/        # local workflow scripts
+│   ├── frontend/   # React + Vite billing UI
+│   └── server/     # Fastify backend API
 ├── packages/
-│   ├── shared/          # Universal types and utilities
-│   ├── ui/              # Component library (Tailwind + shadcn/ui)
-│   └── desktop/         # Electron desktop application
-├── assist/              # AI-native agent context and rules
-└── storage/             # Persistent data and database storage
+│   └── shared/     # framework-free shared types/utilities
+├── assist/         # project rules and working notes
+└── storage/        # local runtime storage
 ```
 
-## 🤝 Contributing
+## Requirements
 
-We welcome contributions from the community! To get started:
+- Node.js 20+
+- npm 10+
+- MariaDB/MySQL for platform and tenant databases
 
-1.  **Fork** the repository.
-2.  **Create** a new feature branch (`git checkout -b feature/amazing-feature`).
-3.  **Commit** your changes (`git commit -m 'Add some amazing feature'`).
-4.  **Push** to the branch (`git push origin feature/amazing-feature`).
-5.  **Open** a Pull Request.
-
-Please ensure your code adheres to our TypeScript standards and includes appropriate tests.
-
-## 🧪 Testing
+## Setup
 
 ```bash
-# Run specific module tests
-npm -w apps/server run test:master-data
+npm install
+cp .env.sample .env
+npm run dev
 ```
 
-## 🐳 Deployment
+Update `.env` with your local database credentials before starting the server.
 
-Deploy using Docker Compose:
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start server and frontend together |
+| `npm run dev:server` | Start only the backend |
+| `npm run dev:frontend` | Start only the frontend |
+| `npm run typecheck:active` | Typecheck server, frontend, and shared package |
+| `npm run build:active` | Build server and frontend into root `build/` |
+| `npm run check` | Run active typechecks and builds |
+| `npm run db:migrate` | Run server migrations |
+| `npm run db:seed` | Seed server data |
+| `npm run db:setup` | Setup database schema and seed data |
+
+## Runtime
+
+- Backend default port: `6005`
+- Frontend default port: `6010`
+- Frontend API target is read from the server dev-state file during local `npm run dev`, or from `VITE_API_BASE_URL` when set.
+
+## Verification
+
+Before finishing meaningful changes, run:
+
 ```bash
-docker compose -f .container/docker-compose.yml up --build
+npm run check
 ```
-
-## 📄 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
----
-*For in-depth technical documentation, refer to [assist/README.md](assist/README.md).*

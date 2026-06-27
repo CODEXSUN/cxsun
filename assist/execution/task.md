@@ -1,10 +1,15 @@
 # Tasks
 
+<<<<<<< Updated upstream
 ## 2026-06-25 - Contact and address follow-up
+=======
+## 2026-06-26 - Billing workspace cleanup
+>>>>>>> Stashed changes
 
 **Batch:** #131
 **Owner:** Billing API, Contact frontend
 
+<<<<<<< Updated upstream
 ### Completed
 
 - [x] Make Pincode independent from Country, State, District, and City.
@@ -221,3 +226,14 @@ The remaining shared framework/helper dependencies are deferred to the platform 
 - [ ] Native-move Ecommerce module into `apps/ecommerce-api/src/modules/ecommerce`.
 - [ ] Add a mutation e2e that provisions a disposable tenant database and verifies settings/product publication/customer profile create/update flows.
 - [ ] Only remove combined-server ecommerce route implementation after standalone Ecommerce API traffic is proven.
+=======
+- [x] Read `assist/README.md`, rules, context, planning, and task notes.
+- [x] Identify stale workspace scripts and references after the cleanup.
+- [x] Limit root npm workspaces to `apps/cli`, `apps/server`, `apps/frontend`, and `packages/shared`.
+- [x] Update active typecheck, build, check, preflight, and version-bump scripts.
+- [x] Update root and assist documentation for the focused billing app shape.
+- [x] Remove deleted product app references from runtime registry and frontend runtime page.
+- [x] Remove leftover unused app/package directories.
+- [x] Regenerate `package-lock.json`.
+- [x] Run active verification commands.
+>>>>>>> Stashed changes

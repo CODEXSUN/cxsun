@@ -49,8 +49,11 @@
 - Put shared framework-free code under `packages/shared`.
 - Put shared reusable UI primitives, rich editors, dashboard shell components, and design-system helpers under `packages/ui`.
 - Use `apps/cli` for workflow helpers.
+<<<<<<< Updated upstream
 - Treat `packages/web` and `packages/mobile` as placeholders unless the user explicitly asks to activate them.
 - Treat `packages/desktop` as the active Electron desktop package.
+=======
+>>>>>>> Stashed changes
 
 ## Architecture
 
@@ -58,8 +61,13 @@
 - Follow Domain-Driven Design for business modules: each module represents a bounded context/domain.
 - Use events or explicit public contracts for cross-module behavior.
 - Do not import another module's internals directly.
+<<<<<<< Updated upstream
 - Keep owned products and industry apps in the same repo by default. Separate the app experience with app workspaces, routes, ports, domains, and later service deploy units when needed; do not duplicate billing, accounting, compliance, mail, files, CRM, sites/blog, auth, tenant/company, or ZETRO logic inside each app.
 - App-specific modules must request shared transaction behavior through the owning service or engine. For example, ecommerce, auditor, sports, learning, welfare, B2B Connect, and industry apps should call billing/accounting contracts for invoices, receipts, vouchers, postings, and reports.
+=======
+- Keep the active billing app focused. Add a new workspace only when it has a clear runtime, scripts, and verification path.
+- App-specific modules must request shared transaction behavior through server-owned services/engines instead of duplicating invoice, receipt, voucher, posting, mail, or report logic.
+>>>>>>> Stashed changes
 - Keep `@cxsun/shared` limited to types, constants, and pure utilities.
 - Frontend module pages must be standalone feature pages routed explicitly from the dashboard/router.
 - Keep module-specific UI logic inside that module's feature folder. Do not add product/contact/company/sales-specific switches to generic master-data or common-data pages.
