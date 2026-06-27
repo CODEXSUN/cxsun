@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import babel from '@rolldown/plugin-babel'
+import transformImports from '@rolldown/plugin-transform-imports'
 import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 
@@ -75,6 +76,11 @@ export default defineConfig(({ command, mode }) => {
     },
     plugins: [
       tailwindcss(),
+      transformImports({
+        '@tabler/icons-react': {
+          transform: '@tabler/icons-react/dist/esm/icons/{{member}}.mjs',
+        },
+      }),
       react(),
       enableReactCompiler && babel({
         include: /apps[\\/]frontend[\\/]src[\\/].*\.[jt]sx?$/,

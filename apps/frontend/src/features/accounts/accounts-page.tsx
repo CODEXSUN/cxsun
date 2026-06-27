@@ -381,8 +381,8 @@ function ChartOfAccountsPage({ session }: { session: AuthSession }) {
   const [searchValue, setSearchValue] = useState("")
   const groupsQuery = useQuery({ queryKey: ["account-groups", session.selectedTenant.slug], queryFn: () => listAccountGroups(session) })
   const ledgersQuery = useQuery({ queryKey: ["account-ledgers-all", session.selectedTenant.slug], queryFn: () => listAllAccountLedgers(session) })
-  const groups = groupsQuery.data ?? []
-  const ledgers = ledgersQuery.data ?? []
+  const groups = useMemo(() => groupsQuery.data ?? [], [groupsQuery.data])
+  const ledgers = useMemo(() => ledgersQuery.data ?? [], [ledgersQuery.data])
   const rows = useMemo(() => filterChartRows(groups, ledgers, searchValue), [groups, ledgers, searchValue])
 
   return (
@@ -1055,7 +1055,7 @@ function DayBookPage({ session }: { session: AuthSession }) {
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
-  const vouchers = dayBookQuery.data ?? []
+  const vouchers = useMemo(() => dayBookQuery.data ?? [], [dayBookQuery.data])
   const financialMonths = useMemo(() => financialYearMonths(vouchers), [vouchers])
   const filteredVouchers = useMemo(() => filterDayBookVouchers(vouchers, { fromDate, monthKey, toDate, voucherType }), [fromDate, monthKey, toDate, voucherType, vouchers])
   const dayBookTotals = dayBookSummary(filteredVouchers)
@@ -1291,7 +1291,7 @@ function MonthlyMovementPage({ session }: { session: AuthSession }) {
     },
     onError: (error) => toast.error("Recalculate failed", { description: error instanceof Error ? error.message : "Please try again." }),
   })
-  const vouchers = dayBookQuery.data ?? []
+  const vouchers = useMemo(() => dayBookQuery.data ?? [], [dayBookQuery.data])
   const financialMonths = useMemo(() => financialYearMonths(vouchers, selectedYear?.startDate), [selectedYear?.startDate, vouchers])
   const rows = useMemo(() => buildMonthlyAccountReport(vouchers, cashBookQuery.data ?? [], bankBookQuery.data ?? [], financialMonths), [bankBookQuery.data, cashBookQuery.data, financialMonths, vouchers])
   const totals = monthlyReportTotals(rows)

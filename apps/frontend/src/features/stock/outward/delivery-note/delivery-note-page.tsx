@@ -102,7 +102,7 @@ export function DeliveryNotePage({ session }: { session: AuthSession }) {
   const restoreMutation = useMutation({ mutationFn: (entry: DeliveryNoteEntry) => restoreDeliveryNoteEntry(session, entry) })
   const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: DeliveryNoteEntry; body: string }) => addDeliveryNoteComment(session, entry, body) })
   const toolMutation = useMutation({ mutationFn: ({ entry, tool }: { entry: DeliveryNoteEntry; tool: string }) => runDeliveryNoteTool(session, entry, tool) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = useMemo(() => searchDeliveryNote(entries, searchValue).sort((left, right) => String(left.entry_no).localeCompare(String(right.entry_no))), [entries, searchValue])
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage))
   const pageEntries = filteredEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
@@ -1565,4 +1565,3 @@ function formatDateTimeWithZone(value?: string | null) {
 function formatMoney(value: number) {
   return new Intl.NumberFormat(undefined, { currency: "INR", maximumFractionDigits: 2, style: "currency" }).format(Number(value ?? 0))
 }
-

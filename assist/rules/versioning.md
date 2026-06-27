@@ -61,7 +61,7 @@ npm run version:bump -- --title "<title>" --no-database-update
 - Assist rules/context/execution docs must be updated when the decision affects architecture, service ownership, release process, verification, or AI workflow.
 - If a feature is not ready for central client docs, add a short local implementation note explaining why it is still internal.
 - Do not finish a code change with undocumented new behavior unless the change is truly invisible plumbing and the changelog explains it.
-- When docs change in `apps/docs`, run the docs build required by `assist/rules/verification.md`.
+- When documentation changes, run the active verification required by `assist/rules/verification.md`.
 - Run `npm run check:docs-progress` before finalizing work that changes code, service boundaries, rules, documentation workflow, changelog policy, or package versions.
 
 ## Release Operation

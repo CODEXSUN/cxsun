@@ -74,10 +74,10 @@ export function SubscriptionPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
   const catalogQuery = useQuery({ queryKey: ["subscription-catalog"], queryFn: () => getSubscriptionCatalog(session) })
   const tenantsQuery = useQuery({ queryKey: ["tenants-for-subscriptions"], queryFn: () => listTenants(session) })
-  const apps = catalogQuery.data?.apps ?? []
-  const plans = catalogQuery.data?.plans ?? []
-  const subscriptions = catalogQuery.data?.subscriptions ?? []
-  const tenants = tenantsQuery.data ?? []
+  const apps = useMemo(() => catalogQuery.data?.apps ?? [], [catalogQuery.data?.apps])
+  const plans = useMemo(() => catalogQuery.data?.plans ?? [], [catalogQuery.data?.plans])
+  const subscriptions = useMemo(() => catalogQuery.data?.subscriptions ?? [], [catalogQuery.data?.subscriptions])
+  const tenants = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data])
   const [tenantSearch, setTenantSearch] = useState("")
   const [selectedTenantId, setSelectedTenantId] = useState<number | null>(null)
   const [pageMode, setPageMode] = useState<SubscriptionPageMode>("list")

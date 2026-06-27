@@ -70,7 +70,7 @@ export default function QueueManagerPage({ session }: { session: AuthSession }) 
   })
   const stats = useMemo(() => overviewQuery.data?.stats ?? [], [overviewQuery.data?.stats])
   const runtime = overviewQuery.data?.runtime
-  const jobs = jobsQuery.data?.jobs ?? []
+  const jobs = useMemo(() => jobsQuery.data?.jobs ?? [], [jobsQuery.data?.jobs])
   const allSelected = jobs.length > 0 && jobs.every((job) => selectedJobIds.includes(job.id))
   const selectedCount = selectedJobIds.length
   const deleteSelectedMutation = useMutation({

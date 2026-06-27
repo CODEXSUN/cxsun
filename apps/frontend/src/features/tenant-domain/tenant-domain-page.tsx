@@ -578,8 +578,8 @@ function TenantDomainUpsertPage({
   const tenantsQuery = useQuery({ queryKey: ["tenants", session.selectedTenant.slug], queryFn: () => listTenants(session) })
   const industriesQuery = useQuery({ queryKey: ["industries", "tenant-domain-settings", session.selectedTenant.slug], queryFn: () => listIndustries(session) })
   const upsertMutation = useMutation({ mutationFn: (input: TenantDomainForm) => upsertDomain(session, input) })
-  const tenants = tenantsQuery.data ?? []
-  const industries = (industriesQuery.data ?? []).filter((industry) => industry.status === "active")
+  const tenants = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data])
+  const industries = useMemo(() => (industriesQuery.data ?? []).filter((industry) => industry.status === "active"), [industriesQuery.data])
   const [form, setForm] = useState<TenantDomainForm>(() => domain ? toForm(domain) : emptyForm(tenants[0]?.id))
   const selectedTenant = tenants.find((tenant) => tenant.id === form.tenant_id) ?? null
   const companyOptions = useMemo(() => tenantCompanyOptions(selectedTenant), [selectedTenant])

@@ -117,7 +117,7 @@ export function CompanyPage({ session }: { session: AuthSession }) {
   const restoreMutation = useMutation({
     mutationFn: (company: CompanyRecord) => restoreCompany(session, company.id),
   })
-  const companies = companiesQuery.data ?? []
+  const companies = useMemo(() => companiesQuery.data ?? [], [companiesQuery.data])
   const isLoading = companiesQuery.isFetching
 
   useEffect(() => {

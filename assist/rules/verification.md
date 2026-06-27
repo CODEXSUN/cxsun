@@ -1,4 +1,4 @@
-# Verification Rules
+﻿# Verification Rules
 
 Run checks that match the files changed. Prefer targeted workspace checks during development and the full active check before finalizing meaningful changes.
 
@@ -33,35 +33,6 @@ Shared package changes under `packages/shared`:
 - `npm -w packages/shared run typecheck`
 - Also run affected app typechecks when shared exports are consumed by apps.
 
-<<<<<<< Updated upstream
-Shared UI changes under `packages/ui`:
-
-- `npm -w packages/ui run typecheck`
-- Run affected app typechecks or builds when shared UI exports are consumed by apps.
-
-Desktop, web, or mobile package changes:
-
-- Run that workspace's `typecheck` script.
-- Run additional app build/dev checks when the package becomes active or user-facing.
-
-CXSync Desktop or CXSync Cloud changes:
-
-- `npm -w apps/cxsync-cloud run test:contract`
-- `npm -w apps/cxsync-cloud run typecheck`
-- `npm -w apps/cxsync-cloud run build`
-- `npm -w apps/cxsync run typecheck`
-- `npm -w apps/cxsync run compile:electron`
-- Run `npm -w apps/cxsync-cloud run test:integration` against a configured live service and master tenant when transport, authentication, handshake, or report persistence changes.
-
-Platform API changes:
-
-- `npm run typecheck:platform-api`
-- `npm run build:platform-api`
-- `npm -w apps/platform-api run test:contract` when MariaDB is configured.
-- `npm -w apps/platform-api run test:e2e` when Platform API routes, auth, tenant, domain, industry, user-management, or service runtime behavior changes.
-
-=======
->>>>>>> Stashed changes
 Assist-only documentation changes:
 
 - Run `rg` scans for stale paths when architecture or workflow guidance changes.

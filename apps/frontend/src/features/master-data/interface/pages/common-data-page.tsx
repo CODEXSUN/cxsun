@@ -53,8 +53,11 @@ export function CommonModulePage({ moduleKey, session }: CommonModulePageProps) 
   const destroyMutation = useMutation({ mutationFn: (record: MasterDataRecord) => destroyMasterDataRecord(session, moduleKey, record.uuid) })
   const restoreMutation = useMutation({ mutationFn: (record: MasterDataRecord) => restoreMasterDataRecord(session, moduleKey, record.uuid) })
   const definition = modulesQuery.data?.find((module) => module.key === moduleKey) ?? null
-  const records = recordsQuery.data ?? []
-  const referenceOptions = referenceModuleKey === "countries" ? (countriesQuery.data ?? []) : (referenceQuery.data ?? [])
+  const records = useMemo(() => recordsQuery.data ?? [], [recordsQuery.data])
+  const referenceOptions = useMemo(
+    () => referenceModuleKey === "countries" ? (countriesQuery.data ?? []) : (referenceQuery.data ?? []),
+    [countriesQuery.data, referenceModuleKey, referenceQuery.data],
+  )
   const referenceLookup = useMemo(() => buildReferenceLookup(referenceModuleKey, referenceOptions), [referenceModuleKey, referenceOptions])
   const filteredRecords = useMemo(() => searchCommonRecords(records, searchValue, definition, referenceLookup), [referenceLookup, definition, records, searchValue])
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / rowsPerPage))

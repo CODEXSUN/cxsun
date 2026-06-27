@@ -46,7 +46,7 @@ export function MediaPickerDialog({
     queryKey,
     queryFn: () => listMediaAssets(session, { folder: activeFolder, search, visibility }),
   })
-  const assets = assetsQuery.data ?? []
+  const assets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data])
   const folders = useMemo(() => Array.from(new Set(assets.map((asset) => asset.folder))).sort(), [assets])
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {

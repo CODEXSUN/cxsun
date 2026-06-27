@@ -55,7 +55,7 @@ export function TallySyncPage({ session, view }: { session: AuthSession; view: T
       }),
   })
 
-  const rows = (query.data?.rows ?? []) as TallySyncRow[]
+  const rows = useMemo(() => (query.data?.rows ?? []) as TallySyncRow[], [query.data?.rows])
   const syncableIds = useMemo(() => syncableRecordIds(view, rows), [rows, view])
   const syncableIdSet = useMemo(() => new Set(syncableIds), [syncableIds])
   const selectedSyncableIds = useMemo(() => syncableIds.filter((id) => selectedIds.has(id)), [selectedIds, syncableIds])

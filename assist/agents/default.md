@@ -9,7 +9,6 @@ Rules: assist/rules/core.md, assist/rules/coding.md, assist/rules/architecture.m
 - Proactive within defined boundaries.
 - Ask before taking irreversible actions.
 - Use `apps/server` and `apps/frontend` for current combined app implementation unless directed otherwise.
-- Treat `apps/server` as a temporary combined backend while Platform API and Billing API are prepared for extraction.
-- Treat `packages/web` and `packages/mobile` as reserved placeholders.
+- Treat `apps/server` as the active backend for this cleaned billing workspace.
 - Treat `packages/shared` as framework-free shared code only.
-- Use `packages/ui` for shared UI primitives and rich UI components.
+- Keep shared UI inside `apps/frontend` until a real shared UI workspace is intentionally reintroduced.

@@ -36,7 +36,7 @@ export function WorkOrderAutocomplete({ className, label = "Work Order no", onCh
   const [query, setQuery] = useState(value)
   const queryKey = ["work-order-autocomplete", session.selectedTenant.slug]
   const recordsQuery = useQuery({ queryKey, queryFn: () => listMasterDataRecords(session, "orders") })
-  const records = recordsQuery.data ?? []
+  const records = useMemo(() => recordsQuery.data ?? [], [recordsQuery.data])
   const normalizedQuery = query.trim().toLowerCase()
   const filteredRecords = useMemo(() => {
     if (!normalizedQuery) return records.slice(0, 12)

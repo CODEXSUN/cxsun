@@ -108,7 +108,7 @@ export function PaymentPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   const correctionMutation = useMutation({ mutationFn: (entry: PaymentEntry) => paymentActions.createCorrection(session, entry) })
   const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PaymentEntry; printHtml?: string; tool: string }) => paymentActions.runTool(session, entry, tool, printHtml) })
   const reversalMutation = useMutation({ mutationFn: (entry: PaymentEntry) => paymentActions.createReversal(session, entry) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = useMemo(() => filterPayments(searchPayments(entries, searchValue), statusFilter).sort((left, right) => left.payment_no.localeCompare(right.payment_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizePaymentsByMonth(filteredEntries), [filteredEntries])
   const monthlyTotal = useMemo(() => totalMonthlyPayments(monthlyEntries), [monthlyEntries])
@@ -639,7 +639,7 @@ function PaymentDetailsTab({ contacts, form, ledgers, onCreateContact, session, 
 
 function PaymentAllocationsTab({ form, session, setForm }: { form: PaymentEntryInput; session: AuthSession; setForm: Dispatch<SetStateAction<PaymentEntryInput>> }) {
   const purchaseQuery = useQuery(paymentQueries.openPurchases(session))
-  const allocations = form.allocations?.length ? form.allocations : [emptyPaymentAllocation()]
+  const allocations = useMemo(() => form.allocations?.length ? form.allocations : [emptyPaymentAllocation()], [form.allocations])
   const openBills = useMemo(() => openPurchaseBillOptions(purchaseQuery.data ?? [], allocations), [allocations, purchaseQuery.data])
   return (
     <div className="space-y-3">

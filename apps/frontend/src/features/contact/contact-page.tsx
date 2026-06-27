@@ -87,7 +87,7 @@ export function ContactPage({ session }: { session: AuthSession }) {
   const upsertMutation = useMutation({ mutationFn: (input: ContactInput) => upsertContact(session, input) })
   const destroyMutation = useMutation({ mutationFn: (contact: ContactRecord) => destroyContact(session, contact) })
   const restoreMutation = useMutation({ mutationFn: (contact: ContactRecord) => restoreContact(session, contact) })
-  const contacts = contactsQuery.data ?? []
+  const contacts = useMemo(() => contactsQuery.data ?? [], [contactsQuery.data])
   const filteredContacts = useMemo(() => filterContacts(searchContacts(contacts, searchValue), statusFilter), [contacts, searchValue, statusFilter])
   const totalPages = Math.max(1, Math.ceil(filteredContacts.length / rowsPerPage))
   const pageContacts = filteredContacts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)

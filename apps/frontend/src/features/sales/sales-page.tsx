@@ -138,7 +138,7 @@ export function SalesPage({ initialEntryUuid, session }: { initialEntryUuid?: st
   const correctionMutation = useMutation({ mutationFn: (entry: SalesEntry) => salesActions.createCorrection(session, entry) })
   const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: SalesEntry; printHtml?: string; tool: string }) => salesActions.runTool(session, entry, tool, printHtml) })
   const reversalMutation = useMutation({ mutationFn: (entry: SalesEntry) => salesActions.createReversal(session, entry) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = useMemo(() => filterSales(searchSales(entries, searchValue), statusFilter).sort((left, right) => compareDocumentNo(left.invoice_no, right.invoice_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizeSalesByMonth(filteredEntries), [filteredEntries])
   const monthlyTotal = useMemo(() => totalMonthlySales(monthlyEntries), [monthlyEntries])

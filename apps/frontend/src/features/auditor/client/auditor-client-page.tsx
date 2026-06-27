@@ -45,7 +45,7 @@ export function AuditorClientPage({ session }: { session: AuthSession }) {
   const queryKey = ["auditor-clients", session.selectedTenant.slug]
   const clientsQuery = useQuery({ queryKey, queryFn: () => listAuditorClients(session) })
   const saveMutation = useMutation({ mutationFn: (input: AuditorClientInput) => upsertAuditorClient(session, input) })
-  const clients = clientsQuery.data ?? []
+  const clients = useMemo(() => clientsQuery.data ?? [], [clientsQuery.data])
   const filtered = useMemo(() => clients.filter((client) => {
     const term = search.trim().toLowerCase()
     const matchesSearch = !term || [client.id, client.uuid, client.name, client.group, client.gstin, client.mobile].some((value) => String(value ?? "").toLowerCase().includes(term))

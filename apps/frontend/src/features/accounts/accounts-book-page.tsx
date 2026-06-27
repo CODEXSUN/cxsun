@@ -72,8 +72,8 @@ function AccountBookPage({ bookType, description, session, title }: { bookType: 
   const restoreMutation = useMutation({ mutationFn: (entry: AccountBookEntry) => restoreAccountBookEntry(session, bookType, entry) })
   const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: AccountBookEntry; body: string }) => addAccountBookComment(session, bookType, entry, body) })
   const toolMutation = useMutation({ mutationFn: ({ entry, tool }: { entry: AccountBookEntry; tool: string }) => runAccountBookTool(session, bookType, entry, tool) })
-  const entries = entriesQuery.data ?? []
-  const ledgers = ledgersQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
+  const ledgers = useMemo(() => ledgersQuery.data ?? [], [ledgersQuery.data])
   const filteredEntries = useMemo(() => searchEntries(entries, ledgers, searchValue), [entries, ledgers, searchValue])
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage))
   const pageEntries = filteredEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)

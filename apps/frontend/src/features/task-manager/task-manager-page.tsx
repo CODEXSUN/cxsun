@@ -149,7 +149,7 @@ export function TaskManagerPage({ scope = "all", session }: { scope?: TaskManage
       })
     },
   })
-  const tasks = query.data ?? []
+  const tasks = useMemo(() => query.data ?? [], [query.data])
   const filteredTasks = useMemo(() => {
     const term = searchValue.trim().toLowerCase()
     return tasks.filter((task) => {

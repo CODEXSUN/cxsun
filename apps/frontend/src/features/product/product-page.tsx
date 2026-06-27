@@ -70,7 +70,7 @@ export function ProductPage({ session }: { session: AuthSession }) {
   const destroyMutation = useMutation({ mutationFn: (record: MasterDataRecord) => destroyMasterDataRecord(session, "products", record.uuid) })
   const restoreMutation = useMutation({ mutationFn: (record: MasterDataRecord) => restoreMasterDataRecord(session, "products", record.uuid) })
   const references = useProductReferences(session)
-  const products = productsQuery.data ?? []
+  const products = useMemo(() => productsQuery.data ?? [], [productsQuery.data])
   const filteredProducts = useMemo(() => filterProducts(searchProducts(products, searchValue, references), statusFilter), [products, references, searchValue, statusFilter])
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / rowsPerPage))
   const pageProducts = filteredProducts.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)

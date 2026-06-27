@@ -48,17 +48,6 @@ function runNpm(label, args) {
 const totalStartedAt = performance.now()
 
 runNpm('Backend server build', ['-w', 'apps/server', 'run', 'build'])
-runNpm('Platform package build', ['-w', '@cxsun/platform', 'run', 'build'])
-runNpm('Platform API build', ['-w', 'apps/platform-api', 'run', 'build'])
-runNpm('Billing API build', ['-w', 'apps/billing-api', 'run', 'build'])
-runNpm('Sites API build', ['-w', 'apps/sites-api', 'run', 'build'])
-runNpm('CRM API build', ['-w', 'apps/crm-api', 'run', 'build'])
-runNpm('Tally API build', ['-w', 'apps/tally-api', 'run', 'build'])
-runNpm('Frappe API build', ['-w', 'apps/frappe-api', 'run', 'build'])
-runNpm('Task Manager API build', ['-w', 'apps/task-manager-api', 'run', 'build'])
-runNpm('Auditor API build', ['-w', 'apps/auditor-api', 'run', 'build'])
-runNpm('Blog API build', ['-w', 'apps/blog-api', 'run', 'build'])
-runNpm('Agent OS API build', ['-w', 'apps/agent-os-api', 'run', 'build'])
 runNpm('Frontend app build', ['-w', 'apps/frontend', 'run', 'build'])
 
 console.log(`\n[build] Active build completed in ${formatDuration(performance.now() - totalStartedAt)}`)

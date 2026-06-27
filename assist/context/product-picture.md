@@ -6,7 +6,7 @@ This document is the clear product picture for CXSun. It describes what we are b
 
 CXSun is a multi-tenant commerce and business operating platform. Each tenant gets an isolated workspace to run storefront, sales, inventory, finance, company, and day-to-day operations from one system. The platform team gets separate tools to operate the software, support users, manage tenants, and keep the system healthy.
 
-Owned products and industry products should remain in the same monorepo. Different products may have separate app surfaces, ports, domains, backend services, and deployment units, but shared billing, accounting, compliance, mail, CRM, sites/blog, payments, files, auth, tenant/company, ZETRO, and GST logic belongs behind the owning service contracts. See `assist/context/one-repo-multi-backend.md`.
+The cleaned workspace currently keeps the working product in one backend and one frontend. Future products can be reintroduced only when they have a clear runtime, scripts, documentation, and verification path.
 
 The product should feel like one connected operating layer:
 

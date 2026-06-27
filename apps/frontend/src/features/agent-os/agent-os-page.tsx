@@ -42,7 +42,10 @@ export function AgentOsPage({ session, view = "base" }: { session: AuthSession; 
     queryFn: () => getZetroQueryRegistry(session),
   })
   const status = statusQuery.data ?? null
-  const platformConnections = adminMode ? status?.provider_connections.length ? status.provider_connections : fallbackProviders : []
+  const platformConnections = useMemo(
+    () => adminMode ? status?.provider_connections.length ? status.provider_connections : fallbackProviders : [],
+    [adminMode, status?.provider_connections],
+  )
   const activeProvider = useMemo(
     () => platformConnections.find((connection) => connection.provider === providerKey) ?? status?.api_connection ?? null,
     [providerKey, status?.api_connection, platformConnections],

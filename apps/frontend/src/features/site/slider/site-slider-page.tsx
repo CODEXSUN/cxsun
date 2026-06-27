@@ -52,7 +52,7 @@ export function SiteSliderPage({ session }: { session: AuthSession }) {
   const query = useQuery({ queryKey: ["site-sliders", session.selectedTenant.slug], queryFn: () => listSiteSliders(session) })
   const saveMutation = useMutation({ mutationFn: (input: SiteSliderInput) => upsertSiteSlider(session, input) })
   const deleteMutation = useMutation({ mutationFn: (slider: SiteSlider) => deleteSiteSlider(session, slider) })
-  const sliders = query.data ?? []
+  const sliders = useMemo(() => query.data ?? [], [query.data])
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return sliders.filter((slider) => !term || [slider.name, slider.slug, slider.placement, slider.status].some((value) => value.toLowerCase().includes(term)))

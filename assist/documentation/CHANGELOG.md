@@ -29,6 +29,9 @@ New changelog entries must keep database-facing work and application code work s
 #### App Codebase Changes
 
 - Bumped workspace version to 1.0.131
+- Cleaned the active repository back to the working billing workspace by removing unused standalone app/package folders, service-split scripts, extracted-service frontend startup checks, and stale assist guidance while keeping `apps/server`, `apps/frontend`, `apps/cli`, and `packages/shared` as the runnable workspaces.
+- Removed the remaining frontend lint warnings by stabilizing query-data fallback arrays with memoized defaults, fixing media preview blob URL cleanup, and documenting the TanStack Table React Compiler compatibility suppression.
+- Tightened the active dependency graph by removing unused frontend Playwright test tooling, moving Nodemailer types to server dev dependencies, and adding a focused Rolldown import transform for Tabler icons so production builds no longer resolve the full icon barrel.
 - Released the extracted backend service stack with standalone Platform, Billing, Ecommerce, Sites, CRM, Tally, Frappe, Task Manager, Auditor, Blog, and Agent OS API workspaces.
 - Kept extracted services independent from `apps/server` by using the shared `@cxsun/platform` runtime and service-specific frontend API base URLs.
 - Added concurrent Billing and full extracted-stack development commands, health/readiness checks, container runtime modes, and service-aware local preflight behavior.

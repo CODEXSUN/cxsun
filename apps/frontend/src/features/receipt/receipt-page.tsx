@@ -108,7 +108,7 @@ export function ReceiptPage({ initialEntryUuid, session }: { initialEntryUuid?: 
   const correctionMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => receiptActions.createCorrection(session, entry) })
   const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: ReceiptEntry; printHtml?: string; tool: string }) => receiptActions.runTool(session, entry, tool, printHtml) })
   const reversalMutation = useMutation({ mutationFn: (entry: ReceiptEntry) => receiptActions.createReversal(session, entry) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = useMemo(() => filterReceipts(searchReceipts(entries, searchValue), statusFilter).sort((left, right) => left.receipt_no.localeCompare(right.receipt_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizeReceiptsByMonth(filteredEntries), [filteredEntries])
   const monthlyTotal = useMemo(() => totalMonthlyReceipts(monthlyEntries), [monthlyEntries])
@@ -639,7 +639,7 @@ function ReceiptDetailsTab({ contacts, form, ledgers, onCreateContact, session, 
 
 function ReceiptAllocationsTab({ form, session, setForm }: { form: ReceiptEntryInput; session: AuthSession; setForm: Dispatch<SetStateAction<ReceiptEntryInput>> }) {
   const salesQuery = useQuery(receiptQueries.openSales(session))
-  const allocations = form.allocations?.length ? form.allocations : [emptyReceiptAllocation()]
+  const allocations = useMemo(() => form.allocations?.length ? form.allocations : [emptyReceiptAllocation()], [form.allocations])
   const openInvoices = useMemo(() => openSalesInvoiceOptions(salesQuery.data ?? [], allocations), [allocations, salesQuery.data])
   return (
     <div className="space-y-3">

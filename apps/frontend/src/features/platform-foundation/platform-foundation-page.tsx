@@ -12,9 +12,9 @@ export function PlatformFoundationPage({ session }: { session: AuthSession }) {
   const queryClient = useQueryClient()
   const [token, setToken] = useState("")
   const query = useQuery({ queryKey: ["platform-foundation"], queryFn: () => listPlatformFoundation(session) })
-  const tokenMutation = useMutation({ mutationFn: () => createServiceToken(session, { name: `Billing Service ${Date.now()}`, service_code: "billing-api", scopes: ["tenant.read", "billing.sales.create"] }) })
+  const tokenMutation = useMutation({ mutationFn: () => createServiceToken(session, { name: `Billing Service ${Date.now()}`, service_code: "billing", scopes: ["tenant.read", "billing.sales.create"] }) })
   const appMutation = useMutation({ mutationFn: () => upsertPlatformApp(session, { code: "billing", name: "Billing", category: "business" }) })
-  const policyMutation = useMutation({ mutationFn: () => upsertPlatformPolicy(session, { code: "billing.sales.create", name: "Create Billing Sales", description: "Allows Billing API sales creation through service contracts." }) })
+  const policyMutation = useMutation({ mutationFn: () => upsertPlatformPolicy(session, { code: "billing.sales.create", name: "Create Billing Sales", description: "Allows billing sales creation through service contracts." }) })
   const outboxMutation = useMutation({ mutationFn: () => processPlatformOutbox(session) })
 
   const data = query.data

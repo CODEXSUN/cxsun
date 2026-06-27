@@ -417,17 +417,20 @@ const tenantUserRoles: Array<{ value: TenantUserRole; label: string }> = [
 function TenantUserManagerPage({ mode, session }: { mode: UserManagerMode; session: AuthSession }) {
   const isPlatformMode = mode === "platform"
   const queryClient = useQueryClient()
-  const sessionTenant: TenantUserTenantOption = {
+  const sessionTenant: TenantUserTenantOption = useMemo(() => ({
     id: session.selectedTenant.id,
     code: session.selectedTenant.code,
     slug: session.selectedTenant.slug,
     name: session.selectedTenant.name,
     status: session.selectedTenant.status as TenantUserTenantOption["status"],
-  }
+  }), [session.selectedTenant.code, session.selectedTenant.id, session.selectedTenant.name, session.selectedTenant.slug, session.selectedTenant.status])
   const tenantsQuery = useQuery({ enabled: isPlatformMode, queryKey: ["tenant-user-manager-tenants"], queryFn: () => listTenants(session) })
   const summariesQuery = useQuery({ enabled: isPlatformMode, queryKey: ["tenant-user-manager-summary"], queryFn: () => listTenantUserSummaries(session) })
-  const tenants: TenantUserTenantOption[] = isPlatformMode ? tenantsQuery.data ?? [] : [sessionTenant]
-  const summaries = summariesQuery.data ?? []
+  const tenants: TenantUserTenantOption[] = useMemo(
+    () => isPlatformMode ? tenantsQuery.data ?? [] : [sessionTenant],
+    [isPlatformMode, sessionTenant, tenantsQuery.data],
+  )
+  const summaries = useMemo(() => summariesQuery.data ?? [], [summariesQuery.data])
   const [selectedTenantId, setSelectedTenantId] = useState<number>(() => session.selectedTenant.id)
   const activeTenantId = tenants.some((tenant) => tenant.id === selectedTenantId) ? selectedTenantId : tenants[0]?.id ?? session.selectedTenant.id
   const usersQuery = useQuery({

@@ -1,4 +1,4 @@
-# Session Review
+﻿# Session Review
 
 **Date:** 2026-05-14
 **Project:** cxsun v1.0.08
@@ -24,7 +24,7 @@ read assist/readme and prepare for work
 ```
 update assist guidance for billing with all  Billing-API.md and sub folders readme
 
-fix docs need a “Billing support routes mounted for workflow dependency” section, or these routes should move behind Platform API calls later.
+fix docs need a â€œBilling support routes mounted for workflow dependencyâ€ section, or these routes should move behind Platform API calls later.
 
 fix missing app-aware tenant provisioning.
 
@@ -73,7 +73,7 @@ add shad cn package and connect with npx shadcn@latest add dashboard-07 and npx 
 ## Current Prompt
 
 ```
-This site can’t be reached
+This site canâ€™t be reached
 The web page at http://localhost:6000/ might be temporarily down or it may have
 
 "C:\Program Files\nodejs\npm.cmd" run dev
@@ -83,9 +83,9 @@ The web page at http://localhost:6000/ might be temporarily down or it may have
 
 [server] ...
 [web]   VITE v8.0.12  ready in 609 ms
-[web]   ➜  Local:   http://localhost:6000/
-[server]   ✓ Server running at http://localhost:6001
-[server]   ✓ Health check: {"status":"ok","uptime":82,"timestamp":"2026-05-14T06:25:38.978Z","version":"1.0.08"}
+[web]   âžœ  Local:   http://localhost:6000/
+[server]   âœ“ Server running at http://localhost:6001
+[server]   âœ“ Health check: {"status":"ok","uptime":82,"timestamp":"2026-05-14T06:25:38.978Z","version":"1.0.08"}
 ```
 
 ## Current Prompt
@@ -2347,17 +2347,17 @@ Build Agent OS in layers.
 
 Phase 0 - Core Principle
 User
- ↓
+ â†“
 Agent Router
- ↓
+ â†“
 Specialized Agents
- ↓
+ â†“
 Site Actions / Database / APIs
 
 Not:
 
 User
- ↓
+ â†“
 One Giant Agent
 
 Multi-agent wins because each agent has one job.
@@ -2615,205 +2615,12 @@ User prompt:
 ok next
 ```
 
-<<<<<<< Updated upstream
-## 2026-06-26 - Platform and Billing API hardening
-=======
 ## 2026-06-26 - Billing workspace cleanup
->>>>>>> Stashed changes
 
 User prompt:
 
 ```text
-<<<<<<< Updated upstream
-any improvement in billing and platform api
-```
-
-User prompt:
-
-```text
-ok fine implement all
-```
-
-## 2026-06-26 - Local dev port and env audit
-
-User prompt:
-
-```text
-check all ports and .env and .env.sample  is having correct value
-```
-
-## 2026-06-26 - Billing stack startup health check socket failure
-
-User prompt:
-
-```text
-"C:\Program Files\nodejs\npm.cmd" run dev:billing-stack
-
-> cxsun@1.0.131 dev:billing-stack
-...
-[platform] [TypeError: fetch failed] {
-[platform]   [cause]: SocketError: other side closed
-[platform]     code: 'UND_ERR_SOCKET',
-[platform]     socket: {
-[platform]       localAddress: '::1',
-[platform]       remoteAddress: '::1',
-[platform]       remotePort: 6105,
-[platform]       remoteFamily: 'IPv6',
-[platform]       bytesWritten: 175,
-[platform]       bytesRead: 0
-```
-
-## 2026-06-26 - Purchase contact popup supplier code and legal name behavior
-
-User prompt:
-
-```text
-on purchase when create new contact on pop up it is showing name as code change this to s-0001 format next no and Legal name to capitalised and can override buy user
-```
-
-User prompt:
-
-```text
-make the same for sales contact , receipt , payment, export sales , quotation
-```
-
-User pasted browser console output showing:
-
-```text
-GET http://localhost:6205/api/v1/contacts/next-code 500 (Internal Server Error)
-POST http://localhost:6205/api/v1/contacts/upsert 500 (Internal Server Error)
-contact-client.ts:164 Uncaught (in promise) Error: Internal Server Error
-```
-
-User pasted billing server error:
-
-```text
-Internal Server Error; Table 'codexsun_db.contact_code_sequences' doesn't exist in ContactMasterRepository.synchronizeCode during POST /api/v1/contacts/upsert.
-```
-
-User prompt:
-
-```text
-create full set of test suit for sale, purchase and test it e2e
-
-make create all pop up except eway and einvoice
-
-test rest of all and finalise any error
-```
-
-User pasted browser console output:
-
-```text
-localhost:6105/api/v1/auth/login:1 Failed to load resource: the server responded with a status of 500 (Internal Server Error)
-```
-
-User prompt:
-
-```text
-ok fine record this in out assist/execution/futureNotes.md
-```
-
-User prompt:
-
-```text
-there is two global spinner running at load make it one keep this
-```
-
-User clarification:
-
-```text
-don't change global spinner
-```
-
-User prompt:
-
-```text
-in global spinner make backdrop little transparent so it show blured app
-```
-
-User prompt:
-
-```text
-ok fine do all pending what you can do now
-```
-
-## 2026-06-25 - Standalone Billing API release
-
-User prompt:
-
-```text
-create log in changelog with version bump
-```
-
-User prompt:
-
-```text
-run and test that platform-api and billing-api is wired to frontend and working fine with e2e testing
-```
-
-User prompt:
-
-```text
-make this concurrently script on package.json to run concurrently
-```
-
-User prompt:
-
-```text
-add preflight to check already port is used if so kill existing and reuse this on restart
-```
-
-User prompt:
-
-```text
-check at this frontend is taking too much time fix this make first paint as soon as possible and then load some content or load loader that we can understand app is running
-```
-
-User-reported browser error:
-
-```text
-localhost:6005/api/v1/auth/login:1 Failed to load resource: net::ERR_CONNECTION_REFUSED
-```
-
-User prompt:
-
-```text
-can we make this log in readable formatted look
-```
-
-User prompt:
-
-```text
-public pages are not displayed how to solve this
-```
-
-User prompt:
-
-```text
-in side dashboard is using existing for can fix this alos
-```
-
-## 2026-06-25 - One repo, multiple backend services documentation
-
-User prompt:
-
-```text
-ok fine create required documentation first for assist ai rules and each modules and then we move next
-```
-
-## 2026-06-25 - Consolidate service split documentation
-
-User prompt:
-
-```text
-ok fine write this also with clean documentation and review our documentation and consolidate and show me what we done ,
-
-move drop or unwanted to new folder trash inside assist , so i can review and delete saftely
-
-consolidate assist documentation and app documentation
-=======
 ok fine clean up all un used and make work of this computer
->>>>>>> Stashed changes
 ```
 
 User prompt:

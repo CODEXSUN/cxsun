@@ -22,8 +22,8 @@ export function MySubscriptionPage({ session }: { session: AuthSession }) {
     queryKey: ["my-subscription-catalog", session.selectedTenant.slug],
     queryFn: () => getMySubscriptionCatalog(session),
   })
-  const apps = catalogQuery.data?.apps ?? []
-  const plans = catalogQuery.data?.plans ?? []
+  const apps = useMemo(() => catalogQuery.data?.apps ?? [], [catalogQuery.data?.apps])
+  const plans = useMemo(() => catalogQuery.data?.plans ?? [], [catalogQuery.data?.plans])
   const subscription = catalogQuery.data?.subscription ?? null
   const [selectedPlanUuid, setSelectedPlanUuid] = useState("")
   const [selectedApps, setSelectedApps] = useState<string[]>([])

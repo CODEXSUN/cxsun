@@ -58,15 +58,6 @@ if (!currentSection) {
   if (!currentSection.includes('#### App Codebase Changes')) fail(`${currentVersionHeading} must include App Codebase Changes.`)
 }
 
-for (const workspace of ['apps/platform-api', 'apps/billing-api', 'apps/ecommerce-api']) {
-  const packageFile = `${workspace}/package.json`
-  if (!existsSync(path.join(root, packageFile))) continue
-  const packageJson = readJson(packageFile)
-  if (packageJson.version !== currentVersion) {
-    fail(`${packageFile} version ${packageJson.version} must match root package version ${currentVersion}.`)
-  }
-}
-
 const changed = gitChangedFiles()
 const changedMeaningful = changed.filter((file) => (
   !file.startsWith('node_modules/')
@@ -86,17 +77,6 @@ const codeOrRuleChanged = changedMeaningful.some((file) => (
 
 if (codeOrRuleChanged && !changed.includes('assist/documentation/CHANGELOG.md')) {
   fail('Meaningful code/rule/context changes must update assist/documentation/CHANGELOG.md in the same stage.')
-}
-
-const platformModuleChanges = changed.filter((file) => file.startsWith('apps/platform-api/src/modules/') && file.endsWith('.ts'))
-const modules = new Set(platformModuleChanges.map((file) => file.split('/').slice(0, 5).join('/')))
-
-for (const moduleDir of modules) {
-  const moduleName = moduleDir.split('/').at(-1)
-  const moduleDoc = `${moduleDir}/${moduleName}.module.md`
-  if (!existsSync(path.join(root, moduleDoc))) {
-    fail(`Platform API module ${moduleName} must include local documentation: ${moduleDoc}.`)
-  }
 }
 
 if (failures.length > 0) {

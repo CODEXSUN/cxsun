@@ -36,7 +36,7 @@ export function MediaManagerPage({ session }: { session: AuthSession }) {
   const [selected, setSelected] = useState<MediaAsset | null>(null)
   const queryKey = ["media-assets", session.selectedTenant.slug, search, folder, visibility]
   const assetsQuery = useQuery({ queryKey, queryFn: () => listMediaAssets(session, { folder, search, visibility }) })
-  const assets = assetsQuery.data ?? []
+  const assets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data])
   const folders = useMemo(() => Array.from(new Set(assets.map((asset) => asset.folder))).sort(), [assets])
   const uploadMutation = useMutation({
     mutationFn: async ({ file, input }: { file: File; input: { folder: string; visibility: MediaVisibility } }) => {
@@ -192,13 +192,16 @@ function MediaPreview({ asset, session }: { asset: MediaAsset; session: AuthSess
   const [url, setUrl] = useState("")
   useEffect(() => {
     let active = true
+    let objectUrl = ""
     if (!asset.mime_type.startsWith("image/")) return
     void mediaContentBlobUrl(session, asset).then((blobUrl) => {
+      objectUrl = blobUrl
       if (active) setUrl(blobUrl)
+      else URL.revokeObjectURL(blobUrl)
     })
     return () => {
       active = false
-      if (url) URL.revokeObjectURL(url)
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [asset, session])
   return (

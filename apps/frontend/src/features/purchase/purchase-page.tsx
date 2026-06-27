@@ -141,7 +141,7 @@ export function PurchasePage({ initialEntryUuid, session }: { initialEntryUuid?:
   const correctionMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => purchaseActions.createCorrection(session, entry) })
   const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: PurchaseEntry; printHtml?: string; tool: string }) => purchaseActions.runTool(session, entry, tool, printHtml) })
   const reversalMutation = useMutation({ mutationFn: (entry: PurchaseEntry) => purchaseActions.createReversal(session, entry) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = useMemo(() => filterPurchase(searchPurchase(entries, searchValue), statusFilter).sort((left, right) => compareDocumentNo(left.entry_no, right.entry_no)), [entries, searchValue, statusFilter])
   const monthlyEntries = useMemo(() => summarizePurchaseByMonth(filteredEntries), [filteredEntries])
   const monthlyTotal = useMemo(() => totalMonthlyPurchase(monthlyEntries), [monthlyEntries])

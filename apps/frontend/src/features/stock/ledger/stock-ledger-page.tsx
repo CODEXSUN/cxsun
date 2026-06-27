@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { ArrowLeft, Barcode, Check, Plus, Printer, RefreshCw, Save, ScanLine, Settings2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -39,7 +39,7 @@ export function StockLedgerPage({ session }: { session: AuthSession }) {
   const [rowsPerPage, setRowsPerPage] = useState(100)
   const entriesQuery = useQuery({ queryKey: ["stock-ledger-entries", session.selectedTenant.slug], queryFn: () => listStockLedgerEntries(session) })
   const entryMutation = useMutation({ mutationFn: (entry?: StockLedgerEntry) => upsertStockLedgerEntry(session, entry ? { uuid: entry.uuid, entry_date: entry.entry_date, entry_no: entry.entry_no, notes: entry.notes, source_uuid: entry.source_uuid, source_no: entry.source_no, status: entry.status } : {}) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = entries.filter((entry) => [entry.entry_no, entry.source_no, entry.status, entry.created_by].some((value) => String(value ?? "").toLowerCase().includes(searchValue.trim().toLowerCase())))
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage))
   const pageEntries = filteredEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
@@ -729,9 +729,9 @@ function PurchaseReceiptAutocomplete({ label, onChange, options, value }: { labe
   const filteredOptions = options.filter((receipt) => purchaseReceiptLabel(receipt).toLowerCase().includes(normalizedQuery))
   const exactOption = options.find((receipt) => purchaseReceiptLabel(receipt).toLowerCase() === normalizedQuery)
 
-  function resetQuery() {
+  const resetQuery = useCallback(() => {
     setQuery(selectedReceipt ? purchaseReceiptLabel(selectedReceipt) : "")
-  }
+  }, [selectedReceipt])
 
   function selectReceipt(receipt: PurchaseReceiptEntry) {
     setQuery(purchaseReceiptLabel(receipt))
@@ -741,7 +741,7 @@ function PurchaseReceiptAutocomplete({ label, onChange, options, value }: { labe
 
   useEffect(() => {
     if (!isOpen) resetQuery()
-  }, [isOpen, selectedReceipt])
+  }, [isOpen, resetQuery])
 
   return (
     <div className="relative z-10 grid w-full gap-2 focus-within:z-[90]">

@@ -14,17 +14,6 @@ const APP = process.argv[2]
 
 const APP_CONFIG = {
   server: { cwd: 'apps/server', envKey: 'PORT', port: 6005, kind: 'server' },
-  'platform-api': { cwd: 'apps/platform-api', envKey: 'PLATFORM_API_PORT', port: 6105, kind: 'server' },
-  'billing-api': { cwd: 'apps/billing-api', envKey: 'BILLING_API_PORT', port: 6205, kind: 'server' },
-  'ecommerce-api': { cwd: 'apps/ecommerce-api', envKey: 'ECOMMERCE_API_PORT', port: 6305, kind: 'server' },
-  'sites-api': { cwd: 'apps/sites-api', envKey: 'SITES_API_PORT', port: 6405, kind: 'server' },
-  'crm-api': { cwd: 'apps/crm-api', envKey: 'CRM_API_PORT', port: 6505, kind: 'server' },
-  'tally-api': { cwd: 'apps/tally-api', envKey: 'TALLY_API_PORT', port: 6515, kind: 'server' },
-  'frappe-api': { cwd: 'apps/frappe-api', envKey: 'FRAPPE_API_PORT', port: 6525, kind: 'server' },
-  'task-manager-api': { cwd: 'apps/task-manager-api', envKey: 'TASK_MANAGER_API_PORT', port: 6535, kind: 'server' },
-  'auditor-api': { cwd: 'apps/auditor-api', envKey: 'AUDITOR_API_PORT', port: 6545, kind: 'server' },
-  'blog-api': { cwd: 'apps/blog-api', envKey: 'BLOG_API_PORT', port: 6555, kind: 'server' },
-  'agent-os-api': { cwd: 'apps/agent-os-api', envKey: 'AGENT_OS_API_PORT', port: 6565, kind: 'server' },
   frontend: { cwd: 'apps/frontend', envKey: 'VITE_PORT', port: 6010, kind: 'vite' },
 }
 
@@ -180,25 +169,8 @@ function ask(query) {
 async function waitForServerState(env) {
   if (config.kind === 'server') return
   if (process.argv.includes('--skip-api-wait')) {
-    const requiredServicesArg = process.argv.find((arg) => arg.startsWith('--required-api-services='))
     env.VITE_API_BASE_URL ||= process.env.VITE_API_BASE_URL || 'http://localhost:6005'
-    env.VITE_PLATFORM_API_BASE_URL ||= process.env.VITE_PLATFORM_API_BASE_URL || 'http://localhost:6105'
-    env.VITE_BILLING_API_BASE_URL ||= process.env.VITE_BILLING_API_BASE_URL || 'http://localhost:6205'
-    env.VITE_SITES_API_BASE_URL ||= process.env.VITE_SITES_API_BASE_URL || 'http://localhost:6405'
-    env.VITE_CRM_API_BASE_URL ||= process.env.VITE_CRM_API_BASE_URL || 'http://localhost:6505'
-    env.VITE_TALLY_API_BASE_URL ||= process.env.VITE_TALLY_API_BASE_URL || 'http://localhost:6515'
-    env.VITE_FRAPPE_API_BASE_URL ||= process.env.VITE_FRAPPE_API_BASE_URL || 'http://localhost:6525'
-    env.VITE_TASK_MANAGER_API_BASE_URL ||= process.env.VITE_TASK_MANAGER_API_BASE_URL || 'http://localhost:6535'
-    env.VITE_AUDITOR_API_BASE_URL ||= process.env.VITE_AUDITOR_API_BASE_URL || 'http://localhost:6545'
-    env.VITE_BLOG_API_BASE_URL ||= process.env.VITE_BLOG_API_BASE_URL || 'http://localhost:6555'
-    env.VITE_AGENT_OS_API_BASE_URL ||= process.env.VITE_AGENT_OS_API_BASE_URL || 'http://localhost:6565'
-    env.VITE_REQUIRED_API_SERVICES ||= process.env.VITE_REQUIRED_API_SERVICES || requiredServicesArg?.split('=').slice(1).join('=') || 'platform,billing,sites'
-    env.VITE_REQUIRE_EXTRACTED_SERVICES = 'true'
     console.log(`  - Skipping backend announcement wait; fallback API target: ${env.VITE_API_BASE_URL}`)
-    console.log(`  - Platform API target: ${env.VITE_PLATFORM_API_BASE_URL}`)
-    console.log(`  - Billing API target: ${env.VITE_BILLING_API_BASE_URL}`)
-    console.log(`  - Sites API target: ${env.VITE_SITES_API_BASE_URL}`)
-    console.log(`  - Required service health checks: ${env.VITE_REQUIRED_API_SERVICES}`)
     return
   }
   if (process.env.VITE_API_BASE_URL) {

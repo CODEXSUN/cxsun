@@ -85,7 +85,7 @@ export function GstSandboxPage({ allowEnvironmentSelect = false, preferredEnviro
   const [results, setResults] = useState<Partial<Record<GstComplianceOperation, RunState>>>({})
 
   const settings = settingsQuery.data
-  const tenants = tenantsQuery.data ?? []
+  const tenants = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data])
   const activeDefinition = useMemo(() => operationDefinitions.find((item) => item.name === activeOperation) ?? operationDefinitions[0], [activeOperation])
   const activeResult = results[activeOperation]
   const handshakeResult = results.gstnDetails ?? results.authenticate

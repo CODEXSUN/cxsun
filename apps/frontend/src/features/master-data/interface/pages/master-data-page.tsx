@@ -42,7 +42,7 @@ export function MasterDataPage({ moduleKey, session }: { moduleKey: string; sess
   const destroyMutation = useMutation({ mutationFn: (record: MasterDataRecord) => destroyMasterDataRecord(session, moduleKey, record.uuid) })
   const restoreMutation = useMutation({ mutationFn: (record: MasterDataRecord) => restoreMasterDataRecord(session, moduleKey, record.uuid) })
   const definition = modulesQuery.data?.find((module) => module.key === moduleKey) ?? null
-  const records = recordsQuery.data ?? []
+  const records = useMemo(() => recordsQuery.data ?? [], [recordsQuery.data])
   const listColumns = definition ? definition.columns.slice(0, 5) : []
   const filteredRecords = useMemo(() => searchRecords(records, searchValue), [records, searchValue])
   const totalPages = Math.max(1, Math.ceil(filteredRecords.length / rowsPerPage))

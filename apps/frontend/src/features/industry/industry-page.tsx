@@ -68,7 +68,7 @@ export function IndustryPage({ session }: { session: AuthSession }) {
   const upsertMutation = useMutation({ mutationFn: (input: IndustryUpsertInput) => upsertIndustry(session, input) })
   const destroyMutation = useMutation({ mutationFn: (industry: IndustryRecord) => destroyIndustry(session, industry.id) })
   const restoreMutation = useMutation({ mutationFn: (industry: IndustryRecord) => restoreIndustry(session, industry.id) })
-  const industries = industriesQuery.data ?? []
+  const industries = useMemo(() => industriesQuery.data ?? [], [industriesQuery.data])
   const isLoading = industriesQuery.isFetching
 
   useEffect(() => {

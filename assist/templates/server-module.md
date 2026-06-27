@@ -1,6 +1,6 @@
 # Server Module Template
 
-Use this shape for new or expanded business modules under the correct `apps/server/src/modules` boundary while `apps/server` remains the transition backend. For new Core/Billing split work, also follow `assist/rules/service-boundaries.md`.
+Use this shape for new or expanded business modules under the correct `apps/server/src/modules` boundary.
 
 Choose placement before creating files:
 
@@ -14,22 +14,22 @@ Do not create new business modules directly at `apps/server/src/modules/<module-
 
 ## Directory Layout
 
-```
+```text
 apps/server/src/modules/<group-or-boundary>/<module-name>/
-├── domain/
-│   ├── events/
-│   └── <entity-or-value-object>.ts
-├── application/
-│   ├── dto/
-│   └── <use-case>.ts
-├── infrastructure/
-│   └── database/
-│       ├── migrations/
-│       └── seeders/
-├── interface/
-│   └── <module-name>.controller.ts
-├── <module-name>.module.ts
-└── index.ts
+|-- domain/
+|   |-- events/
+|   `-- <entity-or-value-object>.ts
+|-- application/
+|   |-- dto/
+|   `-- <use-case>.ts
+|-- infrastructure/
+|   `-- database/
+|       |-- migrations/
+|       `-- seeders/
+|-- interface/
+|   `-- <module-name>.controller.ts
+|-- <module-name>.module.ts
+`-- index.ts
 ```
 
 ## Placement Guide

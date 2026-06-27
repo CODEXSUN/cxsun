@@ -132,7 +132,7 @@ export function ExportSalesPage({ initialEntryUuid, session }: { initialEntryUui
   const restoreMutation = useMutation({ mutationFn: (entry: ExportSalesEntry) => restoreExportSalesEntry(session, entry) })
   const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: ExportSalesEntry; body: string }) => addExportSalesComment(session, entry, body) })
   const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: ExportSalesEntry; printHtml?: string; tool: string }) => runExportSalesTool(session, entry, tool, printHtml) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const filteredEntries = useMemo(() => filterExportSales(searchExportSales(entries, searchValue), statusFilter).sort((left, right) => compareDocumentNo(left.invoice_no, right.invoice_no)), [entries, searchValue, statusFilter])
   const totalPages = Math.max(1, Math.ceil(filteredEntries.length / rowsPerPage))
   const pageEntries = filteredEntries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)

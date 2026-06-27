@@ -25,11 +25,7 @@ import { AuditorClientModule } from './auditor/client/index.js'
 import { AuditorContactCredentialModule } from './auditor/contact-credential/index.js'
 import { AuditorGstFilingModule } from './auditor/gst-filing/index.js'
 import { BlogModule } from './blog/index.js'
-<<<<<<< Updated upstream
-import { CxSyncModule } from './cxsync/index.js'
-=======
 import { SystemUpdateModule } from '../core/system/system-update/system-update.module.js'
->>>>>>> Stashed changes
 import { QueueManagerModule } from '../core/system/queue-manager/queue-manager.module.js'
 import { DatabaseManagerModule } from '../core/system/database-manager/database-manager.module.js'
 import { AppRuntimeModule } from '../core/system/app-runtime/app-runtime.module.js'
@@ -53,6 +49,7 @@ import { AuthGuard } from '../core/guards/auth.guard.js'
     DatabaseManagerModule,
     AppRuntimeModule,
     ProjectDocsModule,
+    SystemUpdateModule,
     TenantModule,
     TenantDomainModule,
     AppSetupModule,

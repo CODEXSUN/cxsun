@@ -40,7 +40,7 @@ export async function processPlatformOutbox(session: AuthSession) {
 
 async function apiGet<T>(session: AuthSession, path: string) {
   const response = await fetch(`${platformApiBaseUrl}${path}`, { cache: "no-store", headers: authHeaders(session) })
-  if (!response.ok) throw new Error(`Platform API request failed with status ${response.status}.`)
+  if (!response.ok) throw new Error(`API request failed with status ${response.status}.`)
   return await response.json() as T
 }
 
@@ -51,6 +51,6 @@ async function apiPost<T>(session: AuthSession, path: string, body: unknown) {
     headers: { ...authHeaders(session), "Content-Type": "application/json" },
     method: "POST",
   })
-  if (!response.ok) throw new Error(`Platform API request failed with status ${response.status}.`)
+  if (!response.ok) throw new Error(`API request failed with status ${response.status}.`)
   return await response.json() as T
 }

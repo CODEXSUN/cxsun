@@ -104,7 +104,7 @@ export function TenantListPage({ session }: { session: AuthSession }) {
   const upsertMutation = useMutation({ mutationFn: (input: TenantUpsertInput) => upsertTenant(session, input) })
   const destroyMutation = useMutation({ mutationFn: (tenant: TenantRecord) => softDeleteTenant(session, tenant.id) })
   const restoreMutation = useMutation({ mutationFn: (tenant: TenantRecord) => restoreTenant(session, tenant.id) })
-  const tenants = tenantsQuery.data ?? []
+  const tenants = useMemo(() => tenantsQuery.data ?? [], [tenantsQuery.data])
   const isLoading = tenantsQuery.isFetching
 
   useEffect(() => {

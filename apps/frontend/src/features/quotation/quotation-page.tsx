@@ -138,7 +138,7 @@ export function QuotationPage({ initialEntryUuid, session }: { initialEntryUuid?
   const commentMutation = useMutation({ mutationFn: ({ entry, body }: { entry: QuotationEntry; body: string }) => addQuotationComment(session, entry, body) })
   const toolMutation = useMutation({ mutationFn: ({ entry, printHtml, tool }: { entry: QuotationEntry; printHtml?: string; tool: string }) => runQuotationTool(session, entry, tool, printHtml) })
   const generateInvoiceMutation = useMutation({ mutationFn: (quotationIds: string[]) => generateInvoiceFromQuotations(session, quotationIds) })
-  const entries = entriesQuery.data ?? []
+  const entries = useMemo(() => entriesQuery.data ?? [], [entriesQuery.data])
   const contactOptions = useMemo(() => buildQuotationContactFilterOptions(entries), [entries])
   const filteredEntries = useMemo(() => filterQuotationByContact(filterQuotation(searchQuotation(entries, searchValue), statusFilter), selectedContactFilter).sort((left, right) => compareDocumentNo(left.invoice_no, right.invoice_no)), [entries, searchValue, selectedContactFilter, statusFilter])
   const monthlyEntries = useMemo(() => summarizeQuotationByMonth(filteredEntries), [filteredEntries])
