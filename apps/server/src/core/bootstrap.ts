@@ -343,7 +343,6 @@ function isAllowedCorsOrigin(origin: string) {
 function configuredCorsOrigins() {
   const origins = [
     settings.urls.frontend,
-    settings.urls.electronDevServer,
     settings.cors.origins,
   ]
     .flatMap((value) => value?.split(',') ?? [])
