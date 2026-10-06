@@ -1,16 +1,24 @@
-import { createApiApp, registerHealthRoute, registerRequestLogging } from "@cxapp/framework/api";
-import { registerModules } from "@cxapp/framework/modules";
-import { createMailModule } from "@cxapp/mail-api";
-import { accountsApiModuleKeys, registerAccountsApi } from "@cxapp/accounts-api";
+import { createApiApp, registerHealthRoute, registerRequestLogging } from "@cxsun/framework/api";
+import { registerModules } from "@cxsun/framework/modules";
+import { createMailModule } from "@cxsun/mail-api";
+import { accountsApiModuleKeys, registerAccountsApi } from "@cxsun/accounts-api";
 import {
   billingApiModuleKeys,
   closeAllBillingDatabases,
   registerBillingApi
-} from "@cxapp/billing-api";
-import { closeCoreDatabase, coreApiModuleKeys, registerCoreApi } from "@cxapp/core-api";
-import { AppError } from "@cxapp/framework/errors";
+} from "@cxsun/billing-api";
+import {
+  closeCoreDatabase,
+  coreApiModuleKeys,
+  registerCoreApi,
+  getActiveContactForDatabase,
+  resolveOrCreateCustomerForDatabase
+} from "@cxsun/core-api";
+import { enquiryModule, type EnquiryDatabase } from "@cxsun/crm-api";
+import { auditorClientModule, type AuditorClientDatabase } from "@cxsun/auditor-api";
+import { AppError } from "@cxsun/framework/errors";
 import type { FastifyRequest } from "fastify";
-import type { HealthCheck } from "@cxapp/framework/health";
+import type { HealthCheck } from "@cxsun/framework/health";
 import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { appRegistryModule } from "./modules/app-registry/index.js";
 import { tenantDomainModule } from "./modules/tenant-domain/index.js";
@@ -43,7 +51,7 @@ import { closeAllTenantDatabases } from "./database/tenant-database.js";
 import { registerAuthRequestContext } from "./auth/auth-request-context.js";
 import { TenantDomainRepository } from "./modules/tenant-domain/tenant-domain.repository.js";
 import { registerDevkitHost } from "./devkit-host.js";
-import { devkitApiModuleKeys } from "@cxapp/devkit-api";
+import { devkitApiModuleKeys } from "@cxsun/devkit-api";
 import {
   addonApiModuleKeys,
   activePlatformAddons,
@@ -103,6 +111,8 @@ export async function createApp() {
         details: {
           modules: [
             ...coreApiModuleKeys,
+            enquiryModule.key,
+            auditorClientModule.key,
             ...billingApiModuleKeys,
             ...accountsApiModuleKeys,
             ...devkitApiModuleKeys,
@@ -144,7 +154,7 @@ export async function createApp() {
       VITE_DEV_AUTO_TENANT_LOGIN: env.DEV_AUTO_TENANT_LOGIN,
       VITE_PLATFORM_API_URL: "/api/platform",
       VITE_TENANT_NAME: env.DEFAULT_TENANT_NAME,
-      VITE_TENANCY_MODE: env.CXAPP_TENANCY_MODE
+      VITE_TENANCY_MODE: env.CXSUN_TENANCY_MODE
     },
     success: true
   }));
@@ -156,6 +166,62 @@ export async function createApp() {
     resolveIndustryName: (industryId) => industryService.resolveActiveIndustryName(industryId)
   });
   console.info("[platform.routes] Core package ready");
+  await enquiryModule.register(app, async (request) => {
+    const context = tenantAccessContext(request);
+    const enabled = await context.database
+      .selectFrom("app_module_settings")
+      .select("id")
+      .where("module_key", "=", "crm")
+      .where("enabled", "=", true)
+      .where("status", "=", "active")
+      .executeTakeFirst();
+    if (!enabled) throw AppError.forbidden("CRM is not enabled for this tenant.");
+    await context.authorize(
+      `crm.enquiry.${request.method === "GET" ? "view" : request.method === "POST" ? "create" : "update"}`
+    );
+    return {
+      actorEmail: context.actorEmail,
+      database: context.database as unknown as import("kysely").Kysely<EnquiryDatabase>,
+      relations: {
+        contact: (id: number) => getActiveContactForDatabase(context.tenantDatabase, id),
+        resolveOrCreateCustomer: (input) =>
+          resolveOrCreateCustomerForDatabase(context.tenantDatabase, input),
+        user: async (id: number) =>
+          Boolean(
+            await context.database
+              .selectFrom("app_users")
+              .select("id")
+              .where("id", "=", id)
+              .where("status", "=", "active")
+              .executeTakeFirst()
+          )
+      }
+    };
+  });
+  console.info("[platform.routes] CRM package ready");
+  await auditorClientModule.register(app, async (request) => {
+    const context = tenantAccessContext(request);
+    const enabled = await context.database
+      .selectFrom("app_module_settings")
+      .select("id")
+      .where("module_key", "=", "auditor")
+      .where("enabled", "=", true)
+      .where("status", "=", "active")
+      .executeTakeFirst();
+    if (!enabled) throw AppError.forbidden("Auditor is not enabled for this tenant.");
+    return {
+      actorEmail: context.actorEmail,
+      authorize: context.authorize,
+      database: context.database as unknown as import("kysely").Kysely<AuditorClientDatabase>,
+      audit: async (action, record) => {
+        request.log.info(
+          { action, actorEmail: context.actorEmail, clientId: record.id, module: "auditor.client" },
+          "Auditor client changed"
+        );
+      }
+    };
+  });
+  console.info("[platform.routes] Auditor package ready");
   await registerBillingApi(app);
   console.info("[platform.routes] Billing package ready");
   await registerAccountsApi(app);

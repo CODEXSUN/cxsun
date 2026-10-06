@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { getPlatformDatabase } from "../../database/platform-database.js";
 import { env } from "../../env.js";
 import type { TenantDomainRecord, TenantDomainSavePayload } from "./tenant-domain.types.js";
@@ -191,7 +191,7 @@ export function isSharedApplicationHost(value: string) {
 }
 
 export function tenantDomainVerificationName(domain: string) {
-  return `_cxapp-verification.${normalizeTenantDomain(domain)}`;
+  return `_cxsun-verification.${normalizeTenantDomain(domain)}`;
 }
 
 function hashToken(value: string) {

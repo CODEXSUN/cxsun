@@ -1,4 +1,4 @@
-import "@cxapp/framework/api";
+import "@cxsun/framework/api";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Kysely } from "kysely";
 import { bootstrapDevkitDatabase, runWithDevkitDatabase } from "./database/index.js";

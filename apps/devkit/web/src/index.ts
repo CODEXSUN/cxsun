@@ -1,2 +1,2 @@
-export { DevkitWorkspaceHost, devkitWebBundle } from "./cxapp";
-export type { DevkitWorkspaceContribution } from "./cxapp";
+export { DevkitWorkspaceHost, devkitWebBundle } from "./cxsun";
+export type { DevkitWorkspaceContribution } from "./cxsun";

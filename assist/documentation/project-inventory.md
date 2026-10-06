@@ -1,6 +1,6 @@
 # CODEXSUN Project Inventory
 
-> Database boundary update: the Platform master database contains unprefixed global Platform/Super Admin tables. Tenant Platform runtime tables use `app_`; composed apps keep their owner prefixes. Every database records migrations in `migration_schema`. Platform Task Manager remains JSON-backed. DevKit Platform Registry data and its audit activity are database-backed in both master and enabled tenant databases.
+> Database boundary update: the Platform master database contains unprefixed global Platform/Super Admin tables. Tenant Platform runtime tables use `app_`; composed apps keep their owner prefixes. Every database records migrations in `migration_schema`. Platform Task Manager stores todos and lookups in the Platform master or enabled tenant database. DevKit Platform Registry data and its audit activity are database-backed in both master and enabled tenant databases.
 
 ## Purpose
 
@@ -64,7 +64,7 @@ assist/
   product/
 ```
 
-The root package uses npm workspaces with `apps/*/*`, `packages/*`, and `tools/*`.
+The root package uses npm workspaces with `apps/*/*`, `devkits/*`, `packages/*`, and `tools/*`.
 
 ## Runtime Application And Composed Packages
 
@@ -75,16 +75,16 @@ Platform owns the SaaS foundation.
 - `apps/platform/api`: Fastify API for tenant identity, auth, app registry, database setup, tenant provisioning, and
   platform operations.
 - `apps/platform/web`: React/Vite shell for the domain-resolved tenant app portal, login, super-admin desk, admin
-  desk, tenant desk, tenant UI, and design-system gallery.
+  desk, tenant desk, and tenant UI. It embeds the UIUX gallery and retains the existing component catalog.
 - `apps/platform/windows`: Tauri 2/Rust host that opens the shared Platform React UI through WebView2 and stores
   only a validated, non-secret one-workspace projection in device-local SQLite.
 
-Platform is the only runnable application: API `7010` and Web `7020`.
+Platform is the production runtime: API `7010` and Web `7020`.
 
 Current Platform API modules:
 
 - `app-registry`
-- `task-manager` (JSON-backed)
+- `task-manager` (MariaDB-backed; private visibility by default)
 - `tenant`
 
 Current Platform Web modules:
@@ -93,6 +93,11 @@ Current Platform Web modules:
 - `task-manager`
 - `tenant`
 - `tenant-portal` (read-only public projection owned by `platform.tenant`)
+
+### UIUX
+
+- `devkits/uiux`: standalone Vite gallery and Super Admin desk contribution for shared UI foundations, layouts,
+  workspace blocks, and components. It imports public `@cxsun/ui` contracts and owns no application data.
 
 ### DevKit
 
@@ -105,7 +110,14 @@ DevKit owns the Platform Registry application and is composed by Platform throug
   tenant database for tenant users. Tables use the `devkit_` owner prefix and migration state uses
   `migration_schema`.
 - Platform supplies the authenticated request database and actor. DevKit does not resolve tenant identity from
-  browser input and uses the existing HttpOnly CXApp session cookie.
+  browser input and uses the existing HttpOnly CXSUN session cookie.
+
+### Auditor
+
+- `apps/auditor/api` owns the client directory module, migration, permission seed, and `/auditor/clients` routes. The Platform API composes it using the existing desk user session.
+- `apps/auditor/web` owns the client list and create/edit form. The Auditor desk mounts it through an injected API gateway and shows Clients in its side menu.
+- Client records contain a client name, optional company name, owner name, mobile, email, GSTIN, and status. They are not Platform tenants or portal users.
+- Auditor clients use the dedicated `auditor_clients` table when Auditor is enabled. They are distinct from Platform tenants and do not have their own login accounts.
 
 ### Core
 
@@ -158,12 +170,12 @@ names, purpose text, taglines, and other business identity must not be added to 
 
 ## Shared Packages
 
-### `@cxapp/framework`
+### `@cxsun/framework`
 
 Shared backend runtime package. It exports API bootstrap helpers, config/env loading, database contracts, errors,
 events, health, HTTP envelope utilities, logging, module contracts, queues, storage contracts, and testing helpers.
 
-### `@cxapp/ui`
+### `@cxsun/ui`
 
 Shared frontend UI package. It exports components, layouts, menu blocks, design-system tokens, workspace controls,
 workspace presets, forms, tables, filters, panels, date picker, autocomplete, drag/drop helpers, print helpers, and
@@ -207,7 +219,7 @@ the root `package.json`. Workspace manifests retain their package identity,
 build/typecheck/lint scripts, and direct runtime dependencies. Only the root
 manifest exposes `npm run dev`.
 
-Database commands currently route through `@cxapp/platform-api` and `apps/platform/api/src/database/db-cli.ts`.
+Database commands currently route through `@cxsun/platform-api` and `apps/platform/api/src/database/db-cli.ts`.
 
 ## Current Version And Work Update
 

@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { AppError } from "@cxapp/framework/errors";
-import { registerCoreTenantDatabaseConnection } from "@cxapp/core-api";
-import { registerBillingTenantDatabaseConnection } from "@cxapp/billing-api";
-import { registerAccountsTenantDatabaseConnection } from "@cxapp/accounts-api";
+import { AppError } from "@cxsun/framework/errors";
+import { registerCoreTenantDatabaseConnection } from "@cxsun/core-api";
+import { registerBillingTenantDatabaseConnection } from "@cxsun/billing-api";
+import { registerAccountsTenantDatabaseConnection } from "@cxsun/accounts-api";
 import { TenantRepository } from "../modules/tenant/tenant.repository.js";
 import {
   isSharedApplicationHost,
@@ -77,7 +77,7 @@ export function registerAuthRequestContext(app: FastifyInstance) {
         tenant.status !== "active" ||
         (isSingleTenantMode() &&
           tenant.corporateId?.trim().toUpperCase() !==
-            env.CXAPP_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase()) ||
+            env.CXSUN_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase()) ||
         tenant.dbName !== payload.tenantDbName ||
         tenant.tenantCode !== payload.tenantCode
       ) {

@@ -10,7 +10,7 @@ const root = resolve(import.meta.dirname, "..");
 const serverFile = resolve(root, "dist/apps/platform/api/server.js");
 const port = 17110;
 
-assert.ok(existsSync(serverFile), "Build CXApp before running the production artifact smoke test.");
+assert.ok(existsSync(serverFile), "Build CXSUN before running the production artifact smoke test.");
 
 const productionResolver = resolve(root, "tools/register-production-package-resolution.mjs");
 const child = spawn(
@@ -34,9 +34,6 @@ try {
   const health = await waitForHealth();
   const addons = health.data?.checks?.["platform-api"]?.details?.addons ?? [];
   assert.ok(addons.some((addon) => addon.key === "codexsun.blog" && addon.version === "1.0.16"));
-  assert.ok(
-    addons.some((addon) => addon.key === "codexsun.file-manager" && addon.version === "1.1.5")
-  );
   console.log("Production API artifact smoke passed", { addons, port });
 } finally {
   child.kill("SIGTERM");

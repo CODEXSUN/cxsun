@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
+import { Button } from "@cxsun/ui/components/button";
 import { useBillingAccess } from "../../shared/auth/billing-access";
 import { useOpeningBalances } from "./opening-balance.hooks";
 import { OpeningBalanceForm } from "./opening-balance.form";

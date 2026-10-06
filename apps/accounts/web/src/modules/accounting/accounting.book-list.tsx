@@ -1,12 +1,12 @@
 import { Printer } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/workspace/table";
+import { cn } from "@cxsun/ui/lib/utils";
 import { formatDate, formatMoney } from "./accounting.services";
 import type { BookRegisterLine } from "./accounting.types";
 

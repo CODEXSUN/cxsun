@@ -1,4 +1,4 @@
-name: cxapp-media
+name: cxsun-media
 
 services:
   media:
@@ -6,10 +6,10 @@ services:
       context: ../..
       dockerfile: .container/media/Dockerfile
       args:
-        CXAPP_VERSION: ${CXAPP_VERSION:?CXAPP_VERSION is required}
+        CXSUN_VERSION: ${CXSUN_VERSION:?CXSUN_VERSION is required}
         FILEBROWSER_BASE_IMAGE: ${FILEBROWSER_BASE_IMAGE:?FILEBROWSER_BASE_IMAGE is required}
-    image: ${CXAPP_IMAGE_REGISTRY:?CXAPP_IMAGE_REGISTRY is required}/media:${MEDIA_IMAGE_TAG:?MEDIA_IMAGE_TAG is required}
-    container_name: cxapp-media
+    image: ${CXSUN_IMAGE_REGISTRY:?CXSUN_IMAGE_REGISTRY is required}/media:${MEDIA_IMAGE_TAG:?MEDIA_IMAGE_TAG is required}
+    container_name: cxsun-media
     restart: unless-stopped
     user: "0:0"
     command:
@@ -22,19 +22,19 @@ services:
       - --database
       - /database/filebrowser.db
     ports:
-      - "${CXAPP_BIND_ADDRESS:?CXAPP_BIND_ADDRESS is required}:${MEDIA_HOST_PORT:?MEDIA_HOST_PORT is required}:80"
+      - "${CXSUN_BIND_ADDRESS:?CXSUN_BIND_ADDRESS is required}:${MEDIA_HOST_PORT:?MEDIA_HOST_PORT is required}:80"
     labels:
       traefik.enable: "true"
-      traefik.http.routers.cxapp-media.rule: "Host(`${CXAPP_MEDIA_HOST:?CXAPP_MEDIA_HOST is required}`)"
-      traefik.http.routers.cxapp-media.entrypoints: websecure
-      traefik.http.routers.cxapp-media.tls: "true"
-      traefik.http.routers.cxapp-media.tls.certresolver: letsencrypt
-      traefik.http.services.cxapp-media.loadbalancer.server.port: "80"
+      traefik.http.routers.cxsun-media.rule: "Host(`${CXSUN_MEDIA_HOST:?CXSUN_MEDIA_HOST is required}`)"
+      traefik.http.routers.cxsun-media.entrypoints: websecure
+      traefik.http.routers.cxsun-media.tls: "true"
+      traefik.http.routers.cxsun-media.tls.certresolver: letsencrypt
+      traefik.http.services.cxsun-media.loadbalancer.server.port: "80"
     volumes:
       - media-data:/srv
       - media-db:/database
     networks:
-      - cxapp-network
+      - cxsun-network
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
       interval: 10s
@@ -51,6 +51,6 @@ volumes:
     external: true
 
 networks:
-  cxapp-network:
-    name: ${CXAPP_DOCKER_NETWORK:?CXAPP_DOCKER_NETWORK is required}
+  cxsun-network:
+    name: ${CXSUN_DOCKER_NETWORK:?CXSUN_DOCKER_NETWORK is required}
     external: true

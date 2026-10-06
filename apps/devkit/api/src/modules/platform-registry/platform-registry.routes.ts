@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { ok } from "@cxapp/framework/http";
+import { ok } from "@cxsun/framework/http";
 import { z } from "zod";
 import { requireDevkitActor } from "../../request-context.js";
 import { PlatformRegistryService } from "./platform-registry.service.js";

@@ -8,18 +8,18 @@ const AppDesk = lazy(() => import("./AppDesk").then((module) => ({ default: modu
 
 const printPages = {
   "export-sales": lazyPrintPage(() =>
-    import("@cxapp/billing-web/modules/export-sales").then(
+    import("@cxsun/billing-web/modules/export-sales").then(
       (module) => module.ExportSalesPrintRoutePage
     )
   ),
   purchase: lazyPrintPage(() =>
-    import("@cxapp/billing-web/modules/purchase").then((module) => module.PurchasePrintRoutePage)
+    import("@cxsun/billing-web/modules/purchase").then((module) => module.PurchasePrintRoutePage)
   ),
   quotation: lazyPrintPage(() =>
-    import("@cxapp/billing-web/modules/quotation").then((module) => module.QuotationPrintRoutePage)
+    import("@cxsun/billing-web/modules/quotation").then((module) => module.QuotationPrintRoutePage)
   ),
   sales: lazyPrintPage(() =>
-    import("@cxapp/billing-web/modules/sales").then((module) => module.SalesPrintRoutePage)
+    import("@cxsun/billing-web/modules/sales").then((module) => module.SalesPrintRoutePage)
   )
 } as const;
 

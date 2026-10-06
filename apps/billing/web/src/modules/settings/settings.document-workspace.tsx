@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspaceSwitchCard } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
 import { getDocumentSettings, saveDocumentSettings } from "./settings.services";
 import { billingSettingsQueryKey, useCompanyContextId } from "./settings.hooks";
 import {

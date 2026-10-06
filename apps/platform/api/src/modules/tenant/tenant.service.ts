@@ -22,8 +22,8 @@ import {
   getApplicationCompanyBrandingForDatabase,
   getDefaultCompanyForDatabase,
   type ApplicationCompanyBranding
-} from "@cxapp/core-api";
-import { AppError, isAppError } from "@cxapp/framework/errors";
+} from "@cxsun/core-api";
+import { AppError, isAppError } from "@cxsun/framework/errors";
 import { isSingleTenantMode } from "../../tenancy-mode.js";
 
 export class TenantService {
@@ -68,7 +68,7 @@ export class TenantService {
     const canonicalDomain = normalizeTenantDomain(env.PLATFORM_WEB_ORIGIN);
 
     const canonicalCorporateId = isSingleTenantMode()
-      ? env.CXAPP_SINGLE_TENANT_CORPORATE_ID
+      ? env.CXSUN_SINGLE_TENANT_CORPORATE_ID
       : env.DEFAULT_TENANT_CORPORATE_ID;
     if (!tenant && domain && domain === canonicalDomain && canonicalCorporateId) {
       tenant = await this.repository.findByCorporateId(canonicalCorporateId);
@@ -97,9 +97,9 @@ export class TenantService {
       if (
         !existing ||
         existing.corporateId?.trim().toUpperCase() !==
-          env.CXAPP_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase() ||
+          env.CXSUN_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase() ||
         input.corporateId?.trim().toUpperCase() !==
-          env.CXAPP_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase() ||
+          env.CXSUN_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase() ||
         input.tenantCode.trim().toUpperCase() !== existing.tenantCode.trim().toUpperCase() ||
         input.status !== "active"
       ) {

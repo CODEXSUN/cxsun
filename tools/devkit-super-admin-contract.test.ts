@@ -31,8 +31,8 @@ test("tenant desk and provisioning contain no DevKit host surface", async () => 
   ]);
 
   assert.doesNotMatch(desk, /DevkitWorkspaceHost|\/app\/devkit\/registry|["']DevKit["']/);
-  assert.doesNotMatch(registry, /@cxapp\/devkit-web/);
-  assert.doesNotMatch(provisioning, /@cxapp\/devkit-api|migrateDevkit|seedDevkit/);
+  assert.doesNotMatch(registry, /@cxsun\/devkit-web/);
+  assert.doesNotMatch(provisioning, /@cxsun\/devkit-api|migrateDevkit|seedDevkit/);
   assert.match(host, /DevKit is available only to Super Admin\./);
   assert.doesNotMatch(host, /tenantAccessContext|roles: \["tenant"\]/);
 });

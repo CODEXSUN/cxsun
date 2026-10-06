@@ -1,10 +1,9 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Kysely } from "kysely";
-import { AddonHostRegistry, type AddonManifest } from "@cxapp/framework/addons";
-import { runMigrationBatch } from "@cxapp/framework/db";
-import { AppError } from "@cxapp/framework/errors";
+import { AddonHostRegistry, type AddonManifest } from "@cxsun/framework/addons";
+import { runMigrationBatch } from "@cxsun/framework/db";
+import { AppError } from "@cxsun/framework/errors";
 import { blogPluginManifest } from "@codexsun/blog/contracts";
-import { fileManagerPluginManifest } from "@codexsun/file-manager/contracts";
 import { tenantAccessContext } from "./auth/tenant-access-context.js";
 import { env } from "./env.js";
 import { TenantService } from "./modules/tenant/tenant.service.js";
@@ -30,30 +29,12 @@ type BlogPackage = {
 type BlogContext = {
   actorId: string | null;
   database: Kysely<Record<string, unknown>>;
-  host: "cxapp";
+  host: "cxsun";
   origin: string;
   scopeId: string;
 };
 
-type FileManagerPackage = {
-  closeFileManagerDatabase: () => Promise<void>;
-  fileManagerApiModuleKeys: readonly string[];
-  registerFileManagerApi: (
-    app: FastifyInstance,
-    options: {
-      resolveContext: (request: FastifyRequest) => Promise<FileManagerContext>;
-    }
-  ) => Promise<void>;
-};
-
-type FileManagerContext = {
-  actorId: string;
-  host: "cxapp";
-  tenantId: string;
-};
-
 const blog = (await import("@codexsun/blog/api")) as unknown as BlogPackage;
-const fileManager = (await import("@codexsun/file-manager/api")) as unknown as FileManagerPackage;
 const tenantService = new TenantService();
 const provisioning = new Map<string, Promise<void>>();
 const registry = new AddonHostRegistry({
@@ -69,10 +50,7 @@ const registry = new AddonHostRegistry({
   runtimeMode: "multi-tenant"
 });
 
-export const addonApiModuleKeys = [
-  ...blog.blogsApiModuleKeys,
-  ...fileManager.fileManagerApiModuleKeys
-] as const;
+export const addonApiModuleKeys = [...blog.blogsApiModuleKeys] as const;
 
 export async function registerPlatformAddons(app: FastifyInstance) {
   try {
@@ -82,13 +60,6 @@ export async function registerPlatformAddons(app: FastifyInstance) {
       databaseMode: supportsHostDatabase(blog) ? "host-database" : "dedicated",
       manifest: installedBlogManifest(),
       moduleKeys: blog.blogsApiModuleKeys
-    });
-    await registry.register({
-      activate: () => registerFileManager(app),
-      close: fileManager.closeFileManagerDatabase,
-      databaseMode: "dedicated",
-      manifest: installedFileManagerManifest(),
-      moduleKeys: fileManager.fileManagerApiModuleKeys
     });
   } catch (error) {
     await closeAfterActivationFailure(error);
@@ -133,19 +104,6 @@ async function registerBlog(app: FastifyInstance) {
   });
 }
 
-async function registerFileManager(app: FastifyInstance) {
-  await fileManager.registerFileManagerApi(app, {
-    resolveContext: async (request) => {
-      const access = tenantAccessContext(request);
-      return {
-        actorId: access.actorEmail,
-        host: "cxapp",
-        tenantId: access.tenantId
-      };
-    }
-  });
-}
-
 async function resolveBlogContext(request: FastifyRequest): Promise<BlogContext> {
   const publicRoute =
     request.url.startsWith("/public/blog") || request.url.startsWith("/sitemap.xml");
@@ -175,7 +133,7 @@ function blogContext(
   return {
     actorId,
     database: getTenantDatabase(tenant) as unknown as Kysely<Record<string, unknown>>,
-    host: "cxapp",
+    host: "cxsun",
     origin: requestOrigin(request),
     scopeId: tenant.uuid
   };
@@ -219,13 +177,5 @@ function installedBlogManifest(): AddonManifest {
     "@codexsun/blog",
     "@codexsun/blog/contracts",
     blogPluginManifest
-  );
-}
-
-function installedFileManagerManifest(): AddonManifest {
-  return withInstalledAddonVersion(
-    "@codexsun/file-manager",
-    "@codexsun/file-manager/contracts",
-    fileManagerPluginManifest
   );
 }

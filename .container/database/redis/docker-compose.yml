@@ -1,4 +1,4 @@
-name: cxapp-redis
+name: cxsun-redis
 
 services:
   redis:
@@ -6,10 +6,10 @@ services:
       context: ../../..
       dockerfile: .container/database/redis/Dockerfile
       args:
-        CXAPP_VERSION: ${CXAPP_VERSION:?CXAPP_VERSION is required}
+        CXSUN_VERSION: ${CXSUN_VERSION:?CXSUN_VERSION is required}
         REDIS_BASE_IMAGE: ${REDIS_BASE_IMAGE:?REDIS_BASE_IMAGE is required}
-    image: ${CXAPP_IMAGE_REGISTRY:?CXAPP_IMAGE_REGISTRY is required}/redis:${REDIS_IMAGE_TAG:?REDIS_IMAGE_TAG is required}
-    container_name: cxapp-redis
+    image: ${CXSUN_IMAGE_REGISTRY:?CXSUN_IMAGE_REGISTRY is required}/redis:${REDIS_IMAGE_TAG:?REDIS_IMAGE_TAG is required}
+    container_name: cxsun-redis
     restart: unless-stopped
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -22,11 +22,11 @@ services:
         fi
         exec redis-server --appendonly yes
     ports:
-      - "${CXAPP_BIND_ADDRESS:?CXAPP_BIND_ADDRESS is required}:${REDIS_HOST_PORT:?REDIS_HOST_PORT is required}:6379"
+      - "${CXSUN_BIND_ADDRESS:?CXSUN_BIND_ADDRESS is required}:${REDIS_HOST_PORT:?REDIS_HOST_PORT is required}:6379"
     volumes:
       - redis-data:/data
     networks:
-      - cxapp-network
+      - cxsun-network
     healthcheck:
       test:
         - CMD-SHELL
@@ -41,6 +41,6 @@ volumes:
     name: ${REDIS_DATA_VOLUME:?REDIS_DATA_VOLUME is required}
 
 networks:
-  cxapp-network:
-    name: ${CXAPP_DOCKER_NETWORK:?CXAPP_DOCKER_NETWORK is required}
+  cxsun-network:
+    name: ${CXSUN_DOCKER_NETWORK:?CXSUN_DOCKER_NETWORK is required}
     external: true

@@ -19,7 +19,7 @@ Usage: .container/clean.sh [OPTIONS] [billing]
 Clean CODEXSUN Docker resources with an explicit scope.
 
 Scopes:
-  --scope app      Remove only cxapp-api/cxapp-web and application images.
+  --scope app      Remove only cxsun-api/cxsun-web and application images.
                    Databases, Redis, File Browser, volumes, and network remain.
   --scope runtime  Remove every CODEXSUN container and image. All named
                    volumes, databases, Redis data, files, and network remain.
@@ -111,11 +111,11 @@ if [ "$SCOPE" != host ]; then
   validate_container_ownership
 fi
 
-assert_cxapp_name() {
+assert_cxsun_name() {
   kind="$1"
   value="$2"
   case "$value" in
-    cxapp|cxapp-*) ;;
+    cxsun|cxsun-*) ;;
     *)
       echo "Refusing to delete $kind outside the CODEXSUN namespace: $value" >&2
       exit 73
@@ -123,8 +123,8 @@ assert_cxapp_name() {
   esac
 }
 
-network=$(env_value CXAPP_DOCKER_NETWORK)
-assert_cxapp_name network "$network"
+network=$(env_value CXSUN_DOCKER_NETWORK)
+assert_cxsun_name network "$network"
 
 volumes=(
   "$(env_value MARIADB_DATA_VOLUME)"
@@ -135,10 +135,10 @@ volumes=(
   "$(env_value BILLING_STACK_DATA_VOLUME)"
 )
 for volume in "${volumes[@]}"; do
-  assert_cxapp_name volume "$volume"
+  assert_cxsun_name volume "$volume"
 done
 
-registry=$(env_value CXAPP_IMAGE_REGISTRY)
+registry=$(env_value CXSUN_IMAGE_REGISTRY)
 app_repositories=(
   "$registry/billing-stack-api"
   "$registry/billing-stack-web"
@@ -151,9 +151,9 @@ infrastructure_repositories=(
 )
 
 print_code_resource_list() {
-  echo "  Application containers: cxapp-api, cxapp-web"
+  echo "  Application containers: cxsun-api, cxsun-web"
   if [ "$SCOPE" != app ]; then
-    echo "  Infrastructure containers: cxapp-mariadb, cxapp-redis, cxapp-media"
+    echo "  Infrastructure containers: cxsun-mariadb, cxsun-redis, cxsun-media"
   fi
   echo "  Image repositories:"
   printf '    %s\n' "${app_repositories[@]}"
@@ -168,13 +168,13 @@ case "$SCOPE" in
     echo "CODEXSUN application-only cleanup"
     print_code_resource_list
     echo "  Preserved: MariaDB, Redis, File Browser, all volumes, network, and both environment files"
-    required_confirmation=CLEAN_CXAPP_APP
+    required_confirmation=CLEAN_CXSUN_APP
     ;;
   runtime)
     echo "CODEXSUN runtime cleanup"
     print_code_resource_list
     echo "  Preserved: all databases, Redis data, files, named volumes, network, and both environment files"
-    required_confirmation=CLEAN_CXAPP_RUNTIME
+    required_confirmation=CLEAN_CXSUN_RUNTIME
     ;;
   data)
     echo "CODEXSUN full local data cleanup"
@@ -183,7 +183,7 @@ case "$SCOPE" in
     echo "  Permanently deleted named volumes:"
     printf '    %s\n' "${volumes[@]}"
     echo "  Preserved: root .env and .container/deploy.env"
-    required_confirmation=CLEAN_CXAPP_DATA
+    required_confirmation=CLEAN_CXSUN_DATA
     ;;
   host)
     echo "HOST-WIDE Docker cleanup will permanently remove every local:"
@@ -264,15 +264,15 @@ if [ "$SCOPE" = host ]; then
     echo "Removed all local Docker images."
   fi
 else
-  remove_project_containers cxapp-billing
+  remove_project_containers cxsun-billing
   for repository in "${app_repositories[@]}"; do
     remove_repository_images "$repository"
   done
 
   if [ "$SCOPE" = runtime ] || [ "$SCOPE" = data ]; then
-    remove_project_containers cxapp-media
-    remove_project_containers cxapp-redis
-    remove_project_containers cxapp-mariadb
+    remove_project_containers cxsun-media
+    remove_project_containers cxsun-redis
+    remove_project_containers cxsun-mariadb
     for repository in "${infrastructure_repositories[@]}"; do
       remove_repository_images "$repository"
     done

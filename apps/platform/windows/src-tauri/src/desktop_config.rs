@@ -17,8 +17,8 @@ impl Default for DesktopConfig {
             api_mode: "local".to_string(),
             database_host: "127.0.0.1".to_string(),
             database_port: 3306,
-            database_name: "cxapp_tenant".to_string(),
-            database_user: "cxapp".to_string(),
+            database_name: "cxsun_tenant".to_string(),
+            database_user: "cxsun".to_string(),
         }
     }
 }
@@ -27,7 +27,7 @@ pub fn path() -> Result<PathBuf, String> {
     let root = std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
         .ok_or_else(|| "Windows local application data is unavailable.".to_string())?;
-    Ok(root.join("CXApp").join("Desktop").join("desktop-config.json"))
+    Ok(root.join("CXSUN").join("Desktop").join("desktop-config.json"))
 }
 
 pub fn load() -> Result<DesktopConfig, String> {

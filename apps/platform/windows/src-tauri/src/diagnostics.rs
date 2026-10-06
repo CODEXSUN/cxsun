@@ -31,5 +31,5 @@ pub fn write(message: &str) {
 fn log_path() -> Option<PathBuf> {
     std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
-        .map(|root| root.join("CXApp").join("Desktop").join("startup.log"))
+        .map(|root| root.join("CXSUN").join("Desktop").join("startup.log"))
 }

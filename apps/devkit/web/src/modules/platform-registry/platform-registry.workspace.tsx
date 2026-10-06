@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { ArrowLeftIcon, PlusIcon, RefreshCwIcon, SaveIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceSelect } from "@cxapp/ui/workspace/select";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceSelect } from "@cxsun/ui/workspace/select";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormGrid
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import { usePlatformRegistryMutations, usePlatformRegistryQuery } from "./platform-registry.hooks";
 import {
   AppList,

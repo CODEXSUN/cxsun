@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { TaskManagerRepository } from "./task-manager.repository.js";
 import type { TodoInput, TodoLookupKind, TodoStatus } from "./task-manager.types.js";
 

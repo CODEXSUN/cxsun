@@ -9,7 +9,7 @@ import { assertPurchaseHasNoAllocations } from "../../apps/billing/api/src/modul
 import { assertQuotationMutable } from "../../apps/billing/api/src/modules/quotation/quotation.lifecycle-guard.js";
 import { assertLinkedSaleIdentity } from "../../apps/billing/api/src/modules/sales/sales.quotation-link-guard.js";
 
-const databaseName = `cxapp_allocation_guard_e2e_${Date.now()}`;
+const databaseName = `cxsun_allocation_guard_e2e_${Date.now()}`;
 const options = {
   host: env.DB_HOST,
   port: env.DB_PORT,
@@ -136,7 +136,7 @@ try {
 } finally {
   await database?.destroy();
   // Only the database created by this test is eligible for cleanup.
-  assert.match(databaseName, /^cxapp_allocation_guard_e2e_\d+$/);
+  assert.match(databaseName, /^cxsun_allocation_guard_e2e_\d+$/);
   await admin.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
   await admin.end();
 }

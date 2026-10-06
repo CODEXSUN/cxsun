@@ -11,13 +11,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "@cxapp/ui/components/alert-dialog";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspacePagination } from "@cxapp/ui/workspace/pagination";
-import { buildShowingLabel } from "@cxapp/ui/workspace/utils";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/components/alert-dialog";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
+import { cn } from "@cxsun/ui/lib/utils";
 import { LedgersForm } from "./ledgers.form";
 import { ledgersQueryKey, useLedgerGroupLookups, useLedgers } from "./ledgers.hooks";
 import { LedgersList } from "./ledgers.list";

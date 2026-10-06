@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Kysely } from "kysely";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { ok } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { ok } from "@cxsun/framework/http";
 import { tenantAccessContext } from "../../auth/tenant-access-context.js";
 import { getPlatformDatabase } from "../../database/platform-database.js";
 import type { TaskManagerDatabase } from "./task-manager.migration.js";
@@ -14,12 +14,12 @@ const superAdminScope = "super-admin";
 const lookupKindSchema = z.enum(["category", "group", "status", "priority"]);
 const todoFieldsSchema = z.object({
   category: z.string().trim().min(1).max(80).optional(),
-  description: z.string().max(65_535).optional(),
   dueDate: z.string().max(32).optional(),
   groupName: z.string().trim().max(120).optional(),
   priority: z.string().trim().min(1).max(40).optional(),
   status: z.string().trim().min(1).max(40).optional(),
-  title: z.string().trim().min(1).max(255).optional()
+  title: z.string().trim().min(1).max(255).optional(),
+  visibility: z.enum(["private", "public"]).optional()
 });
 const createTodoSchema = todoFieldsSchema.extend({
   title: z.string().trim().min(1).max(255)

@@ -100,11 +100,11 @@ export async function executeDatabaseRestore(input: {
 
 function liveRestoreName(sourceDatabaseName: string, confirmation: string | undefined) {
   if (
-    env.CXAPP_ALLOW_LIVE_RESTORE !== "1" ||
-    env.CXAPP_LIVE_RESTORE_CONFIRM !== "ALLOW_LIVE_RESTORE"
+    env.CXSUN_ALLOW_LIVE_RESTORE !== "1" ||
+    env.CXSUN_LIVE_RESTORE_CONFIRM !== "ALLOW_LIVE_RESTORE"
   ) {
     throw new Error(
-      "Live restore is disabled. Set CXAPP_ALLOW_LIVE_RESTORE=1 and CXAPP_LIVE_RESTORE_CONFIRM=ALLOW_LIVE_RESTORE only during an approved restore window."
+      "Live restore is disabled. Set CXSUN_ALLOW_LIVE_RESTORE=1 and CXSUN_LIVE_RESTORE_CONFIRM=ALLOW_LIVE_RESTORE only during an approved restore window."
     );
   }
   const databaseName = assertDatabaseName(sourceDatabaseName, "live restore database name");
@@ -115,11 +115,11 @@ function liveRestoreName(sourceDatabaseName: string, confirmation: string | unde
 }
 
 function restoreSandboxName(sourceDatabaseName: string) {
-  if (env.NODE_ENV === "production" && !env.CXAPP_RESTORE_TEST_DB_NAME) {
-    throw new Error("Production restore requires CXAPP_RESTORE_TEST_DB_NAME.");
+  if (env.NODE_ENV === "production" && !env.CXSUN_RESTORE_TEST_DB_NAME) {
+    throw new Error("Production restore requires CXSUN_RESTORE_TEST_DB_NAME.");
   }
   return assertDatabaseName(
-    env.CXAPP_RESTORE_TEST_DB_NAME || `${sourceDatabaseName}_restore_sandbox`,
+    env.CXSUN_RESTORE_TEST_DB_NAME || `${sourceDatabaseName}_restore_sandbox`,
     "restore sandbox database name"
   );
 }

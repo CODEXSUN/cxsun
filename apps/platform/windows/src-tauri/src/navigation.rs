@@ -12,7 +12,7 @@ pub fn is_allowed_application_url(url: &Url) -> bool {
 }
 
 pub fn policy<R: Runtime>() -> tauri::plugin::TauriPlugin<R> {
-    tauri::plugin::Builder::new("cxapp-navigation-policy")
+    tauri::plugin::Builder::new("cxsun-navigation-policy")
         .on_navigation(|webview: &Webview<R>, url| {
             webview.label() != "main" || is_allowed_desktop_url(url)
         })

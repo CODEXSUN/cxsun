@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { AccountingRepository } from "./accounting.repository.js";
 
 export type AccountingJobName = "accounts.journal.post" | "accounts.journal.reverse";

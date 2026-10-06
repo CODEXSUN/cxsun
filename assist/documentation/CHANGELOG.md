@@ -2,11 +2,11 @@
 
 ## Version State
 
-Current version: 1.0.79
+Current version: 1.0.80
 
-Release tag: v-1.0.79
+Release tag: v-1.0.80
 
-Changelog label: v 1.0.79
+Changelog label: v 1.0.80
 
 This changelog starts fresh from the cleaned CODEXSUN foundation. Earlier copied application history was intentionally removed because it did not represent the current workspace.
 
@@ -19,6 +19,25 @@ Records schema, migration, seed, tenant provisioning, and data compatibility cha
 #### App Codebase Changes
 
 Records UI, API, service logic, tooling, packaging, and documentation changes.
+
+## v-1.0.80
+
+### [v 1.0.80] 2026-10-06 6:21 pm - CXSUN identity migration and CRM contacts navigation
+
+#### Database Changes
+
+- Database update: Yes (manual). Deployment database names, users, service names, and volume names changed to CXSUN defaults. Existing deployments must map their data and credentials before upgrade; no table schema rewrite is included.
+- Kept the recorded DevKit migration checksum stable so existing databases can continue through the migration ledger.
+
+#### App Codebase Changes
+
+- Bumped workspace version to 1.0.80.
+- Renamed internal packages, environment keys, runtime identifiers, container resources, and tooling from CXApp to CXSUN.
+- Added CRM Contacts navigation and an overview action that opens Core's existing Contact workspace and API.
+- Kept Leads and Deals as planned CRM modules without adding new data screens or database tables.
+- Clarified single-client and multi-tenant setup in `.env.example` and documented Core Contact ownership in the module boundaries.
+- Set `CODEXSUN/cxsun` as the active repository and Windows release source.
+- Added a UIUX gallery workspace for shared design foundations, layouts, workspace blocks, and components.
 
 ## v-1.0.79
 
@@ -269,7 +288,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 - Restored File Manager API startup and shutdown beside Blog in the shared add-on host.
 - Read active add-on versions from installed package metadata instead of hardcoded host values.
 - Added add-on package, registry-release, and production-artifact startup checks.
-- Added production package resolution so compiled APIs load compiled `@cxapp/*` packages.
+- Added production package resolution so compiled APIs load compiled `@cxsun/*` packages.
 - Refreshed Sales contacts on mount and window focus so saved Contact changes appear without stale lookup data.
 - Preserved existing Contact addresses and address IDs when Sales updates the selected Contact.
 - Re-resolved Sales billing and shipping addresses after Contact edits, including current state and location names.
@@ -305,7 +324,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 - Updated all npm workspaces to their latest permitted dependency releases, regenerated the lockfile, and verified zero known audit vulnerabilities.
 - Removed the `@codexsun/file-manager` dependency and its API host, tenant navigation, domain types, database provisioning, environment variables, and deployment configuration.
 - Kept Blog operational after File Manager removal by aligning the host adapter and public media behavior with the current Blog package contract.
-- Added the missing `@cxapp/framework/addons` runtime export wrapper and verified the add-on lifecycle contract.
+- Added the missing `@cxsun/framework/addons` runtime export wrapper and verified the add-on lifecycle contract.
 - Preserved `app.codexsun.com` as the shared Corporate-ID domain while allowing individually verified tenant domains to authenticate without a redundant Corporate ID prompt.
 - Added versioned tenant-specific JWT signing-key derivation so platform, ALTEX, COTTON, and other tenant tokens use cryptographically isolated keys.
 - Continued binding authenticated sessions to the exact login hostname and retained host-only production cookies for parallel tenant sessions in one browser.
@@ -330,7 +349,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 - Pinned the composed Blog package contract to version 1.0.9.
 - Made the public home-page story desk use the Blog API as its content source, with static content only for connection failures.
 - Added storage-aware Blog media paths and expanded the public tenant site with reusable editorial and marketing sections.
-- Resolved linked Blog and File Manager dependencies and styles through CXApp's single root dependency tree.
+- Resolved linked Blog and File Manager dependencies and styles through CXSUN's single root dependency tree.
 - Added mandatory File Manager environment values, deployment validation, credential generation, and startup connectivity checks.
 - Added development contract tests for linked owner-package resolution and File Manager provisioning.
 - Added inline ledger-group creation to the Cash Book ledger workflow.
@@ -352,7 +371,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 - Added automatic `JV-######` journal numbering when the entry number is blank.
 - Kept company and financial-year browser context session-scoped to prevent stale tenant context after login changes.
 - Verified Accounts API/web typechecks, module boundaries, and accounting E2E flows.
-- Repaired the root npm workspace installation so `@cxapp/accounts-api` and `@cxapp/accounts-web` resolve through the
+- Repaired the root npm workspace installation so `@cxsun/accounts-api` and `@cxsun/accounts-web` resolve through the
   single root `node_modules` tree during Platform startup.
 - Updated every external npm dependency to the latest registry release, including React 19.2, TanStack Table 9,
   Tiptap 3, BullMQ 6, Framer Motion 13, Fastify 5.12, Tauri 2.11, Vite 8.2, and the current tooling packages.
@@ -394,7 +413,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
   the direct update-settings command.
 - Replaced the WinUI 3/.NET 10 host with a Tauri 2/Rust host that reuses the Platform React login and
   desk through the installed WebView2 runtime.
-- Preserved the existing `%LOCALAPPDATA%\CXApp\Desktop\workspace.db` projection and added Rust
+- Preserved the existing `%LOCALAPPDATA%\CXSUN\Desktop\workspace.db` projection and added Rust
   validation plus WAL-backed SQLite tests for canonical tenant identity data.
 - Restricted desktop navigation to local launcher content and `https://app.codexsun.com`, kept
   Corporate ID visible and mandatory, and exposed only the safe workspace-projection bridge.
@@ -403,7 +422,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
   uninstall, and WinUI migration scripts.
 - Added a separate updater signing identity and GitHub Actions secret contract. Node.js remains the
   cloud runtime and build tool and is not shipped as a permanent desktop sidecar.
-- Verified the Tauri development host in the real Windows UI: one responsive CXApp window rendered
+- Verified the Tauri development host in the real Windows UI: one responsive CXSUN window rendered
   the cloud login with Corporate ID, Email, Password, Forgot password, and Sign in controls.
 
 ## v-1.0.61
@@ -468,7 +487,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
   10 version 2004 as the minimum supported client version.
 - Delayed WebView2 startup until its WinUI control is loaded and removed the redundant direct
   WebView2 NuGet reference supplied by the Windows App SDK.
-- Added bounded local startup diagnostics under `%LOCALAPPDATA%\CXApp\Desktop\startup.log` so a
+- Added bounded local startup diagnostics under `%LOCALAPPDATA%\CXSUN\Desktop\startup.log` so a
   packaged launch failure can be diagnosed without exposing tenant credentials or session tokens.
 - Kept the current Windows release scoped to tenant enrollment and the canonical cloud workspace;
   offline Billing runtime and synchronization remain later release gates.
@@ -486,14 +505,14 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 - Bumped workspace version to 1.0.58.
 - Added the x64 WinUI 3 and .NET 10 Windows host with WebView2, a safe tenant workspace bridge, and
   device-local SQLite enrollment state.
-- Added deterministic MSIX packaging, CXApp package icons, SHA-256 checksums, current-user install
+- Added deterministic MSIX packaging, CXSUN package icons, SHA-256 checksums, current-user install
   and uninstall commands, and stable App Installer release assets.
 - Added a GitHub Actions release workflow for `v-<version>` tags. It rejects version/tag mismatch,
   validates the source, builds the Windows host, signs the MSIX, and publishes the release assets.
-- Required the `CXAPP_WINDOWS_SIGNING_PFX` and `CXAPP_WINDOWS_SIGNING_PASSWORD` repository secrets.
+- Required the `CXSUN_WINDOWS_SIGNING_PFX` and `CXSUN_WINDOWS_SIGNING_PASSWORD` repository secrets.
   The release stops before publication if the trusted signing identity is unavailable.
 - Connected App Installer launch and background update checks to stable assets under the latest
-  CODEXSUN/cxapp GitHub release.
+  CODEXSUN/cxsun GitHub release.
 - Added a first-release installer that validates and trusts the private CODEXSUN sideloading
   certificate for the current user before it installs the automatic-update feed.
 - Added the public signing certificate and install/uninstall scripts to the release assets. The
@@ -736,7 +755,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 - Removed the supplier contact-filter card from the Billing Purchase list while preserving purchase
   search, status filtering, multi-select invoice generation, totals, and pagination.
 - Added a persisted Billing Settings Work order layout toggle with backward-compatible defaults and conditional work-order controls in quotation, sales, and purchase forms. Receipt and payment currently have no work-order field/API contract to toggle.
-- Ported Billing Stack show/print enhancements into CXApp quotation, sales, and purchase: configurable document titles, shared letterhead headers, address-mode layouts, bank details, amount-in-words, signature/footer sections, compact totals, richer feedback, and sales e-invoice print details.
+- Ported Billing Stack show/print enhancements into CXSUN quotation, sales, and purchase: configurable document titles, shared letterhead headers, address-mode layouts, bank details, amount-in-words, signature/footer sections, compact totals, richer feedback, and sales e-invoice print details.
 - Tuned quotation, sales, and purchase print item tables with product/description on the first Particulars line, valid Colour/Size values on a dedicated second line, wider particulars columns, darker borders, balanced item-row spacing with a larger first-row top buffer, tighter blank rows, and compact totals and footer sections.
 - Reworked quotation, sales, and purchase A4 pagination to fit up to 20 items on the first page and 12 items on each continuation page, retain the 12-row blank reservation for short final pages, and prevent signatures or jurisdiction footers from spilling onto an extra sheet.
 - Added calculated page totals, cumulative carried-forward totals, and explicit "To be continued" markers to multi-page Billing prints; removed duplicate Colour/Size columns because valid values are already rendered in the wider Particulars column.
@@ -777,7 +796,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
   retired cookie is rejected while the new cookie remains authenticated.
 - Added the Cloudflare MariaDB tunnel runbook for server routing, new Windows client installation,
   SQLyog configuration, verification, reconnection, and troubleshooting.
-- Hardened CXApp Docker updates with source-to-image version matching, an exclusive host lock,
+- Hardened CXSUN Docker updates with source-to-image version matching, an exclusive host lock,
   explicit migration compatibility approval, dirty-worktree control, disk-space preflight,
   SHA-256 backup verification and retention, plus per-attempt deployment audit metadata.
 - Debounced and cancellation-wired all Billing transaction searches, ran page and count reads in
@@ -1056,7 +1075,7 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
   administrator login forms with one compact yellow message badge below the
   shared login card.
 - Renamed the deployed application containers from
-  `codexsun-platform-api`/`codexsun-platform-web` to `cxapp-api`/`cxapp-web` and
+  `codexsun-platform-api`/`codexsun-platform-web` to `cxsun-api`/`cxsun-web` and
   updated the internal API hostname, cleanup workflow, and deployment
   documentation.
 - Verified a production build and repeat deployment with persistent

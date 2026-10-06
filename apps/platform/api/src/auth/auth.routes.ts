@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { fail, ok } from "@cxapp/framework/http";
+import { fail, ok } from "@cxsun/framework/http";
 import { z } from "zod";
 import { AuthService } from "./auth.service.js";
 import { AuthSessionRepository } from "./auth-session.repository.js";

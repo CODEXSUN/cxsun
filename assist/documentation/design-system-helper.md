@@ -12,6 +12,7 @@ The goal is simple: every module should feel like the same product. Only the dat
 - CODEXSUN UI package: `packages/ui/src`
 - Workspace primitives: `packages/ui/src/workspace`
 - Theme tokens and palettes: `packages/ui/src/design-system`
+- UIUX gallery and specimens: `devkits/uiux/src`
 - Platform module examples: Tenant, Domain, Plan, Subscription, Apps, and Industry under `apps/platform/web/src/pages/sa`
 
 This repository is the source of truth for flow, spacing, tone, loading behavior, and interaction rhythm. Do not import
@@ -19,7 +20,7 @@ business logic or UI assumptions from an older CODEXSUN/CXSUN checkout.
 
 ## Non-Negotiable Rules
 
-- Use shared design-system and workspace components from `@cxapp/ui`.
+- Use shared design-system and workspace components from `@cxsun/ui`.
 - Do not create one-off list, table, form, select, autocomplete, badge, toast, tab, date picker, or pagination UI.
 - Do not use hardcoded business records, fake lookup rows, localStorage seeds, or frontend assumptions for module data.
 - Every module must be DB/API-backed before it is treated as complete.
@@ -195,7 +196,7 @@ Switch:
 
 Select:
 
-- Use `WorkspaceSelect` or the shadcn/Radix themed `Select` from `@cxapp/ui`.
+- Use `WorkspaceSelect` or the shadcn/Radix themed `Select` from `@cxsun/ui`.
 - Do not use native `<select>` on workspace screens.
 - Dropdown hover and selected states must use the current theme highlight, not browser blue.
 - Theming must work for shadcn, neutral, orange, green, blue, purple, and other approved palettes.

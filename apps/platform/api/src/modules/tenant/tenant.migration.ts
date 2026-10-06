@@ -6,7 +6,7 @@ import {
   rollbackTablePrefixPolicy,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import type { PlatformDatabase, TenantDatabase } from "../../database/schema.js";
 import {
   migrateTenantPermissionModule,

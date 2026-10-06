@@ -203,10 +203,10 @@ checksums plus `latest.json`, and publishes stable asset names to the GitHub rel
 
 The repository must have these secrets before a Windows release tag is pushed:
 
-- `CXAPP_WINDOWS_SIGNING_PFX`
-- `CXAPP_WINDOWS_SIGNING_PASSWORD`
-- `CXAPP_TAURI_SIGNING_PRIVATE_KEY`
-- `CXAPP_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+- `CXSUN_WINDOWS_SIGNING_PFX`
+- `CXSUN_WINDOWS_SIGNING_PASSWORD`
+- `CXSUN_TAURI_SIGNING_PRIVATE_KEY`
+- `CXSUN_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
 The PFX must be a production code-signing certificate trusted by the target Windows devices. Keep the
 certificate publisher and the separate Tauri updater key unchanged between releases. A local unsigned

@@ -17,12 +17,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "@cxapp/ui/components/alert-dialog";
-import { Button } from "@cxapp/ui/components/button";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import { Spinner } from "@cxapp/ui/components/spinner";
-import { WorkspaceDetailTable, WorkspaceShowCard } from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+} from "@cxsun/ui/components/alert-dialog";
+import { Button } from "@cxsun/ui/components/button";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import { Spinner } from "@cxsun/ui/components/spinner";
+import { WorkspaceDetailTable, WorkspaceShowCard } from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import { useTenantDatabaseDetailsQuery, useTenantDatabaseMutations } from "./tenant-database.hooks";
 
 export function TenantDatabaseControl({ tenantId }: { tenantId: number }) {

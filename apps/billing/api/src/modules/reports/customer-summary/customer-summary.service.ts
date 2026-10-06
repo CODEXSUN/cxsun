@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { CustomerSummaryRepository } from "./customer-summary.repository.js";
 import type { CustomerSummaryResult } from "./customer-summary.types.js";
 

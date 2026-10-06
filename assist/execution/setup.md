@@ -6,7 +6,7 @@ The active `.container/` deployment contains only four independent stacks: Maria
 
 Billing owns the current deployable business release boundary:
 
-- `@cxapp/framework`
+- `@cxsun/framework`
 - Platform API/Web
 - Core API/Web
 - Billing API/Web
@@ -28,7 +28,7 @@ non-interactive setup. Interactive prompts show the exact current
 
 If `ENABLE_DEFAULT_TENANT_SEED=1`, setup prepares and validates the complete `DEFAULT_TENANT_*` input before changing containers. It provisions the configured tenant and tenant database repeatably; it does not reset an existing tenant database.
 
-Keep the generated file private and review public URLs before deploy. Production database reset flags must remain disabled. Set `CXAPP_VERIFIED_BACKUP_ID` to a verified backup run ID before Billing migrations. A confirmed empty first deployment may use a recorded `initial-empty-database-YYYYMMDD` marker, but that marker must never be reused against an existing database.
+Keep the generated file private and review public URLs before deploy. Production database reset flags must remain disabled. Set `CXSUN_VERIFIED_BACKUP_ID` to a verified backup run ID before Billing migrations. A confirmed empty first deployment may use a recorded `initial-empty-database-YYYYMMDD` marker, but that marker must never be reused against an existing database.
 
 ## Install or reinstall the complete stack
 
@@ -48,7 +48,7 @@ For repeated local deployments, use `bash setup.sh --clean`. The interactive
 menu can remove only application containers/images, all CODEXSUN runtime
 containers/images while preserving persistent data, or every CODEXSUN
 container, image, volume, and network. Build-cache pruning is separately
-optional. Full data cleanup requires the exact `CLEAN_CXAPP_DATA`
+optional. Full data cleanup requires the exact `CLEAN_CXSUN_DATA`
 confirmation and always preserves the root `.env`.
 
 ## Deploy or reinstall Billing only

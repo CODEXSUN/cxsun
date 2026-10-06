@@ -5,8 +5,8 @@ import {
   type DevkitDatabase,
   type DevkitHostAdapter,
   type DevkitHostRequestContext
-} from "@cxapp/devkit-api";
-import { AppError } from "@cxapp/framework/errors";
+} from "@cxsun/devkit-api";
+import { AppError } from "@cxsun/framework/errors";
 import { getPlatformDatabase } from "./database/platform-database.js";
 import type { PlatformDatabase } from "./database/schema.js";
 

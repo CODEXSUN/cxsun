@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { ColoursRepository } from "./colours.repository.js";
 import type { ColoursListFilters, ColoursRecord, ColoursSavePayload } from "./colours.types.js";
 

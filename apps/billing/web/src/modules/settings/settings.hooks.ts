@@ -11,10 +11,10 @@ export function useCompanyContextId() {
   const [companyId, setCompanyId] = useState(getCompanyId);
   useEffect(() => {
     const update = () => setCompanyId(getCompanyId());
-    window.addEventListener("cxapp:company-change", update);
+    window.addEventListener("cxsun:company-change", update);
     window.addEventListener("storage", update);
     return () => {
-      window.removeEventListener("cxapp:company-change", update);
+      window.removeEventListener("cxsun:company-change", update);
       window.removeEventListener("storage", update);
     };
   }, []);

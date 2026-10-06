@@ -3,6 +3,7 @@ import {
   KeyRoundIcon,
   ListChecksIcon,
   LogOutIcon,
+  PaletteIcon,
   ShieldCheckIcon,
   WalletCardsIcon
 } from "lucide-react";
@@ -19,7 +20,7 @@ type SuperLayoutProps = {
   subtitle?: ReactNode;
   title?: ReactNode;
   versionLabel?: string;
-  workspace?: "platform" | "task-manager";
+  workspace?: "platform" | "task-manager" | "uiux";
 };
 
 const superMenuItems: SidemenuItem[] = [
@@ -65,7 +66,7 @@ const superMenuItems: SidemenuItem[] = [
   }
 ];
 
-function superWorkspaceItems(activeWorkspace: "platform" | "task-manager") {
+function superWorkspaceItems(activeWorkspace: "platform" | "task-manager" | "uiux") {
   return [
     {
       title: "Platform",
@@ -80,6 +81,13 @@ function superWorkspaceItems(activeWorkspace: "platform" | "task-manager") {
       icon: ListChecksIcon,
       active: activeWorkspace === "task-manager",
       url: "/sa/task-manager"
+    },
+    {
+      title: "UIUX",
+      description: "Shared UI gallery, layouts, and workspace blocks.",
+      icon: PaletteIcon,
+      active: activeWorkspace === "uiux",
+      url: "/sa/uiux"
     }
   ];
 }

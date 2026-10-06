@@ -9,6 +9,10 @@ export {
 } from "./database/core-database.js";
 export { coreApiModuleKeys, registerCoreApi, type CoreApiDependencies } from "./app.js";
 export {
+  getActiveContactForDatabase,
+  resolveOrCreateCustomerForDatabase
+} from "./modules/master/contact/index.js";
+export {
   getApplicationCompanyBrandingForDatabase,
   getDefaultCompanyForDatabase,
   setDefaultCompanyLandingAppForDatabase

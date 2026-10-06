@@ -21,9 +21,9 @@ mkdirSync(repositoryTemp, { mode: 0o700, recursive: true });
 chmodSync(repositoryTemp, 0o700);
 
 const directory = mkdtempSync(join(repositoryTemp, "github-ssh-key-"));
-const privateKeyPath = join(directory, "github_cxapp");
+const privateKeyPath = join(directory, "github_cxsun");
 const publicKeyPath = `${privateKeyPath}.pub`;
-const comment = options.comment ?? `cxapp-server@${hostname()}`;
+const comment = options.comment ?? `cxsun-server@${hostname()}`;
 
 try {
   chmodSync(directory, 0o700);
@@ -101,7 +101,7 @@ function printHelp() {
 
 Usage:
   npm run github:ssh-key
-  npm run github:ssh-key -- --comment "cxapp-server"
+  npm run github:ssh-key -- --comment "cxsun-server"
   npm run github:ssh-key -- --json
 
 The keypair is created under this repository's ignored .temp directory. It is never

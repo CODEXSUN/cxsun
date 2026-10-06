@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { getBillingDatabase } from "../../database/billing-database.js";
 import { currentBillingScope } from "../../auth/billing-scope.js";
 import { ReceiptExportAllocationRepository } from "./receipt.export-allocation.repository.js";
@@ -374,7 +374,14 @@ export class ReceiptRepository {
         transaction
       );
       await replaceAllocations(transaction, internal.id, input.allocations);
-      await addActivity(transaction, internal.id, "updated", "Receipt updated.", internal.status, internal.status);
+      await addActivity(
+        transaction,
+        internal.id,
+        "updated",
+        "Receipt updated.",
+        internal.status,
+        internal.status
+      );
     });
     return this.get(databaseName, uuid);
   }
@@ -385,7 +392,10 @@ export class ReceiptRepository {
     if (!current) return null;
     await database.transaction().execute(async (transaction) => {
       await assertReceiptUnchanged(transaction, current.id, current.status);
-      if ((status === "posted" && current.status !== "draft") || (status === "cancelled" && current.status !== "posted"))
+      if (
+        (status === "posted" && current.status !== "draft") ||
+        (status === "cancelled" && current.status !== "posted")
+      )
         throw AppError.conflict("Receipt status changed. Refresh and try again.");
       await sql`
         UPDATE billing_receipts SET status=${status},
@@ -409,10 +419,19 @@ export class ReceiptRepository {
     const database = await receiptDatabase(databaseName);
     const current = await internalReceipt(database, uuid);
     if (!current) return null;
-    await database.transaction().execute(async transaction => {
+    await database.transaction().execute(async (transaction) => {
       await assertReceiptUnchanged(transaction, current.id, "draft");
-      await sql`UPDATE billing_receipts SET deleted_at=CURRENT_TIMESTAMP(3) WHERE id=${current.id}`.execute(transaction);
-      await addActivity(transaction,current.id,"deleted","Draft receipt deleted.","draft",null);
+      await sql`UPDATE billing_receipts SET deleted_at=CURRENT_TIMESTAMP(3) WHERE id=${current.id}`.execute(
+        transaction
+      );
+      await addActivity(
+        transaction,
+        current.id,
+        "deleted",
+        "Draft receipt deleted.",
+        "draft",
+        null
+      );
     });
     return this.getIncludingDeleted(database, uuid);
   }
@@ -647,9 +666,13 @@ async function internalReceipt(database: Kysely<ReceiptDatabase>, uuid: string) 
   return result.rows[0] ?? null;
 }
 
-async function assertReceiptUnchanged(transaction: ReceiptTransaction, id: number, status: ReceiptStatus) {
+async function assertReceiptUnchanged(
+  transaction: ReceiptTransaction,
+  id: number,
+  status: ReceiptStatus
+) {
   const scope = currentBillingScope();
-  const result = await sql<{status: ReceiptStatus}>`SELECT status FROM billing_receipts
+  const result = await sql<{ status: ReceiptStatus }>`SELECT status FROM billing_receipts
     WHERE id=${id} AND company_id=${scope.companyId} AND financial_year_id=${scope.financialYearId}
       AND deleted_at IS NULL FOR UPDATE`.execute(transaction);
   if (result.rows[0]?.status !== status)

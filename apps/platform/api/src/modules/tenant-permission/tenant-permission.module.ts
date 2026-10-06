@@ -1,4 +1,4 @@
-import { defineModule } from "@cxapp/framework/modules";
+import { defineModule } from "@cxsun/framework/modules";
 import type { PlatformModuleDependencies } from "../../module-dependencies.js";
 import { registerTenantPermissionRoutes } from "./tenant-permission.routes.js";
 export const tenantPermissionModule = defineModule<PlatformModuleDependencies>({

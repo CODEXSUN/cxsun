@@ -9,10 +9,10 @@ development-only.
 
 ## Repository and runtime
 
-- Repository path: `/home/cxapp`
+- Repository path: `/home/cxsun`
 - Branch: `main`
-- Docker network: `cxapp-network`
-- Runtime versions: Node.js `26.5.0` and npm `12.0.1` inside the application images
+- Docker network: `cxsun-network`
+- Runtime versions: Node.js `26.5.0` and npm `12.2.0` inside the application images
 - Deployment command: `bash setup.sh`
 - Update readiness check: `bash update.sh --check`
 - Guarded source update: `bash update.sh`
@@ -26,11 +26,11 @@ runtime.
 
 | Service      | Container       | Host binding      |
 | ------------ | --------------- | ----------------- |
-| MariaDB      | `cxapp-mariadb` | `127.0.0.1:3307`  |
-| Redis        | `cxapp-redis`   | `127.0.0.1:6379`  |
-| Platform API | `cxapp-api`     | `127.0.0.1:17010` |
-| Platform Web | `cxapp-web`     | `127.0.0.1:17020` |
-| FileBrowser  | `cxapp-media`   | `127.0.0.1:7090`  |
+| MariaDB      | `cxsun-mariadb` | `127.0.0.1:3307`  |
+| Redis        | `cxsun-redis`   | `127.0.0.1:6379`  |
+| Platform API | `cxsun-api`     | `127.0.0.1:17010` |
+| Platform Web | `cxsun-web`     | `127.0.0.1:17020` |
+| FileBrowser  | `cxsun-media`   | `127.0.0.1:7090`  |
 
 Traefik runs separately from `/docker/traefik`, listens on public ports 80 and
 443, redirects HTTP to HTTPS, and obtains certificates with the `letsencrypt`
@@ -43,18 +43,18 @@ resolver.
 - `https://files.codexsun.com` - FileBrowser
 
 The canonical hostname routes through Traefik to the Platform Web container and
-resolves the configured tenant in `CXAPP_TENANCY_MODE=single`. Set
-`CXAPP_TENANCY_MODE=multi` for deployments that register additional tenants
+resolves the configured tenant in `CXSUN_TENANCY_MODE=single`. Set
+`CXSUN_TENANCY_MODE=multi` for deployments that register additional tenants
 and verified tenant hostnames.
 
 ## Databases and tenants
 
 The MariaDB application user is `root`; its password is stored only in the
-protected environment files. The master database is `cxapp_master_db`.
+protected environment files. The master database is `cxsun_master_db`.
 
 | Tenant code | Primary domain     | Database   | Status |
 | ----------- | ------------------ | ---------- | ------ |
-| `CODEXSUN`  | `app.codexsun.com` | `cxapp_db` | Active |
+| `CODEXSUN`  | `app.codexsun.com` | `cxsun_db` | Active |
 
 The tenant database is provisioned with the repository-supported tenant
 workflow and seeded idempotently with Platform Application, Core/Billing, Mail,

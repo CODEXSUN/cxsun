@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import { StorageManagerForm } from "./storage-manager.form";
 import {
   useStorageListingQuery,

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
-import { companyBrandName, useCompanyBranding } from "@cxapp/core-web/modules/organisation/company";
-import { cn } from "@cxapp/ui/lib/utils";
+import { companyBrandName, useCompanyBranding } from "@cxsun/core-web/modules/organisation/company";
+import { cn } from "@cxsun/ui/lib/utils";
 import { useBillingSettings, useCompanyContextId } from "./settings.hooks";
 import { defaultBillingSettings, type BillingSettings } from "./settings.types";
 

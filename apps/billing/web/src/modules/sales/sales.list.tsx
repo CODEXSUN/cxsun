@@ -1,13 +1,13 @@
 import { Eye, Printer, RotateCcw, Trash2 } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/workspace/table";
+import { cn } from "@cxsun/ui/lib/utils";
 import {
   BillingDocumentTotalsTable,
   type BillingDocumentReportRecord,
@@ -107,16 +107,16 @@ export function SalesList({
                         <button
                           className={cn(
                             "font-medium underline-offset-4",
-                            canEditEntries &&
-                            (sale.status === "draft" || canEditFinalizedEntries)
+                            canEditEntries && (sale.status === "draft" || canEditFinalizedEntries)
                               ? "hover:underline"
                               : "cursor-not-allowed text-muted-foreground"
                           )}
-                          disabled={!canEditEntries || (sale.status !== "draft" && !canEditFinalizedEntries)}
+                          disabled={
+                            !canEditEntries || (sale.status !== "draft" && !canEditFinalizedEntries)
+                          }
                           onClick={() => onEdit(sale)}
                           title={
-                            canEditEntries &&
-                            (sale.status === "draft" || canEditFinalizedEntries)
+                            canEditEntries && (sale.status === "draft" || canEditFinalizedEntries)
                               ? "Edit sale"
                               : "Only an Admin or Super Admin can edit this sale"
                           }
@@ -207,7 +207,8 @@ export function SalesList({
                                 ]
                               : [])
                           ]}
-                          {...(canEditEntries && (sale.status === "draft" || canEditFinalizedEntries)
+                          {...(canEditEntries &&
+                          (sale.status === "draft" || canEditFinalizedEntries)
                             ? { onEdit: () => onEdit(sale) }
                             : {})}
                           onView={() => onView(sale)}

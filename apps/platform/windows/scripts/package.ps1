@@ -46,7 +46,7 @@ if (Test-Path -LiteralPath $releaseRoot) {
 New-Item -ItemType Directory -Path $releaseRoot -Force | Out-Null
 New-Item -ItemType Directory -Path $overrideRoot -Force | Out-Null
 
-npm.cmd run build -w @cxapp/windows
+npm.cmd run build -w @cxsun/windows
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $bundleOverride = @{ bundle = @{ createUpdaterArtifacts = [bool]$CreateUpdaterArtifacts } }
@@ -76,7 +76,7 @@ if (-not $generatedInstaller) {
     throw "The Tauri build did not create an NSIS installer."
 }
 
-$installerPath = Join-Path $releaseRoot "CXApp.Windows.Setup.exe"
+$installerPath = Join-Path $releaseRoot "CXSUN.Windows.Setup.exe"
 Copy-Item -LiteralPath $generatedInstaller.FullName -Destination $installerPath -Force
 
 if ($CreateUpdaterArtifacts) {
@@ -84,27 +84,27 @@ if ($CreateUpdaterArtifacts) {
     if (-not (Test-Path -LiteralPath $signatureSource)) {
         throw "The signed Tauri updater artifact is missing."
     }
-    $signaturePath = Join-Path $releaseRoot "CXApp.Windows.Setup.exe.sig"
+    $signaturePath = Join-Path $releaseRoot "CXSUN.Windows.Setup.exe.sig"
     Copy-Item -LiteralPath $signatureSource -Destination $signaturePath -Force
     $signature = (Get-Content -Raw -LiteralPath $signaturePath).Trim()
     $latest = @{
         version = $Version
-        notes = "CXApp Windows $Version"
+        notes = "CXSUN Windows $Version"
         pub_date = [DateTimeOffset]::UtcNow.ToString("O")
         platforms = @{
             "windows-x86_64" = @{
                 signature = $signature
-                url = "https://github.com/CODEXSUN/cxsun/releases/latest/download/CXApp.Windows.Setup.exe"
+                url = "https://github.com/CODEXSUN/cxsun/releases/latest/download/CXSUN.Windows.Setup.exe"
             }
         }
     } | ConvertTo-Json -Depth 5
     [IO.File]::WriteAllText((Join-Path $releaseRoot "latest.json"), $latest, [Text.UTF8Encoding]::new($false))
 }
 
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "install-release.ps1") -Destination (Join-Path $releaseRoot "Install-CXApp.ps1")
-Copy-Item -LiteralPath (Join-Path $PSScriptRoot "uninstall.ps1") -Destination (Join-Path $releaseRoot "Uninstall-CXApp.ps1")
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "install-release.ps1") -Destination (Join-Path $releaseRoot "Install-CXSUN.ps1")
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "uninstall.ps1") -Destination (Join-Path $releaseRoot "Uninstall-CXSUN.ps1")
 if ($PublicCertificatePath) {
-    Copy-Item -LiteralPath $PublicCertificatePath -Destination (Join-Path $releaseRoot "CXApp.Windows.cer") -Force
+    Copy-Item -LiteralPath $PublicCertificatePath -Destination (Join-Path $releaseRoot "CXSUN.Windows.cer") -Force
 }
 
 $hashLines = Get-ChildItem -LiteralPath $releaseRoot -File |
@@ -112,4 +112,4 @@ $hashLines = Get-ChildItem -LiteralPath $releaseRoot -File |
     Sort-Object Name |
     ForEach-Object { "{0}  {1}" -f (Get-Sha256Hex $_.FullName), $_.Name }
 [IO.File]::WriteAllLines((Join-Path $releaseRoot "SHA256SUMS.txt"), $hashLines)
-Write-Host "CXApp Tauri release assets are ready at $releaseRoot"
+Write-Host "CXSUN Tauri release assets are ready at $releaseRoot"

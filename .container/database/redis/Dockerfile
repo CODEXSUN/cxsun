@@ -1,6 +1,6 @@
 ARG REDIS_BASE_IMAGE
 FROM ${REDIS_BASE_IMAGE}
 
-ARG CXAPP_VERSION
+ARG CXSUN_VERSION
 LABEL org.opencontainers.image.title="CODEXSUN Redis" \
-      org.opencontainers.image.version="$CXAPP_VERSION"
+      org.opencontainers.image.version="$CXSUN_VERSION"

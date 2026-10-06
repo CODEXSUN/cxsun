@@ -4,10 +4,10 @@ export type TodoCategory = string;
 export type Todo = {
   id: string;
   title: string;
-  description: string;
   category: TodoCategory;
   groupName: string;
   status: TodoStatus;
+  visibility: "private" | "public";
   priority: TodoPriority;
   dueDate: string;
   position: number;
@@ -15,7 +15,7 @@ export type Todo = {
   updatedAt: string;
 };
 export type TodoInput = Partial<
-  Pick<Todo, "title" | "description" | "category" | "groupName" | "status" | "priority" | "dueDate">
+  Pick<Todo, "title" | "category" | "groupName" | "status" | "priority" | "dueDate" | "visibility">
 > & { title: string };
 export type TodoLookupKind = "category" | "group" | "status" | "priority";
 export type TodoLookup = {

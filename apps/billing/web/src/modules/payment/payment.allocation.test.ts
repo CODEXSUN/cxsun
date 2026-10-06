@@ -26,10 +26,7 @@ test("payment allocation candidates enforce party and currency and restore only 
     60
   );
   assert.deepEqual(availablePaymentCandidates([candidate], 3, 1, entry), []);
-  assert.deepEqual(
-    availablePaymentCandidates([], 2, 1, { ...entry, status: "cancelled" }),
-    []
-  );
+  assert.deepEqual(availablePaymentCandidates([], 2, 1, { ...entry, status: "cancelled" }), []);
   assert.deepEqual(availablePaymentCandidates([candidate], 2, 3, entry), []);
   assert.equal(availablePaymentCandidates([], 2, 1, entry)[0]?.outstandingAmount, 25);
   assert.equal(availablePaymentCandidates([candidate], 2, 1)[0]?.outstandingAmount, 60);

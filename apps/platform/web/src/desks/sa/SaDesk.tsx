@@ -12,15 +12,15 @@ import {
   UsersIcon,
   WorkflowIcon
 } from "lucide-react";
-import { SuperLayout } from "@cxapp/ui/layouts/super-layout";
-import type { SidemenuItem } from "@cxapp/ui/blocks/menu/sidemenu/sub/sidemenu-section";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
+import { SuperLayout } from "@cxsun/ui/layouts/super-layout";
+import type { SidemenuItem } from "@cxsun/ui/blocks/menu/sidemenu/sub/sidemenu-section";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
 import { AppOperationsStrip, useAppOperationsQuery } from "../../modules/app-orchestration";
 import type { OrchestratedAppId } from "../../modules/app-orchestration";
 import { logout } from "../../shared/api/platform-api";
 import { AuthGate } from "../../shared/auth/AuthGate";
 import { requiredClientEnv } from "../../shared/env/client-env";
-import { DevkitWorkspaceHost } from "@cxapp/devkit-web";
+import { DevkitWorkspaceHost } from "@cxsun/devkit-web";
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
   return lazy(async () => ({ default: await loader() }));
@@ -29,6 +29,7 @@ function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
 const DesignSystemGallery = lazyWorkspace(() =>
   import("../../modules/design-system").then((module) => module.DesignSystemGallery)
 );
+const UiuxGallery = lazyWorkspace(() => import("@cxsun/uiux").then((module) => module.UiuxGallery));
 const TenantList = lazyWorkspace(() =>
   import("../../modules/tenant").then((module) => module.TenantList)
 );
@@ -107,6 +108,7 @@ type SaPage =
   | "storage-manager"
   | "access"
   | "activity"
+  | "uiux"
   | "design-system";
 
 export function SaDesk() {
@@ -277,8 +279,13 @@ export function SaDesk() {
     {
       title: "Design System",
       icon: PaletteIcon,
-      isActive: page === "design-system",
+      isActive: page === "design-system" || page === "uiux",
       items: [
+        {
+          title: "UIUX Gallery",
+          isActive: page === "uiux",
+          onSelect: () => selectPage("uiux")
+        },
         {
           title: "Components",
           isActive: page === "design-system",
@@ -290,44 +297,50 @@ export function SaDesk() {
 
   return (
     <AuthGate desk="sa">
-      <SuperLayout
-        homeHref="/"
-        menuItems={menuItems}
-        onLogout={handleLogout}
-        versionLabel={`v ${__APP_VERSION__}`}
-        workspace={page === "task-manager" ? "task-manager" : "platform"}
-      >
+      {page === "uiux" ? (
         <Suspense fallback={<GlobalLoader className="min-h-[24rem]" fullScreen={false} />}>
-          {page === "overview" ? <SaOverview onOpenApp={openAppOperations} /> : null}
-          {page === "app-operations" ? (
-            <AppOrchestrationWorkspace
-              appId={selectedAppId}
-              onBack={() => selectPage("overview")}
-            />
-          ) : null}
-          {page === "task-manager" ? <TaskManagerWorkspace /> : null}
-          {page.startsWith("devkit-") ? (
-            <DevkitWorkspaceHost workspaceId={page.slice("devkit-".length)} />
-          ) : null}
-          {page === "tenants" ? <TenantList onBack={() => selectPage("overview")} /> : null}
-          {page === "domains" ? <TenantDomainList /> : null}
-          {page === "plans" ? <PlanWorkspace /> : null}
-          {page === "plan-access" ? <PlanAccessWorkspace /> : null}
-          {page === "subscriptions" ? <SubscriptionWorkspace /> : null}
-          {page === "apps" ? <AppRegistryWorkspace /> : null}
-          {page === "entitlements" ? <EntitlementWorkspace /> : null}
-          {page === "tenant-access" ? <TenantAccessWorkspace /> : null}
-          {page === "tenant-users" ? <TenantUserWorkspace mode="super-admin" /> : null}
-          {page === "industries" ? <IndustryWorkspace /> : null}
-          {page === "master-database" ? <MasterDatabaseWorkspace /> : null}
-          {page === "tenant-database" ? <TenantDatabaseWorkspace /> : null}
-          {page === "queue-management" ? <QueueManagementWorkspace /> : null}
-          {page === "storage-manager" ? <StorageManagerWorkspace /> : null}
-          {page === "access" ? <AccessControlWorkspace /> : null}
-          {page === "activity" ? <PlatformActivityWorkspace /> : null}
-          {page === "design-system" ? <DesignSystemGallery /> : null}
+          <UiuxGallery componentCatalogHref="/sa/design-system" deskRoutesAvailable />
         </Suspense>
-      </SuperLayout>
+      ) : (
+        <SuperLayout
+          homeHref="/"
+          menuItems={menuItems}
+          onLogout={handleLogout}
+          versionLabel={`v ${__APP_VERSION__}`}
+          workspace={page === "task-manager" ? "task-manager" : "platform"}
+        >
+          <Suspense fallback={<GlobalLoader className="min-h-[24rem]" fullScreen={false} />}>
+            {page === "overview" ? <SaOverview onOpenApp={openAppOperations} /> : null}
+            {page === "app-operations" ? (
+              <AppOrchestrationWorkspace
+                appId={selectedAppId}
+                onBack={() => selectPage("overview")}
+              />
+            ) : null}
+            {page === "task-manager" ? <TaskManagerWorkspace /> : null}
+            {page.startsWith("devkit-") ? (
+              <DevkitWorkspaceHost workspaceId={page.slice("devkit-".length)} />
+            ) : null}
+            {page === "tenants" ? <TenantList onBack={() => selectPage("overview")} /> : null}
+            {page === "domains" ? <TenantDomainList /> : null}
+            {page === "plans" ? <PlanWorkspace /> : null}
+            {page === "plan-access" ? <PlanAccessWorkspace /> : null}
+            {page === "subscriptions" ? <SubscriptionWorkspace /> : null}
+            {page === "apps" ? <AppRegistryWorkspace /> : null}
+            {page === "entitlements" ? <EntitlementWorkspace /> : null}
+            {page === "tenant-access" ? <TenantAccessWorkspace /> : null}
+            {page === "tenant-users" ? <TenantUserWorkspace mode="super-admin" /> : null}
+            {page === "industries" ? <IndustryWorkspace /> : null}
+            {page === "master-database" ? <MasterDatabaseWorkspace /> : null}
+            {page === "tenant-database" ? <TenantDatabaseWorkspace /> : null}
+            {page === "queue-management" ? <QueueManagementWorkspace /> : null}
+            {page === "storage-manager" ? <StorageManagerWorkspace /> : null}
+            {page === "access" ? <AccessControlWorkspace /> : null}
+            {page === "activity" ? <PlatformActivityWorkspace /> : null}
+            {page === "design-system" ? <DesignSystemGallery /> : null}
+          </Suspense>
+        </SuperLayout>
+      )}
     </AuthGate>
   );
 }
@@ -353,6 +366,7 @@ function pageFromUrl(): SaPage {
     page === "storage-manager" ||
     page === "access" ||
     page === "activity" ||
+    page === "uiux" ||
     page === "design-system"
     ? page
     : "overview";

@@ -2,7 +2,7 @@ import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import { formatSupplierSummaryMoney } from "./supplier-summary.services";
 import type { SupplierSummaryItem } from "./supplier-summary.types";
 

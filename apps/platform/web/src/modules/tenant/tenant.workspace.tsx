@@ -3,33 +3,33 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Pencil, Plus, RefreshCw, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { requiredClientEnv } from "../../shared/env/client-env";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspacePagination } from "@cxapp/ui/workspace/pagination";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceSelect } from "@cxapp/ui/workspace/select";
-import { WorkspaceStatusBadge, WorkspaceSwitchCard } from "@cxapp/ui/workspace/status";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceSelect } from "@cxsun/ui/workspace/select";
+import { WorkspaceStatusBadge, WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel,
   WorkspaceTableLoadingState
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormGrid,
   WorkspaceFormPanel,
   WorkspaceUpsertPage
-} from "@cxapp/ui/workspace/upsert";
-import { buildShowingLabel } from "@cxapp/ui/workspace/utils";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/workspace/upsert";
+import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
+import { cn } from "@cxsun/ui/lib/utils";
 import { TenantPrimaryDomainField } from "../tenant-domain/tenant-domain.form";
 import {
   defaultTenantDomain,

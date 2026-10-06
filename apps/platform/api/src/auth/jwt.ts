@@ -1,18 +1,18 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
-import { authTokenKeyId, deriveAuthTokenKey } from "@cxapp/framework/api";
+import { authTokenKeyId, deriveAuthTokenKey } from "@cxsun/framework/api";
 import { env } from "../env.js";
 
-export { authTokenKeyId } from "@cxapp/framework/api";
+export { authTokenKeyId } from "@cxsun/framework/api";
 
 export type AuthUserType = "super_admin" | "staff" | "tenant";
 export type TenantAccessMode = "custom_domain" | "platform" | "shared_domain";
 
 export type AuthTokenPayload = {
-  aud: "cxapp-platform";
+  aud: "cxsun-platform";
   email: string;
   exp: number;
   iat: number;
-  iss: "cxapp-platform-api";
+  iss: "cxsun-platform-api";
   jti: string;
   loginHost: string;
   name?: string;
@@ -45,10 +45,10 @@ export function signAuthToken(
   const now = Math.floor(Date.now() / 1000);
   const payload: AuthTokenPayload = {
     ...input,
-    aud: "cxapp-platform",
+    aud: "cxsun-platform",
     exp: now + 60 * 60 * env.AUTH_SESSION_TTL_HOURS,
     iat: now,
-    iss: "cxapp-platform-api",
+    iss: "cxsun-platform-api",
     jti: options.jti ?? randomUUID(),
     loginHost: input.loginHost ?? "",
     sessionIssuedAt: options.sessionIssuedAt ?? new Date(now * 1000).toISOString(),
@@ -82,8 +82,8 @@ export function verifyAuthToken(token: string): AuthTokenPayload | null {
     if (
       header.alg !== "HS256" ||
       header.typ !== "at+jwt" ||
-      payload.iss !== "cxapp-platform-api" ||
-      payload.aud !== "cxapp-platform" ||
+      payload.iss !== "cxsun-platform-api" ||
+      payload.aud !== "cxsun-platform" ||
       typeof payload.exp !== "number" ||
       payload.exp <= now ||
       typeof payload.jti !== "string" ||

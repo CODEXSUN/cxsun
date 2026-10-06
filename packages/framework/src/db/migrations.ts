@@ -365,7 +365,7 @@ export async function ensureStandardTableColumns<Database>(
 }
 
 async function ensureMigrationLedger<Database>(database: Kysely<Database>, ledgerTable: string) {
-  await withMigrationLock(database, "cxapp:migration-schema", 30, async () => {
+  await withMigrationLock(database, "cxsun:migration-schema", 30, async () => {
     if (ledgerTable === migrationSchemaTableName) {
       const adoption = planMigrationSchemaAdoption(await listDatabaseTables(database));
       if (adoption) {
@@ -627,7 +627,7 @@ function positiveInteger(value: number, label: string) {
 
 function migrationLockName(scope: string, batch: number) {
   const digest = createHash("sha256").update(`${scope}:${batch}`).digest("hex").slice(0, 24);
-  return `cxapp:migration:${digest}`;
+  return `cxsun:migration:${digest}`;
 }
 
 function migrationError(error: unknown) {

@@ -22,7 +22,7 @@ try {
   assert.equal(loginResponse.statusCode, 200, loginResponse.body);
 
   const sessionCookie = loginResponse.cookies.findLast(
-    (cookie) => cookie.name.endsWith("cxapp_session") && cookie.value.length > 0
+    (cookie) => cookie.name.endsWith("cxsun_session") && cookie.value.length > 0
   );
   assert.ok(sessionCookie, "Development login did not issue a session cookie.");
 

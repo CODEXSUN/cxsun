@@ -12,7 +12,7 @@
     "DB_PASSWORD",
     "DB_MASTER_NAME",
     "JWT_SECRET",
-    "CXAPP_REDIS_URL"
+    "CXSUN_REDIS_URL"
   ],
   "tasks": {
     "build": {

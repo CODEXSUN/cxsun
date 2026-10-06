@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { FastifyRequest } from "fastify";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 
 export type BillingScope = {
   actorEmail?: string;

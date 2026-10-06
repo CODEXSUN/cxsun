@@ -129,4 +129,4 @@ Core Common tables inside a dedicated tenant database must not add redundant `te
 
 Business APIs must require an explicit validated tenant database context and must reject `DB_MASTER_NAME`. They must not bootstrap business tables into the master database during application startup.
 
-Task Manager retains its existing JSON store and is outside this SQL database split.
+Task Manager stores todos and lookups in MariaDB. Super Admin data uses the Platform master database. Enabled tenants use their own databases.

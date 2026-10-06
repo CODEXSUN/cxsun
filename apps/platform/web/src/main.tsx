@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import "@cxapp/ui/styles.css";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import "@cxsun/ui/styles.css";
 import "./styles.css";
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
@@ -17,7 +17,7 @@ const envelope = (await response.json()) as {
 if (!envelope.success || !envelope.data) {
   throw new Error("Runtime configuration response is invalid.");
 }
-window.__CXAPP_RUNTIME_CONFIG__ = Object.freeze(envelope.data);
+window.__CXSUN_RUNTIME_CONFIG__ = Object.freeze(envelope.data);
 
 const { PlatformWebApp } = await import("./app/PlatformWebApp");
 root.render(<PlatformWebApp />);

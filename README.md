@@ -4,7 +4,7 @@ Software makes simple.
 
 ## Working Repository
 
-This CODEXSUN CXApp project is owned and developed from:
+This CODEXSUN CXSUN project is owned and developed from:
 
 ```text
 D:\workspace\cxsun
@@ -23,13 +23,13 @@ tooling.
 
 ## Start
 
-Set `CXAPP_TENANCY_MODE=multi` in the root `.env` for shared multi-tenant use, or
-set `CXAPP_TENANCY_MODE=single` with `CXAPP_SINGLE_TENANT_CORPORATE_ID` for one
+Set `CXSUN_TENANCY_MODE=multi` in the root `.env` for shared multi-tenant use, or
+set `CXSUN_TENANCY_MODE=single` with `CXSUN_SINGLE_TENANT_CORPORATE_ID` for one
 registered client. Single mode still uses a tenant database and tenant-scoped
 sessions. The configured tenant must be the only tenant in the master registry.
 For containers, set these values in `.container/deploy.env` instead of root `.env`.
-The former `CXAPP_SINGLE_TENANT` flag controlled only seeding; rerun
-`bash prepare-env.sh` to migrate it to the runtime mode setting.
+Create a separate `.container/deploy.env` for this application. Do not reuse a
+deployment file or persistent volumes from the previous application.
 
 ```bash
 npm install
@@ -126,8 +126,8 @@ MariaDB is exposed at the host binding and port declared in
 updates, migrations, and smoke checks read only `.container/deploy.env`. Normal
 updates preserve configuration, credentials, databases, uploads, and named
 volumes. The updater verifies Compose ownership before any build, creates a
-validated MariaDB backup before migration, replaces only `cxapp-api` and
-`cxapp-web`, runs the complete deployment smoke test, and restores the previous
+validated MariaDB backup before migration, replaces only `cxsun-api` and
+`cxsun-web`, runs the complete deployment smoke test, and restores the previous
 application images if replacement fails. See `.container/README.md` for the
 full port map, registry flow, persistence contract, and verification commands.
 
@@ -142,6 +142,7 @@ apps/billing/api
 apps/billing/web
 apps/mail/api
 apps/mail/web
+devkits/uiux
 packages/framework
 packages/ui
 tools/version

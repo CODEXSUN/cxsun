@@ -1,4 +1,4 @@
-import { defineModule } from "@cxapp/framework/modules";
+import { defineModule } from "@cxsun/framework/modules";
 import type { DevkitModuleDependencies } from "../../module-dependencies.js";
 import { registerPlatformRegistryRoutes } from "./platform-registry.routes.js";
 

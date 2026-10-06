@@ -1,9 +1,9 @@
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import type { Tenant } from "./tenant.types";
 
 export function TenantTable({

@@ -4,8 +4,8 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "paths": {
-      "@cxapp/ui": ["../../../packages/ui/src/index.ts"],
-      "@cxapp/ui/*": ["../../../packages/ui/src/*"]
+      "@cxsun/ui": ["../../../packages/ui/src/index.ts"],
+      "@cxsun/ui/*": ["../../../packages/ui/src/*"]
     },
     "types": ["vite/client", "node"]
   },

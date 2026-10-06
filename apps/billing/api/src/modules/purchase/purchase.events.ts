@@ -1,4 +1,4 @@
-import type { DomainEvent } from "@cxapp/framework/events";
+import type { DomainEvent } from "@cxsun/framework/events";
 import type { PurchaseStatus } from "./purchase.types.js";
 
 export const purchaseEvents = {

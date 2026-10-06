@@ -1,7 +1,7 @@
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { cn } from "@cxapp/ui/lib/utils";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { cn } from "@cxsun/ui/lib/utils";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import { ArrowUpRight, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { type BillingDocumentLayoutSettings } from "../settings/settings.types";

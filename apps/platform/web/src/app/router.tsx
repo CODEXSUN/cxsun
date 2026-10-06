@@ -39,10 +39,14 @@ const TenantSecurityPage = lazy(() =>
   }))
 );
 const TenantBlogPage = lazy(() =>
-  import("../public/tenant-blog-package").then((module) => ({ default: module.TenantBlogPackagePage }))
+  import("../public/tenant-blog-package").then((module) => ({
+    default: module.TenantBlogPackagePage
+  }))
 );
 const TenantBlogArticlePage = lazy(() =>
-  import("../public/tenant-blog-package").then((module) => ({ default: module.TenantBlogArticlePackagePage }))
+  import("../public/tenant-blog-package").then((module) => ({
+    default: module.TenantBlogArticlePackagePage
+  }))
 );
 const TenantUpdatesPage = lazy(() =>
   import("../public/tenant-site/pages/updates.page").then((module) => ({

@@ -11,19 +11,19 @@ import {
   XIcon
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import {
   WorkspaceDetailTable,
   WorkspaceShowCard,
   WorkspaceShowLayout
-} from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+} from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import type {
   PlatformRegistryDocumentationRow,
   PlatformRegistryPlanningNote,

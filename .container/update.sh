@@ -10,7 +10,7 @@ ASSUME_YES=false
 CHECK_ONLY=false
 ALLOW_DIRTY=false
 BACKUP_DIR="$SCRIPT_DIR/backups"
-LOCK_FILE="${TMPDIR:-/tmp}/cxapp-update.lock"
+LOCK_FILE="${TMPDIR:-/tmp}/cxsun-update.lock"
 backup_file="not-created"
 backup_temp=""
 backup_checksum="not-created"
@@ -39,7 +39,7 @@ Safely update an existing CODEXSUN Docker installation while preserving:
 Before application replacement, the updater validates configuration and
 Compose ownership, builds the current API, Web, and migration images, creates
 a timestamped MariaDB backup, and applies safe forward migrations. It recreates
-only cxapp-api and cxapp-web, waits for health, runs the deployment smoke test,
+only cxsun-api and cxsun-web, waits for health, runs the deployment smoke test,
 and restores the previous application images if replacement fails.
 
 The updater never runs interactive setup, changes either environment file, recreates
@@ -81,12 +81,12 @@ done
 
 if [ "$CHECK_ONLY" != true ]; then
   command -v flock >/dev/null 2>&1 || {
-    echo "flock is required to serialize CXApp deployment updates." >&2
+    echo "flock is required to serialize CXSUN deployment updates." >&2
     exit 69
   }
   exec 9>"$LOCK_FILE"
   flock -n 9 || {
-    echo "Another CXApp update is already running (lock: $LOCK_FILE)." >&2
+    echo "Another CXSUN update is already running (lock: $LOCK_FILE)." >&2
     exit 75
   }
 fi
@@ -110,7 +110,7 @@ validate_release_contract() {
     exit 78
   }
 
-  for key in CXAPP_VERSION BILLING_STACK_API_IMAGE_TAG BILLING_STACK_WEB_IMAGE_TAG \
+  for key in CXSUN_VERSION BILLING_STACK_API_IMAGE_TAG BILLING_STACK_WEB_IMAGE_TAG \
     BILLING_STACK_MIGRATIONS_IMAGE_TAG; do
     configured=$(env_value "$key")
     [ "$configured" = "$source_version" ] || {
@@ -120,11 +120,11 @@ validate_release_contract() {
     }
   done
 
-  compatible_version=$(env_value CXAPP_MIGRATION_COMPATIBLE_VERSION)
+  compatible_version=$(env_value CXSUN_MIGRATION_COMPATIBLE_VERSION)
   [ "$compatible_version" = "$source_version" ] || {
-    echo "Migration compatibility is not approved for CXApp $source_version." >&2
+    echo "Migration compatibility is not approved for CXSUN $source_version." >&2
     echo "After confirming expand-contract/backward compatibility with the current image, set:" >&2
-    echo "  CXAPP_MIGRATION_COMPATIBLE_VERSION=$source_version" >&2
+    echo "  CXSUN_MIGRATION_COMPATIBLE_VERSION=$source_version" >&2
     echo "in $DEPLOY_ENV." >&2
     exit 78
   }
@@ -136,13 +136,13 @@ inspect_source_state() {
     exit 69
   }
   git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1 || {
-    echo "CXApp update source is not a Git worktree: $PROJECT_ROOT" >&2
+    echo "CXSUN update source is not a Git worktree: $PROJECT_ROOT" >&2
     exit 78
   }
   source_commit=$(git -C "$PROJECT_ROOT" rev-parse HEAD)
   if [ -n "$(git -C "$PROJECT_ROOT" status --porcelain --untracked-files=normal)" ]; then
     source_dirty=true
-    echo "WARNING: the CXApp Git worktree contains uncommitted or untracked files." >&2
+    echo "WARNING: the CXSUN Git worktree contains uncommitted or untracked files." >&2
     echo "Commit: $source_commit" >&2
     if [ "$ALLOW_DIRTY" != true ]; then
       echo "Commit/stash the changes, or rerun with --allow-dirty to deploy and record them." >&2
@@ -187,7 +187,7 @@ write_deployment_metadata() {
   "sourceCommit": "$source_commit",
   "sourceDirty": $source_dirty,
   "applicationVersion": "$source_version",
-  "migrationCompatibilityVersion": "$(env_value CXAPP_MIGRATION_COMPATIBLE_VERSION)",
+  "migrationCompatibilityVersion": "$(env_value CXSUN_MIGRATION_COMPATIBLE_VERSION)",
   "apiImageDigest": "$api_digest",
   "webImageDigest": "$web_digest",
   "previousApiImageDigest": "$old_api_image",
@@ -208,14 +208,14 @@ prune_old_backups() {
     count=$((count + 1))
     if [ "$count" -gt "$retention" ]; then
       backup_name=${old_backup##*/}
-      backup_timestamp=${backup_name#cxapp-all-databases-}
+      backup_timestamp=${backup_name#cxsun-all-databases-}
       backup_timestamp=${backup_timestamp%.sql}
       rm -f -- "$old_backup" "${old_backup}.sha256"
-      rm -f -- "$resolved_backup_dir/cxapp-deployment-$backup_timestamp.json"
+      rm -f -- "$resolved_backup_dir/cxsun-deployment-$backup_timestamp.json"
       echo "Removed expired backup: $old_backup"
     fi
   done < <(find "$resolved_backup_dir" -maxdepth 1 -type f \
-    -name 'cxapp-all-databases-*.sql' -printf '%T@ %p\n' | sort -nr | cut -d' ' -f2-)
+    -name 'cxsun-all-databases-*.sql' -printf '%T@ %p\n' | sort -nr | cut -d' ' -f2-)
 }
 
 container_is_running() {
@@ -239,7 +239,7 @@ require_existing_service() {
 
 stack_image() {
   role="$1"
-  registry=$(env_value CXAPP_IMAGE_REGISTRY)
+  registry=$(env_value CXSUN_IMAGE_REGISTRY)
   case "$role" in
     api) tag=$(env_value BILLING_STACK_API_IMAGE_TAG) ;;
     web) tag=$(env_value BILLING_STACK_WEB_IMAGE_TAG) ;;
@@ -252,14 +252,14 @@ rollback_application() {
   reason="$1"
   rollback_status=0
   echo "$reason" >&2
-  failure_log="$resolved_backup_dir/cxapp-api-failure-$timestamp.log"
+  failure_log="$resolved_backup_dir/cxsun-api-failure-$timestamp.log"
   {
     echo "Reason: $reason"
     echo "Timestamp: $timestamp"
     echo "Container inspect:"
-    docker inspect cxapp-api 2>&1 || true
+    docker inspect cxsun-api 2>&1 || true
     echo "Container logs:"
-    docker logs --timestamps cxapp-api 2>&1 || true
+    docker logs --timestamps cxsun-api 2>&1 || true
   } >"$failure_log"
   chmod 600 "$failure_log" 2>/dev/null || true
   echo "API failure diagnostics: $failure_log" >&2
@@ -292,16 +292,16 @@ inspect_source_state
 require_docker
 validate_container_ownership
 
-backup_retention=$(env_value CXAPP_UPDATE_BACKUP_RETENTION)
+backup_retention=$(env_value CXSUN_UPDATE_BACKUP_RETENTION)
 backup_retention=${backup_retention:-10}
-minimum_backup_mb=$(env_value CXAPP_UPDATE_MIN_BACKUP_FREE_MB)
+minimum_backup_mb=$(env_value CXSUN_UPDATE_MIN_BACKUP_FREE_MB)
 minimum_backup_mb=${minimum_backup_mb:-1024}
-minimum_docker_mb=$(env_value CXAPP_UPDATE_MIN_DOCKER_FREE_MB)
+minimum_docker_mb=$(env_value CXSUN_UPDATE_MIN_DOCKER_FREE_MB)
 minimum_docker_mb=${minimum_docker_mb:-5120}
 for setting in \
-  "CXAPP_UPDATE_BACKUP_RETENTION:$backup_retention" \
-  "CXAPP_UPDATE_MIN_BACKUP_FREE_MB:$minimum_backup_mb" \
-  "CXAPP_UPDATE_MIN_DOCKER_FREE_MB:$minimum_docker_mb"; do
+  "CXSUN_UPDATE_BACKUP_RETENTION:$backup_retention" \
+  "CXSUN_UPDATE_MIN_BACKUP_FREE_MB:$minimum_backup_mb" \
+  "CXSUN_UPDATE_MIN_DOCKER_FREE_MB:$minimum_docker_mb"; do
   key=${setting%%:*}
   value=${setting#*:}
   positive_integer "$value" || {
@@ -329,13 +329,13 @@ docker_root=$(docker info --format '{{.DockerRootDir}}')
 require_free_space "$resolved_backup_dir" "$minimum_backup_mb" "MariaDB backup"
 require_free_space "$docker_root" "$minimum_docker_mb" "Docker build storage"
 
-require_existing_service cxapp-mariadb cxapp-mariadb mariadb
-require_existing_service cxapp-redis cxapp-redis redis
-require_existing_service cxapp-media cxapp-media media
-require_existing_service cxapp-api cxapp-billing platform-api
-require_existing_service cxapp-web cxapp-billing platform-web
+require_existing_service cxsun-mariadb cxsun-mariadb mariadb
+require_existing_service cxsun-redis cxsun-redis redis
+require_existing_service cxsun-media cxsun-media media
+require_existing_service cxsun-api cxsun-billing platform-api
+require_existing_service cxsun-web cxsun-billing platform-web
 
-for container in cxapp-mariadb cxapp-redis cxapp-media cxapp-api cxapp-web; do
+for container in cxsun-mariadb cxsun-redis cxsun-media cxsun-api cxsun-web; do
   container_is_running "$container" || {
     echo "Existing CODEXSUN container is not running: $container" >&2
     exit 69
@@ -351,7 +351,7 @@ echo
 echo "CODEXSUN Docker update plan"
 echo "  Runtime and deployment configuration: $DEPLOY_ENV (preserved)"
 echo "  Infrastructure: MariaDB, Redis, and File Browser (preserved)"
-echo "  Application containers: cxapp-api and cxapp-web"
+echo "  Application containers: cxsun-api and cxsun-web"
 echo "  Preflight: environment, Docker health, and Compose ownership"
 echo "  Release: source and image tags locked to $source_version"
 echo "  Source commit: $source_commit (dirty: $source_dirty)"
@@ -379,8 +379,8 @@ if [ "$ASSUME_YES" != true ]; then
   esac
 fi
 
-old_api_image=$(docker inspect --format '{{.Image}}' cxapp-api)
-old_web_image=$(docker inspect --format '{{.Image}}' cxapp-web)
+old_api_image=$(docker inspect --format '{{.Image}}' cxsun-api)
+old_web_image=$(docker inspect --format '{{.Image}}' cxsun-web)
 
 echo "Building the API, Web, and migration images."
 bash "$SCRIPT_DIR/deploy.sh" billing build
@@ -389,14 +389,14 @@ built_web_image=$(docker image inspect --format '{{.Id}}' "$(stack_image web)")
 
 chmod 700 "$resolved_backup_dir" 2>/dev/null || true
 timestamp=$(date -u +%Y%m%dT%H%M%SZ)
-backup_file="$resolved_backup_dir/cxapp-all-databases-$timestamp.sql"
+backup_file="$resolved_backup_dir/cxsun-all-databases-$timestamp.sql"
 backup_temp="${backup_file}.partial"
-metadata_file="$resolved_backup_dir/cxapp-deployment-$timestamp.json"
+metadata_file="$resolved_backup_dir/cxsun-deployment-$timestamp.json"
 
 echo "Creating MariaDB backup: $backup_file"
 if ! MSYS_NO_PATHCONV=1 docker exec \
   -e MYSQL_PWD="$(env_value DB_PASSWORD)" \
-  cxapp-mariadb \
+  cxsun-mariadb \
   mariadb-dump \
   --no-defaults \
   --user="$(env_value DB_USER)" \
@@ -431,7 +431,7 @@ prune_old_backups "$backup_retention"
 
 echo "Checking production migration targets before applying the release."
 if ! stack_compose billing --profile tools run --rm \
-  -e "CXAPP_VERIFIED_BACKUP_ID=$timestamp" \
+  -e "CXSUN_VERIFIED_BACKUP_ID=$timestamp" \
   platform-migrate npm run db:migrations:preflight; then
   migration_result="preflight-failed"
   write_deployment_metadata "migration-preflight-failed" "$built_api_image" "$built_web_image"
@@ -473,14 +473,14 @@ if ! bash "$SCRIPT_DIR/smoke-test.sh"; then
   rollback_application "The replacement deployment failed its smoke test."
 fi
 
-new_api_image=$(docker inspect --format '{{.Image}}' cxapp-api)
-new_web_image=$(docker inspect --format '{{.Image}}' cxapp-web)
+new_api_image=$(docker inspect --format '{{.Image}}' cxsun-api)
+new_web_image=$(docker inspect --format '{{.Image}}' cxsun-web)
 write_deployment_metadata "completed" "$new_api_image" "$new_web_image"
 
 echo
 echo "CODEXSUN Docker update completed."
-echo "Web: http://$(env_value CXAPP_BIND_ADDRESS):$(env_value PLATFORM_WEB_PORT)/"
-echo "API health: http://$(env_value CXAPP_BIND_ADDRESS):$(env_value PLATFORM_API_PORT)/health"
+echo "Web: http://$(env_value CXSUN_BIND_ADDRESS):$(env_value PLATFORM_WEB_PORT)/"
+echo "API health: http://$(env_value CXSUN_BIND_ADDRESS):$(env_value PLATFORM_API_PORT)/health"
 echo "Validated database backup: $backup_file"
 echo "Backup SHA-256: $backup_checksum"
 echo "Deployment metadata: $metadata_file"

@@ -1,6 +1,6 @@
 import { ArrowLeft, Pencil, RotateCcw, Trash2 } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { cn } from "@cxapp/ui/lib/utils";
+import { Button } from "@cxsun/ui/components/button";
+import { cn } from "@cxsun/ui/lib/utils";
 import { formatDate, formatMoney } from "./accounting.services";
 import { JournalStatusPill } from "./accounting.list";
 import type { JournalEntry } from "./accounting.types";

@@ -9,7 +9,7 @@ import {
   requireEnvNumber,
   requireEnvValue,
   resolvePlatformRuntime
-} from "@cxapp/framework/env";
+} from "@cxsun/framework/env";
 
 const configDir = fileURLToPath(new URL(".", import.meta.url));
 const rootPackage = JSON.parse(
@@ -31,7 +31,7 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(rootPackage.version)
     },
     optimizeDeps: {
-      exclude: ["@codexsun/blog/web", "@cxapp/billing-web"],
+      exclude: ["@codexsun/blog/web", "@cxsun/billing-web", "@cxsun/core-web"],
       include: [
         "react-is",
         "use-sync-external-store/shim",
@@ -43,9 +43,17 @@ export default defineConfig(({ command, mode }) => {
     plugins: [tailwindcss(), react()],
     resolve: {
       alias: {
-        "@cxapp/billing-web/modules/reports": resolve(
+        "@cxsun/ui/workspace/lookup": resolve(
+          configDir,
+          "../../../packages/ui/src/workspace/lookup.tsx"
+        ),
+        "@cxsun/billing-web/modules/reports": resolve(
           configDir,
           "../../billing/web/src/modules/reports/index.ts"
+        ),
+        "@cxsun/crm-web/modules/enquiry": resolve(
+          configDir,
+          "../../crm/web/src/modules/enquiry/index.ts"
         )
       },
       preserveSymlinks: true

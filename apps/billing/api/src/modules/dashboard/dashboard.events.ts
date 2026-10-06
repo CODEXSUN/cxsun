@@ -1,4 +1,4 @@
-import type { DomainEvent } from "@cxapp/framework/events";
+import type { DomainEvent } from "@cxsun/framework/events";
 import type { DashboardProjectionRequest } from "./dashboard.types.js";
 
 export const dashboardEvents = {

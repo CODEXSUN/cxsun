@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { currentAccountsScope } from "../../auth/accounts-scope.js";
 import { BankBookRepository } from "./bank-book.repository.js";
 import type { BankBookEntryPayload, BankBookRegister } from "./bank-book.types.js";

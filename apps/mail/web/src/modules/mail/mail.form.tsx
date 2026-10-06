@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Bold, FileText, Italic, Paperclip, Send, Underline } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
+import { Button } from "@cxsun/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -8,9 +8,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "@cxapp/ui/components/dialog";
-import { Input } from "@cxapp/ui/components/input";
-import { Textarea } from "@cxapp/ui/components/textarea";
+} from "@cxsun/ui/components/dialog";
+import { Input } from "@cxsun/ui/components/input";
+import { Textarea } from "@cxsun/ui/components/textarea";
 import { mailComposeSchema } from "./mail.schema";
 import type { MailComposePayload } from "./mail.types";
 

@@ -1,18 +1,18 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
-import { Textarea } from "@cxapp/ui/components/textarea";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
+import { Textarea } from "@cxsun/ui/components/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "@cxapp/ui/components/select";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/components/select";
+import { cn } from "@cxsun/ui/lib/utils";
 import { formatMoney } from "./accounting.services";
 import type {
   Account,

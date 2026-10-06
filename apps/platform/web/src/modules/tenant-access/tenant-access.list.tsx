@@ -1,4 +1,4 @@
-import { StatusBadge } from "@cxapp/ui";
+import { StatusBadge } from "@cxsun/ui";
 import type { TenantAccessSummary } from "./tenant-access.types";
 
 export function TenantAccessList({ records }: { records: TenantAccessSummary[] }) {

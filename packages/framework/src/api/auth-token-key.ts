@@ -14,5 +14,5 @@ export function authTokenKeyId(scope: AuthTokenKeyScope) {
 }
 
 export function deriveAuthTokenKey(rootSecret: string, keyId: string) {
-  return createHmac("sha256", rootSecret).update(`cxapp:auth-token:${keyId}`).digest();
+  return createHmac("sha256", rootSecret).update(`cxsun:auth-token:${keyId}`).digest();
 }

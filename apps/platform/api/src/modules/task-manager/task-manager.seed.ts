@@ -58,7 +58,6 @@ async function importLegacyJson(repository: TaskManagerRepository, scopeKey: str
     await repository.importTodo(scopeKey, {
       category: item.category ?? "work",
       createdAt: validDate(item.createdAt, now),
-      description: String(item.description ?? ""),
       dueDate: String(item.dueDate ?? ""),
       groupName: String(item.groupName ?? ""),
       id: item.id,
@@ -66,7 +65,8 @@ async function importLegacyJson(repository: TaskManagerRepository, scopeKey: str
       priority: item.priority ?? "medium",
       status: item.status ?? "open",
       title: item.title.trim(),
-      updatedAt: validDate(item.updatedAt, now)
+      updatedAt: validDate(item.updatedAt, now),
+      visibility: item.visibility ?? "private"
     });
     imported += 1;
   }

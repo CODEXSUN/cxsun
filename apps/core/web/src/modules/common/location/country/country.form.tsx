@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspaceSwitchCard } from "@cxapp/ui/workspace/status";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormFooter,
   WorkspaceFormGrid,
   WorkspaceUpsertDialog
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import { countrySchema } from "./country.schema";
 import type { CountryRecord, CountrySavePayload } from "./country.types";
 

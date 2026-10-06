@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { CurrenciesRepository } from "./currencies.repository.js";
 import type {
   CurrenciesListFilters,

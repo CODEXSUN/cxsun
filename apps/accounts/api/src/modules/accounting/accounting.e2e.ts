@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
 import { createConnection } from "mysql2/promise";
-import { getDefaultCompanyForDatabase, bootstrapCoreDatabase } from "@cxapp/core-api";
+import { getDefaultCompanyForDatabase, bootstrapCoreDatabase } from "@cxsun/core-api";
 import {
   bootstrapAccountsDatabase,
   closeAllAccountsDatabases
@@ -14,7 +14,7 @@ import { BankBookService } from "../bank-book/bank-book.service.js";
 import type { AccountGroup, JournalEntry, LedgerView } from "./accounting.types.js";
 
 export async function runAccountingE2e() {
-  const databaseName = `cxapp_accounting_e2e_${Date.now()}`;
+  const databaseName = `cxsun_accounting_e2e_${Date.now()}`;
   const admin = await createConnection({
     host: env.DB_HOST,
     password: env.DB_PASSWORD,

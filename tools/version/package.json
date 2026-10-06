@@ -1,9 +1,9 @@
 {
-  "name": "@cxapp/version-tools",
-  "version": "1.0.79",
+  "name": "@cxsun/version-tools",
+  "version": "1.0.80",
   "private": true,
   "type": "module",
   "bin": {
-    "cxapp-version": "./version.mjs"
+    "cxsun-version": "./version.mjs"
   }
 }

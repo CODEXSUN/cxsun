@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { z } from "zod";
 import { currentAccountsScope } from "../../auth/accounts-scope.js";
 import { overviewService } from "./overview.service.js";

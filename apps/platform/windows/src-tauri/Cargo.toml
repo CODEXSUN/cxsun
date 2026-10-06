@@ -1,16 +1,16 @@
 [package]
-name = "cxapp-windows"
-version = "1.0.79"
-description = "CXApp Windows desktop host"
+name = "cxsun-windows"
+version = "1.0.80"
+description = "CXSUN Windows desktop host"
 authors = ["CODEXSUN"]
 edition = "2024"
 
 [lib]
-name = "cxapp_windows_lib"
+name = "cxsun_windows_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [[bin]]
-name = "cxapp-windows"
+name = "cxsun-windows"
 path = "src/main.rs"
 
 [build-dependencies]

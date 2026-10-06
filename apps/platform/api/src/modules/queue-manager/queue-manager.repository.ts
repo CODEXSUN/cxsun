@@ -33,7 +33,7 @@ export class QueueManagerRepository {
       .selectAll()
       .where("singleton_key", "=", 1)
       .executeTakeFirst();
-    const backend = normalizeBackend(selected?.backend ?? env.CXAPP_QUEUE_BACKEND);
+    const backend = normalizeBackend(selected?.backend ?? env.CXSUN_QUEUE_BACKEND);
     return {
       availableBackends: ["database", "bullmq-redis"],
       backend,
@@ -42,7 +42,7 @@ export class QueueManagerRepository {
       completed: jobs.filter((job) => job.status === "completed").length,
       failed: jobs.filter((job) => job.status === "failed").length,
       pending: jobs.filter((job) => job.status === "pending").length,
-      redisConfigured: Boolean(env.CXAPP_REDIS_URL.trim()),
+      redisConfigured: Boolean(env.CXSUN_REDIS_URL.trim()),
       running: jobs.filter((job) => job.status === "running").length,
       updatedAt: selected?.updated_at ? new Date(selected.updated_at).toISOString() : null,
       updatedBy: selected?.updated_by ?? "environment"

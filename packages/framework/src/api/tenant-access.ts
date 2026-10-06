@@ -116,8 +116,8 @@ function verify(token: string, secret: string): PlatformAccessClaims | null {
       .digest("base64url");
     if (!safeEqual(signature, expected)) return null;
     if (
-      claims.iss !== "cxapp-platform-api" ||
-      claims.aud !== "cxapp-platform" ||
+      claims.iss !== "cxsun-platform-api" ||
+      claims.aud !== "cxsun-platform" ||
       typeof claims.exp !== "number" ||
       claims.exp <= Math.floor(Date.now() / 1000)
     ) {

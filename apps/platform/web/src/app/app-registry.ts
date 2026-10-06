@@ -25,7 +25,7 @@ import {
   Trash2Icon,
   type LucideIcon
 } from "lucide-react";
-import type { SidemenuItem } from "@cxapp/ui/blocks/menu/sidemenu/sub/sidemenu-section";
+import type { SidemenuItem } from "@cxsun/ui/blocks/menu/sidemenu/sub/sidemenu-section";
 
 export type PlatformAppId =
   | "application"
@@ -46,6 +46,7 @@ export type PlatformAppRootPage =
   | "task-manager.overview"
   | "blog.overview"
   | "auditor.overview"
+  | "auditor.clients"
   | "crm.overview";
 
 export type BillingNavigationFeatures = {
@@ -231,6 +232,16 @@ export function appMenuFor(
           title: "Overview",
           isActive: activePage === "crm.overview",
           onSelect: () => onSelect("crm.overview")
+        },
+        {
+          title: "Enquiries",
+          isActive: activePage === "crm.enquiries",
+          onSelect: () => onSelect("crm.enquiries")
+        },
+        {
+          title: "Contacts",
+          isActive: activePage === "crm.contacts",
+          onSelect: () => onSelect("crm.contacts")
         }
       ]
     };
@@ -264,6 +275,11 @@ export function appMenuFor(
           title: "Overview",
           isActive: activePage === "auditor.overview",
           onSelect: () => onSelect("auditor.overview")
+        },
+        {
+          title: "Clients",
+          isActive: activePage === "auditor.clients",
+          onSelect: () => onSelect("auditor.clients")
         }
       ]
     };
@@ -537,6 +553,18 @@ export function appMenuItemsFor(
         isActive: activePage === "crm.overview",
         onSelect: () => onSelect("crm.overview"),
         title: "Overview"
+      },
+      {
+        icon: ClipboardListIcon,
+        isActive: activePage === "crm.enquiries",
+        onSelect: () => onSelect("crm.enquiries"),
+        title: "Enquiries"
+      },
+      {
+        icon: ContactRoundIcon,
+        isActive: activePage === "crm.contacts",
+        onSelect: () => onSelect("crm.contacts"),
+        title: "Contacts"
       }
     ];
   }
@@ -547,6 +575,12 @@ export function appMenuItemsFor(
         isActive: activePage === "auditor.overview",
         onSelect: () => onSelect("auditor.overview"),
         title: "Overview"
+      },
+      {
+        icon: ContactRoundIcon,
+        isActive: activePage === "auditor.clients",
+        onSelect: () => onSelect("auditor.clients"),
+        title: "Clients"
       }
     ];
   }

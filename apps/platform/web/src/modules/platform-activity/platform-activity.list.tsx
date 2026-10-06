@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from "date-fns";
-import { StatusBadge } from "@cxapp/ui";
+import { StatusBadge } from "@cxsun/ui";
 import type { PlatformActivity } from "./platform-activity.types";
 
 export function PlatformActivityList({ records }: { records: PlatformActivity[] }) {

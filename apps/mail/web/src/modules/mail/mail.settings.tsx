@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "@cxapp/ui/components/button";
+import { Button } from "@cxsun/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -7,21 +7,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "@cxapp/ui/components/dialog";
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
+} from "@cxsun/ui/components/dialog";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "@cxapp/ui/components/select";
+} from "@cxsun/ui/components/select";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspaceSwitchCard } from "@cxapp/ui/workspace/status";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
 import { mailSettingsSchema } from "./mail.schema";
 import type { MailSettings, MailSettingsPayload } from "./mail.types";
 
@@ -338,7 +338,7 @@ function Field({ children, label }: { children: React.ReactNode; label: string }
 }
 function blankSettings(): MailSettingsPayload {
   return {
-    companyId: Number(localStorage.getItem("cxapp.tenant.company-id")) || 0,
+    companyId: Number(localStorage.getItem("cxsun.tenant.company-id")) || 0,
     enabled: false,
     fallbackEnabled: true,
     fromEmail: "",

@@ -61,9 +61,9 @@ Queue backend selection should be visible in Super Admin or system settings. Pro
 Current platform implementation:
 
 - `platform.queue-manager` owns `queue_jobs`, `queue_runtime_settings`, Queue Management UI, retry/cancel/run controls, retention cleanup, and worker dispatch.
-- `CXAPP_QUEUE_BACKEND` seeds the initial selection. Super Admin can switch the persisted runtime backend between `memory`, `database`, and `bullmq-redis`.
+- `CXSUN_QUEUE_BACKEND` seeds the initial selection. Super Admin can switch the persisted runtime backend between `memory`, `database`, and `bullmq-redis`.
 - Every backend retains job metadata in `queue_jobs`; in-memory means in-process dispatch, not non-durable business records.
-- `bullmq-redis` is connected through BullMQ and Redis using `CXAPP_REDIS_URL`; database metadata is still retained so Queue Management can show status, filters, retries, and audit context.
+- `bullmq-redis` is connected through BullMQ and Redis using `CXSUN_REDIS_URL`; database metadata is still retained so Queue Management can show status, filters, retries, and audit context.
 - Database maintenance backup/restore requests enqueue `database-maintenance.run` jobs on the `maintenance` queue.
 - Password recovery enqueues Mail-owned `mail.system-send` jobs on the `mail` queue. External delivery requires the environment SMTP fallback to be configured and enabled.
 - Tenant browser-generated artifacts enqueue `client-artifact.prepare` metadata jobs on the `reports` queue after checksum and size validation. Billing document PDF downloads use this ingress so Queue Management records the accepted export without storing large PDF payloads in the platform queue database.

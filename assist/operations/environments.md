@@ -97,7 +97,7 @@ Cloud operators prepare that file with `bash prepare-env.sh`; `bash setup.sh`
 only checks and consumes it. Setup must never create deployment configuration
 or offer to copy values or credentials from development `.env`.
 
-All application-owned environment variables use the `CXAPP_*` prefix. The
+All application-owned environment variables use the `CXSUN_*` prefix. The
 retired prefix has no runtime alias: root and deployment environment files must
 be migrated together before startup. Public branding values such as the
 CODEXSUN display name and `app.codexsun.com` remain values, not configuration

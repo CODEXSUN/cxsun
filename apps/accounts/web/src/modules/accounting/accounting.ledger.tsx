@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
+import { Button } from "@cxsun/ui/components/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "@cxapp/ui/components/select";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceTableEmptyState, WorkspaceTablePanel } from "@cxapp/ui/workspace/table";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/components/select";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceTableEmptyState, WorkspaceTablePanel } from "@cxsun/ui/workspace/table";
+import { cn } from "@cxsun/ui/lib/utils";
 import { useAccounts, useLedger } from "./accounting.hooks";
 import { formatDate, formatMoney } from "./accounting.services";
 

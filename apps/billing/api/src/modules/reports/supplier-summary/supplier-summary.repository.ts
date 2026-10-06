@@ -71,8 +71,8 @@ export class SupplierSummaryRepository {
         return {
           balance: money(Number(row.balance) + opening - Number(row.legacy)),
           code: row.code,
-          credit: money(Number(row.credit) - Number(row.legacy) + Math.max(opening,0)),
-          debit: money(Number(row.debit) + Math.max(-opening,0)),
+          credit: money(Number(row.credit) - Number(row.legacy) + Math.max(opening, 0)),
+          debit: money(Number(row.debit) + Math.max(-opening, 0)),
           id: Number(row.id),
           name: row.name
         };

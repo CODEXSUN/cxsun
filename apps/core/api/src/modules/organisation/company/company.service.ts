@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { runWithCoreDatabase } from "../../../database/core-database.js";
 import { CompanyRepository } from "./company.repository.js";
 import type {

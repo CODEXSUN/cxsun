@@ -1,8 +1,8 @@
 import { Printer } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceShowCard } from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceShowCard } from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import { formatDate, formatMoney } from "./accounting.services";
 import type { BookEntry, BookRegisterLine, JournalEntry } from "./accounting.types";
 

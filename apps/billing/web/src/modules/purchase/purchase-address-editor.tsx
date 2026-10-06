@@ -2,16 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
-import { DialogFooter, DialogHeader, DialogTitle } from "@cxapp/ui/components/dialog";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
+import { DialogFooter, DialogHeader, DialogTitle } from "@cxsun/ui/components/dialog";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import { billingLookupQuery } from "../../shared/query/billing-lookup-query";
 import {
   createPurchaseAddressType,

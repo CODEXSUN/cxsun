@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { mailEvents } from "./mail.events.js";
 import { decryptMailSecret, encryptMailSecret } from "./mail.secrets.js";
 import type {

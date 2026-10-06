@@ -133,7 +133,15 @@ export async function ensureTenantStorage(tenantKey: string) {
 async function ensureTenantPublicStorageLink(tenantKey: string) {
   const safeTenantKey = sanitizeStorageSegment(tenantKey);
   const source = tenantStorageRoot(safeTenantKey);
-  const link = resolve(workspaceRoot(), "apps", "platform", "web", "public", "storage", safeTenantKey);
+  const link = resolve(
+    workspaceRoot(),
+    "apps",
+    "platform",
+    "web",
+    "public",
+    "storage",
+    safeTenantKey
+  );
   await mkdir(dirname(link), { recursive: true });
   try {
     await lstat(link);

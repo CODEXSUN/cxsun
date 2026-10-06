@@ -1,4 +1,4 @@
-import { defineModule } from "@cxapp/framework/modules";
+import { defineModule } from "@cxsun/framework/modules";
 import type { PlatformModuleDependencies } from "../../module-dependencies.js";
 import { registerTaskManagerRoutes } from "./task-manager.routes.js";
 export const taskManagerModule = defineModule<PlatformModuleDependencies>({

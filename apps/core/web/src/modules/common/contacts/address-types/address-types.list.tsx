@@ -1,8 +1,8 @@
 import { Trash2 } from "lucide-react";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
-import { WorkspaceTable } from "@cxapp/ui/workspace/table";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
+import { WorkspaceTable } from "@cxsun/ui/workspace/table";
 import type { AddressTypesRecord } from "./address-types.types";
 
 export function AddressTypesList({

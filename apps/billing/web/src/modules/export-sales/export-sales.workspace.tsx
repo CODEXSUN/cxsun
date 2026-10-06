@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspacePagination } from "@cxapp/ui/workspace/pagination";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspaceTableEmptyState, WorkspaceTablePanel } from "@cxapp/ui/workspace/table";
-import { buildShowingLabel } from "@cxapp/ui/workspace/utils";
-import { cn } from "@cxapp/ui/lib/utils";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspaceTableEmptyState, WorkspaceTablePanel } from "@cxsun/ui/workspace/table";
+import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
+import { cn } from "@cxsun/ui/lib/utils";
 import { defaultBillingSettings, useBillingSettings } from "../settings";
 import {
   type ExportSale,
@@ -281,7 +281,11 @@ export function ExportSalesWorkspace({
         onEdit={() => setView({ mode: "upsert", exportSale: freshExportSale, returnTo: "show" })}
         onNew={() => void openNewExportSale()}
         onPrint={() => window.print()}
-        canEdit={canEditBillingEntry(freshExportSale.status, canEditEntries, canEditFinalizedEntries)}
+        canEdit={canEditBillingEntry(
+          freshExportSale.status,
+          canEditEntries,
+          canEditFinalizedEntries
+        )}
         {...(previousExportSale
           ? { onPrevious: () => setView({ mode: "show", exportSale: previousExportSale }) }
           : {})}

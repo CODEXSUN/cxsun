@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from "react";
 
 export const DESIGN_SYSTEM_COMPONENT_DEFAULTS_STORAGE_KEY =
-  "cxapp.design-system.component-defaults";
-export const DESIGN_SYSTEM_COMPONENT_DEFAULTS_EVENT = "cxapp:design-system-component-defaults";
+  "cxsun.design-system.component-defaults";
+export const DESIGN_SYSTEM_COMPONENT_DEFAULTS_EVENT = "cxsun:design-system-component-defaults";
 
 export type DesignSystemComponentDefaults = Record<string, string>;
 

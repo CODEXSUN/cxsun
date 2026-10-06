@@ -1,5 +1,5 @@
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import { WorkspaceShowCard } from "@cxapp/ui/workspace/show";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import { WorkspaceShowCard } from "@cxsun/ui/workspace/show";
 import type { AuditEventDTO } from "./tenant.types";
 
 export function TenantActivityControl({

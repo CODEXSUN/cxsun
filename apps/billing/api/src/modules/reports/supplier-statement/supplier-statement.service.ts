@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { buildSupplierStatementAgeing } from "./supplier-statement.ageing.js";
 import { SupplierStatementRepository } from "./supplier-statement.repository.js";
 import type {

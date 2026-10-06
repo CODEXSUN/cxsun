@@ -3,7 +3,7 @@ import {
   rollbackMigrationBatch,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import { sql, type Kysely } from "kysely";
 
 type MailDatabase = Record<string, Record<string, unknown>>;

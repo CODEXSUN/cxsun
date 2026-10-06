@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { BookOpen, Layers, Landmark } from "lucide-react";
-import { cn } from "@cxapp/ui/lib/utils";
+import { cn } from "@cxsun/ui/lib/utils";
 
 export function OverviewWidget({
   children,

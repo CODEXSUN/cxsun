@@ -33,7 +33,7 @@ const runtimes = new Map(
 let healthTimer;
 let stopping = false;
 
-console.log("\nCXApp Platform development runtime");
+console.log("\nCXSUN Platform development runtime");
 
 try {
   await startAndWait("platform-api");
@@ -186,7 +186,7 @@ async function stopServiceChild(child) {
   if (!child || child.exitCode !== null || !child.pid) return;
 
   const exited = waitForExit(child, 3_000);
-  if (child.connected) child.send({ type: "cxapp:shutdown" });
+  if (child.connected) child.send({ type: "cxsun:shutdown" });
   else child.kill("SIGTERM");
   if (await exited) return;
 

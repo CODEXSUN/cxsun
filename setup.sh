@@ -88,7 +88,7 @@ ensure_network
 
 infrastructure_image() {
   stack="$1"
-  registry=$(env_value CXAPP_IMAGE_REGISTRY)
+  registry=$(env_value CXSUN_IMAGE_REGISTRY)
   case "$stack" in
     mariadb) tag=$(env_value MARIADB_IMAGE_TAG) ;;
     redis) tag=$(env_value REDIS_IMAGE_TAG) ;;
@@ -128,9 +128,9 @@ fi
 
 stack_compose database/mariadb build "${build_option[@]}"
 stack_compose database/mariadb up -d --no-build --wait --wait-timeout 180
-MSYS_NO_PATHCONV=1 docker exec cxapp-mariadb \
-  bash /docker-entrypoint-initdb.d/10-cxapp-grants.sh >/dev/null
-echo "MariaDB application grants reconciled. Host access: $(env_value CXAPP_BIND_ADDRESS):$(env_value MARIADB_HOST_PORT)."
+MSYS_NO_PATHCONV=1 docker exec cxsun-mariadb \
+  bash /docker-entrypoint-initdb.d/10-cxsun-grants.sh >/dev/null
+echo "MariaDB application grants reconciled. Host access: $(env_value CXSUN_BIND_ADDRESS):$(env_value MARIADB_HOST_PORT)."
 
 stack_compose database/redis build "${build_option[@]}"
 stack_compose database/redis up -d --no-build --wait --wait-timeout 120

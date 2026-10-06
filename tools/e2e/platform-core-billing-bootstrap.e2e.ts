@@ -4,10 +4,10 @@ import { resolve } from "node:path";
 import { createConnection, type RowDataPacket } from "mysql2/promise";
 
 const runId = Date.now();
-const masterDatabaseName = `cxapp_platform_e2e_${runId}`;
-const tenantDatabaseName = `cxapp_tenant_e2e_${runId}`;
+const masterDatabaseName = `cxsun_platform_e2e_${runId}`;
+const tenantDatabaseName = `cxsun_tenant_e2e_${runId}`;
 const tenantCode = `E2E${runId}`;
-const tenantSlug = `cxapp-e2e-${runId}`;
+const tenantSlug = `cxsun-e2e-${runId}`;
 
 Object.assign(process.env, {
   DB_MASTER_NAME: masterDatabaseName,
@@ -105,7 +105,7 @@ try {
   assert.equal(initial.tenant.moduleSettings, 4);
   assert.equal(initial.tenant.enabledBillingModules, 1);
   assert.equal(initial.tenant.companies, 1);
-  assert.equal(initial.tenant.cxappCompanies, 1);
+  assert.equal(initial.tenant.cxsunCompanies, 1);
   assert.equal(initial.tenant.currentFinancialYears, 1);
   assert.equal(initial.tenant.defaultCompanies, 1);
   assert.equal(initial.tenant.defaultLandingApp, "billing");
@@ -190,7 +190,7 @@ async function loadState() {
       "settings_key = 'billing' AND company_id = (SELECT company_id FROM core_default_company_settings WHERE singleton_key = 1)"
     ),
     billingTables: await countBillingRootTables(),
-    cxappCompanies: await countWhere("core_companies", "name = 'cxapp'"),
+    cxsunCompanies: await countWhere("core_companies", "name = 'cxsun'"),
     companies: await count("core_companies"),
     currentFinancialYears: await countWhere("core_financial_years", "is_current = 1"),
     defaultCompanies: await count("core_default_company_settings"),

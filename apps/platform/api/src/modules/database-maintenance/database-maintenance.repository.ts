@@ -29,14 +29,14 @@ export class DatabaseMaintenanceRepository {
       user: env.DB_USER
     });
     return {
-      backupStatus: process.env.CXAPP_BACKUP_VERIFY_ID
+      backupStatus: process.env.CXSUN_BACKUP_VERIFY_ID
         ? ("verified" as const)
         : ("operator-required" as const),
       databaseName,
       host: env.DB_HOST,
       migrations: await this.masterMigrations(databaseName),
       port: env.DB_PORT,
-      restoreStatus: process.env.CXAPP_RESTORE_TEST_DB_NAME
+      restoreStatus: process.env.CXSUN_RESTORE_TEST_DB_NAME
         ? ("sandbox-configured" as const)
         : ("not-configured" as const),
       runs: await this.runs("master", "master"),

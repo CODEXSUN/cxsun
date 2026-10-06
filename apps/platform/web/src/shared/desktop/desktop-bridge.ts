@@ -38,7 +38,7 @@ export function publishDesktopWorkspace(workspace: DesktopWorkspace): void {
   webView.postMessage(
     JSON.stringify({
       payload: workspace,
-      type: "cxapp.desktop.workspace",
+      type: "cxsun.desktop.workspace",
       version: 1
     })
   );

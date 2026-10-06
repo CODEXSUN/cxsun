@@ -38,28 +38,25 @@ prepare_deploy_env() {
 
 validate_deploy_env() {
   for key in \
-    NODE_ENV NODE_RUNTIME_VERSION NPM_RUNTIME_VERSION NGINX_BASE_IMAGE CXAPP_VERSION \
-    CXAPP_IMAGE_REGISTRY CXAPP_DOCKER_NETWORK CXAPP_BIND_ADDRESS \
-    CXAPP_TENANCY_MODE MARIADB_BASE_IMAGE MARIADB_IMAGE_TAG \
+    NODE_ENV NODE_RUNTIME_VERSION NPM_RUNTIME_VERSION NGINX_BASE_IMAGE CXSUN_VERSION \
+    CXSUN_IMAGE_REGISTRY CXSUN_DOCKER_NETWORK CXSUN_BIND_ADDRESS \
+    CXSUN_TENANCY_MODE MARIADB_BASE_IMAGE MARIADB_IMAGE_TAG \
     MARIADB_ROOT_PASSWORD MARIADB_BIND_ADDRESS MARIADB_HOST_PORT \
     MARIADB_DATA_VOLUME MARIADB_BACKUP_VOLUME DB_DRIVER DB_HOST DB_PORT \
     DB_USER DB_PASSWORD DB_MASTER_NAME REDIS_BASE_IMAGE REDIS_IMAGE_TAG \
-    FILE_MANAGER_DB_HOST FILE_MANAGER_DB_PORT FILE_MANAGER_DB_NAME \
-    FILE_MANAGER_DB_USER FILE_MANAGER_DB_PASSWORD FILE_MANAGER_ENCRYPTION_KEY \
-    FILE_MANAGER_LOCAL_ROOT FILE_MANAGER_MAX_UPLOAD_BYTES \
-    REDIS_PASSWORD REDIS_HOST_PORT REDIS_DATA_VOLUME CXAPP_QUEUE_BACKEND \
-    CXAPP_REDIS_URL CXAPP_QUEUE_WORKER_ENABLED FILEBROWSER_BASE_IMAGE \
+    REDIS_PASSWORD REDIS_HOST_PORT REDIS_DATA_VOLUME CXSUN_QUEUE_BACKEND \
+    CXSUN_REDIS_URL CXSUN_QUEUE_WORKER_ENABLED FILEBROWSER_BASE_IMAGE \
     MEDIA_IMAGE_TAG MEDIA_HOST_PORT MEDIA_ADMIN_USER MEDIA_ADMIN_PASSWORD \
     MEDIA_DATA_VOLUME MEDIA_DB_VOLUME BILLING_STACK_API_IMAGE_TAG \
     BILLING_STACK_WEB_IMAGE_TAG BILLING_STACK_MIGRATIONS_IMAGE_TAG \
     BILLING_STACK_DATA_VOLUME JWT_SECRET AUTH_MODE AUTH_SESSION_TTL_HOURS \
     AUTH_SESSION_RENEWAL_HOURS PLATFORM_API_PORT PLATFORM_WEB_PORT \
-    PLATFORM_WEB_ORIGIN CXAPP_WEB_HOST \
-    CXAPP_WEB_HOST_ALT CXAPP_MEDIA_HOST SUPER_ADMIN_NAME \
+    PLATFORM_WEB_ORIGIN CXSUN_WEB_HOST \
+    CXSUN_WEB_HOST_ALT CXSUN_MEDIA_HOST SUPER_ADMIN_NAME \
     SUPER_ADMIN_EMAIL SUPER_ADMIN_PASSWORD SOFTWARE_ADMIN_NAME \
     SOFTWARE_ADMIN_EMAIL SOFTWARE_ADMIN_PASSWORD TENANT_ADMIN_NAME \
-    TENANT_ADMIN_EMAIL TENANT_ADMIN_PASSWORD CXAPP_DB_FRESH_ON_START \
-    CXAPP_ALLOW_PRODUCTION_DB_RESET CXAPP_VERIFIED_BACKUP_ID \
+    TENANT_ADMIN_EMAIL TENANT_ADMIN_PASSWORD CXSUN_DB_FRESH_ON_START \
+    CXSUN_ALLOW_PRODUCTION_DB_RESET CXSUN_VERIFIED_BACKUP_ID \
     ENABLE_DEFAULT_TENANT_SEED \
     DEFAULT_TENANT_CORPORATE_ID DEFAULT_TENANT_DB_NAME DEFAULT_TENANT_DOMAIN \
     DEFAULT_TENANT_NAME DEFAULT_TENANT_SLUG DEFAULT_TENANT_ADMIN_NAME \
@@ -67,20 +64,16 @@ validate_deploy_env() {
     require_env_value "$key"
   done
 
-  [ "$(env_value CXAPP_DB_FRESH_ON_START)" = "0" ] || {
-    echo "CXAPP_DB_FRESH_ON_START must remain 0 for deployment." >&2
+  [ "$(env_value CXSUN_DB_FRESH_ON_START)" = "0" ] || {
+    echo "CXSUN_DB_FRESH_ON_START must remain 0 for deployment." >&2
     exit 78
   }
-  [ "$(env_value CXAPP_ALLOW_PRODUCTION_DB_RESET)" = "0" ] || {
-    echo "CXAPP_ALLOW_PRODUCTION_DB_RESET must remain 0 for deployment." >&2
+  [ "$(env_value CXSUN_ALLOW_PRODUCTION_DB_RESET)" = "0" ] || {
+    echo "CXSUN_ALLOW_PRODUCTION_DB_RESET must remain 0 for deployment." >&2
     exit 78
   }
   [ "$(env_value DB_MASTER_NAME)" != "$(env_value DEFAULT_TENANT_DB_NAME)" ] || {
     echo "DB_MASTER_NAME and DEFAULT_TENANT_DB_NAME must be different databases." >&2
-    exit 78
-  }
-  [ "$(env_value FILE_MANAGER_DB_NAME)" != "$(env_value DB_MASTER_NAME)" ] || {
-    echo "FILE_MANAGER_DB_NAME and DB_MASTER_NAME must be different databases." >&2
     exit 78
   }
   [ "$(env_value NODE_ENV)" = "production" ] || {
@@ -97,17 +90,17 @@ validate_deploy_env() {
     fi
   fi
 
-  case "$(env_value CXAPP_TENANCY_MODE)" in
+  case "$(env_value CXSUN_TENANCY_MODE)" in
     single)
-      require_env_value CXAPP_SINGLE_TENANT_CORPORATE_ID
+      require_env_value CXSUN_SINGLE_TENANT_CORPORATE_ID
       if [ "$(env_value ENABLE_DEFAULT_TENANT_SEED)" = "1" ] && \
-        [ "$(env_value CXAPP_SINGLE_TENANT_CORPORATE_ID)" != "$(env_value DEFAULT_TENANT_CORPORATE_ID)" ]; then
+        [ "$(env_value CXSUN_SINGLE_TENANT_CORPORATE_ID)" != "$(env_value DEFAULT_TENANT_CORPORATE_ID)" ]; then
         echo "The default tenant and configured single tenant must match." >&2
         exit 78
       fi
       ;;
     multi) ;;
-    *) echo "CXAPP_TENANCY_MODE must be single or multi." >&2; exit 78 ;;
+    *) echo "CXSUN_TENANCY_MODE must be single or multi." >&2; exit 78 ;;
   esac
 }
 
@@ -153,15 +146,15 @@ require_compose_container_ownership() {
 }
 
 validate_container_ownership() {
-  require_compose_container_ownership cxapp-mariadb cxapp-mariadb mariadb
-  require_compose_container_ownership cxapp-redis cxapp-redis redis
-  require_compose_container_ownership cxapp-media cxapp-media media
-  require_compose_container_ownership cxapp-api cxapp-billing platform-api
-  require_compose_container_ownership cxapp-web cxapp-billing platform-web
+  require_compose_container_ownership cxsun-mariadb cxsun-mariadb mariadb
+  require_compose_container_ownership cxsun-redis cxsun-redis redis
+  require_compose_container_ownership cxsun-media cxsun-media media
+  require_compose_container_ownership cxsun-api cxsun-billing platform-api
+  require_compose_container_ownership cxsun-web cxsun-billing platform-web
 }
 
 ensure_network() {
-  network=$(env_value CXAPP_DOCKER_NETWORK)
+  network=$(env_value CXSUN_DOCKER_NETWORK)
   docker network inspect "$network" >/dev/null 2>&1 || docker network create "$network" >/dev/null
 }
 

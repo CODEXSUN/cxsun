@@ -4,7 +4,7 @@ import {
   coreLookupRecordSchema
 } from "../../shared/core-lookup.contracts.js";
 import type { ZodType } from "zod";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 
 export type PurchaseLookupHeaders = {
   authorization?: string | string[] | undefined;

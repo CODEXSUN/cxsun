@@ -1,4 +1,4 @@
-import { registerContractRoute } from "@cxapp/framework/http";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { type FastifyInstance, type FastifyRequest } from "fastify";
 import { z } from "zod";
 import { resolveBillingDatabaseName } from "../../../database/billing-database.js";

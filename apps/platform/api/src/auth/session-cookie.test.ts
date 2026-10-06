@@ -19,11 +19,11 @@ test("fresh login cleanup expires every current and legacy session cookie", () =
   clearAllSessionCookies(reply);
 
   assert.deepEqual(cleared, [
-    "cxapp_session",
-    "cxapp_session_admin",
-    "cxapp_session_sa",
-    "cxapp_session_tenant",
-    "__Host-cxapp_session"
+    "cxsun_session",
+    "cxsun_session_admin",
+    "cxsun_session_sa",
+    "cxsun_session_tenant",
+    "__Host-cxsun_session"
   ]);
 });
 

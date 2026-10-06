@@ -1,13 +1,13 @@
 import { Eye, Printer, RotateCcw, Trash2 } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/workspace/table";
+import { cn } from "@cxsun/ui/lib/utils";
 import {
   BillingDocumentTotalsTable,
   type BillingDocumentReportRecord,
@@ -150,11 +150,14 @@ export function PurchaseList({
                           className={cn(
                             "font-medium underline-offset-4",
                             canEditEntries &&
-                            (purchase.status === "draft" || canEditFinalizedEntries)
+                              (purchase.status === "draft" || canEditFinalizedEntries)
                               ? "hover:underline"
                               : "cursor-not-allowed text-muted-foreground"
                           )}
-                          disabled={!canEditEntries || (purchase.status !== "draft" && !canEditFinalizedEntries)}
+                          disabled={
+                            !canEditEntries ||
+                            (purchase.status !== "draft" && !canEditFinalizedEntries)
+                          }
                           onClick={() => onEdit(purchase)}
                           title={
                             canEditEntries &&

@@ -5,6 +5,10 @@ const requestedApp = process.argv[2]?.trim();
 
 const moduleRoots = [
   {
+    app: "auditor-api",
+    path: join(process.cwd(), "apps", "auditor", "api", "src", "modules")
+  },
+  {
     app: "mail-api",
     path: join(process.cwd(), "apps", "mail", "api", "src", "modules")
   },
@@ -15,6 +19,10 @@ const moduleRoots = [
   {
     app: "core-api",
     path: join(process.cwd(), "apps", "core", "api", "src", "modules")
+  },
+  {
+    app: "crm-api",
+    path: join(process.cwd(), "apps", "crm", "api", "src", "modules")
   },
   {
     app: "platform-api",
@@ -57,11 +65,17 @@ const reducedBackendRoles = [
 const shellOnlyBackendModules = new Set();
 const shellOnlyBackendRoles = ["module", "routes", "types"];
 const capabilityBackendRoles = new Map([
+  ["auditor-api/client", ["module", "service", "repository", "routes", "migration", "types"]],
   ["devkit-api/platform-registry", reducedBackendRoles],
-  ["billing-api/opening-balance", reducedBackendRoles]
+  ["billing-api/opening-balance", reducedBackendRoles],
+  ["crm-api/enquiry", reducedBackendRoles]
 ]);
 
 const webModuleRoots = [
+  {
+    app: "auditor-web",
+    path: join(process.cwd(), "apps", "auditor", "web", "src", "modules")
+  },
   {
     app: "crm-web",
     path: join(process.cwd(), "apps", "crm", "web", "src", "modules")
@@ -91,7 +105,10 @@ const webModuleRoots = [
 const requiredFrontendRoles = ["workspace", "list", "form", "services", "hooks", "types", "schema"];
 const shellOnlyFrontendModules = new Set();
 const shellOnlyFrontendRoles = ["module", "workspace", "services", "hooks", "types"];
-const capabilityFrontendRoles = new Map([["crm-web/overview", ["workspace"]]]);
+const capabilityFrontendRoles = new Map([
+  ["auditor-web/overview", ["workspace"]],
+  ["crm-web/overview", ["workspace"]]
+]);
 const backendBehaviorMarkers = {
   events: ["create"],
   migration: ["migrate"],

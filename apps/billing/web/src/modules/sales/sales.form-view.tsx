@@ -1,28 +1,28 @@
-import { Button } from "@cxapp/ui/components/button";
-import { Dialog, DialogContent } from "@cxapp/ui/components/dialog";
+import { Button } from "@cxsun/ui/components/button";
+import { Dialog, DialogContent } from "@cxsun/ui/components/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger
-} from "@cxapp/ui/components/dropdown-menu";
-import { Input } from "@cxapp/ui/components/input";
-import { Textarea } from "@cxapp/ui/components/textarea";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/components/dropdown-menu";
+import { Input } from "@cxsun/ui/components/input";
+import { Textarea } from "@cxsun/ui/components/textarea";
+import { cn } from "@cxsun/ui/lib/utils";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspaceDatePicker } from "@cxapp/ui/workspace/date-picker";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceSelect } from "@cxapp/ui/workspace/select";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspaceDatePicker } from "@cxsun/ui/workspace/date-picker";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceSelect } from "@cxsun/ui/workspace/select";
 import {
   WorkspaceFormActions,
   WorkspaceFormSurface,
   WorkspaceFormTabbedBody
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import { ArrowUpRight, ChevronDown, Printer, RotateCcw, Save, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { SaleAddressDialog, SaleAddressField } from "./sales-address-editor";

@@ -9,7 +9,7 @@ import {
   rollbackTablePrefixPolicy,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import { env } from "../env.js";
 import {
   appRegistryMigration,
@@ -48,7 +48,11 @@ import {
 import { seedCredentialRecoveryModule } from "../modules/credential-recovery/credential-recovery.seed.js";
 import {
   migrateTaskManagerModule,
-  taskManagerMigration
+  taskManagerMigration,
+  taskManagerVisibilityMigration,
+  migrateTaskManagerVisibility,
+  taskManagerTitleOnlyMigration,
+  migrateTaskManagerTitleOnly
 } from "../modules/task-manager/task-manager.migration.js";
 import { seedTaskManagerModule } from "../modules/task-manager/task-manager.seed.js";
 import { assertDatabaseName, quoteIdentifier } from "./database-utils.js";
@@ -63,7 +67,7 @@ import {
   rollbackDevkitDatabase,
   seedDevkitDatabase,
   type DevkitDatabase
-} from "@cxapp/devkit-api";
+} from "@cxsun/devkit-api";
 
 let platformDatabase: Kysely<PlatformDatabase> | null = null;
 let bootstrapped = false;
@@ -144,6 +148,16 @@ const platformMasterMigrationSteps = [
     description: taskManagerMigration.description,
     migrate: migrateTaskManagerModule,
     name: taskManagerMigration.key
+  },
+  {
+    description: taskManagerVisibilityMigration.description,
+    migrate: migrateTaskManagerVisibility,
+    name: taskManagerVisibilityMigration.key
+  },
+  {
+    description: taskManagerTitleOnlyMigration.description,
+    migrate: migrateTaskManagerTitleOnly,
+    name: taskManagerTitleOnlyMigration.key
   },
   {
     description: "Application orchestration process-local state policy.",
@@ -296,15 +310,15 @@ export function getPlatformDatabase() {
 }
 
 export async function bootstrapPlatformDatabase() {
-  if (bootstrapped || process.env.CXAPP_DEV_SKIP_DB === "1") {
-    if (process.env.CXAPP_DEV_SKIP_DB === "1") {
-      console.info("[database] bootstrap skipped because CXAPP_DEV_SKIP_DB=1");
+  if (bootstrapped || process.env.CXSUN_DEV_SKIP_DB === "1") {
+    if (process.env.CXSUN_DEV_SKIP_DB === "1") {
+      console.info("[database] bootstrap skipped because CXSUN_DEV_SKIP_DB=1");
     }
     return;
   }
 
-  if (env.CXAPP_DB_FRESH_ON_START === "1") {
-    const sessionFile = process.env.CXAPP_DB_FRESH_SESSION_FILE;
+  if (env.CXSUN_DB_FRESH_ON_START === "1") {
+    const sessionFile = process.env.CXSUN_DB_FRESH_SESSION_FILE;
     if (!sessionFile || !existsSync(sessionFile)) {
       console.info("[database] fresh startup requested");
       await resetPlatformDatabases();
@@ -424,15 +438,15 @@ export async function dropPlatformDatabases() {
 }
 
 function assertDestructiveDatabaseAction(action: string) {
-  if (env.CXAPP_DB_RESET_CONFIRM !== "DROP_DATABASES") {
+  if (env.CXSUN_DB_RESET_CONFIRM !== "DROP_DATABASES") {
     throw new Error(
-      `${action} refused. Set CXAPP_DB_RESET_CONFIRM=DROP_DATABASES only when you intentionally want to delete configured databases.`
+      `${action} refused. Set CXSUN_DB_RESET_CONFIRM=DROP_DATABASES only when you intentionally want to delete configured databases.`
     );
   }
 
-  if (env.NODE_ENV === "production" && env.CXAPP_ALLOW_PRODUCTION_DB_RESET !== "1") {
+  if (env.NODE_ENV === "production" && env.CXSUN_ALLOW_PRODUCTION_DB_RESET !== "1") {
     throw new Error(
-      `${action} refused in production. Set CXAPP_ALLOW_PRODUCTION_DB_RESET=1 and CXAPP_DB_RESET_CONFIRM=DROP_DATABASES to continue.`
+      `${action} refused in production. Set CXSUN_ALLOW_PRODUCTION_DB_RESET=1 and CXSUN_DB_RESET_CONFIRM=DROP_DATABASES to continue.`
     );
   }
 }

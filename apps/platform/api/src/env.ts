@@ -1,4 +1,4 @@
-import { loadEnv, resolvePlatformRuntime } from "@cxapp/framework/env";
+import { loadEnv, resolvePlatformRuntime } from "@cxsun/framework/env";
 import { z } from "zod";
 
 const envSchema = z
@@ -16,21 +16,21 @@ const envSchema = z
     DB_PASSWORD: z.string().min(1, "DB_PASSWORD is required"),
     DB_DRIVER: z.enum(["mariadb", "mysql2"]),
     DB_MASTER_NAME: z.string().min(1, "DB_MASTER_NAME is required"),
-    CXAPP_TENANCY_MODE: z.enum(["single", "multi"]),
-    CXAPP_SINGLE_TENANT_CORPORATE_ID: z.string(),
-    CXAPP_DB_FRESH_ON_START: z.enum(["0", "1"]),
-    CXAPP_DB_RESET_CONFIRM: z.string(),
-    CXAPP_ALLOW_PRODUCTION_DB_RESET: z.enum(["0", "1"]),
-    CXAPP_BACKUP_DIR: z.string().min(1),
-    CXAPP_QUEUE_BACKEND: z.preprocess(
+    CXSUN_TENANCY_MODE: z.enum(["single", "multi"]),
+    CXSUN_SINGLE_TENANT_CORPORATE_ID: z.string(),
+    CXSUN_DB_FRESH_ON_START: z.enum(["0", "1"]),
+    CXSUN_DB_RESET_CONFIRM: z.string(),
+    CXSUN_ALLOW_PRODUCTION_DB_RESET: z.enum(["0", "1"]),
+    CXSUN_BACKUP_DIR: z.string().min(1),
+    CXSUN_QUEUE_BACKEND: z.preprocess(
       (value) => (value === "memory" ? "database" : value),
       z.enum(["database", "bullmq-redis"])
     ),
-    CXAPP_QUEUE_COMPLETED_RETENTION_DAYS: z.coerce.number().int().positive(),
-    CXAPP_QUEUE_FAILED_RETENTION_DAYS: z.coerce.number().int().positive(),
-    CXAPP_QUEUE_WORKER_ENABLED: z.enum(["0", "1"]),
-    CXAPP_QUEUE_WORKER_INTERVAL_MS: z.coerce.number().int().positive(),
-    CXAPP_REDIS_URL: z.string().min(1, "CXAPP_REDIS_URL is required"),
+    CXSUN_QUEUE_COMPLETED_RETENTION_DAYS: z.coerce.number().int().positive(),
+    CXSUN_QUEUE_FAILED_RETENTION_DAYS: z.coerce.number().int().positive(),
+    CXSUN_QUEUE_WORKER_ENABLED: z.enum(["0", "1"]),
+    CXSUN_QUEUE_WORKER_INTERVAL_MS: z.coerce.number().int().positive(),
+    CXSUN_REDIS_URL: z.string().min(1, "CXSUN_REDIS_URL is required"),
     MAIL_ENABLED: z.enum(["0", "1"]),
     MAIL_SMTP_HOST: z.string(),
     MAIL_SMTP_PORT: z.coerce.number().int().positive(),
@@ -41,10 +41,10 @@ const envSchema = z
     MAIL_FROM_NAME: z.string(),
     MAIL_REPLY_TO: z.string(),
     PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().max(1440),
-    CXAPP_ALLOW_LIVE_RESTORE: z.enum(["0", "1"]),
-    CXAPP_LIVE_RESTORE_CONFIRM: z.string(),
-    CXAPP_RESTORE_TEST_DB_NAME: z.string(),
-    CXAPP_VERIFIED_BACKUP_ID: z.string(),
+    CXSUN_ALLOW_LIVE_RESTORE: z.enum(["0", "1"]),
+    CXSUN_LIVE_RESTORE_CONFIRM: z.string(),
+    CXSUN_RESTORE_TEST_DB_NAME: z.string(),
+    CXSUN_VERIFIED_BACKUP_ID: z.string(),
     ENABLE_DEFAULT_TENANT_SEED: z.enum(["0", "1"]),
     DEV_AUTO_TENANT_LOGIN: z.enum(["0", "1"]),
     TENANT_DOMAIN_BASE: z.string().min(1),
@@ -71,13 +71,13 @@ const envSchema = z
     TASK_MANAGER_JSON_DIR: z.string().min(1)
   })
   .superRefine((value, context) => {
-    if (value.CXAPP_TENANCY_MODE === "single") {
-      const corporateId = value.CXAPP_SINGLE_TENANT_CORPORATE_ID.trim();
+    if (value.CXSUN_TENANCY_MODE === "single") {
+      const corporateId = value.CXSUN_SINGLE_TENANT_CORPORATE_ID.trim();
       if (!corporateId) {
         context.addIssue({
           code: "custom",
-          message: "CXAPP_SINGLE_TENANT_CORPORATE_ID is required in single mode",
-          path: ["CXAPP_SINGLE_TENANT_CORPORATE_ID"]
+          message: "CXSUN_SINGLE_TENANT_CORPORATE_ID is required in single mode",
+          path: ["CXSUN_SINGLE_TENANT_CORPORATE_ID"]
         });
       }
       if (

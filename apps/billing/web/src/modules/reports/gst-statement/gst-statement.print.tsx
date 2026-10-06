@@ -1,4 +1,4 @@
-import { WorkspacePrintSheet } from "@cxapp/ui/workspace/print";
+import { WorkspacePrintSheet } from "@cxsun/ui/workspace/print";
 import { BillingDocumentHeader } from "../../settings";
 import { formatGstQuantity, formatGstStatementMoney } from "./gst-statement.services";
 import type { GstStatement, GstStatementPanel } from "./gst-statement.types";

@@ -12,6 +12,8 @@ export const blogEditorHost: BlogsEditorHost = {
     return [];
   },
   async uploadImage() {
-    throw new Error("Image uploads are unavailable because no media storage integration is configured.");
+    throw new Error(
+      "Image uploads are unavailable because no media storage integration is configured."
+    );
   }
 };

@@ -1,4 +1,4 @@
-import { captureMailPdf } from "@cxapp/mail-web/modules/mail";
+import { captureMailPdf } from "@cxsun/mail-web/modules/mail";
 import { billingApiPost } from "./api/billing-api";
 
 export type BillingDocumentKind = "export-sales" | "purchase" | "quotation" | "sales";

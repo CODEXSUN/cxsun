@@ -1,4 +1,4 @@
-import { StatusBadge } from "@cxapp/ui";
+import { StatusBadge } from "@cxsun/ui";
 import { RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { apiGet } from "../../shared/api/platform-api";

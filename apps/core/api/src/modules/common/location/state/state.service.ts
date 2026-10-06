@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { StateRepository } from "./state.repository.js";
 import type { State, StateListFilters, StateSavePayload, StateStatus } from "./state.types.js";
 

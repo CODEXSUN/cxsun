@@ -18,7 +18,7 @@ import {
 } from "../../database/billing-database.js";
 
 export async function runQuotationE2e() {
-  const databaseName = `cxapp_quotation_e2e_${Date.now()}`;
+  const databaseName = `cxsun_quotation_e2e_${Date.now()}`;
   let admin = await createConnection({
     host: env.DB_HOST,
     password: env.DB_PASSWORD,
@@ -386,7 +386,7 @@ export async function runQuotationE2e() {
         port: env.DB_PORT,
         user: env.DB_USER
       });
-      assert.match(databaseName, /^cxapp_quotation_e2e_\d+$/);
+      assert.match(databaseName, /^cxsun_quotation_e2e_\d+$/);
       await cleanup.query(`DROP DATABASE IF EXISTS \`${databaseName}\``);
       await cleanup.end();
     }

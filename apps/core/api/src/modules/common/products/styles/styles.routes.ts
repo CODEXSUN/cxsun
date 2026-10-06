@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { StylesService } from "./styles.service.js";
 export const STYLES_COLLECTION_PATH = "/core/common/products/styles";
 const service = new StylesService();

@@ -31,26 +31,26 @@ export class TaskManagerRepository {
   }
 
   async create(scopeKey: string, input: TodoInput, createdBy = "super-admin") {
-    const last = await this.database
+    const first = await this.database
       .selectFrom("task_manager_todos")
       .select("position")
       .where("scope_key", "=", scopeKey)
-      .orderBy("position", "desc")
+      .orderBy("position", "asc")
       .executeTakeFirst();
     const result = await this.database
       .insertInto("task_manager_todos")
       .values({
         category: input.category ?? "work",
         created_by: createdBy,
-        description: String(input.description ?? ""),
         due_date: String(input.dueDate ?? ""),
         group_name: String(input.groupName ?? "").trim(),
-        position: Number(last?.position ?? -1) + 1,
+        position: Number(first?.position ?? 1) - 1,
         priority: input.priority ?? "medium",
         scope_key: scopeKey,
         status: input.status ?? "open",
         title: input.title.trim(),
-        uuid: createUuid()
+        uuid: createUuid(),
+        visibility: input.visibility ?? "private"
       })
       .executeTakeFirst();
     return this.findByInternalId(Number(result.insertId));
@@ -59,12 +59,12 @@ export class TaskManagerRepository {
   async update(scopeKey: string, uuid: string, input: Partial<TodoInput>) {
     const values: Record<string, unknown> = { updated_at: new Date() };
     if (input.title !== undefined) values.title = input.title.trim();
-    if (input.description !== undefined) values.description = String(input.description);
     if (input.category !== undefined) values.category = input.category;
     if (input.groupName !== undefined) values.group_name = String(input.groupName).trim();
     if (input.status !== undefined) values.status = input.status;
     if (input.priority !== undefined) values.priority = input.priority;
     if (input.dueDate !== undefined) values.due_date = String(input.dueDate);
+    if (input.visibility !== undefined) values.visibility = input.visibility;
     await this.database
       .updateTable("task_manager_todos")
       .set(values)
@@ -159,7 +159,6 @@ export class TaskManagerRepository {
         category: todo.category,
         created_at: new Date(todo.createdAt),
         created_by: "system:legacy-json-import",
-        description: todo.description,
         due_date: todo.dueDate,
         group_name: todo.groupName,
         position: todo.position,
@@ -168,7 +167,8 @@ export class TaskManagerRepository {
         status: todo.status,
         title: todo.title,
         updated_at: new Date(todo.updatedAt),
-        uuid: normalizeLegacyUuid(todo.id)
+        uuid: normalizeLegacyUuid(todo.id),
+        visibility: todo.visibility ?? "private"
       })
       .ignore()
       .execute();
@@ -214,7 +214,6 @@ function toValue(name: string) {
 function toTodo(row: {
   category: string;
   created_at: Date | string;
-  description: string;
   due_date: string;
   group_name: string;
   position: number;
@@ -223,11 +222,11 @@ function toTodo(row: {
   title: string;
   updated_at: Date | string;
   uuid: string;
+  visibility: "private" | "public";
 }): Todo {
   return {
     category: row.category,
     createdAt: new Date(row.created_at).toISOString(),
-    description: row.description,
     dueDate: row.due_date,
     groupName: row.group_name,
     id: row.uuid,
@@ -235,7 +234,8 @@ function toTodo(row: {
     priority: row.priority,
     status: row.status,
     title: row.title,
-    updatedAt: new Date(row.updated_at).toISOString()
+    updatedAt: new Date(row.updated_at).toISOString(),
+    visibility: row.visibility
   };
 }
 

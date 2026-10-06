@@ -101,7 +101,7 @@ function checkVersions(rootDir) {
         .map((match) => [match[1], match[2]])
     );
     for (const key of [
-      "CXAPP_VERSION",
+      "CXSUN_VERSION",
       "BILLING_STACK_API_IMAGE_TAG",
       "BILLING_STACK_WEB_IMAGE_TAG",
       "BILLING_STACK_MIGRATIONS_IMAGE_TAG"

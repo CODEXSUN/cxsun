@@ -176,7 +176,6 @@ export type TaskManagerTodosTable = {
   category: string;
   created_at: TimestampColumn;
   created_by: string;
-  description: string;
   due_date: string;
   group_name: string;
   id: Generated<number>;
@@ -187,6 +186,7 @@ export type TaskManagerTodosTable = {
   title: string;
   updated_at: TimestampColumn;
   uuid: string;
+  visibility: "private" | "public";
 };
 
 export type TaskManagerLookupsTable = {

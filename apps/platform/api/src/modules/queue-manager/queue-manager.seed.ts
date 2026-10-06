@@ -6,7 +6,7 @@ export async function seedQueueManagerModule(db: Kysely<PlatformDatabase>) {
   await db
     .insertInto("queue_runtime_settings")
     .values({
-      backend: env.CXAPP_QUEUE_BACKEND,
+      backend: env.CXSUN_QUEUE_BACKEND,
       singleton_key: 1,
       updated_by: "environment-seed"
     })
@@ -21,5 +21,5 @@ export async function seedQueueManagerModule(db: Kysely<PlatformDatabase>) {
     })
     .where("backend", "=", "memory" as never)
     .execute();
-  return { backend: env.CXAPP_QUEUE_BACKEND, seeded: 1 } as const;
+  return { backend: env.CXSUN_QUEUE_BACKEND, seeded: 1 } as const;
 }

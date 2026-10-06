@@ -1,6 +1,6 @@
-import { requireTenantAccess } from "@cxapp/framework/api";
+import { requireTenantAccess } from "@cxsun/framework/api";
 import type { FastifyInstance } from "fastify";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { authorizeAccountsRequest } from "./auth/tenant-permission.js";
 import { runWithAccountsScope, withAccountsActor } from "./auth/accounts-scope.js";
 import { env } from "./env.js";

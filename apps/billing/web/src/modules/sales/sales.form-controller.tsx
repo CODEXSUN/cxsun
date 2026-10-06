@@ -1,4 +1,4 @@
-import { productsQueryKey } from "@cxapp/core-web/modules/master/product";
+import { productsQueryKey } from "@cxsun/core-web/modules/master/product";
 import { billingLookupQuery } from "../../shared/query/billing-lookup-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";

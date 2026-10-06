@@ -3,7 +3,7 @@ import {
   assertAddonManifest,
   hostApiMajor,
   type AddonManifest,
-  type AddonRuntimeMode,
+  type AddonRuntimeMode
 } from "./addon-contract.js";
 
 export type AddonRegistration = {
@@ -28,7 +28,7 @@ export class AddonHostRegistry {
     private readonly options: {
       capabilities: readonly string[];
       runtimeMode: AddonRuntimeMode;
-    },
+    }
   ) {}
 
   async register(registration: AddonRegistration) {
@@ -48,7 +48,7 @@ export class AddonHostRegistry {
         throw new AggregateError(
           [activationError, closeError],
           `Add-on activation and cleanup failed: ${registration.manifest.key}`,
-          { cause: closeError },
+          { cause: closeError }
         );
       }
       throw activationError;
@@ -56,7 +56,7 @@ export class AddonHostRegistry {
     this.active.set(registration.manifest.key, {
       databaseMode: registration.databaseMode,
       manifest: registration.manifest,
-      moduleKeys: [...registration.moduleKeys],
+      moduleKeys: [...registration.moduleKeys]
     });
     if (registration.close) this.closers.unshift(registration.close);
   }
@@ -90,7 +90,7 @@ export class AddonHostRegistry {
     const manifest = registration.manifest;
     if (hostApiMajor(manifest.hostApi) !== hostApiMajor(addonHostApiVersion)) {
       throw new Error(
-        `${manifest.displayName} requires host API ${manifest.hostApi}; this host provides ${addonHostApiVersion}.`,
+        `${manifest.displayName} requires host API ${manifest.hostApi}; this host provides ${addonHostApiVersion}.`
       );
     }
     if (!manifest.runtimeModes.includes(this.options.runtimeMode)) {
@@ -98,13 +98,15 @@ export class AddonHostRegistry {
     }
     if (!manifest.databaseModes.includes(registration.databaseMode)) {
       throw new Error(
-        `${manifest.displayName} does not support database mode ${registration.databaseMode}.`,
+        `${manifest.displayName} does not support database mode ${registration.databaseMode}.`
       );
     }
     const available = new Set(this.options.capabilities);
     const missing = manifest.capabilities.required.filter((item) => !available.has(item));
     if (missing.length) {
-      throw new Error(`${manifest.displayName} requires unavailable capabilities: ${missing.join(", ")}.`);
+      throw new Error(
+        `${manifest.displayName} requires unavailable capabilities: ${missing.join(", ")}.`
+      );
     }
   }
 }

@@ -1,20 +1,26 @@
 {
-  "name": "@cxapp/crm-web",
-  "version": "1.0.79",
+  "name": "@cxsun/crm-web",
+  "version": "1.0.80",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./modules/overview": "./src/modules/overview/index.ts"
+    "./modules/overview": "./src/modules/overview/index.ts",
+    "./modules/enquiry": "./src/modules/enquiry/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "oxlint src"
   },
   "dependencies": {
-    "@cxapp/ui": "^1.0.79",
-    "lucide-react": "^1.33.0",
-    "react": "^19.2.8"
+    "@cxsun/core-web": "^1.0.80",
+    "@cxsun/ui": "^1.0.80",
+    "@tanstack/react-query": "^5.104.1",
+    "@tanstack/react-table": "^9.2.6",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.5"
   }
 }

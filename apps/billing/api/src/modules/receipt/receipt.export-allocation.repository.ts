@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { currentBillingScope } from "../../auth/billing-scope.js";
 import type { ReceiptAllocationCandidate, ReceiptSavePayload } from "./receipt.types.js";
 

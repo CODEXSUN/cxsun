@@ -26,8 +26,8 @@ function storage(values: Record<string, string>): Storage {
 test("accounts reads the company and financial year published by the application desk", () => {
   Object.assign(globalThis, {
     localStorage: storage({
-      "cxapp.tenant.company-id": "17",
-      "cxapp.tenant.financial-year-id": "23"
+      "cxsun.tenant.company-id": "17",
+      "cxsun.tenant.financial-year-id": "23"
     }),
     sessionStorage: storage({})
   });
@@ -39,8 +39,8 @@ test("accounts reads the company and financial year published by the application
 test("accounts rejects missing and invalid company scope values", () => {
   Object.assign(globalThis, {
     localStorage: storage({
-      "cxapp.tenant.company-id": "0",
-      "cxapp.tenant.financial-year-id": "not-a-number"
+      "cxsun.tenant.company-id": "0",
+      "cxsun.tenant.financial-year-id": "not-a-number"
     })
   });
 
@@ -51,14 +51,14 @@ test("accounts rejects missing and invalid company scope values", () => {
 test("accounts mutations send the published company and financial year headers", async () => {
   Object.assign(globalThis, {
     localStorage: storage({
-      "cxapp.tenant.company-id": "17",
-      "cxapp.tenant.financial-year-id": "23"
+      "cxsun.tenant.company-id": "17",
+      "cxsun.tenant.financial-year-id": "23"
     }),
     sessionStorage: storage({
-      cxapp_tenant_db_name: "cxapp_tenant_test",
-      cxapp_tenant_id: "tenant-test"
+      cxsun_tenant_db_name: "cxsun_tenant_test",
+      cxsun_tenant_id: "tenant-test"
     }),
-    window: { __CXAPP_RUNTIME_CONFIG__: { VITE_PLATFORM_API_URL: "http://127.0.0.1:7010" } }
+    window: { __CXSUN_RUNTIME_CONFIG__: { VITE_PLATFORM_API_URL: "http://127.0.0.1:7010" } }
   });
 
   let requestHeaders = new Headers();
@@ -80,5 +80,5 @@ test("accounts mutations send the published company and financial year headers",
   assert.equal(requestHeaders.get("x-company-id"), "17");
   assert.equal(requestHeaders.get("x-financial-year-id"), "23");
   assert.equal(requestHeaders.get("x-tenant-id"), "tenant-test");
-  assert.equal(requestHeaders.get("x-tenant-db"), "cxapp_tenant_test");
+  assert.equal(requestHeaders.get("x-tenant-db"), "cxsun_tenant_test");
 });

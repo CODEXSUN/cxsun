@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { ok } from "@cxapp/framework/http";
+import { ok } from "@cxsun/framework/http";
 import { AccessControlService } from "./access-control.service.js";
 import type {
   AccessPermissionSavePayload,

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { cn } from "@cxapp/ui/lib/utils";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+import { Button } from "@cxsun/ui/components/button";
+import { cn } from "@cxsun/ui/lib/utils";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import { useSupplierSummary } from "./supplier-summary.hooks";
 import { SupplierSummaryForm } from "./supplier-summary.form";
 import { SupplierSummaryList } from "./supplier-summary.list";

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { SizesService } from "./sizes.service.js";
 export const SIZES_COLLECTION_PATH = "/core/common/products/sizes";
 const service = new SizesService();

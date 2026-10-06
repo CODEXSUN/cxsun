@@ -60,7 +60,7 @@ try {
     );
   }
 
-  const probeKey = `cxapp-isolation-${Date.now()}`;
+  const probeKey = `cxsun-isolation-${Date.now()}`;
   const probeUuid = randomBytes(4).toString("hex");
   await connection.beginTransaction();
   try {

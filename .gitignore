@@ -110,8 +110,8 @@ web_modules/
 
 # Local SSH private/public keypairs
 .ssh/
-github_cxapp
-github_cxapp.pub
+github_cxsun
+github_cxsun.pub
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache

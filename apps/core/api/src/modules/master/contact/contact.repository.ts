@@ -212,6 +212,42 @@ export class ContactRepository {
     return row ? { id: Number(row.id), name: String(row.name) } : null;
   }
 
+  async findContactTypeByName(name: string): Promise<ContactReference | null> {
+    const result = await sql<{ id: number; name: string }>`
+      SELECT id, name FROM core_contact_types
+      WHERE name=${name} AND status='active' LIMIT 1
+    `.execute(getCoreDatabase());
+    return result.rows[0] ?? null;
+  }
+
+  async findByMobile(mobile: string) {
+    const digits = mobile.replace(/\D/g, "");
+    if (digits.length < 7) return [];
+    const search = `%${digits.slice(-10)}%`;
+    const result = await sql<{
+      id: number;
+      name: string;
+      status: string;
+      phone: string | null;
+      matched_phone: string | null;
+    }>`
+      SELECT contact.id, contact.name, contact.status,
+        contact.primary_phone AS phone, contact_phone.phone AS matched_phone
+      FROM core_contacts contact
+      LEFT JOIN core_contacts_phones contact_phone ON contact_phone.parent_id=contact.id
+      WHERE contact.deleted_at IS NULL
+        AND (
+          REGEXP_REPLACE(COALESCE(contact.primary_phone, ''), '[^0-9]', '') LIKE ${search}
+          OR REGEXP_REPLACE(COALESCE(contact_phone.phone, ''), '[^0-9]', '') LIKE ${search}
+        )
+      `.execute(getCoreDatabase());
+    const key = mobileKey(mobile);
+    const matches = result.rows.filter(
+      (row) => mobileKey(row.phone) === key || mobileKey(row.matched_phone) === key
+    );
+    return Array.from(new Map(matches.map((row) => [row.id, row])).values());
+  }
+
   async findContactGroup(id: number): Promise<ContactReference | null> {
     const row = (await getCoreDatabase()
       .selectFrom("core_contact_groups" as never)
@@ -856,4 +892,11 @@ function codeFromName(name: string) {
       .replace(/^-+|-+$/g, "")
       .slice(0, 80) || `CONTACT-${Date.now()}`
   );
+}
+
+function mobileKey(value: string | null) {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
+  return digits;
 }

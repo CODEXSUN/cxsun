@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { env } from "../../env.js";
 import { isSingleTenantMode } from "../../tenancy-mode.js";
 import { hashPassword } from "../../auth/password-hash.js";
@@ -108,7 +108,7 @@ export class CredentialRecoveryService {
     if (!isSingleTenantMode() && !corporateId) return null;
     const domainTenant = await this.tenants.findByDomain(input.domain);
     const corporateTenant = await this.tenants.findByCorporateId(
-      isSingleTenantMode() ? env.CXAPP_SINGLE_TENANT_CORPORATE_ID : corporateId
+      isSingleTenantMode() ? env.CXSUN_SINGLE_TENANT_CORPORATE_ID : corporateId
     );
     const tenant = domainTenant ?? corporateTenant;
     if (
@@ -149,7 +149,7 @@ export class CredentialRecoveryService {
     if (
       isSingleTenantMode() &&
       tenant.corporateId?.trim().toUpperCase() !==
-        env.CXAPP_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase()
+        env.CXSUN_SINGLE_TENANT_CORPORATE_ID.trim().toUpperCase()
     ) {
       return undefined;
     }

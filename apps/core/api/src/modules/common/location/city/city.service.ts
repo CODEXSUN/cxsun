@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { CityRepository } from "./city.repository.js";
 import type { City, CityListFilters, CitySavePayload, CityStatus } from "./city.types.js";
 

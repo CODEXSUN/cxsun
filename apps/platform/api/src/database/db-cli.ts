@@ -1,6 +1,6 @@
 import { createConnection } from "mysql2/promise";
-import { closeAllBillingDatabases } from "@cxapp/billing-api";
-import { closeCoreDatabase } from "@cxapp/core-api";
+import { closeAllBillingDatabases } from "@cxsun/billing-api";
+import { closeCoreDatabase } from "@cxsun/core-api";
 import {
   closePlatformDatabase,
   createMasterDatabase,
@@ -132,10 +132,10 @@ async function migrateAll() {
 async function rollbackAll() {
   if (
     env.NODE_ENV === "production" &&
-    process.env.CXAPP_MIGRATION_ROLLBACK_CONFIRM !== "ROLLBACK"
+    process.env.CXSUN_MIGRATION_ROLLBACK_CONFIRM !== "ROLLBACK"
   ) {
     throw new Error(
-      "production rollback refused. Set CXAPP_MIGRATION_ROLLBACK_CONFIRM=ROLLBACK after verifying the backup and rollback plan."
+      "production rollback refused. Set CXSUN_MIGRATION_ROLLBACK_CONFIRM=ROLLBACK after verifying the backup and rollback plan."
     );
   }
   const tenants = await new TenantRepository().list();
@@ -231,9 +231,9 @@ async function runMigrationPreflight() {
   );
   assertDatabaseName(masterName, "master database name");
 
-  if (env.NODE_ENV === "production" && !process.env.CXAPP_VERIFIED_BACKUP_ID) {
+  if (env.NODE_ENV === "production" && !process.env.CXSUN_VERIFIED_BACKUP_ID) {
     throw new Error(
-      "production migration preflight refused. Set CXAPP_VERIFIED_BACKUP_ID to the verified pre-migration backup id."
+      "production migration preflight refused. Set CXSUN_VERIFIED_BACKUP_ID to the verified pre-migration backup id."
     );
   }
 
@@ -250,9 +250,9 @@ async function runLocalMigrationTest() {
     throw new Error("local restored-dump migration test refused in production.");
   }
 
-  if (process.env.CXAPP_RESTORED_DUMP_TEST !== "1") {
+  if (process.env.CXSUN_RESTORED_DUMP_TEST !== "1") {
     throw new Error(
-      "local migration test requires CXAPP_RESTORED_DUMP_TEST=1 after restoring a dump into the configured local databases."
+      "local migration test requires CXSUN_RESTORED_DUMP_TEST=1 after restoring a dump into the configured local databases."
     );
   }
 
@@ -270,10 +270,10 @@ async function runRestoreTest() {
     );
   }
 
-  const restoreDatabaseName = process.env.CXAPP_RESTORE_TEST_DB_NAME;
+  const restoreDatabaseName = process.env.CXSUN_RESTORE_TEST_DB_NAME;
   if (!restoreDatabaseName) {
     throw new Error(
-      "restore test requires CXAPP_RESTORE_TEST_DB_NAME set to an explicit sandbox database name."
+      "restore test requires CXSUN_RESTORE_TEST_DB_NAME set to an explicit sandbox database name."
     );
   }
 
@@ -304,10 +304,10 @@ async function runRestoreTest() {
 }
 
 async function runBackupVerify() {
-  const backupId = process.env.CXAPP_BACKUP_VERIFY_ID;
+  const backupId = process.env.CXSUN_BACKUP_VERIFY_ID;
   if (!backupId) {
     throw new Error(
-      "backup verification requires CXAPP_BACKUP_VERIFY_ID set to the backup artifact/run id being verified."
+      "backup verification requires CXSUN_BACKUP_VERIFY_ID set to the backup artifact/run id being verified."
     );
   }
   console.info(
@@ -328,8 +328,8 @@ DATABASE WARNING
 ${message}.
 
 This deletes configured database data. Required guards:
-  CXAPP_DB_RESET_CONFIRM=DROP_DATABASES
-  CXAPP_ALLOW_PRODUCTION_DB_RESET=1 when NODE_ENV=production
+  CXSUN_DB_RESET_CONFIRM=DROP_DATABASES
+  CXSUN_ALLOW_PRODUCTION_DB_RESET=1 when NODE_ENV=production
 `);
 }
 

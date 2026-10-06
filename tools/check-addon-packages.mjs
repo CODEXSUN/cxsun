@@ -9,12 +9,6 @@ const addons = [
     contract: "@codexsun/blog/contracts",
     manifestExport: "blogPluginManifest",
     name: "@codexsun/blog"
-  },
-  {
-    contract: "@codexsun/file-manager/contracts",
-    normalizeManifestVersion: true,
-    manifestExport: "fileManagerPluginManifest",
-    name: "@codexsun/file-manager"
   }
 ];
 
@@ -75,13 +69,8 @@ async function verifyOwnerManifest(addon) {
   const contracts = await import(addon.contract);
   const manifest = contracts[addon.manifestExport];
   if (manifest?.version !== addon.version) {
-    if (!addon.normalizeManifestVersion) {
-      throw new Error(
-        `${addon.contract} reports ${manifest?.version ?? "no version"}; npm installs ${addon.version}.`
-      );
-    }
-    console.log(
-      `Host compatibility: ${addon.name} manifest ${manifest?.version ?? "missing"} is normalized to installed version ${addon.version}.`
+    throw new Error(
+      `${addon.contract} reports ${manifest?.version ?? "no version"}; npm installs ${addon.version}.`
     );
   }
 }

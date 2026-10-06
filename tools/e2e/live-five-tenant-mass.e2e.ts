@@ -49,11 +49,11 @@ const randomSeed = Number.parseInt(
 const minimumRecordsPerTenant = 8;
 const maximumRecordsPerTenant = 16;
 const tenantDefinitions = [
-  { code: "CODEXSUN", databaseName: "cxapp_db", name: "Codexsun" },
-  { code: "LOAD01", databaseName: "cxapp_load_01", name: "Load Tenant 01" },
-  { code: "LOAD02", databaseName: "cxapp_load_02", name: "Load Tenant 02" },
-  { code: "LOAD03", databaseName: "cxapp_load_03", name: "Load Tenant 03" },
-  { code: "LOAD04", databaseName: "cxapp_load_04", name: "Load Tenant 04" }
+  { code: "CODEXSUN", databaseName: "cxsun_db", name: "Codexsun" },
+  { code: "LOAD01", databaseName: "cxsun_load_01", name: "Load Tenant 01" },
+  { code: "LOAD02", databaseName: "cxsun_load_02", name: "Load Tenant 02" },
+  { code: "LOAD03", databaseName: "cxsun_load_03", name: "Load Tenant 03" },
+  { code: "LOAD04", databaseName: "cxsun_load_04", name: "Load Tenant 04" }
 ] as const;
 
 const admin = await createConnection({

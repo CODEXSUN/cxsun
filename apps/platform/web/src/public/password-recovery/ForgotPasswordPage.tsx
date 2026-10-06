@@ -1,4 +1,4 @@
-import { AuthLayout, Button, Field } from "@cxapp/ui";
+import { AuthLayout, Button, Field } from "@cxsun/ui";
 import { ArrowLeft, Mail } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useState } from "react";
 import { forgotPassword, getTenantLoginContext, type Desk } from "../../shared/api/platform-api";

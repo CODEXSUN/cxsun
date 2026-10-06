@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { buildSupplierStatementAgeing } from "./supplier-statement.ageing.js";
 import { getBillingDatabase } from "../../../database/billing-database.js";
 import { currentBillingScope } from "../../../auth/billing-scope.js";

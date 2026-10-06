@@ -1,12 +1,12 @@
-import { WorkspaceProtectedIndicator } from "@cxapp/ui/workspace/protected-indicator";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { WorkspaceProtectedIndicator } from "@cxsun/ui/workspace/protected-indicator";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel,
   WorkspaceTableLoadingState
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import type { CompanyRecord } from "./company.types";
 export function CompanyList({
   loading,

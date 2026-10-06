@@ -1,6 +1,6 @@
 import { Layers, RefreshCw, UserRound } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
+import { Button } from "@cxsun/ui/components/button";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
 import { getTenantUserIdentity } from "../../shared/api/tenant-context";
 import { useAccountsOverview } from "./overview.hooks";
 import { OverviewKpiCard, OverviewModulesWidget, OverviewWidget } from "./overview.widgets";

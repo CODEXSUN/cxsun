@@ -23,7 +23,7 @@ pub fn check_in_background(app: AppHandle) {
             return;
         };
         diagnostics::write(&format!(
-            "Installing CXApp desktop update {}.",
+            "Installing CXSUN desktop update {}.",
             update.version
         ));
         if let Err(error) = update.download_and_install(|_, _| {}, || {}).await {

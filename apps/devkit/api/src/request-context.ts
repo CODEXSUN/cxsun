@@ -16,6 +16,6 @@ export function runWithDevkitActor<T>(actor: DevkitActor, callback: () => T) {
 
 export function requireDevkitActor() {
   const actor = actorContext.getStore();
-  if (!actor) throw new Error("DevKit requires a CXApp-provided actor.");
+  if (!actor) throw new Error("DevKit requires a CXSUN-provided actor.");
   return actor;
 }

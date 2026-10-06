@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
-import { cn } from "@cxapp/ui/lib/utils";
+} from "@cxsun/ui/workspace/table";
+import { cn } from "@cxsun/ui/lib/utils";
 import { useAccountingPeriods } from "./accounting.hooks";
 import { formatDate, setPeriodStatus } from "./accounting.services";
 import type { AccountingPeriod } from "./accounting.types";

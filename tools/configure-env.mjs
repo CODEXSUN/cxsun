@@ -24,11 +24,16 @@ const deploymentTemplate = deployment
   : parseEnv(readFileSync(resolve(root, ".container", "deploy.env.sample"), "utf8"));
 const currentText = existsSync(envPath) ? readFileSync(envPath, "utf8") : "";
 const current = parseEnv(currentText);
+if (Array.from(current.keys()).some((key) => /^CX[A]PP_/u.test(key))) {
+  fail(
+    "This environment belongs to the previous application. Create a separate CXSUN environment file."
+  );
+}
 
 const optionalEmpty = new Set([
-  "CXAPP_DB_RESET_CONFIRM",
-  "CXAPP_RESTORE_TEST_DB_NAME",
-  "CXAPP_LIVE_RESTORE_CONFIRM",
+  "CXSUN_DB_RESET_CONFIRM",
+  "CXSUN_RESTORE_TEST_DB_NAME",
+  "CXSUN_LIVE_RESTORE_CONFIRM",
   "MAIL_SMTP_HOST",
   "MAIL_USERNAME",
   "MAIL_PASSWORD",
@@ -40,16 +45,15 @@ const optionalEmpty = new Set([
   "GSP_CLIENT_ID",
   "GSP_CLIENT_SECRET",
   "GSP_GSTIN",
-  "CXAPP_DEVKIT_SYNC_INSTANCE_ID",
-  "CXAPP_DEVKIT_SYNC_TOKEN_PEPPER",
-  "CXAPP_DEVKIT_SYNC_ENCRYPTION_KEY",
-  "CXAPP_DEVKIT_SYNC_TEST_CLOUD_URL",
-  "CXAPP_DEVKIT_WORKSPACE_ROOT",
-  "CXAPP_BACKUP_VERIFY_ID",
-  "CXAPP_SINGLE_TENANT_CORPORATE_ID"
+  "CXSUN_DEVKIT_SYNC_INSTANCE_ID",
+  "CXSUN_DEVKIT_SYNC_TOKEN_PEPPER",
+  "CXSUN_DEVKIT_SYNC_ENCRYPTION_KEY",
+  "CXSUN_DEVKIT_SYNC_TEST_CLOUD_URL",
+  "CXSUN_DEVKIT_WORKSPACE_ROOT",
+  "CXSUN_BACKUP_VERIFY_ID",
+  "CXSUN_SINGLE_TENANT_CORPORATE_ID"
 ]);
 const retiredKeys = new Set([
-  "CXAPP_SINGLE_TENANT",
   "PLATFORM_API_HOST",
   "PLATFORM_API_URL",
   "PLATFORM_WEB_HOST",
@@ -59,7 +63,7 @@ const retiredKeys = new Set([
 const interactiveKeys = [
   ["DB_USER", "MariaDB application user", false],
   ["DB_PASSWORD", "MariaDB application password", true],
-  ["CXAPP_VERIFIED_BACKUP_ID", "Verified pre-migration backup ID", false],
+  ["CXSUN_VERIFIED_BACKUP_ID", "Verified pre-migration backup ID", false],
   ["MARIADB_ADMIN_USER", "MariaDB administrative user", false],
   ["MARIADB_ROOT_PASSWORD", "MariaDB administrative password", true],
   ["REDIS_PASSWORD", "Redis password", true],
@@ -86,18 +90,6 @@ const generatedInfrastructureSecrets = new Set([
   "JWT_SECRET"
 ]);
 if (!checkOnly) {
-  if (!current.has("CXAPP_TENANCY_MODE") && current.has("CXAPP_SINGLE_TENANT")) {
-    current.set(
-      "CXAPP_TENANCY_MODE",
-      current.get("CXAPP_SINGLE_TENANT") === "1" ? "single" : "multi"
-    );
-    if (current.get("CXAPP_TENANCY_MODE") === "single") {
-      current.set(
-        "CXAPP_SINGLE_TENANT_CORPORATE_ID",
-        current.get("DEFAULT_TENANT_CORPORATE_ID") ?? ""
-      );
-    }
-  }
   for (const key of retiredKeys) {
     current.delete(key);
   }
@@ -123,11 +115,9 @@ if (!checkOnly) {
 
   if (deployment) {
     current.set("NODE_ENV", "production");
-    current.set("DB_HOST", "cxapp-mariadb");
+    current.set("DB_HOST", "cxsun-mariadb");
     current.set("DB_PORT", "3306");
-    current.set("FILE_MANAGER_DB_HOST", "cxapp-mariadb");
-    current.set("FILE_MANAGER_DB_PORT", "3306");
-    current.set("CXAPP_QUEUE_BACKEND", "bullmq-redis");
+    current.set("CXSUN_QUEUE_BACKEND", "bullmq-redis");
   }
 
   if (nonInteractive) {
@@ -166,9 +156,9 @@ if (!checkOnly) {
   const redisPassword = current.get("REDIS_PASSWORD");
   if (!isMissing(redisPassword)) {
     current.set(
-      "CXAPP_REDIS_URL",
+      "CXSUN_REDIS_URL",
       deployment
-        ? `redis://:${encodeURIComponent(redisPassword)}@cxapp-redis:6379/0`
+        ? `redis://:${encodeURIComponent(redisPassword)}@cxsun-redis:6379/0`
         : `redis://:${encodeURIComponent(redisPassword)}@127.0.0.1:6379/0`
     );
   }
@@ -187,12 +177,12 @@ if (!checkOnly) {
 
 function validate(values, validateDeployment) {
   const problems = [];
-  if (!new Set(["single", "multi"]).has(values.get("CXAPP_TENANCY_MODE"))) {
-    problems.push("CXAPP_TENANCY_MODE must be single or multi");
+  if (!new Set(["single", "multi"]).has(values.get("CXSUN_TENANCY_MODE"))) {
+    problems.push("CXSUN_TENANCY_MODE must be single or multi");
   }
-  if (values.get("CXAPP_TENANCY_MODE") === "single") {
-    const configuredId = values.get("CXAPP_SINGLE_TENANT_CORPORATE_ID")?.trim().toUpperCase();
-    if (!configuredId) problems.push("CXAPP_SINGLE_TENANT_CORPORATE_ID is required in single mode");
+  if (values.get("CXSUN_TENANCY_MODE") === "single") {
+    const configuredId = values.get("CXSUN_SINGLE_TENANT_CORPORATE_ID")?.trim().toUpperCase();
+    if (!configuredId) problems.push("CXSUN_SINGLE_TENANT_CORPORATE_ID is required in single mode");
     if (
       values.get("ENABLE_DEFAULT_TENANT_SEED") === "1" &&
       configuredId !== values.get("DEFAULT_TENANT_CORPORATE_ID")?.trim().toUpperCase()
@@ -217,23 +207,23 @@ function validate(values, validateDeployment) {
       problems.push(`${key} still contains a placeholder`);
     }
   }
-  if (validateDeployment && values.get("CXAPP_DB_FRESH_ON_START") !== "0") {
-    problems.push("CXAPP_DB_FRESH_ON_START must be 0 for deployment");
+  if (validateDeployment && values.get("CXSUN_DB_FRESH_ON_START") !== "0") {
+    problems.push("CXSUN_DB_FRESH_ON_START must be 0 for deployment");
   }
   if (validateDeployment && values.get("NODE_ENV") !== "production") {
     problems.push("NODE_ENV must be production for deployment");
   }
   if (
     validateDeployment &&
-    (values.get("DB_HOST") !== "cxapp-mariadb" || values.get("DB_PORT") !== "3306")
+    (values.get("DB_HOST") !== "cxsun-mariadb" || values.get("DB_PORT") !== "3306")
   ) {
-    problems.push("container deployment requires DB_HOST=cxapp-mariadb and DB_PORT=3306");
+    problems.push("container deployment requires DB_HOST=cxsun-mariadb and DB_PORT=3306");
   }
-  if (validateDeployment && values.get("CXAPP_QUEUE_BACKEND") !== "bullmq-redis") {
-    problems.push("container deployment requires CXAPP_QUEUE_BACKEND=bullmq-redis");
+  if (validateDeployment && values.get("CXSUN_QUEUE_BACKEND") !== "bullmq-redis") {
+    problems.push("container deployment requires CXSUN_QUEUE_BACKEND=bullmq-redis");
   }
-  if (validateDeployment && values.get("CXAPP_ALLOW_PRODUCTION_DB_RESET") !== "0") {
-    problems.push("CXAPP_ALLOW_PRODUCTION_DB_RESET must be 0 for deployment");
+  if (validateDeployment && values.get("CXSUN_ALLOW_PRODUCTION_DB_RESET") !== "0") {
+    problems.push("CXSUN_ALLOW_PRODUCTION_DB_RESET must be 0 for deployment");
   }
   if (values.get("DB_MASTER_NAME") === values.get("DEFAULT_TENANT_DB_NAME")) {
     problems.push("DB_MASTER_NAME and DEFAULT_TENANT_DB_NAME must differ");
@@ -252,7 +242,7 @@ function validate(values, validateDeployment) {
 }
 
 function isOptionalKey(key, validateDeployment) {
-  return optionalEmpty.has(key) || (!validateDeployment && key === "CXAPP_VERIFIED_BACKUP_ID");
+  return optionalEmpty.has(key) || (!validateDeployment && key === "CXSUN_VERIFIED_BACKUP_ID");
 }
 
 function parseEnv(source) {

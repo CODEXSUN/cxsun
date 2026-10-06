@@ -5,11 +5,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const apiPackages = new Map([
-  ["@cxapp/accounts-api", "accounts"],
-  ["@cxapp/billing-api", "billing"],
-  ["@cxapp/core-api", "core"],
-  ["@cxapp/devkit-api", "devkit"],
-  ["@cxapp/mail-api", "mail"]
+  ["@cxsun/accounts-api", "accounts"],
+  ["@cxsun/billing-api", "billing"],
+  ["@cxsun/core-api", "core"],
+  ["@cxsun/devkit-api", "devkit"],
+  ["@cxsun/mail-api", "mail"]
 ]);
 
 registerHooks({

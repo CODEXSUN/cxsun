@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { ProductGroupsRepository } from "./product-groups.repository.js";
 import type {
   ProductGroupsListFilters,

@@ -12,8 +12,8 @@ export const defaultDesktopConfig: DesktopConfig = {
   apiMode: "local",
   databaseHost: "127.0.0.1",
   databasePort: 3306,
-  databaseName: "cxapp_tenant",
-  databaseUser: "cxapp"
+  databaseName: "cxsun_tenant",
+  databaseUser: "cxsun"
 };
 
 export type WorkspaceProjection = {

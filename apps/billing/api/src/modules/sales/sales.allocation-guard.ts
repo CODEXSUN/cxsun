@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { sql, type Transaction } from "kysely";
 import type { SalesDatabase } from "./sales.repository-support.js";
 

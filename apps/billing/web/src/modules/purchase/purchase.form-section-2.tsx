@@ -1,6 +1,6 @@
-import { Button } from "@cxapp/ui/components/button";
-import { DialogFooter, DialogHeader, DialogTitle } from "@cxapp/ui/components/dialog";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+import { Button } from "@cxsun/ui/components/button";
+import { DialogFooter, DialogHeader, DialogTitle } from "@cxsun/ui/components/dialog";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import { Save, X } from "lucide-react";
 import { useState } from "react";
 import { productLookupDisplayLabel } from "../../shared/product-lookup-label";

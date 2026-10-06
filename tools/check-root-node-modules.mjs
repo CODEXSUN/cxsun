@@ -4,7 +4,9 @@ import { existsSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
-const workspaceRoots = ["apps", "packages", "tools"].map((directory) => join(root, directory));
+const workspaceRoots = ["apps", "devkits", "packages", "tools"].map((directory) =>
+  join(root, directory)
+);
 const nestedDependencyTrees = [];
 
 function findNestedDependencyTrees(directory) {

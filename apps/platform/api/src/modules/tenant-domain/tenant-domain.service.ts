@@ -55,8 +55,8 @@ export class TenantDomainService {
     }
     const tokens = records
       .map((parts) => parts.join("").trim())
-      .filter((value) => value.startsWith("cxapp-domain-verification="))
-      .map((value) => value.slice("cxapp-domain-verification=".length));
+      .filter((value) => value.startsWith("cxsun-domain-verification="))
+      .map((value) => value.slice("cxsun-domain-verification=".length));
     const verified = await this.domains.verify(uuid, tokens);
     if (!verified) {
       throw AppError.conflict(
@@ -67,4 +67,4 @@ export class TenantDomainService {
   }
 }
 import { resolveTxt } from "node:dns/promises";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";

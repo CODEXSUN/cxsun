@@ -13,14 +13,14 @@ const manifest = {
   packages: { api: "test/api", contracts: "test/contracts", web: "test/web" },
   runtimeModes: ["multi-tenant", "single-client"],
   schemaVersion: 1,
-  version: "1.0.0",
+  version: "1.0.0"
 };
 
 test("registers compatible add-ons and closes them in reverse order", async () => {
   const events = [];
   const registry = new AddonHostRegistry({
     capabilities: ["identity", "database"],
-    runtimeMode: "multi-tenant",
+    runtimeMode: "multi-tenant"
   });
   for (const suffix of ["one", "two"]) {
     await registry.register({
@@ -28,7 +28,7 @@ test("registers compatible add-ons and closes them in reverse order", async () =
       close: async () => events.push(`close:${suffix}`),
       databaseMode: "host-database",
       manifest: { ...manifest, key: `codexsun.test-${suffix}` },
-      moduleKeys: [`test.${suffix}`],
+      moduleKeys: [`test.${suffix}`]
     });
   }
   assert.deepEqual(registry.moduleKeys(), ["test.one", "test.two"]);
@@ -38,7 +38,10 @@ test("registers compatible add-ons and closes them in reverse order", async () =
 
 test("rejects missing host capabilities before activation", async () => {
   let activated = false;
-  const registry = new AddonHostRegistry({ capabilities: ["identity"], runtimeMode: "multi-tenant" });
+  const registry = new AddonHostRegistry({
+    capabilities: ["identity"],
+    runtimeMode: "multi-tenant"
+  });
   await assert.rejects(
     registry.register({
       activate: async () => {
@@ -46,9 +49,9 @@ test("rejects missing host capabilities before activation", async () => {
       },
       databaseMode: "host-database",
       manifest,
-      moduleKeys: [],
+      moduleKeys: []
     }),
-    /unavailable capabilities: database/,
+    /unavailable capabilities: database/
   );
   assert.equal(activated, false);
 });
@@ -56,13 +59,13 @@ test("rejects missing host capabilities before activation", async () => {
 test("rejects incompatible runtime and host API versions", async () => {
   const registry = new AddonHostRegistry({
     capabilities: ["identity", "database"],
-    runtimeMode: "multi-tenant",
+    runtimeMode: "multi-tenant"
   });
   const registration = {
     activate: async () => undefined,
     databaseMode: "host-database",
     manifest: { ...manifest, hostApi: "^2.0.0" },
-    moduleKeys: [],
+    moduleKeys: []
   };
   await assert.rejects(registry.register(registration), /requires host API/);
 });
@@ -70,7 +73,7 @@ test("cleans a partially started add-on when activation fails", async () => {
   let closed = false;
   const registry = new AddonHostRegistry({
     capabilities: ["identity", "database"],
-    runtimeMode: "multi-tenant",
+    runtimeMode: "multi-tenant"
   });
   await assert.rejects(
     registry.register({
@@ -82,9 +85,9 @@ test("cleans a partially started add-on when activation fails", async () => {
       },
       databaseMode: "host-database",
       manifest,
-      moduleKeys: [],
+      moduleKeys: []
     }),
-    /activation failed/,
+    /activation failed/
   );
   assert.equal(closed, true);
   assert.deepEqual(registry.list(), []);

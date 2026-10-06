@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
 import { resetBrowserSession } from "../../shared/api/platform-api";
 
 const refreshedLoginPath = "/sa/login?reason=session-refreshed";

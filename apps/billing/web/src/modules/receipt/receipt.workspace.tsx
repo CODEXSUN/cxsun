@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Printer, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspacePagination } from "@cxapp/ui/workspace/pagination";
-import { WorkspaceShowCard } from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { WorkspaceShowCard } from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import { canEditBillingEntry, useBillingAccess } from "../../shared/auth/billing-access";
 import {
   BillingDocumentListControls,
@@ -280,7 +280,11 @@ function ReceiptShow({
                 <Pencil className="size-4" />
                 Edit
               </Button>
-              {receipt.status === "draft" ? <Button onClick={onPost} type="button">Post</Button> : null}
+              {receipt.status === "draft" ? (
+                <Button onClick={onPost} type="button">
+                  Post
+                </Button>
+              ) : null}
             </>
           ) : null}
           {receipt.status === "posted" ? (

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { PrioritiesService } from "./priorities.service.js";
 export const PRIORITIES_COLLECTION_PATH = "/core/common/others/priorities";
 const service = new PrioritiesService();

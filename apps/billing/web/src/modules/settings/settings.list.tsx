@@ -2,7 +2,7 @@ import {
   WorkspaceStatusBadge,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace";
+} from "@cxsun/ui/workspace";
 import type { BillingSettings } from "./settings.types";
 
 export function SettingsList({ settings }: { settings: BillingSettings }) {

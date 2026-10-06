@@ -18,12 +18,12 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@cxapp/ui/components/card";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { cn } from "@cxapp/ui/lib/utils";
-import { queueBillingDocumentEmail } from "@cxapp/mail-web/modules/mail";
+import { Button } from "@cxsun/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@cxsun/ui/components/card";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { cn } from "@cxsun/ui/lib/utils";
+import { queueBillingDocumentEmail } from "@cxsun/mail-web/modules/mail";
 import { getTenantUserLabel } from "../../shared/api/tenant-context";
 import {
   buildAndQueueBillingDocumentPdf,

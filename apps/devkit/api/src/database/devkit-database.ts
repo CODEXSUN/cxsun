@@ -4,7 +4,7 @@ import {
   rollbackMigrationBatch,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import {
   migratePlatformRegistryModule,
   platformRegistryMigration
@@ -29,7 +29,7 @@ const bootstraps = new WeakMap<Kysely<DevkitDatabase>, Promise<void>>();
 const requestDatabase = new Proxy({} as Kysely<DevkitDatabase>, {
   get(_target, property) {
     const database = databaseContext.getStore();
-    if (!database) throw new Error("DevKit requires a CXApp-provided request database.");
+    if (!database) throw new Error("DevKit requires a CXSUN-provided request database.");
     const value = Reflect.get(database, property, database) as unknown;
     return typeof value === "function" ? value.bind(database) : value;
   }
@@ -62,10 +62,11 @@ const seedSteps = [{ name: "devkit.platform-registry", seed: seedPlatformRegistr
 
 export const devkitMigrationBatch: MigrationBatch<DevkitDatabase> = {
   batch: 1,
-  description: "DevKit module-owned schema baseline for CXApp master and tenant databases.",
+  description: "DevKit module-owned schema baseline for CXSUN master and tenant databases.",
   scope: "devkit",
   version: "1.0.43",
   steps: migrationSteps.map(({ description, migrate, name }) => ({
+    // Existing databases store this checksum; changing the package name must not rewrite it.
     checksum: `${name}:cxapp-v1`,
     description,
     name,
@@ -118,7 +119,7 @@ export const devkitTenantMigrations = migrationSteps;
 
 export const devkitDatabaseLifecycle = Object.freeze({
   migrations: Object.freeze(migrationSteps.map(({ name }) => name)),
-  packageId: "@cxapp/devkit-api",
+  packageId: "@cxsun/devkit-api",
   seeders: Object.freeze(seedSteps.map(({ name }) => name)),
   async runSql({ database }: { database: unknown }) {
     await bootstrapDevkitDatabase(database as Kysely<DevkitDatabase>);

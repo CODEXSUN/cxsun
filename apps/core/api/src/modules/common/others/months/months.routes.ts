@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { MonthsService } from "./months.service.js";
 export const MONTHS_COLLECTION_PATH = "/core/common/others/months";
 const service = new MonthsService();

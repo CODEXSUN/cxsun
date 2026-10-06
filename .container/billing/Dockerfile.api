@@ -15,19 +15,19 @@ COPY apps/devkit/api ./apps/devkit/api
 COPY apps/accounts/api ./apps/accounts/api
 
 RUN npm ci \
-  && npm run build -w @cxapp/framework \
-  && npm run build -w @cxapp/core-api \
-  && npm run build -w @cxapp/billing-api \
-  && npm run build -w @cxapp/mail-api \
-  && npm run build -w @cxapp/devkit-api \
-  && npm run build -w @cxapp/accounts-api \
-  && npm run build -w @cxapp/platform-api \
+  && npm run build -w @cxsun/framework \
+  && npm run build -w @cxsun/core-api \
+  && npm run build -w @cxsun/billing-api \
+  && npm run build -w @cxsun/mail-api \
+  && npm run build -w @cxsun/devkit-api \
+  && npm run build -w @cxsun/accounts-api \
+  && npm run build -w @cxsun/platform-api \
   && npm run dependencies:check
 
 FROM build AS migrations
-ARG CXAPP_VERSION
+ARG CXSUN_VERSION
 LABEL org.opencontainers.image.title="CODEXSUN Billing Stack Migrations" \
-      org.opencontainers.image.version="$CXAPP_VERSION"
+      org.opencontainers.image.version="$CXSUN_VERSION"
 ENV NODE_ENV=production
 CMD ["npm", "run", "db:migrations:run"]
 
@@ -36,11 +36,11 @@ RUN npm prune --omit=dev
 
 FROM node:${NODE_RUNTIME_VERSION}-bookworm-slim AS runtime
 
-ARG CXAPP_VERSION
+ARG CXSUN_VERSION
 ARG NPM_RUNTIME_VERSION
 ARG PLATFORM_API_PORT
 LABEL org.opencontainers.image.title="CODEXSUN Billing Stack API" \
-      org.opencontainers.image.version="$CXAPP_VERSION"
+      org.opencontainers.image.version="$CXSUN_VERSION"
 
 WORKDIR /app
 RUN npm install --global npm@${NPM_RUNTIME_VERSION} \
@@ -67,7 +67,7 @@ COPY --from=build /app/dist/apps/mail/api ./apps/mail/api/dist
 COPY --from=build /app/dist/apps/devkit/api ./apps/devkit/api/dist
 COPY --from=build /app/dist/apps/accounts/api ./apps/accounts/api/dist
 COPY --from=build /app/dist ./dist
-COPY .container/scripts/api-entrypoint.sh /usr/local/bin/cxapp-api-entrypoint
+COPY .container/scripts/api-entrypoint.sh /usr/local/bin/cxsun-api-entrypoint
 
 RUN sed -i 's#\./src/index\.ts#./dist/index.js#g; s#\./src/modules/mail/index\.ts#./dist/modules/mail/index.js#g' \
       /app/apps/core/api/package.json \
@@ -75,10 +75,10 @@ RUN sed -i 's#\./src/index\.ts#./dist/index.js#g; s#\./src/modules/mail/index\.t
       /app/apps/mail/api/package.json \
       /app/apps/devkit/api/package.json \
       /app/apps/accounts/api/package.json \
-  && chmod +x /usr/local/bin/cxapp-api-entrypoint
+  && chmod +x /usr/local/bin/cxsun-api-entrypoint
 ENV NODE_ENV=production
 USER node
 EXPOSE ${PLATFORM_API_PORT}
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=10 \
   CMD node -e "fetch('http://127.0.0.1:'+process.env.PLATFORM_API_PORT+'/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
-ENTRYPOINT ["cxapp-api-entrypoint"]
+ENTRYPOINT ["cxsun-api-entrypoint"]

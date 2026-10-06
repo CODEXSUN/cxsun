@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { TransportsService } from "./transports.service.js";
 export const TRANSPORTS_COLLECTION_PATH = "/core/common/workorder/transports";
 const service = new TransportsService();

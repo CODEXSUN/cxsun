@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { DomainEvent, EventPublisher } from "@cxapp/framework/events";
-import type { QueueAdapter, QueueJob } from "@cxapp/framework/queue";
-import { AppError } from "@cxapp/framework/errors";
+import type { DomainEvent, EventPublisher } from "@cxsun/framework/events";
+import type { QueueAdapter, QueueJob } from "@cxsun/framework/queue";
+import { AppError } from "@cxsun/framework/errors";
 import { getBillingDatabase } from "../../database/billing-database.js";
 
 export class BillingDatabaseEventPublisher implements EventPublisher {

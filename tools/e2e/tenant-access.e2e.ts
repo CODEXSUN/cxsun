@@ -155,7 +155,7 @@ async function exerciseSuperAdminUserManager(tenant: TenantRow) {
     const createResponse = await adminRequest("POST", path, {
       email: `sa-e2e-${run}@${tenant.tenant_code.toLowerCase()}.test`,
       name: `SA E2E User ${run}`,
-      password: "Cxapp-SA-E2E-123!",
+      password: "CXSUN-SA-E2E-123!",
       status: "active"
     });
     assert.equal(createResponse.statusCode, 200, "Super Admin tenant-user create failed.");
@@ -208,7 +208,7 @@ async function exerciseTenant(tenant: TenantRow) {
   const user = await create(tenant, "users", {
     email: `e2e-${run}@${tenant.tenant_code.toLowerCase()}.test`,
     name: `E2E User ${run}`,
-    password: "Cxapp-E2E-123!",
+    password: "CXSUN-E2E-123!",
     status: "active"
   });
   const userRole = await create(tenant, "user-roles", {

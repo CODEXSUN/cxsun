@@ -6,7 +6,7 @@ import {
   rollbackTablePrefixPolicy,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import { Kysely, MysqlDialect } from "kysely";
 import { createPool, type PoolOptions } from "mysql2";
 import { createConnection } from "mysql2/promise";

@@ -21,7 +21,7 @@ switch ($Action) {
         Invoke-Checked { cargo fetch --manifest-path $manifestPath }
     }
     "build" {
-        Invoke-Checked { npm.cmd run build -w @cxapp/windows }
+        Invoke-Checked { npm.cmd run build -w @cxsun/windows }
         Invoke-Checked { cargo build --manifest-path $manifestPath --release }
     }
     "run" {
@@ -33,7 +33,7 @@ switch ($Action) {
         }
     }
     "publish" {
-        Invoke-Checked { npm.cmd run build -w @cxapp/windows }
+        Invoke-Checked { npm.cmd run build -w @cxsun/windows }
         Invoke-Checked { cargo build --manifest-path $manifestPath --release }
     }
     "package" {

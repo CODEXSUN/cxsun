@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { sql, type Transaction } from "kysely";
 import type { QuotationDatabase } from "./quotation.repository-support.js";
 import type { QuotationStatus } from "./quotation.types.js";

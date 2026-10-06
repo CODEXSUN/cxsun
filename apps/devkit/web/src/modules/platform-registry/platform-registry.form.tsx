@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { Save } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
 import {
   WorkspaceFormField,
   WorkspaceFormGrid,
   WorkspaceFormPanel,
   WorkspaceSelect
-} from "@cxapp/ui/workspace";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import { platformRegistrySchema } from "./platform-registry.schema";
 import type { PlatformRegistryFormPayload } from "./platform-registry.types";
 

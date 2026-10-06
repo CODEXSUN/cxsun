@@ -7,7 +7,7 @@ const root = resolve(import.meta.dirname, "..");
 const dependencies = JSON.parse(
   readFileSync(resolve(root, "apps/platform/api/package.json"), "utf8")
 ).dependencies;
-const addons = ["@codexsun/blog", "@codexsun/file-manager"];
+const addons = ["@codexsun/blog"];
 const updates = [];
 
 for (const name of addons) {

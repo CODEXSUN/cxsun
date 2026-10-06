@@ -161,7 +161,7 @@ export function WorkspaceLookup({
 
   useEffect(() => {
     if (!isOpen) {
-      const nextQuery = value ? (selectedOption?.label ?? selectedDisplayValue ?? value) : "";
+      const nextQuery = value ? selectedOption?.label || selectedDisplayValue || value : "";
       setQuery((current) => (current === nextQuery ? current : nextQuery));
     }
   }, [allowTextValue, isOpen, selectedDisplayValue, selectedOption, value]);
@@ -218,7 +218,7 @@ export function WorkspaceLookup({
   }
 
   function resetQuery() {
-    setQuery(selectedOption?.label ?? selectedDisplayValue ?? value);
+    setQuery(selectedOption?.label || selectedDisplayValue || value);
   }
 
   function clearSelection() {

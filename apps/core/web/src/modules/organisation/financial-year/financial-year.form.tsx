@@ -8,8 +8,8 @@ import {
   WorkspaceFormGrid,
   WorkspaceSwitchCard,
   WorkspaceUpsertDialog
-} from "@cxapp/ui";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import { financialYearSchema } from "./financial-year.schema";
 import type { FinancialYearRecord, FinancialYearSavePayload } from "./financial-year.types";
 const empty: FinancialYearSavePayload = {

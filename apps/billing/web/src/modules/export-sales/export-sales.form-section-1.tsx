@@ -1,13 +1,13 @@
-import { Button } from "@cxapp/ui/components/button";
-import { DialogFooter, DialogHeader, DialogTitle } from "@cxapp/ui/components/dialog";
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
-import { cn } from "@cxapp/ui/lib/utils";
+import { Button } from "@cxsun/ui/components/button";
+import { DialogFooter, DialogHeader, DialogTitle } from "@cxsun/ui/components/dialog";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
+import { cn } from "@cxsun/ui/lib/utils";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import { useQuery } from "@tanstack/react-query";
 import { Save, Sparkles, X } from "lucide-react";
 import { useEffect, useState } from "react";

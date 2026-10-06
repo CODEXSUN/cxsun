@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { sql, type Transaction } from "kysely";
 import type { SalesDatabase } from "./sales.repository-support.js";
 import type { SaleSavePayload } from "./sales.types.js";
@@ -6,7 +6,10 @@ import type { SaleSavePayload } from "./sales.types.js";
 export async function assertLinkedSaleIdentity(
   database: Transaction<SalesDatabase>,
   saleId: number,
-  input?: Pick<SaleSavePayload, "invoiceNumber" | "companyId" | "financialYearId" | "customerId" | "currencyId">
+  input?: Pick<
+    SaleSavePayload,
+    "invoiceNumber" | "companyId" | "financialYearId" | "customerId" | "currencyId"
+  >
 ) {
   const result = await sql<{
     invoice_number: string;

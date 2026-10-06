@@ -2,8 +2,8 @@ import {
   WorkspaceDetailTable,
   WorkspaceShowCard,
   WorkspaceShowLayout
-} from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+} from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import type { Tenant } from "./tenant.types";
 
 export function TenantIdentityControl({ tenant }: { tenant: Tenant }) {

@@ -70,7 +70,7 @@ const child = spawn(
       ...(app === "platform-web" ? env : {}),
       ...(app === "platform-api"
         ? {
-            CXAPP_DB_FRESH_SESSION_FILE: join(tmpdir(), `cxapp-platform-fresh-${process.pid}.done`)
+            CXSUN_DB_FRESH_SESSION_FILE: join(tmpdir(), `cxsun-platform-fresh-${process.pid}.done`)
           }
         : {}),
       [config.envKey]: String(port)
@@ -82,7 +82,7 @@ const child = spawn(
 child.on("exit", (code) => process.exit(code ?? 0));
 
 process.on("message", (message) => {
-  if (message?.type === "cxapp:shutdown") {
+  if (message?.type === "cxsun:shutdown") {
     stopChild(child, "SIGTERM");
   }
 });
@@ -143,7 +143,7 @@ function parseRequiredPort(value, envKey) {
 
 function ensurePlatformApiDependencies() {
   console.log("  - Checking API package builds");
-  buildWorkspacePackage("@cxapp/framework", "startup contract");
+  buildWorkspacePackage("@cxsun/framework", "startup contract");
 }
 
 function buildWorkspacePackage(workspaceName, reason) {
@@ -195,9 +195,9 @@ async function freePort(port, host) {
 
   console.log(`  ! ${host}:${port} is already in use by PID ${pids.join(", ")}`);
 
-  if (process.env.CXAPP_DEV_PORT_POLICY === "abort") {
+  if (process.env.CXSUN_DEV_PORT_POLICY === "abort") {
     console.error(
-      "  x Port policy is abort. Stop the existing process or change CXAPP_DEV_PORT_POLICY.\n"
+      "  x Port policy is abort. Stop the existing process or change CXSUN_DEV_PORT_POLICY.\n"
     );
     process.exit(1);
   }

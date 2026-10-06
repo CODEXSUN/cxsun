@@ -39,13 +39,13 @@ Do not read historical blueprints, product plans, or runbooks by default when th
 - Use root scripts for dependency checks, formatting, lint, TypeScript, boundaries, builds, versions, and releases.
 - Generated runtime logs, caches, IDE state, and agent run output do not belong in the repository.
 
-## CXApp Internal Naming Contract
+## CXSUN Internal Naming Contract
 
-- CXApp is the repository and runtime identity. New environment variables must use the `CXAPP_` prefix, and workspace packages must use the `@cxapp/*` scope.
-- Internal cookies, browser storage, cache keys, JWT issuer/audience values, database defaults, Docker resources, image names, service names, queues, locks, events, test resources, and generated filenames must use `cxapp`.
-- Do not add compatibility reads for the retired environment prefix. Deployment configuration must be migrated atomically and fail closed when required `CXAPP_*` values are absent.
+- CXSUN is the repository and runtime identity. New environment variables must use the `CXSUN_` prefix, and workspace packages must use the `@cxsun/*` scope.
+- Internal cookies, browser storage, cache keys, JWT issuer/audience values, database defaults, Docker resources, image names, service names, queues, locks, events, test resources, and generated filenames must use `cxsun`.
+- Do not add compatibility reads for the retired environment prefix. Deployment configuration must be migrated atomically and fail closed when required `CXSUN_*` values are absent.
 - `CODEXSUN`, `Codexsun`, and `codexsun` may remain only where they are public identity: visible product branding, `codexsun.com` and branded email domains, the `CODEXSUN` GitHub organization, the branded default tenant/corporate identity, or the canonical local repository path recorded above.
-- Historical changelog entries remain historical evidence. Active source, examples, tests, and operational instructions must use the CXApp internal naming contract.
+- Historical changelog entries remain historical evidence. Active source, examples, tests, and operational instructions must use the CXSUN internal naming contract.
 
 ## Architecture Boundary
 
@@ -160,7 +160,7 @@ When a table row opens View, action/menu clicks must stop propagation so Edit or
 
 ## UI Pattern
 
-- Use `@cxapp/ui` controls and workspace primitives.
+- Use `@cxsun/ui` controls and workspace primitives.
 - Use `WorkspaceLookup` for persisted relationships.
 - Use shared table, filters, pagination, row actions, upsert dialog, banners, and status badges.
 - Required fields show required markers and useful validation messages.

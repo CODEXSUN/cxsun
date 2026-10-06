@@ -3,7 +3,7 @@ import type { DevkitDatabase } from "./schema.js";
 import { quoteIdentifier } from "./database-utils.js";
 
 export const devkitSchemaStandardizationMigration = {
-  description: "CXApp standard identity, status, and audit columns for every DevKit-owned table.",
+  description: "CXSUN standard identity, status, and audit columns for every DevKit-owned table.",
   key: "devkit.schema-standardization.v1"
 } as const;
 

@@ -109,7 +109,7 @@ Each reduced Common module must own concrete migration SQL, repository queries, 
 
 The same ownership discipline applies to Core, Platform, Billing, DevKit, and every future application. DevKit
 Platform Registry behavior belongs under `apps/devkit/api` and `apps/devkit/web`; Platform may compose only
-the public `@cxapp/devkit-api` and `@cxapp/devkit-web` contracts. DevKit request databases and actors must always
+the public `@cxsun/devkit-api` and `@cxsun/devkit-web` contracts. DevKit request databases and actors must always
 come from the authenticated Platform host adapter, its API remains namespaced under `/devkit`, and its master and
 tenant tables retain the `devkit_` owner prefix plus the standard identity, status, and audit columns. Before an
 application change is finalized, audit its complete backend and frontend module tree for wrapper/alias roles,
@@ -117,7 +117,7 @@ inherited or metadata-driven generic CRUD, private cross-module imports, central
 stale exports and proxies, misplaced files, and business behavior stored in app-level shared folders. Composition
 roots contain registration and lifecycle composition only; leaf modules own executable behavior.
 
-Allowed shared infrastructure is narrow: API transport/session context, environment readers, observability, and reusable `@cxapp/ui` controls. Shared code must not know a business module's fields, validation, tables, lifecycle, routes, forms, lists, workspaces, settings, or print behavior.
+Allowed shared infrastructure is narrow: API transport/session context, environment readers, observability, and reusable `@cxsun/ui` controls. Shared code must not know a business module's fields, validation, tables, lifecycle, routes, forms, lists, workspaces, settings, or print behavior.
 
 Run `node tools/check-module-boundaries.mjs <app>` for the changed application, followed by formatting, lint, TypeScript, production composition/build validation, and any configured database/E2E checks. A new application is incomplete until the boundary checker understands and enforces its approved full or reduced contract.
 
@@ -171,7 +171,7 @@ apps/
     web/              # Billing frontend modules
 
   crm/
-    api/              # CRM backend modules when data workflows are added
+    api/              # CRM backend modules and tenant migrations
     web/              # CRM frontend modules
 
 ```
@@ -196,7 +196,9 @@ Frontend ownership follows the same boundary:
 - `apps/core/web` owns common/master tenant screens and shared tenant data UI.
 - `apps/billing/web` owns billing entries, billing settings, billing reports, and billing forms.
 - `apps/crm/web` owns its own app-specific screens and routes.
-- The initial CRM app owns `apps/crm/web/src/modules/overview` and the `crm.overview` desk route. Leads, contacts, and deals require CRM-owned API and database modules before their navigation entries are exposed.
+- The CRM app owns the overview and Enquiry modules. `crm.enquiries` uses the CRM API and tenant-owned `crm_enquiries` table.
+- `crm.contacts` composes Core's public Contact workspace. An Enquiry can link to a Core Contact through `contact_id`. Core owns contact identity and the public contact lookup contract.
+- CRM owns Enquiry status, priority, captured contact details, assignment, and permissions. A future Deal module will own deal stages and conversion.
 - `packages/ui` owns reusable design-system primitives only. It must not absorb app-specific business screens or rules.
 
 Runnable app web packages use `apps/{app}/web/src/modules/{module}/` for app-owned frontend workflows:
@@ -470,7 +472,7 @@ Current registered modules in `platformModuleCatalog`:
 9. **Business apps use strict backend/frontend module folders** - Runnable business backends use `api/src/index.ts` plus `api/src/modules/`; frontend modules remain under the app's `web` workspace. The API composition root registers modules but does not own business behavior.
 10. **Platform web composes app web packages** - `apps/platform/web` remains the shell and route/menu composer. Business screens must live in the owning app web package and be imported or registered through app manifests.
 
-11. **External add-ons use the host-adapter contract** - `packages/framework/src/addons` validates manifest version, host API compatibility, runtime mode, database mode, and required capabilities before activation. `apps/platform/api/src/addon-host.ts` is the only API composition point for add-on registration and shutdown. Add-ons own their routes, tables, migrations, and web exports; CXApp supplies verified tenant identity, authorization, database access, migration-ledger execution, and optional infrastructure through public adapters.
+11. **External add-ons use the host-adapter contract** - `packages/framework/src/addons` validates manifest version, host API compatibility, runtime mode, database mode, and required capabilities before activation. `apps/platform/api/src/addon-host.ts` is the only API composition point for add-on registration and shutdown. Add-ons own their routes, tables, migrations, and web exports; CXSUN supplies verified tenant identity, authorization, database access, migration-ledger execution, and optional infrastructure through public adapters.
 
 Current runtime composition supersedes the earlier gateway wording in decision 3: Platform, Core,
 and Billing run as app-owned API packages. Product stacks start selected APIs

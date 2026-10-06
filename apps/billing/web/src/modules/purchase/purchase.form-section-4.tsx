@@ -1,10 +1,10 @@
-import { Button } from "@cxapp/ui/components/button";
-import { DialogFooter, DialogHeader, DialogTitle } from "@cxapp/ui/components/dialog";
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
-import { cn } from "@cxapp/ui/lib/utils";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+import { Button } from "@cxsun/ui/components/button";
+import { DialogFooter, DialogHeader, DialogTitle } from "@cxsun/ui/components/dialog";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
+import { cn } from "@cxsun/ui/lib/utils";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import { useQuery } from "@tanstack/react-query";
 import { Save, X } from "lucide-react";
 import { useState } from "react";

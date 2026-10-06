@@ -1,35 +1,35 @@
 # Cloudflare Tunnel for MariaDB
 
-This runbook connects a database client such as SQLyog to the CXApp MariaDB container without
+This runbook connects a database client such as SQLyog to the CXSUN MariaDB container without
 publishing MariaDB directly to the Internet.
 
-## Verified CXApp configuration
+## Verified CXSUN configuration
 
 | Setting                | Value                      |
 | ---------------------- | -------------------------- |
 | Public hostname        | `data.codexsun.com`        |
 | Cloudflare route type  | Published application, TCP |
-| Tunnel origin          | `tcp://cxapp-mariadb:3306` |
+| Tunnel origin          | `tcp://cxsun-mariadb:3306` |
 | Windows local listener | `127.0.0.1:13307`          |
 | Verified server        | `11.8.8-MariaDB-ubu2404`   |
 
-The Cloudflare connector must be attached to the same Docker network as `cxapp-mariadb` for the
+The Cloudflare connector must be attached to the same Docker network as `cxsun-mariadb` for the
 container hostname to resolve. If `cloudflared` runs directly on the server host instead, use a
 MariaDB address that is reachable from that host rather than the Docker-only service name.
 
 ## Server configuration
 
 1. Open Cloudflare Zero Trust and select **Networks -> Tunnels**.
-2. Create or select the tunnel used by the CXApp server.
+2. Create or select the tunnel used by the CXSUN server.
 3. Add a **Published application** route with:
 
    - Hostname: `data.codexsun.com`
    - Service type: `TCP`
-   - Service URL: `tcp://cxapp-mariadb:3306`
+   - Service URL: `tcp://cxsun-mariadb:3306`
 
 4. Run the Cloudflare connector using the installation command or tunnel token supplied by the
    Cloudflare dashboard. Never commit the tunnel token or credentials file to this repository.
-5. Ensure the connector and `cxapp-mariadb` share a Docker network.
+5. Ensure the connector and `cxsun-mariadb` share a Docker network.
 
 MariaDB does not need a public firewall rule or a publicly bound port for this configuration.
 
@@ -131,9 +131,9 @@ port. Start it again and check `Test-NetConnection`.
 Check that:
 
 - the Cloudflare tunnel is healthy;
-- its published route is `tcp://cxapp-mariadb:3306`;
+- its published route is `tcp://cxsun-mariadb:3306`;
 - the connector shares the MariaDB container's Docker network;
-- the `cxapp-mariadb` container is running and healthy; and
+- the `cxsun-mariadb` container is running and healthy; and
 - outbound Cloudflare tunnel traffic is permitted by the server firewall.
 
 ### MariaDB reports access denied

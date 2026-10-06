@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { PrioritiesRepository } from "./priorities.repository.js";
 import type {
   PrioritiesListFilters,

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import { getCompanyForDatabase } from "@cxapp/core-api";
-import { AppError } from "@cxapp/framework/errors";
-import { fail, ok } from "@cxapp/framework/http";
+import { getCompanyForDatabase } from "@cxsun/core-api";
+import { AppError } from "@cxsun/framework/errors";
+import { fail, ok } from "@cxsun/framework/http";
 import { requireSuperAdmin } from "../../auth/super-admin.guard.js";
 import { tenantAccessContext } from "../../auth/tenant-access-context.js";
 import { TenantService } from "../tenant/tenant.service.js";

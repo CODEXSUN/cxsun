@@ -1,6 +1,6 @@
 {
-  "name": "@cxapp/accounts-web",
-  "version": "1.0.79",
+  "name": "@cxsun/accounts-web",
+  "version": "1.0.80",
   "private": true,
   "type": "module",
   "exports": {
@@ -11,13 +11,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "oxlint src"
   },
   "dependencies": {
-    "@cxapp/ui": "^1.0.79",
-    "@tanstack/react-query": "^5.101.4",
-    "lucide-react": "^1.33.0",
-    "react": "^19.2.8",
-    "zod": "^4.4.3"
+    "@cxsun/ui": "^1.0.80",
+    "@tanstack/react-query": "^5.104.1",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "zod": "^4.6.5"
   }
 }

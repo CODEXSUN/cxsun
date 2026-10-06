@@ -12,9 +12,9 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { cn } from "@cxapp/ui/lib/utils";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { cn } from "@cxsun/ui/lib/utils";
 import { MailComposeForm } from "./mail.form";
 import { MailList } from "./mail.list";
 import { MailSettingsForm } from "./mail.settings";

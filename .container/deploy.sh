@@ -17,7 +17,7 @@ Actions:
   --reinstall  Replace only the selected stack's containers/images, rebuild
                without cache, migrate, and start. Named volumes are preserved.
   build        Build the selected stack images locally.
-  publish      Build and push versioned images to CXAPP_IMAGE_REGISTRY.
+  publish      Build and push versioned images to CXSUN_IMAGE_REGISTRY.
   upgrade      Pull versioned images, migrate, and recreate only app containers.
   migrate      Run safe forward migrations and print migration state.
   ps           Show the selected stack containers.
@@ -54,7 +54,7 @@ compose_all() {
 }
 
 require_stack_dependencies() {
-  network=$(env_value CXAPP_DOCKER_NETWORK)
+  network=$(env_value CXSUN_DOCKER_NETWORK)
   docker network inspect "$network" >/dev/null 2>&1 || {
     echo "Required Docker network is missing: $network" >&2
     echo "Run: bash setup.sh $STACK" >&2
@@ -68,7 +68,7 @@ require_stack_dependencies() {
     exit 69
   }
 
-  for container in cxapp-mariadb cxapp-redis; do
+  for container in cxsun-mariadb cxsun-redis; do
     state=$(docker inspect "$container" --format '{{.State.Status}}' 2>/dev/null || true)
     health=$(docker inspect "$container" \
       --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
@@ -83,7 +83,7 @@ require_stack_dependencies() {
 
 stack_image() {
   suffix="$1"
-  registry=$(env_value CXAPP_IMAGE_REGISTRY)
+  registry=$(env_value CXSUN_IMAGE_REGISTRY)
   upper_stack=$(printf '%s' "$STACK" | tr '[:lower:]' '[:upper:]')
   case "$suffix" in
     api) tag_key="${upper_stack}_STACK_API_IMAGE_TAG" ;;
@@ -158,7 +158,7 @@ reinstall_stack() {
 
 upgrade_stack() {
   require_stack_dependencies
-  registry=$(env_value CXAPP_IMAGE_REGISTRY)
+  registry=$(env_value CXSUN_IMAGE_REGISTRY)
   echo "Pulling the versioned $STACK release from $registry."
   compose_all pull
   migrate_stack

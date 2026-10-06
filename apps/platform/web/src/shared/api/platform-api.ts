@@ -4,18 +4,18 @@ const apiBaseUrl = requiredClientEnv("VITE_PLATFORM_API_URL");
 export type Desk = "sa" | "admin" | "tenant";
 
 const LEGACY_TOKEN_KEYS = [
-  "cxapp_session_admin",
-  "cxapp_session_sa",
-  "cxapp_session_tenant"
+  "cxsun_session_admin",
+  "cxsun_session_sa",
+  "cxsun_session_tenant"
 ] as const;
-const TENANT_ID_KEY = "cxapp_tenant_id";
-const TENANT_DB_NAME_KEY = "cxapp_tenant_db_name";
-const SESSION_CONTEXT_KEY = "cxapp.auth.context";
-const SESSION_IDENTITY_KEY = "cxapp.auth.identity";
+const TENANT_ID_KEY = "cxsun_tenant_id";
+const TENANT_DB_NAME_KEY = "cxsun_tenant_db_name";
+const SESSION_CONTEXT_KEY = "cxsun.auth.context";
+const SESSION_IDENTITY_KEY = "cxsun.auth.identity";
 const TENANT_RUNTIME_KEYS = [
-  "cxapp.tenant.landing-app.live",
-  "cxapp.tenant.company-id",
-  "cxapp.tenant.financial-year-id"
+  "cxsun.tenant.landing-app.live",
+  "cxsun.tenant.company-id",
+  "cxsun.tenant.financial-year-id"
 ] as const;
 
 type ApiEnvelope<T> = { data: T; success: true } | { error: { message: string }; success: false };

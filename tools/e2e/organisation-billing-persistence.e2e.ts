@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { FastifyInstance } from "fastify";
 import { createConnection, type RowDataPacket } from "mysql2/promise";
-import { createApiApp } from "@cxapp/framework/api";
+import { createApiApp } from "@cxsun/framework/api";
 import {
   runWithBillingScope,
   withBillingScope
@@ -36,8 +36,8 @@ import { env } from "../../apps/core/api/src/env.js";
 
 const runId = Date.now();
 const salesComplianceOnly = process.argv.includes("--sales-compliance");
-const databaseName = `cxapp_persistence_e2e_${runId}`;
-const isolatedDatabaseName = `cxapp_persistence_isolated_e2e_${runId}`;
+const databaseName = `cxsun_persistence_e2e_${runId}`;
+const isolatedDatabaseName = `cxsun_persistence_isolated_e2e_${runId}`;
 const admin = await createConnection({
   host: env.DB_HOST,
   password: env.DB_PASSWORD,

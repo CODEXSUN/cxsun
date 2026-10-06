@@ -4,7 +4,7 @@ import { EntitlementRepository } from "./entitlement.repository.js";
 import {
   getDefaultCompanyForDatabase,
   setDefaultCompanyLandingAppForDatabase
-} from "@cxapp/core-api";
+} from "@cxsun/core-api";
 
 export class EntitlementAccessService {
   constructor(

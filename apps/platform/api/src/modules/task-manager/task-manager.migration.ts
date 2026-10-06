@@ -2,7 +2,7 @@ import {
   rollbackMigrationBatch,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import { sql, type Kysely } from "kysely";
 import type { TaskManagerLookupsTable, TaskManagerTodosTable } from "../../database/schema.js";
 
@@ -14,6 +14,16 @@ export type TaskManagerDatabase = {
 export const taskManagerMigration = {
   key: "platform.task-manager.database-v1",
   description: "Database-backed tenant and Super Admin tasks and lookup values."
+};
+
+export const taskManagerVisibilityMigration = {
+  key: "platform.task-manager.visibility-v2",
+  description: "Private and public visibility for Task Manager todos."
+};
+
+export const taskManagerTitleOnlyMigration = {
+  key: "platform.task-manager.title-only-v3",
+  description: "Remove the description column from Task Manager todos."
 };
 
 export const taskManagerTenantMigrationBatch: MigrationBatch<TaskManagerDatabase> = {
@@ -29,6 +39,22 @@ export const taskManagerTenantMigrationBatch: MigrationBatch<TaskManagerDatabase
       name: taskManagerMigration.key,
       up: migrateTaskManagerModule,
       version: 1
+    },
+    {
+      checksum: `${taskManagerVisibilityMigration.key}:v1`,
+      description: taskManagerVisibilityMigration.description,
+      down: rollbackTaskManagerVisibility,
+      name: taskManagerVisibilityMigration.key,
+      up: migrateTaskManagerVisibility,
+      version: 2
+    },
+    {
+      checksum: `${taskManagerTitleOnlyMigration.key}:v1`,
+      description: taskManagerTitleOnlyMigration.description,
+      down: rollbackTaskManagerTitleOnly,
+      name: taskManagerTitleOnlyMigration.key,
+      up: migrateTaskManagerTitleOnly,
+      version: 3
     }
   ]
 };
@@ -61,6 +87,7 @@ export async function migrateTaskManagerModule<Database extends TaskManagerDatab
     .addColumn("group_name", "varchar(120)", (column) => column.notNull().defaultTo(""))
     .addColumn("status", "varchar(40)", (column) => column.notNull().defaultTo("open"))
     .addColumn("priority", "varchar(40)", (column) => column.notNull().defaultTo("medium"))
+    .addColumn("visibility", "varchar(16)", (column) => column.notNull().defaultTo("private"))
     .addColumn("due_date", "varchar(32)", (column) => column.notNull().defaultTo(""))
     .addColumn("position", "integer", (column) => column.notNull().defaultTo(0))
     .addColumn("created_by", "varchar(191)", (column) =>
@@ -123,4 +150,32 @@ export async function rollbackTaskManagerModule<Database extends TaskManagerData
 ) {
   await db.schema.dropTable("task_manager_lookups").ifExists().execute();
   await db.schema.dropTable("task_manager_todos").ifExists().execute();
+}
+
+export async function migrateTaskManagerVisibility<Database extends TaskManagerDatabase>(
+  db: Kysely<Database>
+) {
+  await sql`ALTER TABLE task_manager_todos ADD COLUMN IF NOT EXISTS visibility VARCHAR(16) NOT NULL DEFAULT 'private'`.execute(
+    db
+  );
+}
+
+export async function rollbackTaskManagerVisibility<Database extends TaskManagerDatabase>(
+  db: Kysely<Database>
+) {
+  await sql`ALTER TABLE task_manager_todos DROP COLUMN IF EXISTS visibility`.execute(db);
+}
+
+export async function migrateTaskManagerTitleOnly<Database extends TaskManagerDatabase>(
+  db: Kysely<Database>
+) {
+  await sql`ALTER TABLE task_manager_todos DROP COLUMN IF EXISTS description`.execute(db);
+}
+
+export async function rollbackTaskManagerTitleOnly<Database extends TaskManagerDatabase>(
+  db: Kysely<Database>
+) {
+  await sql`ALTER TABLE task_manager_todos ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''`.execute(
+    db
+  );
 }

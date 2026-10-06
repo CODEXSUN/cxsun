@@ -1,6 +1,6 @@
 {
-  "name": "@cxapp/mail-web",
-  "version": "1.0.79",
+  "name": "@cxsun/mail-web",
+  "version": "1.0.80",
   "private": true,
   "type": "module",
   "exports": {
@@ -10,16 +10,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "oxlint src"
   },
   "dependencies": {
-    "@cxapp/ui": "^1.0.79",
-    "@tanstack/react-query": "^5.101.4",
-    "html2canvas-pro": "^2.3.9",
+    "@cxsun/ui": "^1.0.80",
+    "@tanstack/react-query": "^5.104.1",
+    "html2canvas-pro": "^2.5.1",
     "jspdf": "^4.2.1",
-    "lucide-react": "^1.33.0",
-    "react": "^19.2.8",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
     "sonner": "^2.0.8",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   }
 }

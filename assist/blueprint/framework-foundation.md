@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`@cxapp/framework` is the shared technical backbone for CODEXSUN apps.
+`@cxsun/framework` is the shared technical backbone for CODEXSUN apps.
 
 It must stay business-rule free. Platform, Core, business apps, and industry packs own product behavior.
 
@@ -55,19 +55,19 @@ responses in the standard envelope. Invalid input becomes the standard
 ## Package Subpaths
 
 ```text
-@cxapp/framework
-@cxapp/framework/api
-@cxapp/framework/config
-@cxapp/framework/db
-@cxapp/framework/env
-@cxapp/framework/errors
-@cxapp/framework/events
-@cxapp/framework/health
-@cxapp/framework/http
-@cxapp/framework/logger
-@cxapp/framework/modules
-@cxapp/framework/queue
-@cxapp/framework/storage
+@cxsun/framework
+@cxsun/framework/api
+@cxsun/framework/config
+@cxsun/framework/db
+@cxsun/framework/env
+@cxsun/framework/errors
+@cxsun/framework/events
+@cxsun/framework/health
+@cxsun/framework/http
+@cxsun/framework/logger
+@cxsun/framework/modules
+@cxsun/framework/queue
+@cxsun/framework/storage
 ```
 
 ## Boundary Rules

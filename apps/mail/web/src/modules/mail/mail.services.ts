@@ -127,9 +127,9 @@ function escapeMailHtml(value: string) {
 }
 
 async function mailRequest<T>(path: string, init: RequestInit = {}) {
-  const tenantId = sessionStorage.getItem("cxapp_tenant_id");
-  const tenantDatabase = sessionStorage.getItem("cxapp_tenant_db_name");
-  const companyId = localStorage.getItem("cxapp.tenant.company-id");
+  const tenantId = sessionStorage.getItem("cxsun_tenant_id");
+  const tenantDatabase = sessionStorage.getItem("cxsun_tenant_db_name");
+  const companyId = localStorage.getItem("cxsun.tenant.company-id");
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     credentials: "include",
@@ -151,9 +151,9 @@ async function mailRequest<T>(path: string, init: RequestInit = {}) {
 function requiredRuntimeValue(name: string) {
   const runtime = (
     window as Window & {
-      __CXAPP_RUNTIME_CONFIG__?: Readonly<Record<string, string>>;
+      __CXSUN_RUNTIME_CONFIG__?: Readonly<Record<string, string>>;
     }
-  ).__CXAPP_RUNTIME_CONFIG__;
+  ).__CXSUN_RUNTIME_CONFIG__;
   const value = runtime?.[name]?.trim();
   if (!value) throw new Error(`Missing required runtime configuration: ${name}`);
   return value;

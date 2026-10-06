@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { buildCustomerStatementAgeing } from "./customer-statement.ageing.js";
 import { CustomerStatementRepository } from "./customer-statement.repository.js";
 import type {

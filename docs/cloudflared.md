@@ -1,14 +1,14 @@
 # Cloudflared TCP Client Tunnel
 
-Use this runbook to connect a local database client to the CXApp MariaDB TCP route.
+Use this runbook to connect a local database client to the CXSUN MariaDB TCP route.
 
 ## Connection details
 
-| Setting | Value |
-| --- | --- |
+| Setting             | Value               |
+| ------------------- | ------------------- |
 | Cloudflare hostname | `data.codexsun.com` |
-| Local listener | `127.0.0.1:13307` |
-| Protocol | TCP |
+| Local listener      | `127.0.0.1:13307`   |
+| Protocol            | TCP                 |
 
 Keep the `cloudflared` command running while you use the database client.
 
@@ -58,12 +58,12 @@ Test-NetConnection 127.0.0.1 -Port 13307
 
 Disable SSH tunneling in SQLyog or another database client.
 
-| Field | Value |
-| --- | --- |
-| Host | `127.0.0.1` |
-| Port | `13307` |
-| User | MariaDB user name |
-| Password | MariaDB password |
+| Field    | Value             |
+| -------- | ----------------- |
+| Host     | `127.0.0.1`       |
+| Port     | `13307`           |
+| User     | MariaDB user name |
+| Password | MariaDB password  |
 
 Use normal MySQL or MariaDB authentication. Do not connect the client directly to `data.codexsun.com`.
 

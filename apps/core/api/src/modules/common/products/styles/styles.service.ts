@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { StylesRepository } from "./styles.repository.js";
 import type { StylesListFilters, StylesRecord, StylesSavePayload } from "./styles.types.js";
 

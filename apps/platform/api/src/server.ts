@@ -1,4 +1,4 @@
-import { registerGracefulShutdown, startApiServer } from "@cxapp/framework/api";
+import { registerGracefulShutdown, startApiServer } from "@cxsun/framework/api";
 import { createApp } from "./app.js";
 import { env, platformRuntime } from "./env.js";
 import { verifyStartupConnectivity } from "./startup-smoke.js";

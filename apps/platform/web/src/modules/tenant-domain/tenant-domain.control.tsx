@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { CheckCircle2Icon, Globe2Icon, PlusIcon, RefreshCwIcon } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspaceFormBanner, WorkspaceFormField } from "@cxapp/ui/workspace/upsert";
-import { WorkspaceShowCard } from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceFormBanner, WorkspaceFormField } from "@cxsun/ui/workspace/upsert";
+import { WorkspaceShowCard } from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import {
   useTenantDomainControlMutations,
   useTenantDomainMappingsQuery

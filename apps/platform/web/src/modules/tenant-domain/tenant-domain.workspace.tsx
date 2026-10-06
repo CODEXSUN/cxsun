@@ -2,25 +2,25 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Globe2, Pencil, Plus, RefreshCw, Save } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { cn } from "@cxapp/ui/lib/utils";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspacePagination } from "@cxapp/ui/workspace/pagination";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { cn } from "@cxsun/ui/lib/utils";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
 import {
   WorkspaceDetailTable,
   WorkspaceShowCard,
   WorkspaceShowLayout
-} from "@cxapp/ui/workspace/show";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+} from "@cxsun/ui/workspace/show";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel,
   WorkspaceTableLoadingState
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
@@ -28,8 +28,8 @@ import {
   WorkspaceFormGrid,
   WorkspaceFormPanel,
   WorkspaceUpsertPage
-} from "@cxapp/ui/workspace/upsert";
-import { buildShowingLabel } from "@cxapp/ui/workspace/utils";
+} from "@cxsun/ui/workspace/upsert";
+import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
 import { listTenants } from "../tenant/tenant.services";
 import type { Tenant } from "../tenant/tenant.types";
 import {
@@ -416,7 +416,7 @@ function DomainShowPage({
                 ? [
                     [
                       "DNS TXT",
-                      `_cxapp-verification.${domain.domain} = cxapp-domain-verification=${domain.verificationToken}`
+                      `_cxsun-verification.${domain.domain} = cxsun-domain-verification=${domain.verificationToken}`
                     ] as [string, string]
                   ]
                 : [])

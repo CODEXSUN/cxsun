@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { LedgersRepository } from "./ledgers.repository.js";
 import type {
   LedgerListFilters,

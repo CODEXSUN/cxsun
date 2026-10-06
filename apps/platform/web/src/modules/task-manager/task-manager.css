@@ -1,0 +1,497 @@
+.tm-todos {
+  --tm-ink: var(--foreground);
+  --tm-muted: var(--muted-foreground);
+  min-height: 100%;
+  padding: 30px clamp(18px, 4vw, 52px) 64px;
+  background: transparent;
+  color: var(--tm-ink);
+}
+.tm-todos--tenant {
+  padding: 8px 0 64px;
+}
+.tm-todos-header,
+.tm-todos-header-tools,
+.tm-visibility-filter,
+.tm-todo-composer,
+.tm-todo-row,
+.tm-todo-metadata,
+.tm-todo-actions {
+  display: flex;
+  align-items: center;
+}
+.tm-todos-header {
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 16px;
+}
+.tm-todos h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+}
+.tm-todos-header p {
+  margin: 7px 0 0;
+  color: var(--tm-muted);
+  font-size: 14px;
+}
+.tm-todos-header-tools {
+  gap: 14px;
+  color: var(--tm-muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tm-visibility-filter {
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--muted);
+}
+.tm-visibility-filter button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--tm-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.tm-visibility-filter button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--tm-ink);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--foreground) 12%, transparent);
+}
+.tm-todo-composer {
+  gap: 6px;
+  padding-bottom: 12px;
+}
+.tm-todo-composer > input {
+  flex: 1;
+  min-width: 160px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--tm-ink);
+  font-size: 15px;
+}
+.tm-todo-composer > input:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 25%, transparent);
+}
+.tm-composer-control,
+.tm-add-button {
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  position: relative;
+  border: 1px solid var(--input);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--muted-foreground);
+}
+.tm-composer-date input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  opacity: 0;
+}
+.tm-composer-control:hover,
+.tm-composer-control:focus-within,
+.tm-option-trigger[data-state="open"] {
+  border-color: var(--ring);
+  background: var(--accent);
+}
+.tm-visibility-toggle {
+  cursor: pointer;
+}
+.tm-visibility-toggle:has(svg.lucide-eye) {
+  color: var(--primary);
+}
+.tm-add-button {
+  border: 0;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  cursor: pointer;
+}
+.tm-add-button:disabled {
+  opacity: 0.36;
+  cursor: default;
+}
+.tm-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: min(260px, 100%);
+  height: 30px;
+  margin: 0 0 4px auto;
+  color: var(--tm-muted);
+}
+.tm-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--tm-ink);
+  font-size: 13px;
+}
+.tm-search input::placeholder {
+  color: var(--tm-muted);
+}
+.tm-todo-list {
+  display: grid;
+}
+.tm-todo-row {
+  position: relative;
+  min-height: 62px;
+  gap: 10px;
+  padding: 7px 10px 7px 8px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 10px;
+}
+.tm-todo-row:hover {
+  background: color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.tm-todo-row.is-dragging {
+  z-index: 2;
+  background: var(--card);
+  opacity: 0.65;
+  box-shadow: 0 12px 30px color-mix(in oklab, var(--foreground) 15%, transparent);
+}
+.tm-todo-drag {
+  display: grid;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: var(--tm-muted);
+  cursor: grab;
+}
+.tm-todo-check {
+  display: grid;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--primary-foreground);
+  cursor: pointer;
+}
+.is-done .tm-todo-check {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+.tm-todo-priority {
+  display: block;
+  flex: 0 0 9px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--muted-foreground) 15%, transparent);
+}
+.tm-todo-priority.priority-low {
+  background: var(--chart-2);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--chart-2) 18%, transparent);
+}
+.tm-todo-priority.priority-medium {
+  background: var(--chart-3);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--chart-3) 18%, transparent);
+}
+.tm-todo-priority.priority-high {
+  background: color-mix(in oklab, var(--destructive) 70%, var(--chart-3));
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 18%, transparent);
+}
+.tm-todo-priority.priority-urgent {
+  background: var(--destructive);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--destructive) 18%, transparent);
+}
+.tm-option-trigger {
+  cursor: pointer;
+}
+.tm-option-trigger .tm-todo-priority {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+.tm-option-menu {
+  min-width: 152px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 12px 28px color-mix(in oklab, var(--foreground) 15%, transparent);
+}
+.tm-option-item {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.tm-option-item[data-selected="true"] {
+  background: var(--muted);
+}
+.tm-option-item .tm-todo-priority {
+  width: 12px;
+  height: 12px;
+  flex-basis: 12px;
+}
+.tm-option-status {
+  flex: 0 0 14px;
+  fill: currentColor;
+  stroke: none;
+  color: var(--muted-foreground);
+}
+.tm-option-status.status-open {
+  color: var(--chart-2);
+}
+.tm-option-status.status-in-progress {
+  color: var(--chart-3);
+}
+.tm-option-status.status-completed {
+  color: var(--chart-4);
+}
+.tm-option-status.status-blocked,
+.tm-option-status.status-cancelled {
+  color: var(--destructive);
+}
+.tm-option-status.status-backlog,
+.tm-option-status.status-review {
+  color: var(--muted-foreground);
+}
+.tm-inline-editor {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.tm-inline-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+.tm-inline-main > input {
+  flex: 1;
+  min-width: 120px;
+  height: 40px;
+  border-radius: 9px;
+}
+.tm-inline-main .tm-composer-control {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 9px;
+}
+.tm-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+}
+.tm-inline-actions button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.tm-inline-actions button:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.tm-inline-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tm-todo-row.is-editing {
+  min-height: 64px;
+  align-items: flex-start;
+  padding-top: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.tm-todo-row.is-editing > .tm-todo-drag,
+.tm-todo-row.is-editing > .tm-todo-check,
+.tm-todo-row.is-editing > .tm-todo-priority {
+  margin-top: 8px;
+}
+.tm-todo-content {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+.tm-todo-title {
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: var(--tm-ink);
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tm-todo-title:hover {
+  text-decoration: underline;
+}
+.is-done .tm-todo-title {
+  color: var(--tm-muted);
+  text-decoration: line-through;
+}
+.tm-todo-metadata {
+  min-width: 0;
+  gap: 6px;
+  overflow: hidden;
+  color: var(--tm-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tm-todo-metadata time {
+  font-variant-numeric: tabular-nums;
+}
+.tm-todo-metadata em {
+  color: var(--tm-muted);
+  font-style: normal;
+}
+.tm-todo-status {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+}
+.tm-todo-status.status-open {
+  background: color-mix(in oklab, var(--primary) 14%, var(--background));
+  color: var(--primary);
+}
+.tm-todo-status.status-in-progress {
+  background: color-mix(in oklab, var(--chart-3) 15%, var(--background));
+  color: color-mix(in oklab, var(--chart-3) 55%, var(--foreground));
+}
+.tm-todo-status.status-blocked {
+  background: color-mix(in oklab, var(--destructive) 14%, var(--background));
+  color: var(--destructive);
+}
+.tm-todo-status.status-completed {
+  background: color-mix(in oklab, var(--chart-4) 16%, var(--background));
+  color: color-mix(in oklab, var(--chart-4) 55%, var(--foreground));
+}
+.tm-todo-actions {
+  flex: 0 0 152px;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tm-todo-actions button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tm-muted);
+  cursor: pointer;
+}
+.tm-todo-actions button:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+.tm-todo-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.tm-todo-empty {
+  padding: 60px 18px;
+  color: var(--tm-muted);
+  font-size: 14px;
+  text-align: center;
+}
+.tm-todo-error {
+  color: var(--destructive);
+  font-size: 14px;
+}
+.tm-todo-error button {
+  margin-left: 8px;
+  text-decoration: underline;
+}
+.tm-todos :is(button, input):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .tm-todos {
+    padding: 24px 16px 50px;
+  }
+  .tm-todos--tenant {
+    padding: 8px 0 50px;
+  }
+  .tm-todos-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tm-todo-composer {
+    flex-wrap: wrap;
+  }
+  .tm-todo-composer > input {
+    flex-basis: 100%;
+  }
+  .tm-todo-actions {
+    flex-basis: 112px;
+    gap: 2px;
+  }
+  .tm-todo-actions button {
+    width: 32px;
+  }
+  .tm-todo-row {
+    gap: 7px;
+  }
+  .tm-inline-main {
+    flex-wrap: wrap;
+  }
+  .tm-inline-main > input {
+    flex-basis: 100%;
+  }
+  .tm-inline-actions {
+    margin-left: auto;
+  }
+  .tm-todo-metadata {
+    font-size: 11px;
+  }
+}

@@ -7,18 +7,18 @@ import {
   RotateCcwIcon,
   UploadIcon
 } from "lucide-react";
-import { GlobalLoader, StatusBadge } from "@cxapp/ui";
-import { Button } from "@cxapp/ui/components/button";
+import { GlobalLoader, StatusBadge } from "@cxsun/ui";
+import { Button } from "@cxsun/ui/components/button";
 import {
   WorkspaceAnimatedTabs,
   type WorkspaceAnimatedTab
-} from "@cxapp/ui/workspace/animated-tabs";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+} from "@cxsun/ui/workspace/animated-tabs";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import {
   WorkspaceDetailTable,
   WorkspaceShowCard,
   WorkspaceShowLayout
-} from "@cxapp/ui/workspace/show";
+} from "@cxsun/ui/workspace/show";
 import type {
   DatabaseMaintenanceRun,
   DatabaseMigrationPlan,

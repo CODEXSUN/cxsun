@@ -17,7 +17,7 @@ Use this runbook for CODEXSUN database changes that affect platform or tenant sc
 2. Restore it into local platform and tenant databases.
 3. Set the local `.env` database names to the restored databases.
 4. Run `npm run db:migrations:preflight`.
-5. Run `CXAPP_RESTORED_DUMP_TEST=1 npm run db:migrations:test-local`.
+5. Run `CXSUN_RESTORED_DUMP_TEST=1 npm run db:migrations:test-local`.
 6. Run affected API and app tests.
 7. Compare row counts, important totals, and schema snapshots.
 
@@ -26,7 +26,7 @@ Use this runbook for CODEXSUN database changes that affect platform or tenant sc
 Production migration preflight requires a verified pre-migration backup:
 
 ```text
-CXAPP_VERIFIED_BACKUP_ID=<backup-run-id>
+CXSUN_VERIFIED_BACKUP_ID=<backup-run-id>
 npm run db:migrations:preflight
 ```
 
@@ -58,6 +58,7 @@ Database naming is part of the ownership boundary:
 - `app_` is reserved for tenant-database framework/runtime tables.
 - `core_` for Core-owned tables.
 - `billing_` for Billing-owned tables.
+- `crm_` for CRM-owned tables.
 - `mail_` for Mail-owned tables.
 
 The migration ledger is always `migration_schema`, regardless of database
@@ -80,7 +81,7 @@ npm run db:migrations:rollback
 ```
 
 Production also requires
-`CXAPP_MIGRATION_ROLLBACK_CONFIRM=ROLLBACK`. A baseline step without a
+`CXSUN_MIGRATION_ROLLBACK_CONFIRM=ROLLBACK`. A baseline step without a
 declared safe `down` refuses rollback and requires the verified backup or a
 new corrective forward migration. The command never silently drops a table or
 column.
@@ -95,12 +96,14 @@ Database installation, migration, seeding, tenant setup, and tenant reinstall us
 2. Platform master module seeders.
 3. Tenant runtime migrations: module settings, users, roles, permissions, user roles, and role permissions.
 4. Core leaf migrations in dependency order: Common lookups, Organisation, then Master modules.
-5. Billing leaf migrations: Settings, Sales, Purchase, Export Sales, Quotation, Payment, Receipt, then Dashboard.
-6. Mail migration when Mail is enabled for the tenant.
-7. Tenant runtime seeders.
-8. Core leaf seeders in the same dependency order.
-9. Billing seeders for all eight Billing modules and Billing permissions.
-10. Mail seeder when Mail is enabled.
+5. CRM Enquiry migration when CRM is enabled for the tenant.
+6. Billing leaf migrations: Settings, Sales, Purchase, Export Sales, Quotation, Payment, Receipt, then Dashboard.
+7. Mail migration when Mail is enabled for the tenant.
+8. Tenant runtime seeders.
+9. Core leaf seeders in the same dependency order.
+10. CRM Enquiry permissions when CRM is enabled.
+11. Billing seeders for all eight Billing modules and Billing permissions.
+12. Mail seeder when Mail is enabled.
 
 All module SQL and seed behavior remains in the owning module's `*.migration.ts` and `*.seed.ts` files. Database composition roots only order and record those module-owned lifecycle functions. Repeatable seeders are additive: they insert missing defaults but do not reset tenant passwords, module JSON, or edited lookup labels.
 

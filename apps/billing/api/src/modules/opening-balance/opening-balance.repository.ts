@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { sql } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { getBillingDatabase } from "../../database/billing-database.js";
 import { currentBillingScope } from "../../auth/billing-scope.js";
 import type { OpeningBalanceInput, OpeningBalanceRole } from "./opening-balance.types.js";
@@ -88,9 +88,7 @@ export class OpeningBalanceRepository {
         await sql`INSERT INTO billing_opening_balances
         (uuid,company_id,financial_year_id,contact_id,currency_id,party_role,amount,reason,created_by)
         VALUES (${id()},${scope.companyId},${scope.financialYearId},${input.contactId},${input.currencyId},
-          ${input.partyRole},${input.amount},${input.reason},${actor})`.execute(
-        transaction
-      );
+          ${input.partyRole},${input.amount},${input.reason},${actor})`.execute(transaction);
       }
       const saved = await sql<{ id: number }>`SELECT id FROM billing_opening_balances
         WHERE company_id=${scope.companyId} AND financial_year_id=${scope.financialYearId}
@@ -104,11 +102,12 @@ export class OpeningBalanceRepository {
           throw AppError.conflict(
             "This legacy opening is already assigned to another company or financial year."
           );
-        if (!assignment.rows[0]) await sql`INSERT INTO billing_opening_balance_legacy_assignments
+        if (!assignment.rows[0])
+          await sql`INSERT INTO billing_opening_balance_legacy_assignments
           (uuid,opening_balance_id,contact_id,party_role,legacy_amount,created_by)
           VALUES (${id()},${openingId},${input.contactId},${input.partyRole},${parent.rows[0].opening_balance ?? 0},${actor})`.execute(
-          transaction
-        );
+            transaction
+          );
       }
       await sql`INSERT INTO billing_opening_balance_activities
         (uuid,opening_balance_id,previous_amount,amount,reason,created_by)

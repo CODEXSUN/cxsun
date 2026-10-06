@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { AuthLayout, Button, Field } from "@cxapp/ui";
+import { AuthLayout, Button, Field } from "@cxsun/ui";
 import { LogIn } from "lucide-react";
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {

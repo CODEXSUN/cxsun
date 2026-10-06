@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { MailService } from "./mail.service.js";
 import type { MailListFilters, MailModuleDependencies } from "./mail.types.js";
 

@@ -17,7 +17,7 @@ export function assertSingleTenantRecords(
       tenant.tenantCode.trim().toUpperCase() !== seededTenantCode.trim().toUpperCase())
   ) {
     throw new Error(
-      "Single mode requires exactly one active tenant matching CXAPP_SINGLE_TENANT_CORPORATE_ID."
+      "Single mode requires exactly one active tenant matching CXSUN_SINGLE_TENANT_CORPORATE_ID."
     );
   }
 }

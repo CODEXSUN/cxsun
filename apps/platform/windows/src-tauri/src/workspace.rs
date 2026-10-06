@@ -35,7 +35,7 @@ impl WorkspaceStore {
         let root = std::env::var_os("LOCALAPPDATA")
             .map(PathBuf::from)
             .ok_or_else(|| "Windows local application data is unavailable.".to_string())?;
-        Self::new(root.join("CXApp").join("Desktop").join("workspace.db"))
+        Self::new(root.join("CXSUN").join("Desktop").join("workspace.db"))
     }
 
     fn new(database_path: PathBuf) -> Result<Self, String> {
@@ -181,8 +181,8 @@ fn limited_optional(value: Option<String>, maximum: usize) -> Option<String> {
 }
 
 fn safe_storage_error(error: impl std::fmt::Display) -> String {
-    eprintln!("CXApp desktop storage error: {error}");
-    "The local CXApp workspace database is unavailable.".to_string()
+    eprintln!("CXSUN desktop storage error: {error}");
+    "The local CXSUN workspace database is unavailable.".to_string()
 }
 
 #[cfg(test)]
@@ -198,7 +198,7 @@ mod tests {
 
         let projection = store.load().unwrap().unwrap();
         assert_eq!(projection.corporate_id, "CODEXSUN");
-        assert_eq!(projection.tenant_name, "CXApp Demo");
+        assert_eq!(projection.tenant_name, "CXSUN Demo");
         let _ = fs::remove_file(path);
     }
 
@@ -217,13 +217,13 @@ mod tests {
     fn valid_payload() -> WorkspacePayload {
         WorkspacePayload {
             company_id: Some(1),
-            company_name: Some("CXApp Demo Company".to_string()),
+            company_name: Some("CXSUN Demo Company".to_string()),
             corporate_id: "codexsun".to_string(),
             financial_year_id: Some(1),
             financial_year_name: Some("2026-27".to_string()),
             landing_page: "/app/".to_string(),
-            tenant_code: "cxapp-demo".to_string(),
-            tenant_name: "CXApp Demo".to_string(),
+            tenant_code: "cxsun-demo".to_string(),
+            tenant_name: "CXSUN Demo".to_string(),
             tenant_uuid: "4b1f9aed".to_string(),
         }
     }
@@ -233,6 +233,6 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("cxapp-desktop-{unique}.db"))
+        std::env::temp_dir().join(format!("cxsun-desktop-{unique}.db"))
     }
 }

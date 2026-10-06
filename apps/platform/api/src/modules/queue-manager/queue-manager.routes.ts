@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { AppError } from "@cxapp/framework/errors";
-import { ok } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { ok } from "@cxsun/framework/http";
 import { requireSuperAdmin } from "../../auth/super-admin.guard.js";
 import { verifyAuthToken } from "../../auth/jwt.js";
 import { QueueManagerService } from "./queue-manager.service.js";
 import type { QueueJobFilters, QueueJobStatus } from "./queue-manager.types.js";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { z } from "zod";
 
 const service = new QueueManagerService();

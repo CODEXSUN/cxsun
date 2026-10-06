@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { AppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { CurrenciesService } from "./currencies.service.js";
 export const CURRENCIES_COLLECTION_PATH = "/core/common/others/currencies";
 const service = new CurrenciesService();

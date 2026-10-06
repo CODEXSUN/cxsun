@@ -1,5 +1,5 @@
-import { requireTenantAccess } from "@cxapp/framework/api";
-import { ok } from "@cxapp/framework/http";
+import { requireTenantAccess } from "@cxsun/framework/api";
+import { ok } from "@cxsun/framework/http";
 import type { FastifyInstance } from "fastify";
 import { authorizeBillingRequest } from "./auth/tenant-permission.js";
 import {

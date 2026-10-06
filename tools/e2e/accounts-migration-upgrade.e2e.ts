@@ -2,15 +2,15 @@ import assert from "node:assert/strict";
 import { Kysely, MysqlDialect } from "kysely";
 import { createPool } from "mysql2";
 import { createConnection } from "mysql2/promise";
-import { closeCoreDatabase, bootstrapCoreDatabase } from "@cxapp/core-api";
-import { runMigrationBatch, type MigrationBatch } from "@cxapp/framework/db";
+import { closeCoreDatabase, bootstrapCoreDatabase } from "@cxsun/core-api";
+import { runMigrationBatch, type MigrationBatch } from "@cxsun/framework/db";
 import {
   accountsMigrationBatch,
   type AccountsDatabase
 } from "../../apps/accounts/api/src/database/accounts-database.js";
 import { env } from "../../apps/accounts/api/src/env.js";
 
-const databaseName = `cxapp_accounts_upgrade_e2e_${Date.now()}`;
+const databaseName = `cxsun_accounts_upgrade_e2e_${Date.now()}`;
 const admin = await createConnection({
   host: env.DB_HOST,
   password: env.DB_PASSWORD,

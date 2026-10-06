@@ -1,4 +1,4 @@
-import { StatusBadge } from "@cxapp/ui";
+import { StatusBadge } from "@cxsun/ui";
 import type { AccessControlOverview } from "./access-control.types";
 
 export function AccessControlList({ data }: { data: AccessControlOverview }) {

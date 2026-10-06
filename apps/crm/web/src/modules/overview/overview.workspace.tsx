@@ -1,14 +1,15 @@
 import { CircleGaugeIcon, ContactRoundIcon, HandshakeIcon, TargetIcon } from "lucide-react";
-import { Card } from "@cxapp/ui/components/card";
+import { Card } from "@cxsun/ui/components/card";
+import { Button } from "@cxsun/ui/components/button";
 
 const areas = [
   {
-    description: "Capture and qualify new opportunities as the sales pipeline takes shape.",
+    description: "Capture and qualify customer requests.",
     icon: TargetIcon,
-    title: "Leads"
+    title: "Enquiries"
   },
   {
-    description: "Keep customer people and their relationships together.",
+    description: "Open the shared Core Master Contacts workspace and work with existing records.",
     icon: ContactRoundIcon,
     title: "Contacts"
   },
@@ -19,7 +20,13 @@ const areas = [
   }
 ] as const;
 
-export function CrmOverviewWorkspace() {
+export function CrmOverviewWorkspace({
+  onOpenContacts,
+  onOpenEnquiries
+}: {
+  onOpenContacts: () => void;
+  onOpenEnquiries: () => void;
+}) {
   return (
     <section className="space-y-5">
       <div className="rounded-md border bg-card p-6 shadow-sm">
@@ -39,8 +46,7 @@ export function CrmOverviewWorkspace() {
       <div>
         <h2 className="text-lg font-semibold">CRM workspace</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Leads, contacts, and deals are the planned CRM records. Their data screens will appear
-          here when their API and database modules are added.
+          Enquiries capture new requests. Contacts uses existing Core Master records.
         </p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -49,6 +55,16 @@ export function CrmOverviewWorkspace() {
             <area.icon className="size-6 text-rose-600" />
             <h3 className="mt-4 font-semibold">{area.title}</h3>
             <p className="mt-2 text-sm text-muted-foreground">{area.description}</p>
+            {area.title === "Contacts" ? (
+              <Button className="mt-4" onClick={onOpenContacts} variant="outline">
+                Open contacts
+              </Button>
+            ) : null}
+            {area.title === "Enquiries" ? (
+              <Button className="mt-4" onClick={onOpenEnquiries} variant="outline">
+                Open enquiries
+              </Button>
+            ) : null}
           </Card>
         ))}
       </div>

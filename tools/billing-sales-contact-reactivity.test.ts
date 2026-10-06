@@ -5,7 +5,7 @@ const storage = { getItem: () => null, removeItem: () => undefined };
 Object.assign(globalThis, {
   localStorage: storage,
   sessionStorage: storage,
-  window: { __CXAPP_RUNTIME_CONFIG__: { VITE_PLATFORM_API_URL: "http://127.0.0.1:7020/api" } }
+  window: { __CXSUN_RUNTIME_CONFIG__: { VITE_PLATFORM_API_URL: "http://127.0.0.1:7020/api" } }
 });
 
 test("sales resolves refreshed billing and shipping address state names", async () => {

@@ -1,7 +1,7 @@
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
-import { cn } from "@cxapp/ui/lib/utils";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
+import { cn } from "@cxsun/ui/lib/utils";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import { saleCommonOption } from "./sales.form-section-2";
 import { formatMoney, type SaleLookupOption, type SaleLookupRecord } from "./sales.services";
 import { type SaleDecimalInput, type SaleSavePayload, type SaleTaxType } from "./sales.types";

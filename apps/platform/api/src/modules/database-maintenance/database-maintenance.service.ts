@@ -3,7 +3,7 @@ import {
   migratePlatformDatabase,
   platformDatabaseName
 } from "../../database/platform-database.js";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { provisionTenantDatabase } from "../tenant/index.js";
 import { PlatformActivityService } from "../platform-activity/index.js";
 import { QueueManagerService } from "../queue-manager/index.js";

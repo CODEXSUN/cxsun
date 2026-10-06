@@ -1,6 +1,6 @@
 import { Eye, Pencil, Send, Trash2, XCircle } from "lucide-react";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   BillingDocumentTotalsTable,
   type BillingDocumentReportRecord,
@@ -10,7 +10,7 @@ import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import { formatPaymentDate, formatPaymentMoney } from "./payment.services";
 import type { Payment } from "./payment.types";
 

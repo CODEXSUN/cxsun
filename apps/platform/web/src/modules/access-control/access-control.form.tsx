@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { SaveIcon } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspaceSelect } from "@cxapp/ui/workspace/select";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceSelect } from "@cxsun/ui/workspace/select";
 import {
   WorkspaceFormField,
   WorkspaceFormGrid,
   WorkspaceFormPanel
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import type {
   AccessPermissionSavePayload,
   AccessRoleSavePayload,

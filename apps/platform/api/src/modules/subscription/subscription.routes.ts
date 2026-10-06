@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { ok } from "@cxapp/framework/http";
+import { ok } from "@cxsun/framework/http";
 import { SubscriptionService } from "./subscription.service.js";
 import type { SubscriptionSavePayload } from "./subscription.types.js";
 const service = new SubscriptionService();

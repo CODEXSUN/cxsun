@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { defineModule } from "@cxapp/framework/modules";
+import { defineModule } from "@cxsun/framework/modules";
 import { registerMailRoutes } from "./mail.routes.js";
 import type { MailModuleDependencies } from "./mail.types.js";
 

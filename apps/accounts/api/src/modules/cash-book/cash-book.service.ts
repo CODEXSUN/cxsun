@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { currentAccountsScope } from "../../auth/accounts-scope.js";
 import { CashBookRepository } from "./cash-book.repository.js";
 import type { CashBookEntryPayload, CashBookRegister } from "./cash-book.types.js";

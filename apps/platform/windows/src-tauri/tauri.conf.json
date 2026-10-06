@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CXApp",
-  "version": "1.0.79",
-  "identifier": "com.codexsun.cxapp",
+  "productName": "CXSUN",
+  "version": "1.0.80",
+  "identifier": "com.codexsun.cxsun",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -16,7 +16,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "CXApp",
+        "title": "CXSUN",
         "width": 1440,
         "height": 900,
         "minWidth": 1024,
@@ -32,17 +32,10 @@
     "category": "Business",
     "copyright": "Copyright © CODEXSUN",
     "createUpdaterArtifacts": false,
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.ico"
-    ],
-    "longDescription": "CXApp secure Windows desktop client.",
-    "shortDescription": "CXApp Windows client",
-    "targets": [
-      "nsis"
-    ],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "longDescription": "CXSUN secure Windows desktop client.",
+    "shortDescription": "CXSUN Windows client",
+    "targets": ["nsis"],
     "windows": {
       "digestAlgorithm": "sha256",
       "nsis": {
@@ -53,9 +46,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": [
-        "https://github.com/CODEXSUN/cxsun/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://github.com/CODEXSUN/cxsun/releases/latest/download/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2RjRCOEM0QkE1MUVFOTkKUldTWjdsRzZ4TGowVmhDT2o2blVoOEs1cEx4Ly9ydnp0bnNUekJpMStmM0laUWpoMXd6V3pLL1oK",
       "windows": {
         "installMode": "passive"

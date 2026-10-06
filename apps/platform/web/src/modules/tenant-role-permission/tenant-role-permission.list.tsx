@@ -1,9 +1,9 @@
 import { Trash2 } from "lucide-react";
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
-import { WorkspaceProtectedIndicator } from "@cxapp/ui/workspace/protected-indicator";
-import { WorkspaceRowActions } from "@cxapp/ui/workspace/row-actions";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
-import { WorkspaceTable } from "@cxapp/ui/workspace/table";
+import { WorkspaceProtectedIndicator } from "@cxsun/ui/workspace/protected-indicator";
+import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
+import { WorkspaceTable } from "@cxsun/ui/workspace/table";
 import type { TenantRolePermission } from "./tenant-role-permission.types";
 export function TenantRolePermissionList({
   loading,

@@ -58,7 +58,7 @@ try {
 
   const coreResponse = await app.inject({
     headers: {
-      "x-tenant-db": "cxapp_composed_runtime_probe",
+      "x-tenant-db": "cxsun_composed_runtime_probe",
       "x-tenant-id": "00000000"
     },
     method: "GET",
@@ -70,7 +70,7 @@ try {
     headers: {
       "x-company-id": "1",
       "x-financial-year-id": "1",
-      "x-tenant-db": "cxapp_composed_runtime_probe",
+      "x-tenant-db": "cxsun_composed_runtime_probe",
       "x-tenant-id": "00000000"
     },
     method: "GET",
@@ -169,7 +169,7 @@ try {
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
   const previousSessionCookie = loginResponse.cookies.findLast(
-    (cookie) => cookie.name.endsWith("cxapp_session") && cookie.value.length > 0
+    (cookie) => cookie.name.endsWith("cxsun_session") && cookie.value.length > 0
   );
   assert.ok(previousSessionCookie, "Development login did not issue a session cookie.");
 
@@ -184,7 +184,7 @@ try {
   });
   assert.equal(freshLoginResponse.statusCode, 200, freshLoginResponse.body);
   const freshSessionCookie = freshLoginResponse.cookies.findLast(
-    (cookie) => cookie.name.endsWith("cxapp_session") && cookie.value.length > 0
+    (cookie) => cookie.name.endsWith("cxsun_session") && cookie.value.length > 0
   );
   assert.ok(freshSessionCookie, "Fresh login did not issue a replacement session cookie.");
   assert.notEqual(

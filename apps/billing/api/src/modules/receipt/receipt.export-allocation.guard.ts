@@ -1,5 +1,5 @@
 import { sql, type Kysely } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { currentBillingScope } from "../../auth/billing-scope.js";
 
 export async function assertExportInvoiceUnallocated<Database>(

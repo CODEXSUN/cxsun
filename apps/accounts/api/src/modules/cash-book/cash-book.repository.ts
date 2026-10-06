@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { getAccountsDatabase, type AccountsDatabase } from "../../database/accounts-database.js";
 import { currentAccountsScope } from "../../auth/accounts-scope.js";
 import type {

@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from "date-fns";
 import { DatabaseIcon, RotateCcwIcon, ServerIcon, ShieldCheckIcon } from "lucide-react";
-import { GlobalLoader, StatusBadge } from "@cxapp/ui";
+import { GlobalLoader, StatusBadge } from "@cxsun/ui";
 import type { MasterDatabaseStatus } from "./master-database.types";
 
 export function MasterDatabaseList({ record }: { record: MasterDatabaseStatus | undefined }) {

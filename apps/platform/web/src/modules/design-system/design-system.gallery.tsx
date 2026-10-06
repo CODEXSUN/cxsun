@@ -14,7 +14,7 @@ import {
   getDesignSystemComponentDefaults,
   setDesignSystemComponentDefault,
   type DesignSystemVariantId
-} from "@cxapp/ui";
+} from "@cxsun/ui";
 import {
   CheckIcon,
   CopyIcon,

@@ -2,9 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import { ProductForm } from "./product.form";
 import {
   productLookupsQueryKey,

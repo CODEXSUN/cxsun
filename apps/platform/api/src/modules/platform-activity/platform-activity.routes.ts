@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { ok } from "@cxapp/framework/http";
+import { ok } from "@cxsun/framework/http";
 import { PlatformActivityService } from "./platform-activity.service.js";
 
 const service = new PlatformActivityService();

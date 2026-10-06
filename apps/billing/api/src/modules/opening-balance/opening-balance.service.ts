@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { currentBillingScope } from "../../auth/billing-scope.js";
 import { OpeningBalanceRepository } from "./opening-balance.repository.js";
 import type { OpeningBalanceInput } from "./opening-balance.types.js";

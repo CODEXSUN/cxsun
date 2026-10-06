@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Check out CXApp
+      - name: Check out CXSUN
         uses: actions/checkout@v7
 
       - name: Set up Node.js

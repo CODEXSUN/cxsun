@@ -8,14 +8,14 @@ export const devkitStackContribution = Object.freeze({
     web: true
   }),
   compatibility: Object.freeze({
-    cxapp: "^1.0.2"
+    cxsun: "^1.0.2"
   }),
   contractVersion: 1,
   dependencies: Object.freeze([] as string[]),
   description: "Platform application and module registry.",
   displayName: "CODEXSUN DevKit",
   id: "devkit",
-  packageId: "@cxapp/devkit-api",
+  packageId: "@cxsun/devkit-api",
   registrationOrder: Object.freeze(["database", "api", "web"] as const),
   requiredEnvironment: Object.freeze([] as string[]),
   version: DEVKIT_PACKAGE_VERSION

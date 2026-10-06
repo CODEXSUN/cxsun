@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@cxapp/ui/components/button";
+import { Button } from "@cxsun/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle
-} from "@cxapp/ui/components/dialog";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/components/dialog";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import {
   formatMoney,
   linkQuotationToExistingInvoice,

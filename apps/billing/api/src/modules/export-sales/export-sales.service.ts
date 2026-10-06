@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { assertBillingEntryEditable } from "../../auth/billing-scope.js";
 import { billingDashboardProjection } from "../dashboard/index.js";
 import {

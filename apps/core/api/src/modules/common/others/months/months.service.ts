@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { MonthsRepository } from "./months.repository.js";
 import type { MonthsListFilters, MonthsRecord, MonthsSavePayload } from "./months.types.js";
 

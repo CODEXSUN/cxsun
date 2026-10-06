@@ -23,7 +23,7 @@ import {
   UserRoundIcon
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApplicationLayout } from "@cxapp/ui/layouts/application-layout";
+import { ApplicationLayout } from "@cxsun/ui/layouts/application-layout";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -32,13 +32,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "@cxapp/ui/components/alert-dialog";
-import { Button } from "@cxapp/ui/components/button";
-import { Card } from "@cxapp/ui/components/card";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import { Label } from "@cxapp/ui/components/label";
-import { RadioGroup, RadioGroupItem } from "@cxapp/ui/components/radio-group";
-import { StatusBadge } from "@cxapp/ui/components/StatusBadge";
+} from "@cxsun/ui/components/alert-dialog";
+import { Button } from "@cxsun/ui/components/button";
+import { Card } from "@cxsun/ui/components/card";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import { Label } from "@cxsun/ui/components/label";
+import { RadioGroup, RadioGroupItem } from "@cxsun/ui/components/radio-group";
+import { StatusBadge } from "@cxsun/ui/components/StatusBadge";
 import { toast } from "sonner";
 import { AuthGate } from "../../shared/auth/AuthGate";
 import {
@@ -55,41 +55,48 @@ import { getTenantRuntime } from "../../modules/tenant/tenant.services";
 import {
   companyBrandName,
   useCompanyBranding
-} from "@cxapp/core-web/modules/organisation/company/branding";
-import { listCompanies } from "@cxapp/core-web/modules/organisation/company/services";
-import { defaultCompanyQueryKey } from "@cxapp/core-web/modules/organisation/default-company/hooks";
+} from "@cxsun/core-web/modules/organisation/company/branding";
+import { listCompanies } from "@cxsun/core-web/modules/organisation/company/services";
+import { defaultCompanyQueryKey } from "@cxsun/core-web/modules/organisation/default-company/hooks";
 import {
   getDefaultCompany,
   saveDefaultCompany
-} from "@cxapp/core-web/modules/organisation/default-company/services";
-import type { LandingAppOption } from "@cxapp/core-web/modules/organisation/default-company/types";
-import { listFinancialYears } from "@cxapp/core-web/modules/organisation/financial-year/services";
+} from "@cxsun/core-web/modules/organisation/default-company/services";
+import type { LandingAppOption } from "@cxsun/core-web/modules/organisation/default-company/types";
+import { listFinancialYears } from "@cxsun/core-web/modules/organisation/financial-year/services";
 import { getSessionIdentity, logout } from "../../shared/api/platform-api";
 import { setPlatformDocumentTitle } from "../../shared/document/PageTitle";
 import { publishDesktopWorkspace } from "../../shared/desktop/desktop-bridge";
 import { publishAccountingYear, publishCompanyContext } from "../../shared/tenant/runtime-context";
 import { blogEditorHost } from "../../modules/blog/blog-host";
+import { auditorClientGateway } from "../../modules/auditor/auditor-host";
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
   return lazy(async () => ({ default: await loader() }));
 }
 
-const loadBillingDashboardModule = () => import("@cxapp/billing-web/modules/dashboard");
-const loadQuotationModule = () => import("@cxapp/billing-web/modules/quotation");
-const loadSalesModule = () => import("@cxapp/billing-web/modules/sales");
-const loadPurchaseModule = () => import("@cxapp/billing-web/modules/purchase");
-const loadExportSalesModule = () => import("@cxapp/billing-web/modules/export-sales");
-const loadPaymentModule = () => import("@cxapp/billing-web/modules/payment");
-const loadReceiptModule = () => import("@cxapp/billing-web/modules/receipt");
-const loadBillingReportsModule = () => import("@cxapp/billing-web/modules/reports");
-const loadAccountsOverviewModule = () => import("@cxapp/accounts-web/modules/overview");
-const loadAccountingModule = () => import("@cxapp/accounts-web/modules/accounting");
+const loadBillingDashboardModule = () => import("@cxsun/billing-web/modules/dashboard");
+const loadQuotationModule = () => import("@cxsun/billing-web/modules/quotation");
+const loadSalesModule = () => import("@cxsun/billing-web/modules/sales");
+const loadPurchaseModule = () => import("@cxsun/billing-web/modules/purchase");
+const loadExportSalesModule = () => import("@cxsun/billing-web/modules/export-sales");
+const loadPaymentModule = () => import("@cxsun/billing-web/modules/payment");
+const loadReceiptModule = () => import("@cxsun/billing-web/modules/receipt");
+const loadBillingReportsModule = () => import("@cxsun/billing-web/modules/reports");
+const loadAccountsOverviewModule = () => import("@cxsun/accounts-web/modules/overview");
+const loadAccountingModule = () => import("@cxsun/accounts-web/modules/accounting");
 const loadBlogModule = () => import("@codexsun/blog/web");
 const AuditorOverviewWorkspace = lazyWorkspace(() =>
-  import("@cxapp/auditor-web/modules/overview").then((module) => module.AuditorOverviewWorkspace)
+  import("@cxsun/auditor-web/modules/overview").then((module) => module.AuditorOverviewWorkspace)
+);
+const AuditorClientWorkspace = lazyWorkspace(() =>
+  import("@cxsun/auditor-web/modules/client").then((module) => module.AuditorClientWorkspace)
 );
 const CrmOverviewWorkspace = lazyWorkspace(() =>
-  import("@cxapp/crm-web/modules/overview").then((module) => module.CrmOverviewWorkspace)
+  import("@cxsun/crm-web/modules/overview").then((module) => module.CrmOverviewWorkspace)
+);
+const EnquiryWorkspace = lazyWorkspace(() =>
+  import("@cxsun/crm-web/modules/enquiry").then((module) => module.EnquiryWorkspace)
 );
 
 const billingWorkspacePreloaders = [
@@ -108,163 +115,163 @@ const TaskManagerWorkspace = lazyWorkspace(() =>
 );
 
 const AddressTypesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/contacts/address-types").then(
+  import("@cxsun/core-web/modules/common/contacts/address-types").then(
     (module) => module.AddressTypesWorkspace
   )
 );
 const BankNamesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/contacts/bank-names").then(
+  import("@cxsun/core-web/modules/common/contacts/bank-names").then(
     (module) => module.BankNamesWorkspace
   )
 );
 const ContactGroupsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/contacts/contact-groups").then(
+  import("@cxsun/core-web/modules/common/contacts/contact-groups").then(
     (module) => module.ContactGroupsWorkspace
   )
 );
 const ContactTypesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/contacts/contact-types").then(
+  import("@cxsun/core-web/modules/common/contacts/contact-types").then(
     (module) => module.ContactTypesWorkspace
   )
 );
 const CityWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/location/city").then((module) => module.CityWorkspace)
+  import("@cxsun/core-web/modules/common/location/city").then((module) => module.CityWorkspace)
 );
 const CountryWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/location/country").then(
+  import("@cxsun/core-web/modules/common/location/country").then(
     (module) => module.CountryWorkspace
   )
 );
 const DistrictWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/location/district").then(
+  import("@cxsun/core-web/modules/common/location/district").then(
     (module) => module.DistrictWorkspace
   )
 );
 const PincodeWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/location/pincode").then(
+  import("@cxsun/core-web/modules/common/location/pincode").then(
     (module) => module.PincodeWorkspace
   )
 );
 const StateWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/location/state").then((module) => module.StateWorkspace)
+  import("@cxsun/core-web/modules/common/location/state").then((module) => module.StateWorkspace)
 );
 const LedgerGroupsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/accounts/ledger-groups").then(
+  import("@cxsun/core-web/modules/common/accounts/ledger-groups").then(
     (module) => module.LedgerGroupsWorkspace
   )
 );
 const LedgersWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/accounts/ledgers").then(
+  import("@cxsun/core-web/modules/common/accounts/ledgers").then(
     (module) => module.LedgersWorkspace
   )
 );
 const CurrenciesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/others/currencies").then(
+  import("@cxsun/core-web/modules/common/others/currencies").then(
     (module) => module.CurrenciesWorkspace
   )
 );
 const MonthsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/others/months").then((module) => module.MonthsWorkspace)
+  import("@cxsun/core-web/modules/common/others/months").then((module) => module.MonthsWorkspace)
 );
 const PaymentTermsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/others/payment-terms").then(
+  import("@cxsun/core-web/modules/common/others/payment-terms").then(
     (module) => module.PaymentTermsWorkspace
   )
 );
 const PrioritiesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/others/priorities").then(
+  import("@cxsun/core-web/modules/common/others/priorities").then(
     (module) => module.PrioritiesWorkspace
   )
 );
 const SalesTypesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/others/sales-types").then(
+  import("@cxsun/core-web/modules/common/others/sales-types").then(
     (module) => module.SalesTypesWorkspace
   )
 );
 const BrandsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/brands").then((module) => module.BrandsWorkspace)
+  import("@cxsun/core-web/modules/common/products/brands").then((module) => module.BrandsWorkspace)
 );
 const ColoursWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/colours").then(
+  import("@cxsun/core-web/modules/common/products/colours").then(
     (module) => module.ColoursWorkspace
   )
 );
 const HsnCodesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/hsn-codes").then(
+  import("@cxsun/core-web/modules/common/products/hsn-codes").then(
     (module) => module.HsnCodesWorkspace
   )
 );
 const ProductCategoriesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/product-categories").then(
+  import("@cxsun/core-web/modules/common/products/product-categories").then(
     (module) => module.ProductCategoriesWorkspace
   )
 );
 const ProductGroupsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/product-groups").then(
+  import("@cxsun/core-web/modules/common/products/product-groups").then(
     (module) => module.ProductGroupsWorkspace
   )
 );
 const ProductTypesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/product-types").then(
+  import("@cxsun/core-web/modules/common/products/product-types").then(
     (module) => module.ProductTypesWorkspace
   )
 );
 const SizesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/sizes").then((module) => module.SizesWorkspace)
+  import("@cxsun/core-web/modules/common/products/sizes").then((module) => module.SizesWorkspace)
 );
 const StylesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/styles").then((module) => module.StylesWorkspace)
+  import("@cxsun/core-web/modules/common/products/styles").then((module) => module.StylesWorkspace)
 );
 const TaxesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/taxes").then((module) => module.TaxesWorkspace)
+  import("@cxsun/core-web/modules/common/products/taxes").then((module) => module.TaxesWorkspace)
 );
 const UnitsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/products/units").then((module) => module.UnitsWorkspace)
+  import("@cxsun/core-web/modules/common/products/units").then((module) => module.UnitsWorkspace)
 );
 const DestinationsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/workorder/destinations").then(
+  import("@cxsun/core-web/modules/common/workorder/destinations").then(
     (module) => module.DestinationsWorkspace
   )
 );
 const StockRejectionTypesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/workorder/stock-rejection-types").then(
+  import("@cxsun/core-web/modules/common/workorder/stock-rejection-types").then(
     (module) => module.StockRejectionTypesWorkspace
   )
 );
 const TransportsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/workorder/transports").then(
+  import("@cxsun/core-web/modules/common/workorder/transports").then(
     (module) => module.TransportsWorkspace
   )
 );
 const WarehousesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/workorder/warehouses").then(
+  import("@cxsun/core-web/modules/common/workorder/warehouses").then(
     (module) => module.WarehousesWorkspace
   )
 );
 const WorkOrderTypesWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/common/workorder/work-order-types").then(
+  import("@cxsun/core-web/modules/common/workorder/work-order-types").then(
     (module) => module.WorkOrderTypesWorkspace
   )
 );
 const ContactWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/master/contact").then((module) => module.ContactWorkspace)
+  import("@cxsun/core-web/modules/master/contact").then((module) => module.ContactWorkspace)
 );
 const ProductWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/master/product").then((module) => module.ProductWorkspace)
+  import("@cxsun/core-web/modules/master/product").then((module) => module.ProductWorkspace)
 );
 const WorkOrderWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/master/work-order").then((module) => module.WorkOrderWorkspace)
+  import("@cxsun/core-web/modules/master/work-order").then((module) => module.WorkOrderWorkspace)
 );
 const CompanyWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/organisation/company").then((module) => module.CompanyWorkspace)
+  import("@cxsun/core-web/modules/organisation/company").then((module) => module.CompanyWorkspace)
 );
 const DefaultCompanyWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/organisation/default-company").then(
+  import("@cxsun/core-web/modules/organisation/default-company").then(
     (module) => module.DefaultCompanyWorkspace
   )
 );
 const FinancialYearWorkspace = lazyWorkspace(() =>
-  import("@cxapp/core-web/modules/organisation/financial-year").then(
+  import("@cxsun/core-web/modules/organisation/financial-year").then(
     (module) => module.FinancialYearWorkspace
   )
 );
@@ -302,10 +309,10 @@ const GstStatementWorkspace = lazyWorkspace(() =>
   loadBillingReportsModule().then((module) => module.GstStatementWorkspace)
 );
 const BillingSettingsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/billing-web").then((module) => module.BillingSettingsWorkspace)
+  import("@cxsun/billing-web").then((module) => module.BillingSettingsWorkspace)
 );
 const DocumentSettingsWorkspace = lazyWorkspace(() =>
-  import("@cxapp/billing-web").then((module) => module.DocumentSettingsWorkspace)
+  import("@cxsun/billing-web").then((module) => module.DocumentSettingsWorkspace)
 );
 const PurchaseWorkspace = lazyWorkspace(() =>
   loadPurchaseModule().then((module) => module.PurchaseWorkspace)
@@ -326,7 +333,7 @@ const ReceiptWorkspace = lazyWorkspace(() =>
   loadReceiptModule().then((module) => module.ReceiptWorkspace)
 );
 const MailWorkspace = lazyWorkspace(() =>
-  import("@cxapp/mail-web/modules/mail").then((module) => module.MailWorkspace)
+  import("@cxsun/mail-web/modules/mail").then((module) => module.MailWorkspace)
 );
 const AccountsOverviewWorkspace = lazyWorkspace(() =>
   loadAccountsOverviewModule().then((module) => module.AccountsOverviewWorkspace)
@@ -374,7 +381,10 @@ const TenantRolePermissionWorkspace = lazy(() =>
 
 type AppPage =
   | "auditor.overview"
+  | "auditor.clients"
   | "crm.overview"
+  | "crm.enquiries"
+  | "crm.contacts"
   | "blog.overview"
   | "blog.articles"
   | "application.overview"
@@ -497,7 +507,7 @@ export function AppDesk() {
     enabled:
       activeApp === "billing" && enabledApps.includes("billing") && Boolean(companyContextId),
     queryFn: async () => {
-      const module = await import("@cxapp/billing-web/modules/settings/services");
+      const module = await import("@cxsun/billing-web/modules/settings/services");
       return module.getBillingSettings();
     },
     queryKey: ["billing", "settings", companyContextId],
@@ -631,7 +641,7 @@ export function AppDesk() {
 
   function requestListNavigation(nextPage: AppPage) {
     const hasActiveDraftForm = Boolean(
-      workspaceContentRef.current?.querySelector("form, [data-cxapp-draft-form]")
+      workspaceContentRef.current?.querySelector("form, [data-cxsun-draft-form]")
     );
     if (hasUnsavedFormChanges && hasActiveDraftForm) {
       setPendingListPage(nextPage);
@@ -643,7 +653,7 @@ export function AppDesk() {
   function markUnsavedFormChanges(event: FormEvent<HTMLElement>) {
     const target = event.target;
     if (!(target instanceof Element)) return;
-    if (target.closest("form, [data-cxapp-draft-form]")) {
+    if (target.closest("form, [data-cxsun-draft-form]")) {
       setHasUnsavedFormChanges(true);
     }
   }
@@ -798,7 +808,17 @@ export function AppDesk() {
               <BlogsEditorWorkspace host={blogEditorHost} />
             ) : null}
             {safePage === "auditor.overview" ? <AuditorOverviewWorkspace /> : null}
-            {safePage === "crm.overview" ? <CrmOverviewWorkspace /> : null}
+            {safePage === "auditor.clients" ? (
+              <AuditorClientWorkspace gateway={auditorClientGateway} />
+            ) : null}
+            {safePage === "crm.overview" ? (
+              <CrmOverviewWorkspace
+                onOpenContacts={() => requestListNavigation("crm.contacts")}
+                onOpenEnquiries={() => requestListNavigation("crm.enquiries")}
+              />
+            ) : null}
+            {safePage === "crm.contacts" ? <ContactWorkspace key={safePage} /> : null}
+            {safePage === "crm.enquiries" ? <EnquiryWorkspace key={safePage} /> : null}
             {safePage === "application.overview" ? (
               <ApplicationOverview signedInUser={signedInUser} />
             ) : null}
@@ -958,7 +978,10 @@ function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
   const key = `${app}.${children.filter(Boolean).join(".") || "overview"}`;
   if (
     key === "auditor.overview" ||
+    key === "auditor.clients" ||
     key === "crm.overview" ||
+    key === "crm.enquiries" ||
+    key === "crm.contacts" ||
     key === "blog.overview" ||
     key === "blog.articles" ||
     key === "application.overview" ||
@@ -1459,7 +1482,10 @@ function renderOwnedCommonMasterPage(page: AppPage) {
 function titleForPage(page: AppPage) {
   const labels: Partial<Record<AppPage, string>> = {
     "auditor.overview": "Overview",
+    "auditor.clients": "Clients",
     "crm.overview": "Overview",
+    "crm.enquiries": "Enquiries",
+    "crm.contacts": "Contacts",
     "blog.overview": "Dashboard",
     "blog.articles": "Articles",
     "application.overview": "Overview",

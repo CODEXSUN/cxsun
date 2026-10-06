@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { WorkOrderTypesRepository } from "./work-order-types.repository.js";
 import type {
   WorkOrderTypesListFilters,

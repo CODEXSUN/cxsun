@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
-import { WorkspacePrintSheet } from "@cxapp/ui/workspace/print";
+import { WorkspacePrintSheet } from "@cxsun/ui/workspace/print";
 import { ArrowLeft, Printer, RefreshCw } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+import { Button } from "@cxsun/ui/components/button";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import {
   useCompanyBranding,
   type CompanyRecord
-} from "@cxapp/core-web/modules/organisation/company";
+} from "@cxsun/core-web/modules/organisation/company";
 import { PageTitle } from "../../shared/document/PageTitle";
 import {
   getBillingPrintDummyLineCount,

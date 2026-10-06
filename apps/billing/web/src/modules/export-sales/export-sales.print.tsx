@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { WorkspacePrintSheet } from "@cxapp/ui/workspace/print";
+import { WorkspacePrintSheet } from "@cxsun/ui/workspace/print";
 import { ArrowLeft, Printer, RefreshCw } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
-import { Card, CardContent, CardHeader, CardTitle } from "@cxapp/ui/components/card";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
+import { Button } from "@cxsun/ui/components/button";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
+import { Card, CardContent, CardHeader, CardTitle } from "@cxsun/ui/components/card";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import { PageTitle } from "../../shared/document/PageTitle";
 import {
   getBillingPrintDummyLineCount,

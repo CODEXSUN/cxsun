@@ -1,8 +1,8 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { hasBillingTransaction, withBillingTransaction } from "../../database/billing-database.js";
 import { assertBillingEntryEditable } from "../../auth/billing-scope.js";
-import type { EventPublisher } from "@cxapp/framework/events";
-import type { QueueAdapter } from "@cxapp/framework/queue";
+import type { EventPublisher } from "@cxsun/framework/events";
+import type { QueueAdapter } from "@cxsun/framework/queue";
 import { SalesService } from "../sales/index.js";
 import type { Sale, SaleLineItemInput } from "../sales/index.js";
 import { BillingSettingsRepository } from "../settings/settings.repository.js";

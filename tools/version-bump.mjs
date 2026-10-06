@@ -62,8 +62,8 @@ function updateDeploymentSample(rootDir, currentVersion, nextVersion) {
   const file = resolve(rootDir, ".container", "deploy.env.sample");
   if (!existsSync(file)) return;
   const content = readFileSync(file, "utf8")
-    .replace(/^CXAPP_VERSION=.*$/mu, `CXAPP_VERSION=${nextVersion}`)
-    .replace(/^MARIADB_IMAGE_TAG=.*$/mu, `MARIADB_IMAGE_TAG=11.8-cxapp-${nextVersion}`)
+    .replace(/^CXSUN_VERSION=.*$/mu, `CXSUN_VERSION=${nextVersion}`)
+    .replace(/^MARIADB_IMAGE_TAG=.*$/mu, `MARIADB_IMAGE_TAG=11.8-cxsun-${nextVersion}`)
     .replace(/^MEDIA_IMAGE_TAG=.*$/mu, `MEDIA_IMAGE_TAG=${nextVersion}-filebrowser2.63.5`)
     .replace(/^BILLING_STACK_API_IMAGE_TAG=.*$/mu, `BILLING_STACK_API_IMAGE_TAG=${nextVersion}`)
     .replace(/^BILLING_STACK_WEB_IMAGE_TAG=.*$/mu, `BILLING_STACK_WEB_IMAGE_TAG=${nextVersion}`)
@@ -163,7 +163,7 @@ function updateInternalDependencyRanges(pkg, currentVersion, nextVersion) {
     }
 
     for (const [name, version] of Object.entries(deps)) {
-      if (name.startsWith("@cxapp/") && version === `^${currentVersion}`) {
+      if (name.startsWith("@cxsun/") && version === `^${currentVersion}`) {
         deps[name] = `^${nextVersion}`;
       }
     }

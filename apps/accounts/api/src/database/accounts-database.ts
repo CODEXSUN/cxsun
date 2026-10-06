@@ -3,11 +3,11 @@ import {
   rollbackMigrationBatch,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import { Kysely, MysqlDialect } from "kysely";
 import { createPool, type PoolOptions } from "mysql2";
 import { createConnection } from "mysql2/promise";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { env } from "../env.js";
 import {
   accountingCashBookLinesMigration,

@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Printer } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { Checkbox } from "@cxapp/ui/components/checkbox";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { Checkbox } from "@cxsun/ui/components/checkbox";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import { formatGstQuantity, formatGstStatementMoney } from "./gst-statement.services";
 import type { GstStatementDocument, GstStatementPanel } from "./gst-statement.types";
 

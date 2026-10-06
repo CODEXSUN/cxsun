@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspaceSwitchCard } from "@cxapp/ui/workspace/status";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormFooter,
   WorkspaceFormGrid,
   WorkspaceUpsertDialog
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import { districtSchema } from "./district.schema";
 import type { StateOption, DistrictRecord, DistrictSavePayload } from "./district.types";
 const emptyValue: DistrictSavePayload = { stateId: 0, name: "", sortOrder: 1000, status: "active" };

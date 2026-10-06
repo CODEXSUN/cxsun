@@ -3,12 +3,12 @@ import {
   rollbackMigrationBatch,
   runMigrationBatch,
   type MigrationBatch
-} from "@cxapp/framework/db";
+} from "@cxsun/framework/db";
 import { Kysely, MysqlDialect, type Generated, type Transaction } from "kysely";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createPool, type PoolOptions } from "mysql2";
 import { createConnection } from "mysql2/promise";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { seedBillingTenantPermissions } from "../auth/tenant-permission.seed.js";
 import { env } from "../env.js";
 import {

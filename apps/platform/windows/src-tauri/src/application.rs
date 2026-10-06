@@ -26,7 +26,7 @@ pub fn run() {
             save_workspace_projection
         ])
         .run(tauri::generate_context!())
-        .expect("CXApp desktop host failed");
+        .expect("CXSUN desktop host failed");
 }
 
 #[tauri::command]
@@ -62,17 +62,17 @@ fn save_workspace_projection(
 #[tauri::command]
 fn open_workspace(window: WebviewWindow) -> Result<(), String> {
     if window.label() != "main" {
-        return Err("The CXApp workspace can open only in the main desktop window.".to_string());
+        return Err("The CXSUN workspace can open only in the main desktop window.".to_string());
     }
     let url = navigation::APPLICATION_URL
         .parse()
         .map_err(safe_window_error)?;
     window.navigate(url).map_err(safe_window_error)?;
-    diagnostics::write("Opened the canonical CXApp cloud workspace.");
+    diagnostics::write("Opened the canonical CXSUN cloud workspace.");
     Ok(())
 }
 
 fn safe_window_error(error: impl std::fmt::Display) -> String {
     diagnostics::write(&format!("Desktop window error: {error}"));
-    "The CXApp desktop window could not be opened.".to_string()
+    "The CXSUN desktop window could not be opened.".to_string()
 }

@@ -28,10 +28,10 @@ export function DesktopLauncher() {
       setWorkspace(await loadWorkspaceProjection());
       await openWorkspace();
       setLaunchState("ready");
-      setMessage("The CXApp workspace is open.");
+      setMessage("The CXSUN workspace is open.");
     } catch (error) {
       setLaunchState("failed");
-      setMessage(error instanceof Error ? error.message : "CXApp could not open the workspace.");
+      setMessage(error instanceof Error ? error.message : "CXSUN could not open the workspace.");
     }
   }, []);
 
@@ -47,7 +47,7 @@ export function DesktopLauncher() {
     try {
       await saveDesktopConfig(config);
       await testLocalDatabase(config);
-      setMessage("Local MariaDB is reachable. Restart CXApp to apply API changes.");
+      setMessage("Local MariaDB is reachable. Restart CXSUN to apply API changes.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Local MariaDB connection failed.");
     } finally {
@@ -62,7 +62,7 @@ export function DesktopLauncher() {
           CX
         </div>
         <p className="eyebrow">CODEXSUN</p>
-        <h1>{launchState === "failed" ? "CXApp could not connect" : "CXApp Desktop"}</h1>
+        <h1>{launchState === "failed" ? "CXSUN could not connect" : "CXSUN Desktop"}</h1>
         <p className="message">{message}</p>
 
         {workspace && !showSettings ? (

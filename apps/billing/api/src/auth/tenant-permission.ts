@@ -1,6 +1,6 @@
 import type { FastifyRequest } from "fastify";
 import { sql } from "kysely";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { getBillingDatabase } from "../database/billing-database.js";
 
 export async function authorizeBillingRequest(

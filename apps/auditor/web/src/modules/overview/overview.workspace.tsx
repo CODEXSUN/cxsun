@@ -6,7 +6,7 @@ import {
   Scale,
   ShieldCheck
 } from "lucide-react";
-import { Card } from "@cxapp/ui/components/card";
+import { Card } from "@cxsun/ui/components/card";
 
 const workflowStages = [
   {

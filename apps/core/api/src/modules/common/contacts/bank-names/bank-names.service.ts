@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { BankNamesRepository } from "./bank-names.repository.js";
 import type {
   BankNamesListFilters,

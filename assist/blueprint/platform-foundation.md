@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`@cxapp/platform` owns shared platform business concepts used by runnable apps.
+`@cxsun/platform` owns shared platform business concepts used by runnable apps.
 
 Framework stays technical. Platform owns tenant, identity, subscription, activation, settings, audit, notifications, roles, and permissions language.
 
@@ -10,24 +10,24 @@ Framework stays technical. Platform owns tenant, identity, subscription, activat
 
 The first package foundation provides subpaths for:
 
-- `@cxapp/platform/tenant`
-- `@cxapp/platform/auth`
-- `@cxapp/platform/users`
-- `@cxapp/platform/roles`
-- `@cxapp/platform/permissions`
-- `@cxapp/platform/subscription`
-- `@cxapp/platform/activation`
-- `@cxapp/platform/audit`
-- `@cxapp/platform/notifications`
-- `@cxapp/platform/settings`
+- `@cxsun/platform/tenant`
+- `@cxsun/platform/auth`
+- `@cxsun/platform/users`
+- `@cxsun/platform/roles`
+- `@cxsun/platform/permissions`
+- `@cxsun/platform/subscription`
+- `@cxsun/platform/activation`
+- `@cxsun/platform/audit`
+- `@cxsun/platform/notifications`
+- `@cxsun/platform/settings`
 
 ## Current Runtime Wiring
 
 Platform API now consumes:
 
-- **`@cxapp/platform/auth`**: Login request contract, desk-to-user-type mapping, password hashing/verification, JWT creation/verification, cookie/hybrid session support via `DatabaseSessionStore`.
-- **`@cxapp/platform/tenant`**: `TenantLookupService` for tenant-by-code resolution and database resolution. `MasterDbTenantRepository` for CRUD operations. `TenantService` for validation and DTO mapping.
-- **`@cxapp/platform/audit`**: `MasterDbAuditRepository` and `AuditService` for writing auth and tenant mutation events.
+- **`@cxsun/platform/auth`**: Login request contract, desk-to-user-type mapping, password hashing/verification, JWT creation/verification, cookie/hybrid session support via `DatabaseSessionStore`.
+- **`@cxsun/platform/tenant`**: `TenantLookupService` for tenant-by-code resolution and database resolution. `MasterDbTenantRepository` for CRUD operations. `TenantService` for validation and DTO mapping.
+- **`@cxsun/platform/audit`**: `MasterDbAuditRepository` and `AuditService` for writing auth and tenant mutation events.
 - **`apps/platform/api/src/auth/guards.ts`**: Shared guard helpers (`requireSession`, `requireUserType`, `requireSuperAdmin`, `requireTenantMatch`, `requirePermission`, `requireActiveTenant`, `requireFeatureEnabled`).
 
 Tenant CRUD SQL is behind `MasterDbTenantRepository` and `TenantService`. Auth and tenant mutation actions write audit events. SQL bootstrapping remains in `apps/platform/api` for now.

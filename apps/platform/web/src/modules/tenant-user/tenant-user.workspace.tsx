@@ -10,20 +10,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle
-} from "@cxapp/ui/components/alert-dialog";
-import { Button } from "@cxapp/ui/components/button";
-import { cn } from "@cxapp/ui/lib/utils";
-import { WorkspaceFilters } from "@cxapp/ui/workspace/filters";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspacePagination } from "@cxapp/ui/workspace/pagination";
-import { WorkspaceShowCard } from "@cxapp/ui/workspace/show";
+} from "@cxsun/ui/components/alert-dialog";
+import { Button } from "@cxsun/ui/components/button";
+import { cn } from "@cxsun/ui/lib/utils";
+import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { WorkspaceShowCard } from "@cxsun/ui/workspace/show";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormPanel
-} from "@cxapp/ui/workspace/upsert";
-import { buildShowingLabel } from "@cxapp/ui/workspace/utils";
+} from "@cxsun/ui/workspace/upsert";
+import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
 import { TenantUserForm } from "./tenant-user.form";
 import {
   useTenantUserMutations,

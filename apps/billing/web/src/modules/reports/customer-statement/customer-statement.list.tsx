@@ -1,9 +1,9 @@
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableLoadingState,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import {
   formatCustomerStatementDate,
   formatCustomerStatementAge,
@@ -69,9 +69,7 @@ export function CustomerStatementList({
                   {formatCustomerStatementMoney(entry.balance)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right" title="Days since bill date">
-                  {entry.kind === "receipt"
-                    ? "—"
-                    : `${formatCustomerStatementAge(entry.date)} d`}
+                  {entry.kind === "receipt" ? "—" : `${formatCustomerStatementAge(entry.date)} d`}
                 </td>
               </tr>
             ))}

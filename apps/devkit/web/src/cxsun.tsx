@@ -1,8 +1,8 @@
-import type { SidemenuItem } from "@cxapp/ui/blocks/menu/sidemenu/sub/sidemenu-section";
-import type { TopMenuWorkspaceItem } from "@cxapp/ui/blocks/menu/sidemenu/top-menu";
+import type { SidemenuItem } from "@cxsun/ui/blocks/menu/sidemenu/sub/sidemenu-section";
+import type { TopMenuWorkspaceItem } from "@cxsun/ui/blocks/menu/sidemenu/top-menu";
 import { DatabaseIcon, WrenchIcon } from "lucide-react";
 import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from "react";
-import { GlobalLoader } from "@cxapp/ui/components/global-loader";
+import { GlobalLoader } from "@cxsun/ui/components/global-loader";
 
 export type DevkitWorkspaceContribution = {
   component: LazyExoticComponent<ComponentType>;

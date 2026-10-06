@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { currentAccountsScope } from "../../auth/accounts-scope.js";
 import { AccountingRepository, money, roundMoney } from "./accounting.repository.js";
 import type {

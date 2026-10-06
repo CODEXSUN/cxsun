@@ -1,4 +1,4 @@
-import { WorkspaceFormField, WorkspaceSelect } from "@cxapp/ui/workspace";
+import { WorkspaceFormField, WorkspaceSelect } from "@cxsun/ui/workspace";
 
 const monthOptions = [
   "January",

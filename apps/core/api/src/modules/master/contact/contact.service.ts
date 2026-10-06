@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { ContactRepository } from "./contact.repository.js";
 import type {
   ContactAddress,
@@ -26,6 +26,38 @@ export class ContactService {
     const normalized = await this.validateAndEnrich(input);
     await this.ensureUniqueCode(normalized.code ?? "");
     return this.save(() => this.repository.create(normalized));
+  }
+
+  async resolveOrCreateCustomer(name: string | null, mobile: string | null) {
+    const phone = mobile?.trim() ?? "";
+    const customerName = name?.trim() || phone;
+    if (!customerName) throw AppError.validation("Customer name or mobile number is required.");
+    if (phone && !/^\d{7,15}$/u.test(phone.replace(/\D/g, ""))) {
+      throw AppError.validation("Enter a valid mobile number.");
+    }
+    if (phone) {
+      const matches = await this.repository.findByMobile(phone);
+      if (matches.length > 1) {
+        throw AppError.conflict(
+          "More than one Core contact uses this mobile number. Select a customer."
+        );
+      }
+      const match = matches[0];
+      if (match) {
+        if (match.status !== "active") {
+          throw AppError.conflict("This mobile number belongs to an inactive Core contact.");
+        }
+        return { id: match.id, name: match.name };
+      }
+    }
+    const customerType = await this.repository.findContactTypeByName("Customer");
+    if (!customerType) throw AppError.validation("Active Customer contact type is required.");
+    const created = await this.create({
+      name: customerName,
+      typeId: customerType.id,
+      ...(phone ? { phones: [{ phone, phoneType: "Mobile", isPrimary: true }] } : {})
+    });
+    return { id: created.id, name: created.name };
   }
 
   async update(id: string, input: ContactSaveInput) {

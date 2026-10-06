@@ -8,8 +8,8 @@ import {
   WorkspaceSelect,
   WorkspaceSwitchCard,
   WorkspaceUpsertDialog
-} from "@cxapp/ui";
-import { WorkspaceFormBanner } from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui";
+import { WorkspaceFormBanner } from "@cxsun/ui/workspace/upsert";
 import { defaultCompanySchema } from "./default-company.schema";
 import type {
   DefaultCompanyLookup,

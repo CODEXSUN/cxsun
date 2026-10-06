@@ -23,9 +23,9 @@ The default planning assumption is one database per tenant where business isolat
 
 ## Tenant Context
 
-`CXAPP_TENANCY_MODE` selects `single` or `multi` when Platform starts. Both modes
+`CXSUN_TENANCY_MODE` selects `single` or `multi` when Platform starts. Both modes
 retain the tenant registry, tenant database, signed tenant session, and request-bound
-database routing. In `single` mode, `CXAPP_SINGLE_TENANT_CORPORATE_ID` identifies the
+database routing. In `single` mode, `CXSUN_SINGLE_TENANT_CORPORATE_ID` identifies the
 only active registered tenant. Startup rejects a missing, different, or additional
 tenant. Tenant login and password recovery bind to this identity without asking for
 Corporate ID; requests cannot select another tenant. Tenant creation and suspension
@@ -48,7 +48,7 @@ Current implementation note: tenant login resolves the tenant database for tenan
 
 Tenant database provisioning follows the tenant's selected application set. Platform identity/access migrations run
 first. Billing activation then runs Core's owned prerequisite migrations and seeds before Billing's owned migrations
-and seeds. Mail migrations run only when Mail is enabled; Task Manager currently has no tenant SQL lifecycle. Tenant
+and seeds. Mail migrations run only when Mail is enabled. Task Manager runs its own migrations and seeds when enabled. Tenant
 create/update and managed setup, reinstall, and migration actions use this same ordered composition contract.
 Managed lifecycle actions invalidate only the target tenant's Core and Billing bootstrap state before running, so a
 database recreated while the API process remains online receives the complete selected-app schema.

@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 
 export type AccountingSyncDirection = "push" | "pull";
 export type AccountingSyncDecision = {

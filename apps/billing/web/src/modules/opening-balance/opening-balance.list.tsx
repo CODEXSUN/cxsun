@@ -1,5 +1,5 @@
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceTablePanel } from "@cxapp/ui/workspace/table";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceTablePanel } from "@cxsun/ui/workspace/table";
 import type { OpeningBalance } from "./opening-balance.types";
 export function OpeningBalanceList({
   items,

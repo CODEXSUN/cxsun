@@ -1,29 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Save, X } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { Label } from "@cxapp/ui/components/label";
-import { RadioGroup, RadioGroupItem } from "@cxapp/ui/components/radio-group";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { Label } from "@cxsun/ui/components/label";
+import { RadioGroup, RadioGroupItem } from "@cxsun/ui/components/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "@cxapp/ui/components/select";
-import { Textarea } from "@cxapp/ui/components/textarea";
-import { DialogFooter, DialogHeader, DialogTitle } from "@cxapp/ui/components/dialog";
-import { WorkspaceDatePicker } from "@cxapp/ui/workspace/date-picker";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspacePage } from "@cxapp/ui/workspace/page";
-import { WorkspaceTablePanel } from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/components/select";
+import { Textarea } from "@cxsun/ui/components/textarea";
+import { DialogFooter, DialogHeader, DialogTitle } from "@cxsun/ui/components/dialog";
+import { WorkspaceDatePicker } from "@cxsun/ui/workspace/date-picker";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspaceTablePanel } from "@cxsun/ui/workspace/table";
 import {
   WorkspaceFormActions,
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormGrid,
   WorkspaceFormPanel
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import type {
   Account,
   AccountContext,

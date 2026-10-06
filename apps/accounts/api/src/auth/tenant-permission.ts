@@ -1,5 +1,5 @@
 import type { FastifyRequest } from "fastify";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { sql } from "kysely";
 import { getAccountsDatabase } from "../database/accounts-database.js";
 

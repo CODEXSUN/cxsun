@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useDebouncedValue } from "@cxapp/ui";
+import { useDebouncedValue } from "@cxsun/ui";
 import {
   getQuotation,
   getQuotationContext,

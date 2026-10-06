@@ -1,11 +1,11 @@
 import { ArchiveRestoreIcon, BanIcon } from "lucide-react";
-import { Button } from "@cxapp/ui/components/button";
-import { WorkspaceStatusBadge } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceTableEmptyState,
   WorkspaceTableHeaderCell,
   WorkspaceTablePanel
-} from "@cxapp/ui/workspace/table";
+} from "@cxsun/ui/workspace/table";
 import type {
   PlatformRegistryGroupNode,
   PlatformRegistryModuleNode,

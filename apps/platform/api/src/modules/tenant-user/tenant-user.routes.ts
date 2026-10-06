@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { createConnection } from "mysql2/promise";
 import { z } from "zod";
-import { AppError, isAppError } from "@cxapp/framework/errors";
-import { registerContractRoute } from "@cxapp/framework/http";
+import { AppError, isAppError } from "@cxsun/framework/errors";
+import { registerContractRoute } from "@cxsun/framework/http";
 import { tenantAccessContext } from "../../auth/tenant-access-context.js";
 import { requireSuperAdmin } from "../../auth/super-admin.guard.js";
 import {

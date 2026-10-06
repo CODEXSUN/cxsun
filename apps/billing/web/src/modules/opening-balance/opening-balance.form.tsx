@@ -1,15 +1,15 @@
 import { useState } from "react";
-import { Button } from "@cxapp/ui/components/button";
-import { Input } from "@cxapp/ui/components/input";
-import { WorkspaceLookup } from "@cxapp/ui/workspace/lookup";
-import { WorkspaceSelect } from "@cxapp/ui/workspace/select";
-import { WorkspaceSwitchCard } from "@cxapp/ui/workspace/status";
+import { Button } from "@cxsun/ui/components/button";
+import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
+import { WorkspaceSelect } from "@cxsun/ui/workspace/select";
+import { WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceFormBanner,
   WorkspaceFormField,
   WorkspaceFormGrid,
   WorkspaceFormPanel
-} from "@cxapp/ui/workspace/upsert";
+} from "@cxsun/ui/workspace/upsert";
 import { openingBalanceSchema } from "./opening-balance.schema";
 import type { OpeningBalanceData, OpeningBalanceInput } from "./opening-balance.types";
 

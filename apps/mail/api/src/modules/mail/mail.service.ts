@@ -1,4 +1,4 @@
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { migrateMailModule } from "./mail.migration.js";
 import { MailRepository } from "./mail.repository.js";
 import { seedMailModule } from "./mail.seed.js";

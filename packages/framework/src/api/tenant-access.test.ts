@@ -71,10 +71,10 @@ test("rejects a tenant-scoped Platform token for another tenant database", () =>
 
 function signTenantToken(input: { secret: string; tenantDatabase: string; tenantId: string }) {
   const claims = {
-    aud: "cxapp-platform",
+    aud: "cxsun-platform",
     email: "admin@example.com",
     exp: Math.floor(Date.now() / 1000) + 3600,
-    iss: "cxapp-platform-api",
+    iss: "cxsun-platform-api",
     tenantDbName: input.tenantDatabase,
     tenantId: input.tenantId,
     userId: "user-1",

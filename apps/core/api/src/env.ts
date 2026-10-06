@@ -1,4 +1,4 @@
-import { loadEnv } from "@cxapp/framework/env";
+import { loadEnv } from "@cxsun/framework/env";
 import { z } from "zod";
 
 const envSchema = z.object({

@@ -1,5 +1,5 @@
 import { Building2, CalendarDays, LayoutGrid } from "lucide-react";
-import { Button, WorkspaceStatusBadge } from "@cxapp/ui";
+import { Button, WorkspaceStatusBadge } from "@cxsun/ui";
 import type { DefaultCompanyRecord } from "./default-company.types";
 export function DefaultCompanyList({
   onEdit,

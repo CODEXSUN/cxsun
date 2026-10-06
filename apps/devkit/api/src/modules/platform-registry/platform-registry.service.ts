@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { AppError } from "@cxapp/framework/errors";
+import { AppError } from "@cxsun/framework/errors";
 import { PlatformRegistryRepository } from "./platform-registry.repository.js";
 import type {
   PlatformRegistryGroup,

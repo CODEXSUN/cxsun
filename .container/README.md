@@ -57,6 +57,11 @@ real credentials. Root `prepare-env.sh` creates or updates the private
 deployment file through the environment configurator. Root `setup.sh` never
 creates deployment configuration and never reads development `.env`.
 
+The CXSUN image, container, network, and volume names are separate from the
+previous application. Create a new deployment file for this repository. The
+configurator rejects environment keys from the previous application so an
+existing deployment cannot silently attach to the wrong resources.
+
 The configurator preserves existing deployment values by default and shows the
 exact current `.container/deploy.env` value beside each non-secret prompt.
 Secret prompts show only `[configured]`, hide input, and cover MariaDB, Redis,
@@ -80,7 +85,7 @@ company Mail settings continue to take priority over this deployment fallback.
 
 Platform Web sends `Permissions-Policy: unload=*` in development and from the runtime nginx container. This temporarily permits legacy `unload` listeners, including browser-extension injected frames, during Chromium's staged deprecation. No other browser permission is widened.
 
-MariaDB listens inside Docker on `3306` and is exposed to the host at `127.0.0.1:3307` by default. Applications use the private `cxapp-mariadb:3306` address.
+MariaDB listens inside Docker on `3306` and is exposed to the host at `127.0.0.1:3307` by default. Applications use the private `cxsun-mariadb:3306` address.
 
 ## Clean installation
 
@@ -92,7 +97,7 @@ bash setup.sh --clean
 
 The interactive menu provides three CODEXSUN-owned scopes:
 
-- `app`: remove only `cxapp-api`, `cxapp-web`, and application images.
+- `app`: remove only `cxsun-api`, `cxsun-web`, and application images.
 - `runtime`: remove all CODEXSUN containers and images while preserving every
   named volume, database, Redis record, uploaded file, and the network.
 - `data`: remove all CODEXSUN containers, images, persistent volumes, and the
@@ -121,8 +126,8 @@ bash .container/clean.sh --scope data --yes --prune --install billing
 ```
 
 Without `--yes`, the helper requires the exact confirmation
-`CLEAN_CXAPP`. It refuses to remove a network or volume whose configured
-name is outside the `cxapp` namespace.
+`CLEAN_CXSUN`. It refuses to remove a network or volume whose configured
+name is outside the `cxsun` namespace.
 
 For a deliberately host-wide reset that removes every Docker container, custom
 network, volume, image, and build cache before reinstalling CODEXSUN, use:
@@ -170,7 +175,7 @@ On Windows with Git Bash:
 ```
 
 The updater requires the existing `.container/deploy.env` and Compose-owned CODEXSUN containers.
-It holds an exclusive host update lock; requires `package.json`, `CXAPP_VERSION`, and all three
+It holds an exclusive host update lock; requires `package.json`, `CXSUN_VERSION`, and all three
 application image tags to match; records the Git commit and dirty state; and checks free space in
 both the backup filesystem and Docker storage before building. A dirty worktree is accepted only
 with `--allow-dirty`. Applying an update requires the Linux `flock` command; read-only `--check`
@@ -179,12 +184,12 @@ does not acquire the update lock.
 Before downtime, it validates configuration, container ownership, container health, and every
 Compose model; builds the current API, Web, and migration images; and creates a timestamped full
 MariaDB dump under `.container/backups/`. Every dump receives a verified SHA-256 sidecar. The
-updater retains the newest `CXAPP_UPDATE_BACKUP_RETENTION` dumps and their deployment records.
+updater retains the newest `CXSUN_UPDATE_BACKUP_RETENTION` dumps and their deployment records.
 
-Production migration is allowed only when `CXAPP_MIGRATION_COMPATIBLE_VERSION` exactly matches the
+Production migration is allowed only when `CXSUN_MIGRATION_COMPATIBLE_VERSION` exactly matches the
 source version. Set that value only after confirming the release uses expand-contract migrations
 that remain compatible with the currently running application image. The updater runs the database
-migration preflight, applies forward migrations, recreates only `cxapp-api` and `cxapp-web`, waits
+migration preflight, applies forward migrations, recreates only `cxsun-api` and `cxsun-web`, waits
 for Docker health, and runs the complete deployment smoke test. A failed replacement restores the
 previous application images automatically; migrated data and the verified SQL backup are retained
 for an operator-directed recovery.
@@ -192,7 +197,7 @@ for an operator-directed recovery.
 Each attempt writes a permission-restricted JSON record beside its backup with the timestamp,
 source commit, application version, dirty state, application image digests, migration result,
 backup path, checksum, and final deployment status. Configure the minimum-space guards with
-`CXAPP_UPDATE_MIN_BACKUP_FREE_MB` and `CXAPP_UPDATE_MIN_DOCKER_FREE_MB`.
+`CXSUN_UPDATE_MIN_BACKUP_FREE_MB` and `CXSUN_UPDATE_MIN_DOCKER_FREE_MB`.
 
 The updater does not rerun interactive setup, modify either environment file, recreate MariaDB,
 Redis, or File Browser, remove volumes, change credentials, pull source, or
@@ -206,7 +211,7 @@ immutable registry releases:
 ```bash
 bash .container/deploy.sh billing up
 
-# Build machine / CI: set CXAPP_IMAGE_REGISTRY in .container/deploy.env first.
+# Build machine / CI: set CXSUN_IMAGE_REGISTRY in .container/deploy.env first.
 bash .container/deploy.sh billing publish
 
 # Deployment host
@@ -246,7 +251,7 @@ password and its AOF volume. Changing a credential in the deployment file is
 therefore an explicit rotation on
 the next setup. No normal deployment action deletes a volume or database.
 
-Before a production database migration, set `CXAPP_VERIFIED_BACKUP_ID` to the verified backup run ID. For a confirmed empty first install, record a unique marker such as `initial-empty-database-YYYYMMDD`.
+Before a production database migration, set `CXSUN_VERIFIED_BACKUP_ID` to the verified backup run ID. For a confirmed empty first install, record a unique marker such as `initial-empty-database-YYYYMMDD`.
 
 Media administration can be reconciled independently:
 
@@ -258,7 +263,7 @@ Only the explicit `--reinstall --wipe-media` combination removes media data; the
 
 ## Default host ports
 
-All published ports bind to `127.0.0.1` unless `CXAPP_BIND_ADDRESS` is changed.
+All published ports bind to `127.0.0.1` unless `CXSUN_BIND_ADDRESS` is changed.
 
 | Service                 |                Host port |
 | ----------------------- | -----------------------: |

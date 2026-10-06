@@ -52,7 +52,7 @@ test("web development keeps linked owner source and styles on the root dependenc
 test("tenant app breadcrumbs use app IDs and canonical root pages", () => {
   assert.match(appRegistrySource, /appId:\s*app\.id/u);
   assert.match(appRegistrySource, /url:\s*appRootUrl\(app\.id\)/u);
-  assert.match(appDeskSource, /selectPage\(pageForApp\(item\.appId\)\)/u);
+  assert.match(appDeskSource, /requestListNavigation\(pageForApp\(item\.appId\)\)/u);
   assert.doesNotMatch(appDeskSource, /item\.title\s*===/u);
 });
 
@@ -63,9 +63,9 @@ test("combined development runtime restarts one service without stopping its sib
 });
 
 test("development shutdown asks the child to stop before forcing termination", () => {
-  const gracefulStop = stackSource.indexOf('child.send({ type: "cxapp:shutdown" })');
+  const gracefulStop = stackSource.indexOf('child.send({ type: "cxsun:shutdown" })');
   const forcedStop = stackSource.indexOf('spawnSync("taskkill"');
   assert.ok(gracefulStop >= 0, "The supervisor must request a graceful child shutdown.");
   assert.ok(forcedStop > gracefulStop, "Forced termination must remain a fallback.");
-  assert.match(preflightSource, /message\?\.type === "cxapp:shutdown"/u);
+  assert.match(preflightSource, /message\?\.type === "cxsun:shutdown"/u);
 });

@@ -3,26 +3,40 @@ import {
   migrateBillingTenantDatabase,
   rollbackBillingTenantDatabase,
   seedBillingTenantDatabase
-} from "@cxapp/billing-api";
+} from "@cxsun/billing-api";
 import {
   accountsTenantMigrations,
   migrateAccountsTenantDatabase,
   rollbackAccountsTenantDatabase,
   seedAccountsTenantDatabase
-} from "@cxapp/accounts-api";
+} from "@cxsun/accounts-api";
 import {
   coreTenantMigrations,
   migrateCoreTenantDatabase,
   rollbackCoreTenantDatabase,
   seedCoreTenantDatabase,
   setDefaultCompanyLandingAppForDatabase
-} from "@cxapp/core-api";
+} from "@cxsun/core-api";
+import {
+  crmTenantMigrations,
+  migrateCrmTenantDatabase,
+  rollbackCrmTenantDatabase,
+  seedEnquiryModule,
+  type EnquiryDatabase
+} from "@cxsun/crm-api";
+import {
+  auditorMigrations,
+  migrateAuditorDatabase,
+  rollbackAuditorDatabase,
+  seedAuditorClientPermissions,
+  type AuditorClientDatabase
+} from "@cxsun/auditor-api";
 import {
   mailMigrationBatch,
   migrateMailModule,
   rollbackMailModule,
   seedMailModule
-} from "@cxapp/mail-api";
+} from "@cxsun/mail-api";
 import type { Kysely } from "kysely";
 import type { TenantDatabase } from "./schema.js";
 import type { Tenant } from "../modules/tenant/tenant.types.js";
@@ -51,6 +65,18 @@ export function tenantDatabaseMigrationsFor(tenant: Tenant) {
       ...migration,
       statements: [`RUN ${migration.name}`]
     })),
+    ...(enabled.has("crm")
+      ? crmTenantMigrations.map((migration) => ({
+          ...migration,
+          statements: [`RUN ${migration.name}`]
+        }))
+      : []),
+    ...(enabled.has("auditor")
+      ? auditorMigrations.map((migration) => ({
+          ...migration,
+          statements: [`RUN ${migration.name}`]
+        }))
+      : []),
     ...(enabled.has("billing.sales")
       ? billingTenantMigrations.map((migration) => ({
           ...migration,
@@ -84,6 +110,14 @@ export async function migrateSelectedTenantApps(database: Kysely<TenantDatabase>
   const provisionedApps = ["application"];
 
   await migrateCoreTenantDatabase(tenant.dbName);
+  if (enabled.has("crm")) {
+    await migrateCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
+    provisionedApps.push("crm");
+  }
+  if (enabled.has("auditor")) {
+    await migrateAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
+    provisionedApps.push("auditor");
+  }
 
   if (enabled.has("billing.sales")) {
     await migrateBillingTenantDatabase(tenant.dbName);
@@ -116,6 +150,14 @@ export async function seedSelectedTenantApps(database: Kysely<TenantDatabase>, t
   const seededApps = ["application"];
 
   await seedCoreTenantDatabase(tenant.dbName);
+  if (enabled.has("crm")) {
+    await seedEnquiryModule(database as unknown as Kysely<EnquiryDatabase>);
+    seededApps.push("crm");
+  }
+  if (enabled.has("auditor")) {
+    await seedAuditorClientPermissions(database as unknown as Kysely<AuditorClientDatabase>);
+    seededApps.push("auditor");
+  }
   await setDefaultCompanyLandingAppForDatabase(tenant.dbName, tenant.defaultLandingApp);
 
   if (enabled.has("billing.sales")) {
@@ -148,6 +190,10 @@ export async function rollbackSelectedTenantApps(database: Kysely<TenantDatabase
   if (enabled.has("platform.task-manager"))
     await rollbackTaskManagerTenantModule(database as never);
   if (enabled.has("mail")) await rollbackMailModule(database as never);
+  if (enabled.has("crm"))
+    await rollbackCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
+  if (enabled.has("auditor"))
+    await rollbackAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
   if (enabled.has("billing.sales")) await rollbackBillingTenantDatabase(tenant.dbName);
   if (enabled.has("accounts.accounting")) await rollbackAccountsTenantDatabase(tenant.dbName);
   await rollbackCoreTenantDatabase(tenant.dbName);

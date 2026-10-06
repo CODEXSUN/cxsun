@@ -26,18 +26,18 @@ test("development and deployment samples own independent runtime endpoints", asy
   assert.equal(development.PLATFORM_API_PORT, "7010");
   assert.equal(development.PLATFORM_WEB_PORT, "7020");
   assert.equal(development.DB_HOST, "127.0.0.1");
-  assert.equal(development.CXAPP_QUEUE_BACKEND, "database");
-  assert.equal(development.CXAPP_TENANCY_MODE, "multi");
-  assert.equal(development.CXAPP_IMAGE_REGISTRY, undefined);
+  assert.equal(development.CXSUN_QUEUE_BACKEND, "database");
+  assert.equal(development.CXSUN_TENANCY_MODE, "multi");
+  assert.equal(development.CXSUN_IMAGE_REGISTRY, undefined);
 
   assert.equal(deployment.NODE_ENV, "production");
   assert.equal(deployment.PLATFORM_API_PORT, "17010");
   assert.equal(deployment.PLATFORM_WEB_PORT, "17020");
-  assert.equal(deployment.DB_HOST, "cxapp-mariadb");
-  assert.equal(deployment.CXAPP_QUEUE_BACKEND, "bullmq-redis");
-  assert.equal(deployment.CXAPP_TENANCY_MODE, "single");
-  assert.equal(deployment.CXAPP_SINGLE_TENANT_CORPORATE_ID, deployment.DEFAULT_TENANT_CORPORATE_ID);
-  assert.equal(deployment.CXAPP_IMAGE_REGISTRY, "cxapp");
+  assert.equal(deployment.DB_HOST, "cxsun-mariadb");
+  assert.equal(deployment.CXSUN_QUEUE_BACKEND, "bullmq-redis");
+  assert.equal(deployment.CXSUN_TENANCY_MODE, "single");
+  assert.equal(deployment.CXSUN_SINGLE_TENANT_CORPORATE_ID, deployment.DEFAULT_TENANT_CORPORATE_ID);
+  assert.equal(deployment.CXSUN_IMAGE_REGISTRY, "cxsun");
 });
 
 test("container tooling and Compose consume deploy.env only", async () => {
@@ -58,15 +58,15 @@ test("guarded updates enforce reproducible versions and recoverable deployment e
   const deployment = envValues(await read(".container/deploy.env.sample"));
   const update = await read(".container/update.sh");
 
-  assert.equal(deployment.CXAPP_MIGRATION_COMPATIBLE_VERSION, deployment.CXAPP_VERSION);
-  assert.equal(deployment.CXAPP_UPDATE_BACKUP_RETENTION, "10");
+  assert.equal(deployment.CXSUN_MIGRATION_COMPATIBLE_VERSION, deployment.CXSUN_VERSION);
+  assert.equal(deployment.CXSUN_UPDATE_BACKUP_RETENTION, "10");
   assert.match(update, /flock -n 9/u);
   assert.match(update, /BILLING_STACK_MIGRATIONS_IMAGE_TAG/u);
   assert.match(update, /--allow-dirty/u);
   assert.match(update, /sha256sum --check/u);
   assert.match(update, /mariadb-dump \\\n+  --no-defaults/u);
-  assert.match(update, /CXAPP_UPDATE_MIN_DOCKER_FREE_MB/u);
-  assert.match(update, /cxapp-deployment-\$timestamp\.json/u);
+  assert.match(update, /CXSUN_UPDATE_MIN_DOCKER_FREE_MB/u);
+  assert.match(update, /cxsun-deployment-\$timestamp\.json/u);
 });
 
 test("deployment smoke test uses the current tenant schema and configured identity", async () => {
@@ -74,9 +74,9 @@ test("deployment smoke test uses the current tenant schema and configured identi
 
   assert.match(smokeTest, /FROM tenants/u);
   assert.doesNotMatch(smokeTest, /FROM app_tenants/u);
-  assert.match(smokeTest, /env_value CXAPP_SINGLE_TENANT_CORPORATE_ID/u);
+  assert.match(smokeTest, /env_value CXSUN_SINGLE_TENANT_CORPORATE_ID/u);
   assert.match(smokeTest, /env_value DEFAULT_TENANT_DB_NAME/u);
-  assert.doesNotMatch(smokeTest, /CODEXSUN:cxapp_db/u);
+  assert.doesNotMatch(smokeTest, /CODEXSUN:cxsun_db/u);
 });
 
 test("cloud environment preparation is separate from setup and never copies local env", async () => {
