@@ -1,0 +1,23 @@
+{
+  "name": "@cxapp/accounts-web",
+  "version": "1.0.79",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules/overview": "./src/modules/overview/index.ts",
+    "./modules/accounting": "./src/modules/accounting/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@cxapp/ui": "^1.0.79",
+    "@tanstack/react-query": "^5.101.4",
+    "lucide-react": "^1.33.0",
+    "react": "^19.2.8",
+    "zod": "^4.4.3"
+  }
+}

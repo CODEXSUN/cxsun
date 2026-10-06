@@ -1,0 +1,595 @@
+import {
+  ensureStandardTableColumns,
+  rollbackMigrationBatch,
+  runMigrationBatch,
+  type MigrationBatch
+} from "@cxapp/framework/db";
+import { Kysely, MysqlDialect, type Generated, type Transaction } from "kysely";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { createPool, type PoolOptions } from "mysql2";
+import { createConnection } from "mysql2/promise";
+import { AppError } from "@cxapp/framework/errors";
+import { seedBillingTenantPermissions } from "../auth/tenant-permission.seed.js";
+import { env } from "../env.js";
+import {
+  migrateQuotationModule,
+  quotationMigration
+} from "../modules/quotation/quotation.migration.js";
+import { seedQuotationModule } from "../modules/quotation/quotation.seed.js";
+import {
+  exportSalesMigration,
+  migrateExportSalesModule
+} from "../modules/export-sales/export-sales.migration.js";
+import { seedExportSalesModule } from "../modules/export-sales/export-sales.seed.js";
+import { migratePaymentModule, paymentMigration } from "../modules/payment/payment.migration.js";
+import { seedPaymentModule } from "../modules/payment/payment.seed.js";
+import {
+  migratePurchaseModule,
+  purchaseMigration
+} from "../modules/purchase/purchase.migration.js";
+import { seedPurchaseModule } from "../modules/purchase/purchase.seed.js";
+import {
+  migrateSalesComplianceDrafts,
+  migrateSalesModule,
+  salesComplianceDraftMigration,
+  salesMigration
+} from "../modules/sales/sales.migration.js";
+import { migrateReceiptModule, receiptMigration } from "../modules/receipt/receipt.migration.js";
+import { seedReceiptModule } from "../modules/receipt/receipt.seed.js";
+import {
+  migrateOpeningBalances,
+  openingBalanceMigration
+} from "../modules/opening-balance/opening-balance.migration.js";
+import { seedOpeningBalances } from "../modules/opening-balance/opening-balance.seed.js";
+import {
+  migrateReceiptExportAllocations,
+  receiptExportAllocationMigration
+} from "../modules/receipt/receipt.export-allocation.migration.js";
+import { seedSalesModule } from "../modules/sales/sales.seed.js";
+import {
+  billingSettingsMigration,
+  migrateBillingSettingsModule
+} from "../modules/settings/settings.migration.js";
+import { seedBillingSettingsModule } from "../modules/settings/settings.seed.js";
+import { BillingSettingsRepository } from "../modules/settings/settings.repository.js";
+import {
+  dashboardMigration,
+  migrateDashboardModule
+} from "../modules/dashboard/dashboard.migration.js";
+import { seedDashboardModule } from "../modules/dashboard/dashboard.seed.js";
+import {
+  billingRuntimePersistenceMigration,
+  migrateBillingRuntimePersistence
+} from "../modules/runtime-persistence/runtime-persistence.migration.js";
+import {
+  gstStatementFilingMigration,
+  migrateGstStatementFiling
+} from "../modules/reports/gst-statement/gst-statement.migration.js";
+
+export type BillingDatabase = {
+  billing_domain_events: BillingDomainEventsTable;
+  billing_outbox_jobs: BillingOutboxJobsTable;
+  billing_quotations: BillingQuotationTable;
+  billing_sales: BillingSalesTable;
+};
+
+export type BillingDomainEventsTable = {
+  actor_email: string | null;
+  actor_id: string | null;
+  correlation_id: string | null;
+  created_at: Generated<Date | string>;
+  created_by: Generated<string>;
+  event_name: string;
+  event_version: number;
+  id: Generated<number>;
+  occurred_at: Date | string;
+  payload_json: string;
+  request_id: string | null;
+  source_module: string;
+  status: "published";
+  updated_at: Generated<Date | string>;
+  uuid: string;
+};
+
+export type BillingOutboxJobsTable = {
+  attempts: number;
+  available_at: Date | string;
+  correlation_id: string | null;
+  created_at: Generated<Date | string>;
+  created_by: Generated<string>;
+  id: Generated<number>;
+  idempotency_key: string | null;
+  job_name: string;
+  max_attempts: number;
+  payload_json: string;
+  queue_name: string;
+  request_id: string | null;
+  source_module: string;
+  status: "pending" | "running" | "completed" | "failed";
+  updated_at: Generated<Date | string>;
+  uuid: string;
+};
+
+export type BillingQuotationTable = {
+  amount: number;
+  billing_address_id: number;
+  company_id: number;
+  currency_id: number;
+  customer_id: number;
+  financial_year_id: number;
+  id: number;
+  quotation_date: string;
+  quotation_number: string;
+  line_number: number;
+  shipping_address_id: number;
+  status: "draft" | "confirmed" | "cancelled";
+  uuid: string;
+};
+
+export type BillingSalesTable = {
+  amount: number;
+  billing_address_id: number;
+  company_id: number;
+  currency_id: number;
+  customer_id: number;
+  financial_year_id: number;
+  id: number;
+  invoice_number: string;
+  issued_on: string;
+  line_number: number;
+  shipping_address_id: number;
+  status: "draft" | "confirmed" | "cancelled";
+  uuid: string;
+};
+
+type BillingConnectionEntry = { database: Kysely<BillingDatabase>; lastUsedAt: number };
+
+const connections = new Map<string, BillingConnectionEntry>();
+const tenantConnectionOptions = new Map<string, TenantConnectionOptions>();
+const migrated = new Set<string>();
+const bootstrapping = new Map<string, Promise<void>>();
+const bootstrapTimeoutMs = 5_000;
+const connectionIdleMs = 10 * 60 * 1000;
+const evictionTimer = setInterval(() => void evictIdleBillingDatabases(), 60_000);
+evictionTimer.unref();
+
+const billingMigrationSteps = [
+  {
+    description: "Company-owned Billing settings.",
+    key: billingSettingsMigration.key,
+    migrate: migrateBillingSettingsModule
+  },
+  {
+    description: "Billing sales documents and relational line items.",
+    key: salesMigration.key,
+    migrate: migrateSalesModule
+  },
+  {
+    description: salesComplianceDraftMigration.description,
+    key: salesComplianceDraftMigration.key,
+    migrate: migrateSalesComplianceDrafts
+  },
+  {
+    description: "Billing purchase documents and relational line items.",
+    key: purchaseMigration.key,
+    migrate: migratePurchaseModule
+  },
+  {
+    description: "Billing export-sales documents and relational line items.",
+    key: exportSalesMigration.key,
+    migrate: migrateExportSalesModule
+  },
+  {
+    description: "Billing quotations and relational line items.",
+    key: quotationMigration.key,
+    migrate: migrateQuotationModule
+  },
+  {
+    description: "Billing payment documents.",
+    key: paymentMigration.key,
+    migrate: migratePaymentModule
+  },
+  {
+    description: "Billing receipt documents.",
+    key: receiptMigration.key,
+    migrate: migrateReceiptModule
+  },
+  {
+    description: "Billing dashboard snapshots.",
+    key: dashboardMigration.key,
+    migrate: migrateDashboardModule
+  },
+  {
+    description: billingRuntimePersistenceMigration.description,
+    key: billingRuntimePersistenceMigration.key,
+    migrate: migrateBillingRuntimePersistence
+  },
+  {
+    description: gstStatementFilingMigration.description,
+    key: gstStatementFilingMigration.key,
+    migrate: migrateGstStatementFiling
+  }
+] as const;
+
+const billingTableNames = [
+  "billing_company_settings",
+  "billing_dashboard_snapshots",
+  "billing_export_sales",
+  "billing_export_sales_activities",
+  "billing_export_sales_comments",
+  "billing_export_sales_einvoices",
+  "billing_export_sales_entry_tools",
+  "billing_export_sales_eway_bills",
+  "billing_export_sales_items",
+  "billing_payment_activities",
+  "billing_payment_allocations",
+  "billing_payments",
+  "billing_purchase_activities",
+  "billing_purchase_items",
+  "billing_purchases",
+  "billing_quotation_activities",
+  "billing_quotation_items",
+  "billing_quotations",
+  "billing_receipt_activities",
+  "billing_receipt_allocations",
+  "billing_receipts",
+  "billing_sales",
+  "billing_sales_activities",
+  "billing_sales_comments",
+  "billing_sales_einvoices",
+  "billing_sales_entry_tools",
+  "billing_sales_eway_bills",
+  "billing_sales_items",
+  "billing_settings"
+] as const;
+
+export const billingMigrationBatch: MigrationBatch<BillingDatabase> = {
+  batch: 1,
+  description: "Billing module-owned schema baseline through release 1.0.53.",
+  scope: "billing",
+  version: "1.0.53",
+  steps: [
+    ...billingMigrationSteps.map(({ description, key, migrate }) => ({
+      checksum: `${key}:v1`,
+      description,
+      name: key,
+      up: migrate,
+      version: 1
+    })),
+    {
+      checksum: `standard-columns:${billingTableNames.join(",")}`,
+      description: "Backfill and validate standard Billing table identity and audit columns.",
+      name: "billing.standard-columns-v1",
+      up: (database) => ensureStandardTableColumns(database, billingTableNames),
+      version: 1
+    },
+    {
+      checksum: `uuid-defaults:${billingTableNames.join(",")}`,
+      description: "Add database-generated UUID defaults for repeatable Billing writes.",
+      name: "billing.uuid-defaults-v2",
+      up: (database) => ensureStandardTableColumns(database, billingTableNames),
+      version: 2
+    },
+    {
+      checksum: `${receiptExportAllocationMigration.key}:v1`,
+      description: receiptExportAllocationMigration.description,
+      name: receiptExportAllocationMigration.key,
+      up: migrateReceiptExportAllocations,
+      version: 1
+    },
+    {
+      checksum: `${openingBalanceMigration.key}:v1`,
+      description: openingBalanceMigration.description,
+      name: openingBalanceMigration.key,
+      up: migrateOpeningBalances,
+      version: 1
+    }
+  ]
+};
+
+export const billingTenantMigrations = [
+  ...billingMigrationSteps.map(({ description, key }) => ({
+    description,
+    name: key
+  })),
+  {
+    description: "Backfill and validate standard Billing table identity and audit columns.",
+    name: "billing.standard-columns-v1"
+  },
+  {
+    description: "Add database-generated UUID defaults for repeatable Billing writes.",
+    name: "billing.uuid-defaults-v2"
+  },
+  {
+    description: receiptExportAllocationMigration.description,
+    name: receiptExportAllocationMigration.key
+  },
+  {
+    description: openingBalanceMigration.description,
+    name: openingBalanceMigration.key
+  }
+] as const;
+
+export function resolveBillingDatabaseName(value: unknown) {
+  const requested = typeof value === "string" ? value.trim() : "";
+  if (!requested) throw AppError.validation("x-tenant-db is required for Billing database access.");
+  if (!/^[a-zA-Z0-9_]+$/.test(requested))
+    throw AppError.validation("Invalid tenant database name.");
+  const name = requested;
+  if (name === env.DB_MASTER_NAME)
+    throw AppError.validation("Billing tables cannot use the Platform master database.");
+  return name;
+}
+
+const transactionContext = new AsyncLocalStorage<{
+  databaseName: string;
+  transaction: Transaction<BillingDatabase>;
+}>();
+
+export function hasBillingTransaction(databaseName: string) {
+  return transactionContext.getStore()?.databaseName === assertDatabaseName(databaseName);
+}
+
+export async function withBillingTransaction<T>(databaseName: string, action: () => Promise<T>) {
+  const database = await getBillingDatabase(databaseName);
+  if (database.isTransaction) return action();
+  return database
+    .transaction()
+    .execute((transaction) => transactionContext.run({ databaseName, transaction }, action));
+}
+
+export async function runBillingTransaction<Database, T>(
+  database: Kysely<Database>,
+  action: (transaction: Transaction<Database>) => Promise<T>
+) {
+  if (database.isTransaction) return action(database as Transaction<Database>);
+  return database.transaction().execute(action);
+}
+
+export async function getBillingDatabase(databaseName: string): Promise<Kysely<BillingDatabase>> {
+  const name = assertDatabaseName(databaseName);
+  const context = transactionContext.getStore();
+  if (context) {
+    if (context.databaseName !== name) {
+      throw AppError.conflict("A Billing transaction cannot cross tenant databases.");
+    }
+    return context.transaction;
+  }
+  await bootstrapBillingDatabase(name);
+  return openBillingDatabase(name);
+}
+
+export function registerBillingTenantDatabaseConnection(input: TenantConnectionOptions) {
+  const name = assertDatabaseName(input.database);
+  tenantConnectionOptions.set(name, { ...input, database: name });
+}
+
+export async function bootstrapBillingDatabase(databaseName: string) {
+  const name = assertDatabaseName(databaseName);
+  if (migrated.has(name)) {
+    return;
+  }
+
+  const activeBootstrap = bootstrapping.get(name);
+  if (activeBootstrap) {
+    await withTimeout(
+      activeBootstrap,
+      bootstrapTimeoutMs,
+      `Billing database bootstrap timed out after ${bootstrapTimeoutMs}ms for ${name}`
+    );
+    return;
+  }
+
+  const bootstrapPromise = bootstrapBillingDatabaseOnce(name);
+  bootstrapping.set(name, bootstrapPromise);
+  void bootstrapPromise.then(
+    () => {
+      if (bootstrapping.get(name) === bootstrapPromise) bootstrapping.delete(name);
+    },
+    () => {
+      if (bootstrapping.get(name) === bootstrapPromise) bootstrapping.delete(name);
+    }
+  );
+  await withTimeout(
+    bootstrapPromise,
+    bootstrapTimeoutMs,
+    `Billing database bootstrap timed out after ${bootstrapTimeoutMs}ms for ${name}`
+  );
+}
+
+export async function migrateBillingTenantDatabase(databaseName: string) {
+  const name = assertDatabaseName(databaseName);
+  const active = bootstrapping.get(name);
+  if (active) await active.catch(() => undefined);
+  await closeBillingDatabaseConnection(name);
+  migrated.delete(name);
+  await ensureDatabase(name);
+  await migrateBillingModules(openBillingDatabase(name));
+}
+
+export async function seedBillingTenantDatabase(databaseName: string) {
+  const name = assertDatabaseName(databaseName);
+  await ensureDatabase(name);
+  const database = openBillingDatabase(name);
+  await migrateBillingModules(database);
+  migrated.add(name);
+  try {
+    await seedBillingModules(database, name);
+  } catch (error) {
+    migrated.delete(name);
+    throw error;
+  }
+}
+
+async function bootstrapBillingDatabaseOnce(name: string) {
+  await ensureDatabase(name);
+  const db = openBillingDatabase(name);
+  await migrateBillingModules(db);
+  migrated.add(name);
+  try {
+    await seedBillingModules(db, name);
+  } catch (error) {
+    migrated.delete(name);
+    throw error;
+  }
+}
+
+async function migrateBillingModules(database: Kysely<BillingDatabase>) {
+  await runMigrationBatch(database, billingMigrationBatch, { batchSize: 5 });
+}
+
+export async function rollbackBillingTenantDatabase(databaseName: string) {
+  const name = assertDatabaseName(databaseName);
+  await ensureDatabase(name);
+  return rollbackMigrationBatch(openBillingDatabase(name), billingMigrationBatch);
+}
+
+async function seedBillingModules(database: Kysely<BillingDatabase>, databaseName: string) {
+  await seedBillingTenantPermissions(database as unknown as Kysely<unknown>);
+  await seedBillingSettingsModule();
+  const settingsRepository = new BillingSettingsRepository();
+  const companyId = await settingsRepository.defaultCompanyId(databaseName);
+  await settingsRepository.getBillingSettings(databaseName, companyId);
+  await seedSalesModule(database);
+  await seedPurchaseModule();
+  await seedExportSalesModule(database);
+  await seedQuotationModule();
+  await seedPaymentModule(database);
+  await seedReceiptModule(database);
+  await seedOpeningBalances();
+  await seedDashboardModule(databaseName);
+}
+
+export async function bootstrapRegisteredBillingDatabases() {
+  const databaseNames = await registeredTenantDatabaseNames();
+  await Promise.all(databaseNames.map((databaseName) => bootstrapBillingDatabase(databaseName)));
+}
+
+function openBillingDatabase(databaseName: string) {
+  const name = assertDatabaseName(databaseName);
+  const existing = connections.get(name);
+  if (existing) {
+    existing.lastUsedAt = Date.now();
+    return existing.database;
+  }
+
+  const db = new Kysely<BillingDatabase>({
+    dialect: new MysqlDialect({
+      pool: createPool({
+        database: name,
+        host: tenantConnectionOptions.get(name)?.host ?? env.DB_HOST,
+        password: tenantConnectionOptions.get(name)?.password ?? env.DB_PASSWORD,
+        port: tenantConnectionOptions.get(name)?.port ?? env.DB_PORT,
+        connectionLimit: 4,
+        idleTimeout: 60_000,
+        maxIdle: 1,
+        queueLimit: 100,
+        timezone: "Z",
+        user: tenantConnectionOptions.get(name)?.user ?? env.DB_USER,
+        connectTimeout: 5_000
+      } satisfies PoolOptions)
+    })
+  });
+  connections.set(name, { database: db, lastUsedAt: Date.now() });
+  return db;
+}
+
+async function ensureDatabase(databaseName: string) {
+  const options = tenantConnectionOptions.get(databaseName);
+  const name = assertDatabaseName(databaseName);
+  const connection = await createConnection({
+    host: options?.host ?? env.DB_HOST,
+    password: options?.password ?? env.DB_PASSWORD,
+    port: options?.port ?? env.DB_PORT,
+    timezone: "Z",
+    user: options?.user ?? env.DB_USER,
+    connectTimeout: 5_000
+  });
+  try {
+    await connection.query(
+      `CREATE DATABASE IF NOT EXISTS \`${name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+    );
+  } finally {
+    await connection.end();
+  }
+}
+
+type TenantConnectionOptions = {
+  database: string;
+  host: string;
+  password: string;
+  port: number;
+  user: string;
+};
+
+async function registeredTenantDatabaseNames() {
+  const connection = await createConnection({
+    database: env.DB_MASTER_NAME,
+    host: env.DB_HOST,
+    password: env.DB_PASSWORD,
+    port: env.DB_PORT,
+    timezone: "Z",
+    user: env.DB_USER,
+    connectTimeout: 5_000
+  });
+  try {
+    const [rows] = await connection.query(
+      "SELECT db_name FROM tenants WHERE db_name IS NOT NULL AND status <> 'deleted'"
+    );
+    return (rows as Array<{ db_name: string }>).map(({ db_name }) =>
+      resolveBillingDatabaseName(db_name)
+    );
+  } finally {
+    await connection.end();
+  }
+}
+
+export async function closeAllBillingDatabases() {
+  const openConnections = Array.from(connections.values(), (entry) => entry.database);
+  connections.clear();
+  migrated.clear();
+  await Promise.all(openConnections.map(async (database) => database.destroy()));
+}
+
+async function closeBillingDatabaseConnection(name: string) {
+  const entry = connections.get(name);
+  if (!entry) return;
+  connections.delete(name);
+  await entry.database.destroy();
+}
+
+export async function evictIdleBillingDatabases(now = Date.now()) {
+  const idle = Array.from(connections.entries()).filter(
+    ([name, entry]) => now - entry.lastUsedAt >= connectionIdleMs && !bootstrapping.has(name)
+  );
+  for (const [name, entry] of idle) {
+    if (connections.get(name) !== entry) continue;
+    connections.delete(name);
+    await entry.database.destroy();
+  }
+  return idle.length;
+}
+
+function assertDatabaseName(value: string) {
+  if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+    throw new Error(`Invalid database name: ${value}`);
+  }
+  return value;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    timer.unref();
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}

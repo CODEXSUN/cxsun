@@ -1,0 +1,120 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - "v-*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "26"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build output
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/platform/windows/src-tauri -> dist/.cargo/windows
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Validate the tag and repository version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $expectedTag = "v-$version"
+          if ("${{ github.ref_name }}" -ne $expectedTag) {
+            throw "Tag ${{ github.ref_name }} must match $expectedTag."
+          }
+          npm run check:versions
+
+      - name: Validate source and Tauri host
+        run: |
+          npm run check
+          npm run desktop:build
+          $env:CARGO_TARGET_DIR = "${{ github.workspace }}\dist\.cargo\windows"
+          cargo test --manifest-path apps/platform/windows/src-tauri/Cargo.toml
+
+      - name: Load Windows signing certificate
+        id: signing
+        shell: pwsh
+        env:
+          SIGNING_PASSWORD: ${{ secrets.CXAPP_WINDOWS_SIGNING_PASSWORD }}
+          SIGNING_PFX_BASE64: ${{ secrets.CXAPP_WINDOWS_SIGNING_PFX }}
+        run: |
+          if (-not $env:SIGNING_PFX_BASE64 -or -not $env:SIGNING_PASSWORD) {
+            throw "Add the CXApp Windows signing secrets before creating a release."
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "cxapp-windows-signing.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
+          $password = ConvertTo-SecureString $env:SIGNING_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate `
+            -FilePath $pfxPath `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password $password
+          $certificatePath = Join-Path $env:RUNNER_TEMP "CXApp.Windows.cer"
+          [IO.File]::WriteAllBytes(
+            $certificatePath,
+            $certificate.Export([Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+          )
+          "thumbprint=$($certificate.Thumbprint)" >> $env:GITHUB_OUTPUT
+          "certificate_path=$certificatePath" >> $env:GITHUB_OUTPUT
+
+      - name: Build signed installer and updater artifacts
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.CXAPP_TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.CXAPP_TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if (-not $env:TAURI_SIGNING_PRIVATE_KEY -or -not $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD) {
+            throw "Add the CXApp Tauri updater signing secrets before creating a release."
+          }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          ./apps/platform/windows/scripts/package.ps1 `
+            -Version $version `
+            -CertificateThumbprint '${{ steps.signing.outputs.thumbprint }}' `
+            -PublicCertificatePath '${{ steps.signing.outputs.certificate_path }}' `
+            -CreateUpdaterArtifacts
+
+      - name: Publish the GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $assets = @(
+            "dist/releases/windows/CXApp.Windows.Setup.exe",
+            "dist/releases/windows/CXApp.Windows.Setup.exe.sig",
+            "dist/releases/windows/CXApp.Windows.cer",
+            "dist/releases/windows/latest.json",
+            "dist/releases/windows/Install-CXApp.ps1",
+            "dist/releases/windows/Uninstall-CXApp.ps1",
+            "dist/releases/windows/SHA256SUMS.txt"
+          )
+          gh release view "${{ github.ref_name }}" 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "${{ github.ref_name }}" @assets --clobber
+            gh release edit "${{ github.ref_name }}" --latest --title "CXApp $version"
+          } else {
+            gh release create "${{ github.ref_name }}" @assets `
+              --generate-notes `
+              --latest `
+              --title "CXApp $version" `
+              --verify-tag
+          }

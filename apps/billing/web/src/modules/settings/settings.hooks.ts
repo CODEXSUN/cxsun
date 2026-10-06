@@ -1,0 +1,39 @@
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { getCompanyId } from "../../shared/api/tenant-context";
+import { getBillingSettings } from "./settings.services";
+
+export function billingSettingsQueryKey(companyId = getCompanyId()) {
+  return ["billing", "settings", companyId] as const;
+}
+
+export function useCompanyContextId() {
+  const [companyId, setCompanyId] = useState(getCompanyId);
+  useEffect(() => {
+    const update = () => setCompanyId(getCompanyId());
+    window.addEventListener("cxapp:company-change", update);
+    window.addEventListener("storage", update);
+    return () => {
+      window.removeEventListener("cxapp:company-change", update);
+      window.removeEventListener("storage", update);
+    };
+  }, []);
+  return companyId;
+}
+
+export function useBillingSettings() {
+  const companyId = useCompanyContextId();
+  return useQuery({
+    enabled: Boolean(companyId),
+    queryFn: getBillingSettings,
+    queryKey: billingSettingsQueryKey(companyId),
+    staleTime: 5 * 60 * 1_000
+  });
+}
+
+export function useBillingDocumentTitle(kind: import("./settings.types").BillingDocumentKind) {
+  const settings = useBillingSettings().data;
+  return settings?.customise.documentTitles[kind] ?? kind;
+}
+
+export const useSalesSettings = useBillingSettings;

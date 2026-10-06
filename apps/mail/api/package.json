@@ -1,0 +1,26 @@
+{
+  "name": "@cxapp/mail-api",
+  "version": "1.0.79",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules/mail": "./src/modules/mail/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/modules/mail/mail.spec.ts",
+    "typecheck": "npm run build -w @cxapp/framework && tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@cxapp/framework": "^1.0.79",
+    "fastify": "^5.12.1",
+    "imapflow": "^1.7.1",
+    "kysely": "^0.29.5",
+    "mailparser": "^3.9.15",
+    "node-pop3": "^0.15.0",
+    "nodemailer": "^9.0.5",
+    "zod": "^4.4.3"
+  }
+}

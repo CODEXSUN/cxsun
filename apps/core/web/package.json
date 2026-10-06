@@ -1,0 +1,34 @@
+{
+  "name": "@cxapp/core-web",
+  "version": "1.0.79",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules/common/*": "./src/modules/common/*/index.ts",
+    "./modules/master": "./src/modules/master/index.ts",
+    "./modules/master/*": "./src/modules/master/*/index.ts",
+    "./modules/organisation": "./src/modules/organisation/index.ts",
+    "./modules/organisation/*": "./src/modules/organisation/*/index.ts",
+    "./modules/organisation/company/branding": "./src/modules/organisation/company/company.branding.ts",
+    "./modules/organisation/company/services": "./src/modules/organisation/company/company.services.ts",
+    "./modules/organisation/default-company/hooks": "./src/modules/organisation/default-company/default-company.hooks.ts",
+    "./modules/organisation/default-company/services": "./src/modules/organisation/default-company/default-company.services.ts",
+    "./modules/organisation/default-company/types": "./src/modules/organisation/default-company/default-company.types.ts",
+    "./modules/organisation/financial-year/services": "./src/modules/organisation/financial-year/financial-year.services.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@cxapp/ui": "^1.0.79",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-table": "^9.1.2",
+    "lucide-react": "^1.33.0",
+    "react": "^19.2.8",
+    "sonner": "^2.0.8",
+    "zod": "^4.4.3"
+  }
+}

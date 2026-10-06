@@ -1,0 +1,111 @@
+# Environments
+
+## Purpose
+
+CODEXSUN should have clear environments so development, testing, demos, and production work do not interfere with each other.
+
+## Environment Types
+
+### Local
+
+Used by developers and CODEIT.
+
+Purpose:
+
+- Fast development.
+- Module testing.
+- Local tenant data.
+- Local containers.
+- Offline simulation.
+
+### Development
+
+Shared internal environment.
+
+Purpose:
+
+- Feature integration.
+- Internal testing.
+- Early API and UI validation.
+
+### Staging
+
+Production-like environment.
+
+Purpose:
+
+- Release candidate testing.
+- Migration testing.
+- Integration testing.
+- Performance checks.
+- Demo validation.
+
+### Production
+
+Customer environment.
+
+Purpose:
+
+- Live tenant operations.
+- Business records.
+- Compliance workflows.
+- Real integrations.
+
+### Sandbox
+
+Customer or internal test environment.
+
+Purpose:
+
+- Customer training.
+- Integration trials.
+- Feature preview.
+- Safe experimentation.
+
+## Environment Rules
+
+- Production data must not be copied to lower environments without masking sensitive data.
+- Credentials must be different per environment.
+- External integrations must have sandbox mode where possible.
+- AI tools must clearly know the current environment.
+- Logs must identify environment.
+- Migrations should be tested before production.
+
+## Configuration Rules
+
+Configuration should include:
+
+- Environment name.
+- Database targets.
+- Queue targets.
+- File storage targets.
+- Integration credentials.
+- Feature flags.
+- AI model settings.
+- Logging level.
+- Support access rules.
+
+Secrets must not be committed to source control.
+
+CODEXSUN keeps development and container deployment inputs separate so both
+can run in parallel. Root `.env` is local development configuration documented
+by `.env.example`. `.container/deploy.env` is the private production/container
+configuration built from `.container/deploy.env.sample`. Container Compose,
+migrations, updates, cleanup metadata, and smoke tests must read only the
+deployment file. Environment variables must be validated before startup.
+Cloud operators prepare that file with `bash prepare-env.sh`; `bash setup.sh`
+only checks and consumes it. Setup must never create deployment configuration
+or offer to copy values or credentials from development `.env`.
+
+All application-owned environment variables use the `CXAPP_*` prefix. The
+retired prefix has no runtime alias: root and deployment environment files must
+be migrated together before startup. Public branding values such as the
+CODEXSUN display name and `app.codexsun.com` remain values, not configuration
+names or internal namespaces.
+
+Platform runtime configuration keeps only the API port, Web port, and canonical
+Web origin as developer inputs. Platform derives loopback bind addresses for
+development/test, all-interface bind addresses for staging/production, the
+server-to-server API URL from the API port, and local host/CORS aliases from
+the canonical Web origin. Product packages consume those derived Platform
+runtime contracts instead of defining duplicate host or URL variables.

@@ -1,0 +1,14 @@
+import { loadEnv } from "@cxapp/framework/env";
+import { z } from "zod";
+
+const envSchema = z.object({
+  DB_HOST: z.string().min(1),
+  DB_MASTER_NAME: z.string().min(1, "DB_MASTER_NAME is required"),
+  DB_PASSWORD: z.string().min(1),
+  DB_PORT: z.coerce.number().int().positive(),
+  DB_USER: z.string().min(1, "DB_USER is required"),
+  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+  NODE_ENV: z.enum(["development", "test", "staging", "production"])
+});
+
+export const env = loadEnv(envSchema);
