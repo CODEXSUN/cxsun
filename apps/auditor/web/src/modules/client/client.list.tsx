@@ -8,17 +8,19 @@ export function AuditorClientList({
   records,
   loading,
   onEdit,
+  onView,
   startNumber
 }: {
   records: AuditorClientRecord[];
   loading: boolean;
   onEdit: (record: AuditorClientRecord) => void;
+  onView: (record: AuditorClientRecord) => void;
   startNumber: number;
 }) {
   const columns: ColumnDef<AuditorClientRecord>[] = [
     {
       id: "serial",
-      header: "S. No.",
+      header: "#",
       enableSorting: false,
       size: 64,
       cell: ({ row, table }) =>
@@ -28,13 +30,26 @@ export function AuditorClientList({
       accessorKey: "name",
       header: "Client",
       cell: ({ row }) => (
-        <button
-          className="font-medium text-foreground hover:underline"
-          type="button"
-          onClick={() => onEdit(row.original)}
+        <a
+          className="cursor-pointer font-medium text-foreground hover:underline"
+          href={`/app/auditor/clients?record=${row.original.id}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            if (
+              event.button !== 0 ||
+              event.metaKey ||
+              event.ctrlKey ||
+              event.shiftKey ||
+              event.altKey
+            ) {
+              return;
+            }
+            event.preventDefault();
+            onView(row.original);
+          }}
         >
           {row.original.name}
-        </button>
+        </a>
       )
     },
     {
@@ -62,14 +77,20 @@ export function AuditorClientList({
     },
     {
       id: "actions",
-      header: "Actions",
+      header: () => <div className="text-center">Actions</div>,
       enableSorting: false,
+      size: 96,
       cell: ({ row }) => (
         <div
+          className="flex w-full justify-center"
           onClick={(event) => event.stopPropagation()}
           onKeyDown={(event) => event.stopPropagation()}
         >
-          <WorkspaceRowActions title={row.original.name} onEdit={() => onEdit(row.original)} />
+          <WorkspaceRowActions
+            title={row.original.name}
+            onView={() => onView(row.original)}
+            onEdit={() => onEdit(row.original)}
+          />
         </div>
       )
     }
@@ -81,7 +102,7 @@ export function AuditorClientList({
       emptyState="No clients found."
       isLoading={loading}
       minWidth="1100px"
-      stickyRightColumnId="actions"
+      onRowClick={onView}
     />
   );
 }

@@ -1,75 +1,27 @@
 import { useState } from "react";
-import { BlocksIcon, BookOpenIcon, LayoutTemplateIcon, PanelsTopLeftIcon } from "lucide-react";
+import { BookOpenIcon, PanelsTopLeftIcon } from "lucide-react";
 import { Button } from "@cxsun/ui/components/button";
-import {
-  AppLayout,
-  SideMenu,
-  StatusBar,
-  TopMenu,
-  WorkspaceCanvas,
-  type MainLayoutNavigationSection
-} from "@cxsun/ui/layouts/main-layouts";
-import { galleryApps, galleryUser } from "./main-layout-fixtures";
-
-const navigation: MainLayoutNavigationSection[] = [
-  {
-    label: "Layouts",
-    icon: LayoutTemplateIcon,
-    items: [
-      { label: "Main Layout", icon: PanelsTopLeftIcon },
-      { label: "Documentation Workspace", icon: BookOpenIcon }
-    ]
-  },
-  {
-    label: "Blocks",
-    icon: BlocksIcon,
-    items: [{ label: "Workspace Status" }, { label: "App Header" }]
-  }
-];
+import { AppHeader, StatusBar, TopMenu } from "@cxsun/ui/layouts/main-layouts";
+import { galleryApps, galleryNotifications, galleryUser } from "./main-layout-fixtures";
+import { galleryPageUrl } from "./gallery-routes";
 
 export function AppLayoutPreview() {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState("Overview");
-  const [action, setAction] = useState("Ready");
-
   return (
-    <AppLayout className="h-[min(60vh,30rem)] min-h-72">
-      <TopMenu
-        appItems={galleryApps}
-        applicationName="UI"
-        notificationCount={2}
-        onCloseSearch={() => {
-          setSearchOpen(false);
-          setSearch("");
-        }}
-        onOpenSearch={() => setSearchOpen(true)}
-        onLogout={() => setAction("Sign out preview")}
-        onProfile={() => setAction("Profile preview")}
-        onSearchChange={setSearch}
-        onToggleSidebar={() => setSidebarOpen((open) => !open)}
-        search={search}
-        searchOpen={searchOpen}
-        searchPlaceholder="Search navigation"
-        user={galleryUser}
-      />
-      <div className="flex min-h-0 flex-1">
-        {sidebarOpen ? (
-          <SideMenu
-            navigation={navigation}
-            onSelect={setSelected}
-            search={search}
-            selected={selected}
-            workspaceTitle="Overview"
-          />
-        ) : null}
-        <WorkspaceCanvas>
-          <div className="p-6 text-sm text-muted-foreground">{selected} workspace canvas</div>
-        </WorkspaceCanvas>
-      </div>
-      <StatusBar status={action} workspace={selected} />
-    </AppLayout>
+    <iframe
+      className="h-[min(65vh,36rem)] min-h-96 w-full"
+      src={galleryPageUrl("app-layout", "main-layout")}
+      title="App Layout live preview"
+    />
+  );
+}
+
+export function AppHeaderPreview() {
+  return (
+    <AppHeader
+      breadcrumbs={[{ label: "Main Layout" }]}
+      homeHref={galleryPageUrl("main-layouts")}
+      name="UIUX"
+    />
   );
 }
 
@@ -78,6 +30,7 @@ export function TopMenuPreview() {
   const [search, setSearch] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [action, setAction] = useState("");
+  const [notifications, setNotifications] = useState(galleryNotifications);
 
   function closeSearch() {
     setSearchOpen(false);
@@ -87,16 +40,38 @@ export function TopMenuPreview() {
   return (
     <div className="min-h-56">
       <TopMenu
-        appItems={galleryApps}
+        appItems={galleryApps.map((item) => ({ ...item, url: galleryPageUrl("main-layouts") }))}
         applicationName="UI"
-        notificationCount={2}
+        notifications={notifications}
         onCloseSearch={closeSearch}
         onOpenSearch={() => setSearchOpen(true)}
         onLogout={() => setAction("Sign out preview")}
+        onNotificationDismiss={(id) =>
+          setNotifications((current) => current.filter((entry) => entry.id !== id))
+        }
         onProfile={() => setAction("Profile preview")}
         onSearchChange={setSearch}
         onToggleSidebar={() => setSidebarOpen((open) => !open)}
         search={search}
+        searchItems={[
+          {
+            label: "Go to Main Layout",
+            description: "Open the layout preview",
+            icon: PanelsTopLeftIcon,
+            onSelect: () => setAction("Main Layout selected")
+          },
+          {
+            label: "Go to Documentation Workspace",
+            description: "Open a workspace",
+            icon: BookOpenIcon,
+            onSelect: () => setAction("Documentation Workspace selected")
+          },
+          {
+            label: "Toggle sidebar",
+            description: "Show or hide navigation",
+            onSelect: () => setSidebarOpen((open) => !open)
+          }
+        ]}
         searchOpen={searchOpen}
         searchPlaceholder="Search navigation"
         user={galleryUser}
@@ -105,35 +80,6 @@ export function TopMenuPreview() {
         Navigation: {sidebarOpen ? "open" : "closed"}
         {search ? ` · Search: ${search}` : null}
         {action ? ` · ${action}` : null}
-      </div>
-    </div>
-  );
-}
-
-export function SideMenuPreview() {
-  const [selected, setSelected] = useState("Overview");
-  const [search, setSearch] = useState("");
-
-  return (
-    <div className="flex h-[min(60vh,30rem)] min-h-72">
-      <SideMenu
-        navigation={navigation}
-        onSelect={setSelected}
-        search={search}
-        selected={selected}
-        workspaceTitle="Overview"
-      />
-      <div className="min-w-0 flex-1 p-5">
-        <label className="grid max-w-72 gap-2 text-sm">
-          <span>Filter navigation</span>
-          <input
-            className="h-9 rounded-md border bg-background px-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search items"
-            value={search}
-          />
-        </label>
-        <p className="mt-5 text-sm text-muted-foreground">Selected: {selected}</p>
       </div>
     </div>
   );

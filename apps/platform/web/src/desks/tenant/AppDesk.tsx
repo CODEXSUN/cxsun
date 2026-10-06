@@ -98,6 +98,15 @@ const CrmOverviewWorkspace = lazyWorkspace(() =>
 const EnquiryWorkspace = lazyWorkspace(() =>
   import("@cxsun/crm-web/modules/enquiry").then((module) => module.EnquiryWorkspace)
 );
+const ListInWorkspace = lazyWorkspace(() =>
+  import("@cxsun/crm-web/modules/list-in").then((module) => module.ListInWorkspace)
+);
+const StatusWorkspace = lazyWorkspace(() =>
+  import("@cxsun/crm-web/modules/status").then((module) => module.StatusWorkspace)
+);
+const PriorityWorkspace = lazyWorkspace(() =>
+  import("@cxsun/crm-web/modules/priority").then((module) => module.PriorityWorkspace)
+);
 
 const billingWorkspacePreloaders = [
   loadBillingDashboardModule,
@@ -385,6 +394,9 @@ type AppPage =
   | "crm.overview"
   | "crm.enquiries"
   | "crm.contacts"
+  | "crm.list-in"
+  | "crm.status"
+  | "crm.priority"
   | "blog.overview"
   | "blog.articles"
   | "application.overview"
@@ -513,7 +525,7 @@ export function AppDesk() {
     queryKey: ["billing", "settings", companyContextId],
     staleTime: 5 * 60 * 1_000
   });
-  const appSafePage = page.startsWith("devkit")
+  const appSafePage = page.startsWith("devkit") || page.startsWith("project-manager")
     ? pageForApp(landingApp)
     : page.startsWith("crm") && !switchableApps.includes("crm")
       ? pageForApp(landingApp)
@@ -809,7 +821,10 @@ export function AppDesk() {
             ) : null}
             {safePage === "auditor.overview" ? <AuditorOverviewWorkspace /> : null}
             {safePage === "auditor.clients" ? (
-              <AuditorClientWorkspace gateway={auditorClientGateway} />
+              <AuditorClientWorkspace
+                gateway={auditorClientGateway}
+                initialRecordId={recordIdFromUrl()}
+              />
             ) : null}
             {safePage === "crm.overview" ? (
               <CrmOverviewWorkspace
@@ -819,6 +834,9 @@ export function AppDesk() {
             ) : null}
             {safePage === "crm.contacts" ? <ContactWorkspace key={safePage} /> : null}
             {safePage === "crm.enquiries" ? <EnquiryWorkspace key={safePage} /> : null}
+            {safePage === "crm.list-in" ? <ListInWorkspace key={safePage} /> : null}
+            {safePage === "crm.status" ? <StatusWorkspace key={safePage} /> : null}
+            {safePage === "crm.priority" ? <PriorityWorkspace key={safePage} /> : null}
             {safePage === "application.overview" ? (
               <ApplicationOverview signedInUser={signedInUser} />
             ) : null}
@@ -982,6 +1000,9 @@ function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
     key === "crm.overview" ||
     key === "crm.enquiries" ||
     key === "crm.contacts" ||
+    key === "crm.list-in" ||
+    key === "crm.status" ||
+    key === "crm.priority" ||
     key === "blog.overview" ||
     key === "blog.articles" ||
     key === "application.overview" ||
@@ -1486,6 +1507,9 @@ function titleForPage(page: AppPage) {
     "crm.overview": "Overview",
     "crm.enquiries": "Enquiries",
     "crm.contacts": "Contacts",
+    "crm.list-in": "List In",
+    "crm.status": "Status",
+    "crm.priority": "Priority",
     "blog.overview": "Dashboard",
     "blog.articles": "Articles",
     "application.overview": "Overview",
@@ -1618,7 +1642,7 @@ function appFromPage(
     return enabledApps.includes("task-manager") ? "task-manager" : landingApp;
   if (page.startsWith("accounts"))
     return enabledApps.includes("accounts") ? "accounts" : landingApp;
-  if (page.startsWith("devkit")) return landingApp;
+  if (page.startsWith("devkit") || page.startsWith("project-manager")) return landingApp;
   if (page.startsWith("mail")) return enabledApps.includes("mail") ? "mail" : landingApp;
   return "application";
 }

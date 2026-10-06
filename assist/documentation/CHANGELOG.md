@@ -22,6 +22,26 @@ Records UI, API, service logic, tooling, packaging, and documentation changes.
 
 ## v-1.0.80
 
+### [v 1.0.80] 2026-10-06 11:52 pm - Project Manager, CRM, auditor, and UI updates
+
+#### Database Changes
+
+- Database update: Yes. Added Auditor client portal credentials and CRM enquiry comments, activity, jobs, estimates, and reference tables.
+- Added CRM enquiry backfills for existing descriptions, activity, and List In, Status, and Priority references.
+- Added Project Manager Ideas and activity tables for Super Admin idea tracking.
+- Transferred Platform Registry table ownership from DevKit to Project Manager without copying records. Existing database upgrade and rollback must be verified before deployment.
+
+#### App Codebase Changes
+
+- Replaced the DevKit host with the Super Admin Project Manager package and kept it out of tenant app navigation.
+- Added the Project Manager Ideas API and workspace with status, category, assignee, and archive actions.
+- Added CRM enquiry work, comments, reference workspaces, contact lookup, and HTML comment sanitization.
+- Added encrypted Auditor portal credentials with separate view, update, and reveal permissions and audit events.
+- Added tenant user role choices and role assignment when creating or editing a user.
+- Expanded shared UI layouts, interface topology controls, and the UIUX gallery.
+- Registered the CRM and Auditor API packages in production artifact resolution and extended migration checks to DevKit sources.
+- Passed workspace checks, production build, migration and deployment contracts, production API smoke, and focused credential and Project Manager tests.
+
 ### [v 1.0.80] 2026-10-06 6:21 pm - CXSUN identity migration and CRM contacts navigation
 
 #### Database Changes

@@ -1,0 +1,50 @@
+.cxsun-notification-ripple {
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--destructive);
+  border-radius: 9999px;
+  animation: cxsun-notification-ripple 2.6s ease-out infinite;
+}
+
+.cxsun-notification-ripple:nth-child(2) {
+  animation-delay: -1.3s;
+}
+
+.cxsun-notification-dot {
+  animation: cxsun-notification-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes cxsun-notification-ripple {
+  0% {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  12% {
+    opacity: 0.7;
+  }
+  75%,
+  100% {
+    opacity: 0;
+    transform: scale(2.3);
+  }
+}
+
+@keyframes cxsun-notification-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.86);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cxsun-notification-ripple,
+  .cxsun-notification-dot {
+    animation: none;
+  }
+  .cxsun-notification-ripple {
+    opacity: 0;
+  }
+}

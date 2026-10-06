@@ -11,6 +11,7 @@ export const appRegistrySchema = z.object({
     "billing",
     "accounts",
     "devkit",
+    "project-manager",
     "mail",
     "platform-task-manager",
     "blog",

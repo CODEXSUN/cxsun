@@ -23,16 +23,16 @@ export function TenantAppConnections({
   const client = useQueryClient();
   const appsQuery = usePlatformAppsQuery();
   const [enabledKeys, setEnabledKeys] = useState(() =>
-    tenant.enabledModuleKeys.filter((key) => key !== "devkit")
+    tenant.enabledModuleKeys.filter((key) => key !== "devkit" && key !== "project-manager")
   );
   const [landingApp, setLandingApp] = useState<Tenant["defaultLandingApp"]>(
     tenant.defaultLandingApp
   );
-  const apps = (appsQuery.data ?? []).filter((app) => app.appId !== "devkit");
+  const apps = (appsQuery.data ?? []).filter((app) => app.appId !== "devkit" && app.appId !== "project-manager");
 
   useEffect(() => {
-    setEnabledKeys(tenant.enabledModuleKeys.filter((key) => key !== "devkit"));
-    setLandingApp(tenant.defaultLandingApp === "devkit" ? "application" : tenant.defaultLandingApp);
+    setEnabledKeys(tenant.enabledModuleKeys.filter((key) => key !== "devkit" && key !== "project-manager"));
+    setLandingApp(["devkit", "project-manager"].includes(tenant.defaultLandingApp) ? "application" : tenant.defaultLandingApp);
   }, [tenant]);
 
   const enabledApps = useMemo(

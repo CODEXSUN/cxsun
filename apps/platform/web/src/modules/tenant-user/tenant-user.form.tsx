@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Save } from "lucide-react";
 import { Input } from "@cxsun/ui/components/input";
+import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import { WorkspaceSwitchCard } from "@cxsun/ui/workspace/status";
 import {
   WorkspaceFormBanner,
@@ -10,9 +11,15 @@ import {
   WorkspaceUpsertDialog
 } from "@cxsun/ui/workspace/upsert";
 import { tenantUserSchema } from "./tenant-user.schema";
-import type { TenantUser, TenantUserSavePayload } from "./tenant-user.types";
+import type { TenantUser, TenantUserRoleOption, TenantUserSavePayload } from "./tenant-user.types";
 
-const emptyUser: TenantUserSavePayload = { email: "", name: "", password: "", status: "active" };
+const emptyUser: TenantUserSavePayload = {
+  email: "",
+  name: "",
+  password: "",
+  roleId: 0,
+  status: "active"
+};
 
 export function TenantUserForm({
   contextLabel,
@@ -21,7 +28,9 @@ export function TenantUserForm({
   onCancel,
   onSubmit,
   open,
-  record
+  record,
+  roleOptions,
+  roleOptionsLoading
 }: {
   contextLabel?: string;
   error?: string;
@@ -30,9 +39,12 @@ export function TenantUserForm({
   onSubmit: (value: TenantUserSavePayload) => void;
   open: boolean;
   record: TenantUser | null;
+  roleOptions: TenantUserRoleOption[];
+  roleOptionsLoading: boolean;
 }) {
   return (
     <WorkspaceUpsertDialog
+      className="sm:max-w-xl"
       description={
         contextLabel
           ? `Manage this account in ${contextLabel}.`
@@ -47,13 +59,21 @@ export function TenantUserForm({
         {...(error ? { error } : {})}
         initialValue={
           record
-            ? { email: record.email, name: record.name, password: "", status: record.status }
+            ? {
+                email: record.email,
+                name: record.name,
+                password: "",
+                roleId: record.roles[0]?.id ?? 0,
+                status: record.status
+              }
             : emptyUser
         }
         loading={loading}
         onCancel={onCancel}
         onSubmit={onSubmit}
         record={record}
+        roleOptions={roleOptions}
+        roleOptionsLoading={roleOptionsLoading}
       />
     </WorkspaceUpsertDialog>
   );
@@ -65,7 +85,9 @@ function TenantUserFormBody({
   loading,
   onCancel,
   onSubmit,
-  record
+  record,
+  roleOptions,
+  roleOptionsLoading
 }: {
   error?: string;
   initialValue: TenantUserSavePayload;
@@ -73,6 +95,8 @@ function TenantUserFormBody({
   onCancel: () => void;
   onSubmit: (value: TenantUserSavePayload) => void;
   record: TenantUser | null;
+  roleOptions: TenantUserRoleOption[];
+  roleOptionsLoading: boolean;
 }) {
   const [value, setValue] = useState(initialValue);
   const [validationError, setValidationError] = useState("");
@@ -162,6 +186,31 @@ function TenantUserFormBody({
           />
           {fieldErrors.password ? (
             <p className="text-xs text-destructive">{fieldErrors.password}</p>
+          ) : null}
+        </WorkspaceFormField>
+        <WorkspaceFormField label="Role" required>
+          <WorkspaceLookup
+            allowTextValue={false}
+            invalid={Boolean(fieldErrors.roleId)}
+            loading={roleOptionsLoading}
+            options={roleOptions
+              .filter((role) => role.status === "active" || role.id === value.roleId)
+              .map((role) => ({
+                description: role.key,
+                label: role.label,
+                value: String(role.id)
+              }))}
+            placeholder="Select a role"
+            required
+            showAllOptionsOnFocus
+            value={value.roleId ? String(value.roleId) : ""}
+            onValueChange={(roleId) => {
+              setValue((current) => ({ ...current, roleId: Number(roleId) || 0 }));
+              setFieldErrors((current) => withoutFieldError(current, "roleId"));
+            }}
+          />
+          {fieldErrors.roleId ? (
+            <p className="text-xs text-destructive">{fieldErrors.roleId}</p>
           ) : null}
         </WorkspaceFormField>
         <WorkspaceSwitchCard

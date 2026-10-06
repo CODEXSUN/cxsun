@@ -20,7 +20,7 @@ import type { OrchestratedAppId } from "../../modules/app-orchestration";
 import { logout } from "../../shared/api/platform-api";
 import { AuthGate } from "../../shared/auth/AuthGate";
 import { requiredClientEnv } from "../../shared/env/client-env";
-import { DevkitWorkspaceHost } from "@cxsun/devkit-web";
+import { ProjectManagerWorkspaceHost } from "@cxsun/project-manager-web";
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
   return lazy(async () => ({ default: await loader() }));
@@ -91,7 +91,8 @@ type SaPage =
   | "overview"
   | "app-operations"
   | "task-manager"
-  | "devkit-registry"
+  | "project-manager-registry"
+  | "project-manager-ideas"
   | "tenants"
   | "domains"
   | "plans"
@@ -153,14 +154,19 @@ export function SaDesk() {
       onSelect: () => selectPage("task-manager")
     },
     {
-      title: "DevKit",
+      title: "Project Manager",
       icon: FolderKanbanIcon,
-      isActive: page.startsWith("devkit-"),
+      isActive: page.startsWith("project-manager-"),
       items: [
         {
+          title: "Ideas",
+          isActive: page === "project-manager-ideas",
+          onSelect: () => selectPage("project-manager-ideas")
+        },
+        {
           title: "Platform Registry",
-          isActive: page === "devkit-registry",
-          onSelect: () => selectPage("devkit-registry")
+          isActive: page === "project-manager-registry",
+          onSelect: () => selectPage("project-manager-registry")
         }
       ]
     },
@@ -318,8 +324,8 @@ export function SaDesk() {
               />
             ) : null}
             {page === "task-manager" ? <TaskManagerWorkspace /> : null}
-            {page.startsWith("devkit-") ? (
-              <DevkitWorkspaceHost workspaceId={page.slice("devkit-".length)} />
+            {page.startsWith("project-manager-") ? (
+              <ProjectManagerWorkspaceHost workspaceId={page.slice("project-manager-".length)} />
             ) : null}
             {page === "tenants" ? <TenantList onBack={() => selectPage("overview")} /> : null}
             {page === "domains" ? <TenantDomainList /> : null}
@@ -349,7 +355,8 @@ function pageFromUrl(): SaPage {
   const page = window.location.pathname.split("/")[2];
   return page === "app-operations" ||
     page === "task-manager" ||
-    page === "devkit-registry" ||
+    page === "project-manager-registry" ||
+    page === "project-manager-ideas" ||
     page === "tenants" ||
     page === "domains" ||
     page === "plans" ||

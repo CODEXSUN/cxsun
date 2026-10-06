@@ -1,32 +1,69 @@
-import type { EnquiryLookup, EnquiryRecord, EnquirySavePayload } from "./enquiry.types";
-
-type Envelope<T> = { data: T; success: true } | { error: { message: string }; success: false };
-const baseUrl = (window as Window & { __CXSUN_RUNTIME_CONFIG__?: Record<string, string> })
-  .__CXSUN_RUNTIME_CONFIG__?.VITE_PLATFORM_API_URL;
-if (!baseUrl) throw new Error("Missing VITE_PLATFORM_API_URL for CRM.");
-
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const database = sessionStorage.getItem("cxsun_tenant_db_name");
-  const tenantId = sessionStorage.getItem("cxsun_tenant_id");
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...(database ? { "x-tenant-db": database } : {}),
-      ...(tenantId ? { "x-tenant-id": tenantId } : {}),
-      ...options.headers
-    }
-  });
-  const result = (await response.json()) as Envelope<T>;
-  if (!response.ok || !result.success) {
-    throw new Error(result.success ? "CRM request failed." : result.error.message);
-  }
-  return result.data;
-}
+import { crmRequest as request } from "../../crm-request";
+import type {
+  EnquiryActivity,
+  EnquiryComment,
+  EnquiryEstimate,
+  EnquiryEstimateSavePayload,
+  EnquiryJob,
+  EnquiryJobSavePayload,
+  EnquiryLookup,
+  EnquiryPropertyPatch,
+  EnquiryRecord,
+  EnquirySavePayload
+} from "./enquiry.types";
 
 export const listEnquiries = () => request<EnquiryRecord[]>("/crm/enquiries");
+export const getEnquiry = (id: number) => request<EnquiryRecord>(`/crm/enquiries/${id}`);
+export const listEnquiryComments = (id: number) =>
+  request<EnquiryComment[]>(`/crm/enquiries/${id}/comments`);
+export const createEnquiryComment = (
+  id: number,
+  body: string,
+  parentId: number | null,
+  bodyFormat: "plain" | "html" = "plain"
+) =>
+  request<EnquiryComment>(`/crm/enquiries/${id}/comments`, {
+    method: "POST",
+    body: JSON.stringify({ body, parentId, bodyFormat })
+  });
+export const updateEnquiryProperties = (id: number, patch: EnquiryPropertyPatch) =>
+  request<EnquiryRecord>(`/crm/enquiries/${id}/properties`, {
+    method: "PATCH",
+    body: JSON.stringify(patch)
+  });
+export const listEnquiryJobs = (id: number) => request<EnquiryJob[]>(`/crm/enquiries/${id}/jobs`);
+export const startEnquiryJob = (id: number) =>
+  request<EnquiryJob>(`/crm/enquiries/${id}/jobs/start`, { method: "POST" });
+export const stopEnquiryJob = (id: number, jobId: number) =>
+  request<EnquiryJob>(`/crm/enquiries/${id}/jobs/${jobId}/stop`, { method: "POST" });
+export const createEnquiryJob = (id: number, payload: EnquiryJobSavePayload) =>
+  request<EnquiryJob>(`/crm/enquiries/${id}/jobs`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+export const updateEnquiryJob = (id: number, jobId: number, payload: EnquiryJobSavePayload) =>
+  request<EnquiryJob>(`/crm/enquiries/${id}/jobs/${jobId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+export const listEnquiryEstimates = (id: number) =>
+  request<EnquiryEstimate[]>(`/crm/enquiries/${id}/estimates`);
+export const createEnquiryEstimate = (id: number, payload: EnquiryEstimateSavePayload) =>
+  request<EnquiryEstimate>(`/crm/enquiries/${id}/estimates`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+export const updateEnquiryEstimate = (
+  id: number,
+  estimateId: number,
+  payload: EnquiryEstimateSavePayload
+) =>
+  request<EnquiryEstimate>(`/crm/enquiries/${id}/estimates/${estimateId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+export const listEnquiryActivity = (id: number) =>
+  request<EnquiryActivity[]>(`/crm/enquiries/${id}/activity`);
 export const createEnquiry = (payload: EnquirySavePayload) =>
   request<EnquiryRecord>("/crm/enquiries", { method: "POST", body: JSON.stringify(payload) });
 export const updateEnquiry = (id: number, payload: EnquirySavePayload) =>

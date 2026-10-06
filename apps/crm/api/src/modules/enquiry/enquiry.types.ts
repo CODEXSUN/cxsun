@@ -1,7 +1,7 @@
 import type { ColumnType, Generated } from "kysely";
-
-export type EnquiryStatus = "new" | "contacted" | "qualified" | "unqualified";
-export type EnquiryPriority = "low" | "normal" | "high";
+import type { ListInDatabase } from "../list-in/index.js";
+import type { StatusDatabase } from "../status/index.js";
+import type { PriorityDatabase } from "../priority/index.js";
 
 export type EnquiryInput = {
   title: string;
@@ -12,9 +12,9 @@ export type EnquiryInput = {
   capturedPhone: string | null;
   source: string;
   sourceReference: string | null;
-  listIn: string | null;
-  status: EnquiryStatus;
-  priority: EnquiryPriority;
+  listInId: number | null;
+  statusId: number;
+  priorityId: number;
   assignedUserId: number | null;
   enquiredAt: string;
   dueDate: string | null;
@@ -26,6 +26,11 @@ export type EnquiryRecord = EnquiryInput & {
   enquiryNo: number;
   uuid: string;
   contactName: string | null;
+  listIn: string | null;
+  status: string;
+  statusName: string;
+  priority: string;
+  priorityName: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -43,9 +48,9 @@ export type EnquiryRow = {
   captured_phone: string | null;
   source: string;
   source_reference: string | null;
-  list_in: string | null;
-  status: EnquiryStatus;
-  priority: EnquiryPriority;
+  list_in_id: number | null;
+  status_id: number;
+  priority_id: number;
   assigned_user_id: number | null;
   enquired_at: string;
   due_date: string | null;
@@ -55,7 +60,123 @@ export type EnquiryRow = {
   updated_at: ColumnType<string, string | undefined, never>;
 };
 
-export type EnquiryDatabase = {
+export type EnquiryDatabase = ListInDatabase & StatusDatabase & PriorityDatabase & {
   crm_enquiries: EnquiryRow;
   crm_enquiry_number_sequence: { id: number; next_no: number };
+  crm_enquiry_comments: EnquiryCommentRow;
+  crm_enquiry_jobs: EnquiryJobRow;
+  crm_enquiry_estimates: EnquiryEstimateRow;
+  crm_enquiry_activity: EnquiryActivityRow;
+};
+
+export type EnquiryCommentRow = {
+  id: Generated<number>;
+  uuid: Generated<string>;
+  enquiry_id: number;
+  parent_id: number | null;
+  body: string;
+  body_format: Generated<"plain" | "html">;
+  status: "active";
+  created_by: string;
+  created_at: ColumnType<string, string | undefined, never>;
+  updated_at: ColumnType<string, string | undefined, never>;
+};
+
+export type EnquiryComment = {
+  id: number;
+  uuid: string;
+  enquiryId: number;
+  parentId: number | null;
+  body: string;
+  bodyFormat: "plain" | "html";
+  createdBy: string;
+  createdAt: string;
+};
+
+export type EnquiryJobStatus = "running" | "completed" | "cancelled";
+export type EnquiryJobInput = {
+  employeeUserId: number;
+  startAt: string;
+  stopAt: string | null;
+  ratePerHour: number;
+  status: EnquiryJobStatus;
+};
+export type EnquiryJobRow = {
+  id: Generated<number>;
+  uuid: Generated<string>;
+  enquiry_id: number;
+  employee_user_id: number | null;
+  employee: string;
+  start_at: string;
+  stop_at: string | null;
+  duration_seconds: number;
+  rate_per_hour: string;
+  total_cost: string;
+  status: EnquiryJobStatus;
+  created_by: string;
+  created_at: ColumnType<string, string | undefined, never>;
+  updated_at: ColumnType<string, string | undefined, never>;
+};
+export type EnquiryJob = Omit<EnquiryJobInput, "employeeUserId"> & {
+  id: number;
+  uuid: string;
+  enquiryId: number;
+  employeeUserId: number | null;
+  employee: string;
+  durationSeconds: number;
+  totalCost: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EnquiryEstimateInput = {
+  date: string;
+  itemName: string;
+  supplierContactId: number;
+  price: number;
+};
+export type EnquiryEstimateRow = {
+  id: Generated<number>;
+  uuid: Generated<string>;
+  enquiry_id: number;
+  estimate_date: string;
+  item_name: string;
+  supplier_contact_id: number;
+  supplier_name: string;
+  price: string;
+  status: "active";
+  created_by: string;
+  created_at: ColumnType<string, string | undefined, never>;
+  updated_at: ColumnType<string, string | undefined, never>;
+};
+export type EnquiryEstimate = EnquiryEstimateInput & {
+  id: number;
+  uuid: string;
+  enquiryId: number;
+  supplierName: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EnquiryActivityRow = {
+  id: Generated<number>;
+  uuid: Generated<string>;
+  enquiry_id: number;
+  action: string;
+  details: string;
+  status: "active";
+  created_by: string;
+  created_at: ColumnType<string, string | undefined, never>;
+  updated_at: ColumnType<string, string | undefined, never>;
+};
+export type EnquiryActivity = {
+  id: number;
+  uuid: string;
+  enquiryId: number;
+  action: string;
+  details: string;
+  createdBy: string;
+  createdAt: string;
 };

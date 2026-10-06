@@ -10,6 +10,7 @@
     "./styles.css": "./src/styles.css",
     "./components/*": "./src/components/*",
     "./design-system": "./src/design-system/index.ts",
+    "./features/interface-topology": "./src/features/interface-topology/index.ts",
     "./layouts/main-layouts": "./src/layouts/main-layouts/index.ts",
     "./layouts/*": "./src/layouts/*",
     "./blocks/*": "./src/blocks/*",

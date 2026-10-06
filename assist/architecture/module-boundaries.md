@@ -107,11 +107,11 @@ Each reduced Common module must own concrete migration SQL, repository queries, 
 
 ### Mandatory Boundary Audit For Every Application
 
-The same ownership discipline applies to Core, Platform, Billing, DevKit, and every future application. DevKit
-Platform Registry behavior belongs under `apps/devkit/api` and `apps/devkit/web`; Platform may compose only
-the public `@cxsun/devkit-api` and `@cxsun/devkit-web` contracts. DevKit request databases and actors must always
-come from the authenticated Platform host adapter, its API remains namespaced under `/devkit`, and its master and
-tenant tables retain the `devkit_` owner prefix plus the standard identity, status, and audit columns. Before an
+The same ownership discipline applies to Core, Platform, Billing, Project Manager, and every future application. Project Manager
+Platform Registry behavior belongs under `devkits/project-manager/api` and `devkits/project-manager/web`; Platform may compose only
+the public `@cxsun/project-manager-api` and `@cxsun/project-manager-web` contracts. Project Manager request databases and actors must always
+come from the authenticated Platform host adapter, its API remains namespaced under `/project-manager`, and its master and
+tenant tables use the `project_manager_` owner prefix plus the standard identity, status, and audit columns. Before an
 application change is finalized, audit its complete backend and frontend module tree for wrapper/alias roles,
 inherited or metadata-driven generic CRUD, private cross-module imports, centralized business implementations,
 stale exports and proxies, misplaced files, and business behavior stored in app-level shared folders. Composition
@@ -325,8 +325,8 @@ Do not put unstable business rules in the shared kernel.
 | `apps/billing/web`     | Billing frontend modules          | Billing entry workspaces, billing settings, billing forms, and billing reports                                                                             |
 | `apps/mail/api`        | Mail backend module               | Tenant mail settings, encrypted credentials, messages, attachments, delivery/sync events, SMTP/IMAP workers, and queue contracts                           |
 | `apps/mail/web`        | Mail frontend module              | Mailboxes, rich compose, provider settings, message reader, and public Billing document-mail integration                                                   |
-| `apps/devkit/api`      | DevKit backend module             | Master/tenant Platform Registry hierarchy, JSON registry seed, and registry audit activity                                                                 |
-| `apps/devkit/web`      | DevKit frontend module            | Super Admin and tenant Platform Registry workspace composed through the public DevKit web bundle                                                           |
+| `devkits/project-manager/api` | Project Manager backend module | Master/tenant Platform Registry hierarchy, JSON registry seed, and registry audit activity |
+| `devkits/project-manager/web` | Project Manager frontend module | Super Admin Platform Registry workspace composed through the public Project Manager web bundle |
 | `apps/platform/api`    | API gateway + platform routes     | Route registration, guard functions (session, tenant, feature, permission), migration runner, DB bootstrap                                                 |
 | `apps/platform/web`    | Platform shell and React composer | Login, SA desk, Admin desk, Tenant desk shell, design system pages, route/menu composition, API client integration                                         |
 

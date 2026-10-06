@@ -13,7 +13,7 @@
     "@cxsun/billing-web": "^1.0.80",
     "@cxsun/core-web": "^1.0.80",
     "@cxsun/crm-web": "^1.0.80",
-    "@cxsun/devkit-web": "^1.0.80",
+    "@cxsun/project-manager-web": "^1.0.80",
     "@cxsun/uiux": "^1.0.80",
     "@cxsun/mail-web": "^1.0.80",
     "@cxsun/auditor-web": "^1.0.80",

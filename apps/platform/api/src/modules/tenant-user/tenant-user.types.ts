@@ -7,6 +7,7 @@ export type TenantUser = {
   id: number;
   isProtected: boolean;
   name: string;
+  roles: { id: number; label: string }[];
   status: TenantUserStatus;
   uuid: string;
 };
@@ -14,6 +15,7 @@ export type TenantUserSavePayload = {
   email: string;
   name: string;
   password?: string | undefined;
+  roleId?: number | undefined;
   status: TenantUserStatus;
 };
 export type TenantUserListFilters = { search?: string };

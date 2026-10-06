@@ -1,4 +1,6 @@
 import { sql, type Kysely } from "kysely";
+import { randomBytes } from "node:crypto";
+import { AppError } from "@cxsun/framework/errors";
 import type { TenantDatabase } from "../../database/schema.js";
 import type {
   TenantUserRole,
@@ -70,6 +72,72 @@ export class TenantUserRoleRepository {
     await sql`DELETE FROM app_user_roles WHERE id=${id}`.execute(this.database);
     return r;
   }
+}
+export async function selectUserRole(
+  database: Kysely<TenantDatabase>,
+  userId: number,
+  roleId: number
+) {
+  const role = await database
+    .selectFrom("app_roles")
+    .select("id")
+    .where("id", "=", roleId)
+    .where("status", "=", "active")
+    .executeTakeFirst();
+  if (!role) throw AppError.validation("Select an active role.");
+
+  const assignments = await database
+    .selectFrom("app_user_roles")
+    .select(["id", "role_id", "status", "is_protected"])
+    .where("user_id", "=", userId)
+    .orderBy("updated_at", "desc")
+    .orderBy("id", "desc")
+    .execute();
+  const current = assignments.find((assignment) => assignment.status === "active");
+  const selected = assignments.find((assignment) => Number(assignment.role_id) === roleId);
+  if (selected?.status === "active") {
+    await database
+      .updateTable("app_user_roles")
+      .set({ updated_at: new Date() })
+      .where("id", "=", selected.id)
+      .execute();
+    return false;
+  }
+  if (current?.is_protected) {
+    throw AppError.forbidden("Protected user-role assignments cannot be changed.");
+  }
+  if (selected) {
+    if (current) {
+      await database
+        .updateTable("app_user_roles")
+        .set({ status: "inactive", updated_at: new Date() })
+        .where("id", "=", current.id)
+        .execute();
+    }
+    await database
+      .updateTable("app_user_roles")
+      .set({ status: "active", updated_at: new Date() })
+      .where("id", "=", selected.id)
+      .execute();
+  } else if (current) {
+    await database
+      .updateTable("app_user_roles")
+      .set({ role_id: roleId, updated_at: new Date() })
+      .where("id", "=", current.id)
+      .execute();
+  } else {
+    await database
+      .insertInto("app_user_roles")
+      .values({
+        uuid: randomBytes(4).toString("hex"),
+        user_id: userId,
+        role_id: roleId,
+        status: "active",
+        is_protected: false
+      })
+      .execute();
+  }
+  return true;
 }
 function map(r: Row): TenantUserRole {
   return {

@@ -1,6 +1,6 @@
 # CODEXSUN Project Inventory
 
-> Database boundary update: the Platform master database contains unprefixed global Platform/Super Admin tables. Tenant Platform runtime tables use `app_`; composed apps keep their owner prefixes. Every database records migrations in `migration_schema`. Platform Task Manager stores todos and lookups in the Platform master or enabled tenant database. DevKit Platform Registry data and its audit activity are database-backed in both master and enabled tenant databases.
+> Database boundary update: the Platform master database contains unprefixed global Platform/Super Admin tables. Tenant Platform runtime tables use `app_`; composed apps keep their owner prefixes. Every database records migrations in `migration_schema`. Platform Task Manager stores todos and lookups in the Platform master or enabled tenant database. Project Manager owns Platform Registry data and audit activity under the `project_manager_` table prefix.
 
 ## Purpose
 
@@ -38,9 +38,12 @@ apps/
   mail/
     api/
     web/
-  devkit/
+
+devkits/
+  project-manager/
     api/
     web/
+  uiux/
 
 packages/
   framework/
@@ -64,7 +67,7 @@ assist/
   product/
 ```
 
-The root package uses npm workspaces with `apps/*/*`, `devkits/*`, `packages/*`, and `tools/*`.
+The root package uses npm workspaces with `apps/*/*`, `devkits/*`, `devkits/*/*`, `packages/*`, and `tools/*`.
 
 ## Runtime Application And Composed Packages
 
@@ -99,25 +102,25 @@ Current Platform Web modules:
 - `devkits/uiux`: standalone Vite gallery and Super Admin desk contribution for shared UI foundations, layouts,
   workspace blocks, and components. It imports public `@cxsun/ui` contracts and owns no application data.
 
-### DevKit
+### Project Manager
 
-DevKit owns the Platform Registry application and is composed by Platform through its public API and web contracts.
+Project Manager owns the Platform Registry application and is composed by Platform through its public API and web contracts.
 
-- `apps/devkit/api`: the request-scoped Platform Registry Fastify module, registry migration, JSON registry seed,
+- `devkits/project-manager/api`: the request-scoped Platform Registry Fastify module, registry migration, JSON registry seed,
   and registry audit activity.
-- `apps/devkit/web`: the Platform Registry workspace bundle used by the Super Admin desk and enabled tenant desks.
-- DevKit migrations and seeds run against the Platform master database for Super Admin and against each enabled
-  tenant database for tenant users. Tables use the `devkit_` owner prefix and migration state uses
-  `migration_schema`.
-- Platform supplies the authenticated request database and actor. DevKit does not resolve tenant identity from
+- `devkits/project-manager/web`: the Platform Registry workspace bundle used by the Super Admin desk.
+- The migration preserves applied DevKit checksums, then renames existing registry tables in place to the
+  `project_manager_` prefix in master and tenant databases. Migration state remains in `migration_schema`.
+- Platform supplies the authenticated request database and actor. Project Manager does not resolve tenant identity from
   browser input and uses the existing HttpOnly CXSUN session cookie.
 
 ### Auditor
 
-- `apps/auditor/api` owns the client directory module, migration, permission seed, and `/auditor/clients` routes. The Platform API composes it using the existing desk user session.
-- `apps/auditor/web` owns the client list and create/edit form. The Auditor desk mounts it through an injected API gateway and shows Clients in its side menu.
+- `apps/auditor/api` owns the client directory, portal credential migration, permission seed, and `/auditor/clients` routes. The Platform API composes it using the existing desk user session.
+- `apps/auditor/web` owns the client list, create/edit form, linkable detail page, and four portal credential rows. The Auditor desk mounts it through an injected API gateway and shows Clients in its side menu.
 - Client records contain a client name, optional company name, owner name, mobile, email, GSTIN, and status. They are not Platform tenants or portal users.
 - Auditor clients use the dedicated `auditor_clients` table when Auditor is enabled. They are distinct from Platform tenants and do not have their own login accounts.
+- `auditor_client_credentials` stores one encrypted password and username or email per client and portal: GSTIN, E-Way Bill, E-Invoice, and Accounts. Passwords are fetched only through a separate permission-checked, uncached reveal endpoint for copying. The encryption key derives from the Platform `JWT_SECRET`, which must be retained to read existing credentials.
 
 ### Core
 

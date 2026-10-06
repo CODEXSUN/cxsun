@@ -71,6 +71,7 @@ export type PlatformAppsTable = {
     | "billing"
     | "accounts"
     | "devkit"
+    | "project-manager"
     | "mail"
     | "platform-task-manager"
     | "blog"

@@ -160,7 +160,7 @@ export class TenantRepository {
       )
     )
       .filter((key) => key === "platform.application" || !manuallyDisabledKeys.includes(key))
-      .filter((key) => key !== "devkit")
+      .filter((key) => key !== "devkit" && key !== "project-manager")
       .sort();
     const payloadSettings = {
       ...tenant.payloadSettings,

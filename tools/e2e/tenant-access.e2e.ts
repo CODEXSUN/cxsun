@@ -199,6 +199,12 @@ async function exerciseTenant(tenant: TenantRow) {
     label: `E2E Role ${run}`,
     status: "active"
   });
+  const replacementRole = await create(tenant, "roles", {
+    description: `Replacement E2E role ${run}`,
+    key: `e2e-replacement-${run}`,
+    label: `Replacement E2E Role ${run}`,
+    status: "active"
+  });
   const permission = await create(tenant, "permissions", {
     description: `E2E permission ${run}`,
     key: `e2e.${run}.read`,
@@ -209,13 +215,28 @@ async function exerciseTenant(tenant: TenantRow) {
     email: `e2e-${run}@${tenant.tenant_code.toLowerCase()}.test`,
     name: `E2E User ${run}`,
     password: "CXSUN-E2E-123!",
+    roleId: role.id,
     status: "active"
   });
-  const userRole = await create(tenant, "user-roles", {
-    roleId: role.id,
-    status: "active",
-    userId: user.id
+  assert.deepEqual(user.roles, [{ id: role.id, label: role.label }]);
+  const roleOptions = await request(tenant, "GET", "/tenant/access/users/role-options");
+  assert.equal(roleOptions.statusCode, 200);
+  assert.ok((roleOptions.data as RecordValue[]).some((option) => option.id === role.id));
+  const updatedUser = await request(tenant, "PUT", `/tenant/access/users/${user.id}`, {
+    email: user.email,
+    name: user.name,
+    roleId: replacementRole.id,
+    status: "active"
   });
+  assert.equal(updatedUser.statusCode, 200, "Changing a user's role in upsert failed.");
+  assert.deepEqual((updatedUser.data as RecordValue).roles, [
+    { id: replacementRole.id, label: replacementRole.label }
+  ]);
+  const userRoles = await request(tenant, "GET", "/tenant/access/user-roles");
+  const userRole = (userRoles.data as RecordValue[]).find(
+    (assignment) => assignment.userId === user.id && assignment.roleId === replacementRole.id
+  );
+  assert.ok(userRole, "The edited role assignment was not persisted.");
   const rolePermission = await create(tenant, "role-permissions", {
     permissionId: permission.id,
     roleId: role.id,
@@ -225,6 +246,7 @@ async function exerciseTenant(tenant: TenantRow) {
   for (const [resource, record] of [
     ["users", user],
     ["roles", role],
+    ["roles", replacementRole],
     ["permissions", permission],
     ["user-roles", userRole],
     ["role-permissions", rolePermission]
@@ -244,6 +266,7 @@ async function exerciseTenant(tenant: TenantRow) {
     ["user-roles", userRole],
     ["permissions", permission],
     ["roles", role],
+    ["roles", replacementRole],
     ["users", user]
   ] as const) {
     const removed = await request(
@@ -253,7 +276,7 @@ async function exerciseTenant(tenant: TenantRow) {
     );
     assert.equal(removed.statusCode, 200, `${resource} force delete failed.`);
   }
-  return { records: 5, tenant: tenant.tenant_code };
+  return { records: 6, tenant: tenant.tenant_code };
 }
 
 async function create(tenant: TenantRow, resource: string, payload: unknown) {

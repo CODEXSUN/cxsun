@@ -17,3 +17,17 @@ export type AuditorClientRecord = AuditorClientSavePayload & {
   createdAt: string;
   updatedAt: string;
 };
+
+export type AuditorCredentialPortal = "gstin" | "eway" | "einvoice" | "accounts";
+
+export type AuditorClientCredential = {
+  portal: AuditorCredentialPortal;
+  username: string | null;
+  hasPassword: boolean;
+  updatedAt: string | null;
+};
+
+export type AuditorCredentialSavePayload = {
+  username: string;
+  password?: string | undefined;
+};

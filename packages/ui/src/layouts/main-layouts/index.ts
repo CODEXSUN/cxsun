@@ -1,12 +1,17 @@
 export { AppLayout } from "./app-layout";
 export type { AppLayoutProps } from "./app-layout";
+export { AppHeader } from "./app-header";
+export type { AppHeaderBreadcrumb, AppHeaderProps } from "./app-header";
 export { MainLayout } from "./main-layout";
 export type { MainLayoutProps } from "./main-layout";
+export { mainLayoutTechnicalNames } from "./main-layout-identifiers";
 export { SideMenu } from "./side-menu";
 export type { SideMenuProps } from "./side-menu";
 export { StatusBar } from "./status-bar";
 export { TopMenu } from "./top-menu";
 export type { TopMenuProps } from "./top-menu";
+export type { TopMenuNotification } from "./top-menu-notifications";
+export type { TopMenuSearchItem } from "./top-menu-search";
 export type { TopMenuAppItem, TopMenuUser } from "./top-menu-types";
 export type { MainLayoutNavigationItem, MainLayoutNavigationSection } from "./types";
 export { WorkspaceCanvas } from "./workspace-canvas";

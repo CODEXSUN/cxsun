@@ -3,6 +3,7 @@ import { AppError } from "@cxsun/framework/errors";
 import { hashPassword } from "../../auth/password-hash.js";
 import { recordTenantAccessAudit } from "../../database/tenant-access-audit.js";
 import { TenantUserRepository } from "./tenant-user.repository.js";
+import { selectUserRole } from "../tenant-user-role/index.js";
 import type {
   TenantUser,
   TenantUserContext,
@@ -26,25 +27,47 @@ export class TenantUserService {
   }
   async create(input: TenantUserSavePayload) {
     await this.context.authorize("platform.application.user.create");
+    if (input.roleId !== undefined)
+      await this.context.authorize("platform.application.user-role.assign");
     const value = normalize(input, true);
     const record = await this.save(() =>
-      this.repository.create(value, randomBytes(4).toString("hex"), hashPassword(value.password!))
+      this.context.database.transaction().execute(async (database) => {
+        const repository = new TenantUserRepository(database);
+        const created = await repository.create(
+          value,
+          randomBytes(4).toString("hex"),
+          hashPassword(value.password!)
+        );
+        if (input.roleId !== undefined) await selectUserRole(database, created.id, input.roleId);
+        return (await repository.find(created.id))!;
+      })
     );
     await this.audit("created", record);
+    if (input.roleId !== undefined) await this.audit("role-assigned", record);
     return record;
   }
   async update(id: string, input: TenantUserSavePayload) {
     await this.context.authorize("platform.application.user.update");
     const current = await this.mutable(id);
+    const selectedRoleChanged = input.roleId !== undefined && input.roleId !== current.roles[0]?.id;
+    if (selectedRoleChanged) await this.context.authorize("platform.application.user-role.update");
     const value = normalize(input, false);
+    let roleChanged = false;
     const record = (await this.save(() =>
-      this.repository.update(
-        current.id,
-        value,
-        value.password ? hashPassword(value.password) : undefined
-      )
+      this.context.database.transaction().execute(async (database) => {
+        const repository = new TenantUserRepository(database);
+        await repository.update(
+          current.id,
+          value,
+          value.password ? hashPassword(value.password) : undefined
+        );
+        if (selectedRoleChanged && input.roleId !== undefined)
+          roleChanged = await selectUserRole(database, current.id, input.roleId);
+        return repository.find(current.id);
+      })
     ))!;
     await this.audit("updated", record);
+    if (roleChanged) await this.audit("role-updated", record);
     return record;
   }
   async setStatus(id: string, status: TenantUserStatus) {

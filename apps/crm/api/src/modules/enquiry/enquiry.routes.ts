@@ -6,6 +6,7 @@ import type {} from "@cxsun/framework/api";
 import { EnquiryRepository } from "./enquiry.repository.js";
 import { EnquiryService, type EnquiryRelations } from "./enquiry.service.js";
 import type { EnquiryDatabase } from "./enquiry.types.js";
+import { registerEnquiryWorkRoutes } from "./enquiry.work.routes.js";
 
 const nullableText = z.string().trim().nullable();
 const inputSchema = z.object({
@@ -17,9 +18,9 @@ const inputSchema = z.object({
   capturedPhone: z.string().trim().max(80).nullable(),
   source: z.string().trim().min(1).max(80),
   sourceReference: z.string().trim().max(191).nullable(),
-  listIn: z.string().trim().max(120).nullable(),
-  status: z.enum(["new", "contacted", "qualified", "unqualified"]),
-  priority: z.enum(["low", "normal", "high"]),
+  listInId: z.number().int().positive().nullable(),
+  statusId: z.number().int().positive(),
+  priorityId: z.number().int().positive(),
   assignedUserId: z.number().int().positive().nullable(),
   enquiredAt: z.string().datetime({ offset: true }),
   dueDate: z.iso.date().nullable(),
@@ -31,11 +32,41 @@ const recordSchema = inputSchema.extend({
   id: z.number().int().positive(),
   uuid: z.string(),
   contactName: nullableText,
+  listIn: nullableText,
+  status: z.string(),
+  statusName: z.string(),
+  priority: z.string(),
+  priorityName: z.string(),
   createdBy: z.string(),
   createdAt: z.string(),
   updatedAt: z.string()
 });
 const idSchema = z.object({ id: z.coerce.number().int().positive() });
+const commentSchema = z.object({
+  id: z.number().int().positive(),
+  uuid: z.string(),
+  enquiryId: z.number().int().positive(),
+  parentId: z.number().int().positive().nullable(),
+  body: z.string(),
+  bodyFormat: z.enum(["plain", "html"]),
+  createdBy: z.string(),
+  createdAt: z.string()
+});
+const commentInputSchema = z.object({
+  body: z.string().trim().min(1).max(10000),
+  bodyFormat: z.enum(["plain", "html"]).default("plain"),
+  parentId: z.number().int().positive().nullable().default(null)
+});
+const propertySchema = inputSchema
+  .pick({
+    listInId: true,
+    priorityId: true,
+    assignedUserId: true,
+    dueDate: true,
+    statusId: true
+  })
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, "Choose a property to update.");
 
 export type EnquiryRequestContext = {
   database: Kysely<EnquiryDatabase>;
@@ -82,7 +113,40 @@ export function registerEnquiryRoutes(
     method: "PUT",
     url: "/crm/enquiries/:id",
     schemas: { body: inputSchema, params: idSchema, response: recordSchema },
-    handler: async ({ body, params, request }) =>
-      (await service(request)).enquiry.update(params.id, body)
+    handler: async ({ body, params, request }) => {
+      const { enquiry, scope } = await service(request);
+      return enquiry.update(params.id, body, scope.actorEmail);
+    }
   });
+  registerContractRoute(app, {
+    method: "PATCH",
+    url: "/crm/enquiries/:id/properties",
+    schemas: { body: propertySchema, params: idSchema, response: recordSchema },
+    handler: async ({ body, params, request }) => {
+      const { enquiry, scope } = await service(request);
+      return enquiry.updateProperties(params.id, body, scope.actorEmail);
+    }
+  });
+  registerContractRoute(app, {
+    method: "GET",
+    url: "/crm/enquiries/:id/comments",
+    schemas: { params: idSchema, response: z.array(commentSchema) },
+    handler: async ({ params, request }) => (await service(request)).enquiry.listComments(params.id)
+  });
+  registerContractRoute(app, {
+    method: "POST",
+    url: "/crm/enquiries/:id/comments",
+    schemas: { params: idSchema, body: commentInputSchema, response: commentSchema },
+    handler: async ({ params, body, request }) => {
+      const { enquiry, scope } = await service(request);
+      return enquiry.addComment(
+        params.id,
+        body.body,
+        body.parentId,
+        scope.actorEmail,
+        body.bodyFormat
+      );
+    }
+  });
+  registerEnquiryWorkRoutes(app, context);
 }

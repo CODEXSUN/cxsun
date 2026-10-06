@@ -158,6 +158,9 @@ Passing TypeScript or lint alone does not prove module ownership. The ownership 
 ## UI Rules
 
 - Use the centralized design system and follow `assist/documentation/design-system-helper.md` before creating or changing workspace modules.
+- Every new or updated post-auth desk Main Layout includes Top Menu, Side Menu, App Header, Workspace Canvas, and Status Bar inside `AppLayout`.
+- Identify these regions with the case-sensitive `mainLayoutTechnicalNames` values: `main.topMenu`, `main.sideBar`, `main.AppHeader`, `main.workspace`, and `main.StatusBar`.
+- Keep the shell's `AppHeader` separate from page-level `WorkspaceHeader`; follow `packages/ui/src/layouts/main-layouts/README.md` for the composition.
 - Keep layouts clear, dense, and work-focused for business users.
 - Use the shared workspace list, table, pagination, show, upsert, banner, autocomplete, select, date, tab, toast, and status components from `@cxsun/ui`.
 - Use the shadcn/Radix themed design-system select (`WorkspaceSelect` or `Select` from `@cxsun/ui`) for all form selects; do not use raw native `<select>` in workspace/list/upsert screens.

@@ -142,7 +142,7 @@ export async function seedDefaultTenant() {
 
 export async function seedTenantRuntimeModule(database: Kysely<TenantDatabase>, tenant: Tenant) {
   const enabledKeys = new Set(
-    ["platform.application", ...tenant.enabledModuleKeys].filter((key) => key !== "devkit")
+    ["platform.application", ...tenant.enabledModuleKeys].filter((key) => key !== "devkit" && key !== "project-manager")
   );
   const moduleKeys = Array.from(enabledKeys);
   console.info(
@@ -153,6 +153,11 @@ export async function seedTenantRuntimeModule(database: Kysely<TenantDatabase>, 
     .updateTable("app_module_settings")
     .set({ enabled: false, status: "inactive", updated_at: sql`CURRENT_TIMESTAMP` })
     .where("module_key", "=", "devkit")
+    .execute();
+  await database
+    .updateTable("app_module_settings")
+    .set({ enabled: false, status: "inactive", updated_at: sql`CURRENT_TIMESTAMP` })
+    .where("module_key", "=", "project-manager")
     .execute();
 
   for (const moduleKey of moduleKeys) {
@@ -235,7 +240,9 @@ async function reconcileDefaultTenantModules(repository: TenantRepository, tenan
     defaultTenantModuleKeys.every((key) => tenant.enabledModuleKeys.includes(key)) &&
     defaultTenantModuleKeys.every((key) => configuredApps.includes(key)) &&
     !tenant.enabledModuleKeys.includes("devkit") &&
-    !configuredApps.includes("devkit")
+    !configuredApps.includes("devkit") &&
+    !tenant.enabledModuleKeys.includes("project-manager") &&
+    !configuredApps.includes("project-manager")
   ) {
     return tenant;
   }
@@ -246,7 +253,7 @@ async function reconcileDefaultTenantModules(repository: TenantRepository, tenan
       enabledModuleKeys: Array.from(
         new Set(
           [...defaultTenantModuleKeys, ...tenant.enabledModuleKeys].filter(
-            (key) => key !== "devkit"
+            (key) => key !== "devkit" && key !== "project-manager"
           )
         )
       ).sort(),
@@ -256,7 +263,7 @@ async function reconcileDefaultTenantModules(repository: TenantRepository, tenan
           ...apps,
           enabled: Array.from(
             new Set(
-              [...defaultTenantModuleKeys, ...configuredApps].filter((key) => key !== "devkit")
+              [...defaultTenantModuleKeys, ...configuredApps].filter((key) => key !== "devkit" && key !== "project-manager")
             )
           ).sort()
         }

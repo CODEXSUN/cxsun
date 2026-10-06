@@ -20,11 +20,11 @@ export const platformAppRegistry: PlatformAppDefinition[] = [
     alwaysEnabled: false,
     defaultLanding: false,
     description: "Platform application and module registry.",
-    appId: "devkit",
+    appId: "project-manager",
     id: 0,
-    label: "DevKit",
-    moduleKey: "devkit",
-    stack: "devkit",
+    label: "Project Manager",
+    moduleKey: "project-manager",
+    stack: "project-manager",
     uuid: ""
   },
   {
@@ -121,7 +121,7 @@ export const platformAppRegistry: PlatformAppDefinition[] = [
 export function resolveEnabledApps(enabledModuleKeys: string[]) {
   const enabled = new Set(["platform.application", ...enabledModuleKeys]);
   return platformAppRegistry
-    .filter((app) => app.appId !== "devkit")
+    .filter((app) => app.appId !== "project-manager")
     .map((app) => ({
       ...app,
       enabled: app.alwaysEnabled || enabled.has(app.moduleKey)

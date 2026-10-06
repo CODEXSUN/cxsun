@@ -23,17 +23,17 @@ export function TenantUserList({
 }) {
   const columns: ColumnDef<TenantUser>[] = [
     {
-      cell: ({ row }) => <div className="text-center tabular-nums">{row.index + 1}</div>,
-      header: () => <div className="text-center">#</div>,
-      id: "number",
-      size: 64
-    },
-    {
       accessorKey: "name",
       cell: ({ row }) => <RecordName record={row.original} onEdit={onEdit} />,
       header: "User"
     },
     { accessorKey: "email", header: "Email" },
+    {
+      cell: ({ row }) =>
+        row.original.roles.length ? row.original.roles.map((role) => role.label).join(", ") : "—",
+      header: "Role",
+      id: "role"
+    },
     {
       accessorKey: "status",
       cell: ({ row }) => (
@@ -72,7 +72,7 @@ export function TenantUserList({
       data={records}
       emptyState="No users found."
       isLoading={loading}
-      minWidth="760px"
+      minWidth="860px"
     />
   );
 }

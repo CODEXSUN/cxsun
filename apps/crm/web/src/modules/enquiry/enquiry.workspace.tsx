@@ -7,17 +7,22 @@ import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
 import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
 import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
+import { useListIn } from "../list-in/index";
+import { useStatus } from "../status/index";
+import { usePriority } from "../priority/index";
 import { EnquiryForm } from "./enquiry.form";
 import {
   enquiriesQueryKey,
+  enquiryDetailQueryKey,
   enquiryContactsQueryKey,
   useEnquiries,
   useEnquiryContacts,
   useEnquiryUsers
 } from "./enquiry.hooks";
 import { EnquiryList } from "./enquiry.list";
+import { EnquiryShow } from "./enquiry.show";
 import { createEnquiry, updateEnquiry } from "./enquiry.services";
-import type { EnquiryRecord, EnquirySavePayload, EnquiryStatus } from "./enquiry.types";
+import type { EnquiryRecord, EnquirySavePayload } from "./enquiry.types";
 
 const columnOptions = [
   { id: "customer", label: "Customer" },
@@ -32,6 +37,7 @@ const columnOptions = [
 export function EnquiryWorkspace() {
   const client = useQueryClient();
   const [editing, setEditing] = useState<EnquiryRecord | null | undefined>(undefined);
+  const [showing, setShowing] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
@@ -40,15 +46,15 @@ export function EnquiryWorkspace() {
   const query = useEnquiries();
   const contacts = useEnquiryContacts();
   const users = useEnquiryUsers();
-  const listOptions = useMemo(
-    () => Array.from(new Set((query.data ?? []).map((record) => record.listIn).filter(isPresent))),
-    [query.data]
-  );
+  const lists = useListIn();
+  const statuses = useStatus();
+  const priorities = usePriority();
   const save = useMutation({
     mutationFn: (payload: EnquirySavePayload) =>
       editing ? updateEnquiry(editing.id, payload) : createEnquiry(payload),
     onSuccess: async (record) => {
       await client.invalidateQueries({ queryKey: enquiriesQueryKey });
+      await client.invalidateQueries({ queryKey: enquiryDetailQueryKey(record.id) });
       await client.invalidateQueries({ queryKey: enquiryContactsQueryKey });
       toast.success(`Enquiry #${record.enquiryNo} ${editing ? "updated" : "created"}`, {
         description: record.title
@@ -85,11 +91,20 @@ export function EnquiryWorkspace() {
         record={editing}
         contacts={contacts.data ?? []}
         contactsLoading={contacts.isLoading}
-        listOptions={listOptions}
+        listOptions={lists.data ?? []}
+        statuses={statuses.data ?? []}
+        priorities={priorities.data ?? []}
         users={users.data ?? []}
         loading={save.isPending}
         error={save.error?.message ?? ""}
-        lookupError={contacts.error?.message ?? users.error?.message ?? ""}
+        lookupError={
+          contacts.error?.message ??
+          users.error?.message ??
+          lists.error?.message ??
+          statuses.error?.message ??
+          priorities.error?.message ??
+          ""
+        }
         onBack={() => setEditing(undefined)}
         onContactSaved={async () => {
           await Promise.all([
@@ -98,6 +113,18 @@ export function EnquiryWorkspace() {
           ]);
         }}
         onSubmit={(payload) => save.mutate(payload)}
+      />
+    );
+  }
+  if (showing !== null) {
+    return (
+      <EnquiryShow
+        id={showing}
+        contacts={contacts.data ?? []}
+        users={users.data ?? []}
+        listOptions={lists.data ?? []}
+        statuses={statuses.data ?? []}
+        priorities={priorities.data ?? []}
       />
     );
   }
@@ -117,7 +144,16 @@ export function EnquiryWorkspace() {
             <RefreshCw className="size-4" />
             Refresh
           </Button>
-          <Button type="button" onClick={() => setEditing(null)}>
+          <Button
+            type="button"
+            disabled={
+              lists.isLoading ||
+              statuses.isLoading ||
+              priorities.isLoading ||
+              Boolean(statuses.error || priorities.error)
+            }
+            onClick={() => setEditing(null)}
+          >
             <Plus className="size-4" />
             New enquiry
           </Button>
@@ -145,10 +181,7 @@ export function EnquiryWorkspace() {
         }}
         filterOptions={[
           { id: "all", label: "All statuses" },
-          ...(["new", "contacted", "qualified", "unqualified"] as EnquiryStatus[]).map((id) => ({
-            id,
-            label: id[0]!.toUpperCase() + id.slice(1)
-          }))
+          ...(statuses.data ?? []).map((item) => ({ id: item.code, label: item.name }))
         ]}
       />
       {query.error ? (
@@ -161,6 +194,7 @@ export function EnquiryWorkspace() {
         users={users.data ?? []}
         visibleColumns={visibleColumns}
         loading={query.isLoading}
+        onShow={(record) => setShowing(record.id)}
         onEdit={setEditing}
       />
       <WorkspacePagination
@@ -180,8 +214,4 @@ export function EnquiryWorkspace() {
       />
     </WorkspacePage>
   );
-}
-
-function isPresent(value: string | null): value is string {
-  return Boolean(value);
 }

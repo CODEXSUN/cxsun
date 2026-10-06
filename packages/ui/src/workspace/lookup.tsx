@@ -30,6 +30,8 @@ export interface WorkspaceLookupOption {
   displayLabel?: string;
   description?: string;
   meta?: string;
+  swatchClassName?: string;
+  leadingIcon?: ReactNode;
 }
 
 export type WorkspaceLookupCreateMode = "none" | "inline" | "popup";
@@ -60,6 +62,7 @@ export function WorkspaceLookup({
   sanitizeInput,
   showDropdownIcon = true,
   showAllOptionsOnFocus = false,
+  showCreateWhenEmpty = false,
   showSearchIcon = true,
   renderCreateForm,
   required = false,
@@ -96,6 +99,7 @@ export function WorkspaceLookup({
   sanitizeInput?: ((value: string) => string) | undefined;
   showDropdownIcon?: boolean | undefined;
   showAllOptionsOnFocus?: boolean | undefined;
+  showCreateWhenEmpty?: boolean | undefined;
   showSearchIcon?: boolean | undefined;
   required?: boolean;
   trailingAction?: ReactNode | undefined;
@@ -114,6 +118,8 @@ export function WorkspaceLookup({
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [inlineCreateName, setInlineCreateName] = useState<string | null>(null);
+  const [createError, setCreateError] = useState("");
   const [selectedDisplayValue, setSelectedDisplayValue] = useState("");
   const [showAllOptions, setShowAllOptions] = useState(false);
   const [selectedFallbackOption, setSelectedFallbackOption] =
@@ -123,6 +129,7 @@ export function WorkspaceLookup({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const preserveCreateQueryRef = useRef(false);
+  const selectionRevisionRef = useRef(0);
   const allOptions = useMemo(
     () => mergeOptions(options, createdOptions),
     [createdOptions, options]
@@ -144,20 +151,28 @@ export function WorkspaceLookup({
     [allOptions, normalizedQuery]
   );
   const exactOption = useMemo(
-    () => allOptions.find((option) => isExactMatch(option, normalizedQuery)),
-    [allOptions, normalizedQuery]
+    () => allOptions.find((option) => isExactMatch(option, query.trim().toLowerCase())),
+    [allOptions, query]
   );
+  const suggestedCreateName =
+    showCreateWhenEmpty && showAllOptions && query === selectedOption?.label ? "" : query.trim();
   const canCreate = Boolean(
-    createMode !== "none" && query.trim() && !exactOption && !disabled && !loading && !isCreating
+    createMode !== "none" &&
+    (suggestedCreateName || showCreateWhenEmpty) &&
+    (!suggestedCreateName || !exactOption) &&
+    !disabled &&
+    !loading &&
+    !isCreating &&
+    inlineCreateName === null
   );
   const optionCount = filteredOptions.length + (canCreate ? 1 : 0);
 
   useEffect(() => {
-    if (value) return;
+    if (value || isOpen) return;
     setQuery("");
     setSelectedDisplayValue("");
     setSelectedFallbackOption(null);
-  }, [value]);
+  }, [isOpen, value]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -208,6 +223,8 @@ export function WorkspaceLookup({
   }, [dropdownMinWidth, isOpen]);
 
   function selectOption(option: WorkspaceLookupOption) {
+    selectionRevisionRef.current += 1;
+    setCreateError("");
     setShowAllOptions(false);
     const normalizedOption = normalizeOption(option);
     setSelectedFallbackOption(normalizedOption);
@@ -236,6 +253,7 @@ export function WorkspaceLookup({
     const normalizedName = name.trim();
     if (!normalizedName) return null;
     setIsCreating(true);
+    setCreateError("");
     try {
       const createdResult = await onCreate?.(normalizedName);
       const created = createdResult ?? {
@@ -245,22 +263,50 @@ export function WorkspaceLookup({
       setCreatedOptions((current) => mergeOptions(current, [created]));
       selectOption(created);
       return created;
+    } catch (error) {
+      setCreateError(error instanceof Error ? error.message : "Unable to create this option.");
+      return null;
     } finally {
       setIsCreating(false);
     }
   }
 
   function handleCreate() {
-    const name = query.trim();
-    if (!name || exactOption) return;
+    const name = suggestedCreateName;
+    if (name && exactOption) return;
+    if (!name && createMode === "inline" && showCreateWhenEmpty) {
+      preserveCreateQueryRef.current = true;
+      setInlineCreateName("");
+      return;
+    }
+    if (!name) return;
     setCreateQuery(name);
-    preserveCreateQueryRef.current = true;
     if (createMode === "popup") {
+      preserveCreateQueryRef.current = true;
       setIsCreateOpen(true);
       setIsOpen(false);
       return;
     }
-    void createOption(name);
+    preserveCreateQueryRef.current = true;
+    void createOption(name).then(() => {
+      preserveCreateQueryRef.current = false;
+    });
+  }
+
+  function submitInlineCreate() {
+    if (!inlineCreateName?.trim()) return;
+    void createOption(inlineCreateName).then((created) => {
+      if (!created) return;
+      setInlineCreateName(null);
+      preserveCreateQueryRef.current = false;
+    });
+  }
+
+  function cancelInlineCreate() {
+    setInlineCreateName(null);
+    preserveCreateQueryRef.current = false;
+    setIsOpen(false);
+    resetQuery();
   }
 
   return (
@@ -268,7 +314,19 @@ export function WorkspaceLookup({
       <div className={cn("relative z-10 w-full focus-within:z-[90]", className)}>
         <div className="relative">
           {showSearchIcon ? (
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            (selectedOption?.leadingIcon || selectedOption?.swatchClassName) &&
+            query === selectedOption.label ? (
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-3 top-1/2 flex size-4 -translate-y-1/2 items-center justify-center"
+              >
+                {selectedOption.leadingIcon ?? (
+                  <span className={cn("size-2.5 rounded-full", selectedOption.swatchClassName)} />
+                )}
+              </span>
+            ) : (
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            )
           ) : null}
           <Input
             ref={inputRef}
@@ -287,14 +345,16 @@ export function WorkspaceLookup({
             role="combobox"
             value={query}
             onBlur={() => {
-              setShowAllOptions(false);
-              if (exactOption) {
-                selectOption(exactOption);
-                return;
-              }
+              const selectionRevision = selectionRevisionRef.current;
               window.setTimeout(() => {
-                setIsOpen(false);
+                if (selectionRevision !== selectionRevisionRef.current) return;
                 if (preserveCreateQueryRef.current) return;
+                setShowAllOptions(false);
+                if (exactOption) {
+                  selectOption(exactOption);
+                  return;
+                }
+                setIsOpen(false);
                 if (!allowTextValue) resetQuery();
               }, 120);
             }}
@@ -306,6 +366,7 @@ export function WorkspaceLookup({
                 isExactMatch(option, nextQuery.trim().toLowerCase())
               );
               setQuery(nextQuery);
+              setCreateError("");
               setShowAllOptions(false);
               setSelectedDisplayValue("");
               setIsOpen(true);
@@ -383,6 +444,8 @@ export function WorkspaceLookup({
             ref={listRef}
             activeIndex={activeIndex}
             canCreate={canCreate}
+            createError={createError}
+            inlineCreateName={inlineCreateName}
             createLabel={createLabel}
             compactOptions={compactOptions}
             dropdownPlacement={dropdownPlacement}
@@ -391,9 +454,12 @@ export function WorkspaceLookup({
             filteredOptions={filteredOptions}
             isCreating={isCreating}
             loading={loading}
-            query={query}
+            query={suggestedCreateName}
             value={value}
             onCreate={handleCreate}
+            onInlineNameChange={setInlineCreateName}
+            onInlineSubmit={submitInlineCreate}
+            onInlineCancel={cancelInlineCreate}
             onSelect={selectOption}
           />
         ) : null}
@@ -403,6 +469,8 @@ export function WorkspaceLookup({
                 ref={listRef}
                 activeIndex={activeIndex}
                 canCreate={canCreate}
+                createError={createError}
+                inlineCreateName={inlineCreateName}
                 createLabel={createLabel}
                 compactOptions={compactOptions}
                 dropdownPlacement="bottom"
@@ -411,10 +479,13 @@ export function WorkspaceLookup({
                 filteredOptions={filteredOptions}
                 isCreating={isCreating}
                 loading={loading}
-                query={query}
+                query={suggestedCreateName}
                 style={listStyle}
                 value={value}
                 onCreate={handleCreate}
+                onInlineNameChange={setInlineCreateName}
+                onInlineSubmit={submitInlineCreate}
+                onInlineCancel={cancelInlineCreate}
                 onSelect={selectOption}
               />,
               document.body
@@ -474,6 +545,8 @@ const LookupList = forwardRef<
   {
     activeIndex: number;
     canCreate: boolean;
+    createError: string;
+    inlineCreateName: string | null;
     className?: string | undefined;
     compactOptions: boolean;
     createLabel?: string | undefined;
@@ -486,6 +559,9 @@ const LookupList = forwardRef<
     style?: CSSProperties | undefined;
     value: string;
     onCreate: () => void;
+    onInlineNameChange: (value: string) => void;
+    onInlineSubmit: () => void;
+    onInlineCancel: () => void;
     onSelect: (option: WorkspaceLookupOption) => void;
   }
 >(
@@ -493,6 +569,8 @@ const LookupList = forwardRef<
     {
       activeIndex,
       canCreate,
+      createError,
+      inlineCreateName,
       className,
       compactOptions,
       createLabel,
@@ -502,6 +580,9 @@ const LookupList = forwardRef<
       isCreating,
       loading,
       onCreate,
+      onInlineNameChange,
+      onInlineSubmit,
+      onInlineCancel,
       onSelect,
       query,
       style,
@@ -522,9 +603,16 @@ const LookupList = forwardRef<
             : "absolute left-0 right-0 top-[calc(100%+0.25rem)]",
         className
       )}
-      onMouseDown={(event) => event.preventDefault()}
+      onMouseDown={(event) => {
+        if (!(event.target as HTMLElement).closest("form")) event.preventDefault();
+      }}
     >
       {loading ? <LookupLoadingRows /> : null}
+      {createError ? (
+        <div role="alert" className="px-3 py-2 text-xs text-destructive">
+          {createError}
+        </div>
+      ) : null}
       {!loading && filteredOptions.length === 0 && !canCreate && !isCreating ? (
         <div className="px-3 py-2 text-sm text-muted-foreground">{emptyLabel}</div>
       ) : null}
@@ -542,10 +630,7 @@ const LookupList = forwardRef<
               compactOptions && "gap-1 px-2",
               activeIndex === index ? "bg-accent/80" : "bg-card hover:bg-accent/60"
             )}
-            onMouseDown={(event) => {
-              event.preventDefault();
-              onSelect(option);
-            }}
+            onClick={() => onSelect(option)}
           >
             <span
               className={cn(
@@ -553,13 +638,28 @@ const LookupList = forwardRef<
                 compactOptions && "whitespace-nowrap break-normal [overflow-wrap:normal]"
               )}
             >
-              <span
-                className={cn(
-                  "block whitespace-normal break-words font-medium [overflow-wrap:anywhere]",
-                  compactOptions && "whitespace-nowrap break-normal [overflow-wrap:normal]"
-                )}
-              >
-                {option.displayLabel ?? option.label}
+              <span className="flex items-center gap-2">
+                {option.leadingIcon ? (
+                  <span
+                    aria-hidden="true"
+                    className="flex size-4 shrink-0 items-center justify-center"
+                  >
+                    {option.leadingIcon}
+                  </span>
+                ) : option.swatchClassName ? (
+                  <span
+                    aria-hidden="true"
+                    className={cn("size-2.5 shrink-0 rounded-full", option.swatchClassName)}
+                  />
+                ) : null}
+                <span
+                  className={cn(
+                    "block whitespace-normal break-words font-medium [overflow-wrap:anywhere]",
+                    compactOptions && "whitespace-nowrap break-normal [overflow-wrap:normal]"
+                  )}
+                >
+                  {option.displayLabel ?? option.label}
+                </span>
               </span>
               {option.description || option.meta ? (
                 <span className="block whitespace-normal break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
@@ -575,7 +675,30 @@ const LookupList = forwardRef<
           </button>
         );
       })}
-      {canCreate || isCreating ? (
+      {inlineCreateName !== null ? (
+        <form
+          className="flex items-center gap-2 border-t border-border px-2 py-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onInlineSubmit();
+          }}
+        >
+          <Input
+            autoFocus
+            aria-label="New option name"
+            className="h-9 min-w-0 flex-1"
+            placeholder="Name"
+            value={inlineCreateName}
+            onChange={(event) => onInlineNameChange(event.target.value)}
+          />
+          <Button size="sm" type="submit" disabled={!inlineCreateName.trim() || isCreating}>
+            Create
+          </Button>
+          <Button size="sm" type="button" variant="ghost" onClick={onInlineCancel}>
+            Cancel
+          </Button>
+        </form>
+      ) : canCreate || isCreating ? (
         <button
           data-active={activeIndex === filteredOptions.length}
           type="button"
@@ -584,13 +707,14 @@ const LookupList = forwardRef<
             "flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-primary transition-colors",
             activeIndex === filteredOptions.length ? "bg-accent/80" : "hover:bg-accent/60"
           )}
-          onMouseDown={(event) => {
-            event.preventDefault();
-            onCreate();
-          }}
+          onClick={onCreate}
         >
           <Plus className="size-4" />
-          {isCreating ? "Creating..." : `${createLabel ?? "Create"} "${query.trim()}"`}
+          {isCreating
+            ? "Creating..."
+            : query.trim()
+              ? `${createLabel ?? "Create"} "${query.trim()}"`
+              : (createLabel ?? "Create new")}
         </button>
       ) : null}
     </div>

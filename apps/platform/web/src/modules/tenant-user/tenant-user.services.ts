@@ -2,6 +2,7 @@ import { apiDelete, apiGet, apiPost, apiPut } from "../../shared/api/platform-ap
 import type {
   TenantUser,
   TenantUserListFilters,
+  TenantUserRoleOption,
   TenantUserSavePayload,
   TenantUserScope,
   TenantUserTenantLookup
@@ -18,6 +19,9 @@ export function listTenantUsers(scope: TenantUserScope, filters: TenantUserListF
     `${tenantUserPath(scope)}${query.size ? `?${query}` : ""}`,
     scope.desk
   );
+}
+export function listTenantUserRoleOptions(scope: TenantUserScope) {
+  return apiGet<TenantUserRoleOption[]>(`${tenantUserPath(scope)}/role-options`, scope.desk);
 }
 export function createTenantUser(scope: TenantUserScope, payload: TenantUserSavePayload) {
   return apiPost<TenantUser>(tenantUserPath(scope), toApi(payload), scope.desk);

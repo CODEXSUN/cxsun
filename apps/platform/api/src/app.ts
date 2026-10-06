@@ -1,4 +1,5 @@
 import { createApiApp, registerHealthRoute, registerRequestLogging } from "@cxsun/framework/api";
+import { randomBytes } from "node:crypto";
 import { registerModules } from "@cxsun/framework/modules";
 import { createMailModule } from "@cxsun/mail-api";
 import { accountsApiModuleKeys, registerAccountsApi } from "@cxsun/accounts-api";
@@ -14,7 +15,19 @@ import {
   getActiveContactForDatabase,
   resolveOrCreateCustomerForDatabase
 } from "@cxsun/core-api";
-import { enquiryModule, type EnquiryDatabase } from "@cxsun/crm-api";
+import {
+  enquiryModule,
+  listInModule,
+  statusModule,
+  priorityModule,
+  getActiveListInForDatabase,
+  getActiveStatusForDatabase,
+  getActivePriorityForDatabase,
+  type EnquiryDatabase,
+  type ListInDatabase,
+  type StatusDatabase,
+  type PriorityDatabase
+} from "@cxsun/crm-api";
 import { auditorClientModule, type AuditorClientDatabase } from "@cxsun/auditor-api";
 import { AppError } from "@cxsun/framework/errors";
 import type { FastifyRequest } from "fastify";
@@ -46,12 +59,16 @@ import { tenantAccessContext } from "./auth/tenant-access-context.js";
 import { seedDefaultTenant } from "./modules/tenant/tenant.seed.js";
 import { env } from "./env.js";
 import { assertSingleTenantRegistry } from "./tenancy-mode.js";
-import { bootstrapPlatformDatabase, closePlatformDatabase } from "./database/platform-database.js";
+import {
+  bootstrapPlatformDatabase,
+  closePlatformDatabase,
+  getPlatformDatabase
+} from "./database/platform-database.js";
 import { closeAllTenantDatabases } from "./database/tenant-database.js";
 import { registerAuthRequestContext } from "./auth/auth-request-context.js";
 import { TenantDomainRepository } from "./modules/tenant-domain/tenant-domain.repository.js";
-import { registerDevkitHost } from "./devkit-host.js";
-import { devkitApiModuleKeys } from "@cxsun/devkit-api";
+import { registerProjectManagerHost } from "./project-manager-host.js";
+import { projectManagerApiModuleKeys } from "@cxsun/project-manager-api";
 import {
   addonApiModuleKeys,
   activePlatformAddons,
@@ -96,8 +113,8 @@ export async function createApp() {
   });
   const queueService = new QueueManagerService();
   registerAuthRequestContext(app);
-  await registerDevkitHost(app);
-  console.info("[platform.routes] DevKit package ready");
+  await registerProjectManagerHost(app);
+  console.info("[platform.routes] Project Manager package ready");
   const mailModule = createMailModule({
     enqueue: (payload) => queueService.enqueue(payload),
     resolveContext: mailContext,
@@ -115,7 +132,7 @@ export async function createApp() {
             auditorClientModule.key,
             ...billingApiModuleKeys,
             ...accountsApiModuleKeys,
-            ...devkitApiModuleKeys,
+            ...projectManagerApiModuleKeys,
             ...addonApiModuleKeys,
             appRegistryModule.key,
             tenantModule.key,
@@ -166,7 +183,7 @@ export async function createApp() {
     resolveIndustryName: (industryId) => industryService.resolveActiveIndustryName(industryId)
   });
   console.info("[platform.routes] Core package ready");
-  await enquiryModule.register(app, async (request) => {
+  const crmAccess = async (request: FastifyRequest, resource: string, collection: string) => {
     const context = tenantAccessContext(request);
     const enabled = await context.database
       .selectFrom("app_module_settings")
@@ -176,9 +193,43 @@ export async function createApp() {
       .where("status", "=", "active")
       .executeTakeFirst();
     if (!enabled) throw AppError.forbidden("CRM is not enabled for this tenant.");
-    await context.authorize(
-      `crm.enquiry.${request.method === "GET" ? "view" : request.method === "POST" ? "create" : "update"}`
-    );
+    const action = request.method === "GET" ? "view" : request.method === "DELETE" ? "delete"
+      : request.method === "POST" && request.url.split("?")[0] === collection ? "create" : "update";
+    if (action === "view" && resource !== "enquiry") {
+      try {
+        await context.authorize(`crm.${resource}.view`);
+      } catch (error) {
+        if (!(error instanceof AppError) || error.code !== "FORBIDDEN") throw error;
+        await context.authorize("crm.enquiry.view");
+      }
+    } else {
+      await context.authorize(`crm.${resource}.${action}`);
+    }
+    return context;
+  };
+  await listInModule.register(app, async (request) => {
+    const context = await crmAccess(request, "list-in", "/crm/list-in");
+    return {
+      actorEmail: context.actorEmail,
+      database: context.database as unknown as import("kysely").Kysely<ListInDatabase>
+    };
+  });
+  await statusModule.register(app, async (request) => {
+    const context = await crmAccess(request, "status", "/crm/statuses");
+    return {
+      actorEmail: context.actorEmail,
+      database: context.database as unknown as import("kysely").Kysely<StatusDatabase>
+    };
+  });
+  await priorityModule.register(app, async (request) => {
+    const context = await crmAccess(request, "priority", "/crm/priorities");
+    return {
+      actorEmail: context.actorEmail,
+      database: context.database as unknown as import("kysely").Kysely<PriorityDatabase>
+    };
+  });
+  await enquiryModule.register(app, async (request) => {
+    const context = await crmAccess(request, "enquiry", "/crm/enquiries");
     return {
       actorEmail: context.actorEmail,
       database: context.database as unknown as import("kysely").Kysely<EnquiryDatabase>,
@@ -187,14 +238,18 @@ export async function createApp() {
         resolveOrCreateCustomer: (input) =>
           resolveOrCreateCustomerForDatabase(context.tenantDatabase, input),
         user: async (id: number) =>
-          Boolean(
-            await context.database
-              .selectFrom("app_users")
-              .select("id")
-              .where("id", "=", id)
-              .where("status", "=", "active")
-              .executeTakeFirst()
-          )
+          (await context.database
+            .selectFrom("app_users")
+            .select("name")
+            .where("id", "=", id)
+            .where("status", "=", "active")
+            .executeTakeFirst()) ?? null,
+        listIn: (id: number) => getActiveListInForDatabase(
+          context.database as unknown as import("kysely").Kysely<ListInDatabase>, id),
+        status: (id: number) => getActiveStatusForDatabase(
+          context.database as unknown as import("kysely").Kysely<StatusDatabase>, id),
+        priority: (id: number) => getActivePriorityForDatabase(
+          context.database as unknown as import("kysely").Kysely<PriorityDatabase>, id)
       }
     };
   });
@@ -213,10 +268,33 @@ export async function createApp() {
       actorEmail: context.actorEmail,
       authorize: context.authorize,
       database: context.database as unknown as import("kysely").Kysely<AuditorClientDatabase>,
+      secretKey: env.JWT_SECRET,
       audit: async (action, record) => {
+        await writeAuditorAuditEvent(
+          context.tenantId,
+          context.actorEmail,
+          `auditor.client.${action}:${record.id}`
+        );
         request.log.info(
           { action, actorEmail: context.actorEmail, clientId: record.id, module: "auditor.client" },
           "Auditor client changed"
+        );
+      },
+      auditCredential: async (action, clientId, portal) => {
+        await writeAuditorAuditEvent(
+          context.tenantId,
+          context.actorEmail,
+          `auditor.client.credentials.${action}:${clientId}:${portal}`
+        );
+        request.log.info(
+          {
+            action,
+            actorEmail: context.actorEmail,
+            clientId,
+            portal,
+            module: "auditor.client.credentials"
+          },
+          "Auditor client credential accessed"
         );
       }
     };
@@ -263,6 +341,24 @@ export async function createApp() {
   console.info("[platform.boot] bootstrap completed");
 
   return app;
+}
+
+async function writeAuditorAuditEvent(tenantUuid: string, actorEmail: string, eventName: string) {
+  const database = getPlatformDatabase();
+  const tenant = await database
+    .selectFrom("tenants")
+    .select("id")
+    .where("uuid", "=", tenantUuid)
+    .executeTakeFirstOrThrow();
+  await database
+    .insertInto("tenant_audit_events")
+    .values({
+      actor_email: actorEmail,
+      event_name: eventName,
+      tenant_id: tenant.id,
+      uuid: randomBytes(4).toString("hex")
+    })
+    .execute();
 }
 
 async function platformWebOrigins() {

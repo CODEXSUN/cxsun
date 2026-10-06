@@ -144,7 +144,7 @@ export class TenantService {
     );
     const legacyKeys = input.enabledModuleKeys
       .map((key) => (key === "platform.tenant" ? "platform.application" : key))
-      .filter((key) => key !== "devkit");
+      .filter((key) => key !== "devkit" && key !== "project-manager");
     const defaultKeys = includeDefaults
       ? defaultTenantModuleKeys.filter((key) => !disabledModuleKeys.includes(key))
       : ["platform.application"];

@@ -63,11 +63,11 @@ import {
   migrateAuthLoginAttempt
 } from "../auth/auth-login-attempt.migration.js";
 import {
-  migrateDevkitDatabase,
-  rollbackDevkitDatabase,
-  seedDevkitDatabase,
-  type DevkitDatabase
-} from "@cxsun/devkit-api";
+  migrateProjectManagerDatabase,
+  rollbackProjectManagerDatabase,
+  seedProjectManagerDatabase,
+  type ProjectManagerDatabase
+} from "@cxsun/project-manager-api";
 
 let platformDatabase: Kysely<PlatformDatabase> | null = null;
 let bootstrapped = false;
@@ -370,7 +370,7 @@ export async function migratePlatformDatabase() {
   console.info(`[database] migrating platform database "${platformDatabaseName()}"`);
   const database = getPlatformDatabase();
   const result = await runMigrationBatch(database, platformMigrationBatch, { batchSize: 8 });
-  await migrateDevkitDatabase(database as unknown as Kysely<DevkitDatabase>);
+  await migrateProjectManagerDatabase(database as unknown as Kysely<ProjectManagerDatabase>);
   console.info(
     `[database] platform migration batch ${result.batch}: ${result.applied.length} applied, ${result.skipped.length} checksum-validated`
   );
@@ -378,7 +378,7 @@ export async function migratePlatformDatabase() {
 
 export async function rollbackPlatformDatabase() {
   const database = getPlatformDatabase();
-  await rollbackDevkitDatabase(database as unknown as Kysely<DevkitDatabase>);
+  await rollbackProjectManagerDatabase(database as unknown as Kysely<ProjectManagerDatabase>);
   return rollbackMigrationBatch(database, platformMigrationBatch);
 }
 
@@ -388,8 +388,8 @@ export async function seedPlatformDatabase() {
     await step.seed(database);
     console.info(`[seeder] platform module seeded: ${step.name}`);
   }
-  await seedDevkitDatabase(database as unknown as Kysely<DevkitDatabase>);
-  console.info("[seeder] master app seeded: devkit");
+  await seedProjectManagerDatabase(database as unknown as Kysely<ProjectManagerDatabase>);
+  console.info("[seeder] master app seeded: project-manager");
 }
 
 export async function resetPlatformDatabases() {

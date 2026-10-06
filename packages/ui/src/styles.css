@@ -15,6 +15,7 @@
 @source ".";
 @source "../../../apps/billing/web/src";
 @source "../../../apps/core/web/src";
+@source "../../../apps/crm/web/src";
 @source "../../../apps/mail/web/src";
 @source "../../../apps/platform/web/src";
 @source "../../../devkits/uiux/src";

@@ -18,6 +18,30 @@ The goal is simple: every module should feel like the same product. Only the dat
 This repository is the source of truth for flow, spacing, tone, loading behavior, and interaction rhythm. Do not import
 business logic or UI assumptions from an older CODEXSUN/CXSUN checkout.
 
+## Main Layout Contract
+
+Every new or updated post-auth desk shell uses `AppLayout` to hold five Main
+Layout regions. Their order and case-sensitive technical names are:
+
+| Screen order | Region | Technical name |
+| --- | --- | --- |
+| 1 | Top Menu | `main.topMenu` |
+| 2 | Side Menu | `main.sideBar` |
+| 3 | App Header | `main.AppHeader` |
+| 4 | Workspace Canvas | `main.workspace` |
+| 5 | Status Bar | `main.StatusBar` |
+
+Place the Side Menu beside the workspace. Place the App Header above the page
+canvas within that workspace. The host app owns authentication, routing,
+business content, and the data passed to the shell. A page-level
+`WorkspaceHeader` does not replace the shell's `AppHeader`.
+
+Use `mainLayoutTechnicalNames` from `@cxsun/ui/layouts/main-layouts` when code
+identifies these regions. The [UI Main Layout guide](../../packages/ui/src/layouts/main-layouts/README.md)
+defines their components. The [UIUX gallery](../../devkits/uiux/README.md)
+shows the live composition and interface topology. Keep the existing sidebar
+and workspace implementation when adopting the shell in a desk.
+
 ## Non-Negotiable Rules
 
 - Use shared design-system and workspace components from `@cxsun/ui`.

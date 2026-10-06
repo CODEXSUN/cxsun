@@ -10,6 +10,7 @@ import {
   resolveTenantDatabasePassword
 } from "../../database/tenant-database.js";
 import { TenantService } from "../tenant/index.js";
+import { TenantRoleService } from "../tenant-role/index.js";
 import type { Tenant } from "../tenant/index.js";
 import { TenantUserService } from "./tenant-user.service.js";
 
@@ -20,6 +21,7 @@ const record = z.object({
   id: z.number().int().positive(),
   isProtected: z.boolean(),
   name: z.string(),
+  roles: z.array(z.object({ id: z.number().int().positive(), label: z.string() })),
   status,
   uuid: z.string().length(8)
 });
@@ -27,13 +29,26 @@ const payload = z.object({
   email: z.string().email(),
   name: z.string().trim().min(2).max(180),
   password: z.string().min(8).max(128).optional(),
+  roleId: z.number().int().positive().optional(),
   status
 });
 const params = z.object({ id: z.string().regex(/^\d+$/) });
 const adminTenantParams = z.object({ tenantId: z.coerce.number().int().positive() });
 const adminRecordParams = adminTenantParams.extend({ id: z.string().regex(/^\d+$/) });
 const query = z.object({ search: z.string().trim().optional() });
+const roleOption = z.object({
+  id: z.number().int().positive(),
+  key: z.string(),
+  label: z.string(),
+  status: z.enum(["active", "inactive"])
+});
 export async function registerTenantUserRoutes(app: FastifyInstance) {
+  registerContractRoute(app, {
+    method: "GET",
+    url: `${path}/role-options`,
+    schemas: { response: z.array(roleOption) },
+    handler: ({ request }) => listRoleOptions(tenantAccessContext(request))
+  });
   registerContractRoute(app, {
     method: "GET",
     url: path,
@@ -92,6 +107,14 @@ function registerSuperAdminTenantUserRoutes(app: FastifyInstance) {
   const adminPath = "/admin/tenants/:tenantId/users";
   registerContractRoute(app, {
     method: "GET",
+    url: `${adminPath}/role-options`,
+    preHandler: requireSuperAdmin,
+    schemas: { params: adminTenantParams, response: z.array(roleOption) },
+    handler: async ({ params, request }) =>
+      listRoleOptions(await superAdminContext(request, params.tenantId))
+  });
+  registerContractRoute(app, {
+    method: "GET",
     url: adminPath,
     preHandler: requireSuperAdmin,
     schemas: { params: adminTenantParams, querystring: query, response: z.array(record) },
@@ -145,6 +168,14 @@ function registerSuperAdminTenantUserRoutes(app: FastifyInstance) {
         params.id
       )
   });
+}
+async function listRoleOptions(context: ConstructorParameters<typeof TenantRoleService>[0]) {
+  return (await new TenantRoleService(context).list()).map(({ id, key, label, status }) => ({
+    id,
+    key,
+    label,
+    status
+  }));
 }
 
 function adminAction(app: FastifyInstance, name: string, value: z.infer<typeof status>) {

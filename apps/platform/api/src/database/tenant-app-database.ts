@@ -21,7 +21,7 @@ import {
   crmTenantMigrations,
   migrateCrmTenantDatabase,
   rollbackCrmTenantDatabase,
-  seedEnquiryModule,
+  seedCrmTenantDatabase,
   type EnquiryDatabase
 } from "@cxsun/crm-api";
 import {
@@ -38,6 +38,10 @@ import {
   seedMailModule
 } from "@cxsun/mail-api";
 import type { Kysely } from "kysely";
+import {
+  migrateProjectManagerDatabase,
+  projectManagerTenantMigrations
+} from "@cxsun/project-manager-api";
 import type { TenantDatabase } from "./schema.js";
 import type { Tenant } from "../modules/tenant/tenant.types.js";
 import { tenantRuntimeMigrations } from "../modules/tenant/tenant.migration.js";
@@ -64,6 +68,11 @@ export function tenantDatabaseMigrationsFor(tenant: Tenant) {
     ...coreTenantMigrations.map((migration) => ({
       ...migration,
       statements: [`RUN ${migration.name}`]
+    })),
+    ...projectManagerTenantMigrations.map(({ description, name }) => ({
+      description,
+      name,
+      statements: [`RUN ${name}`]
     })),
     ...(enabled.has("crm")
       ? crmTenantMigrations.map((migration) => ({
@@ -110,6 +119,7 @@ export async function migrateSelectedTenantApps(database: Kysely<TenantDatabase>
   const provisionedApps = ["application"];
 
   await migrateCoreTenantDatabase(tenant.dbName);
+  await migrateProjectManagerDatabase(database as never);
   if (enabled.has("crm")) {
     await migrateCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
     provisionedApps.push("crm");
@@ -151,7 +161,7 @@ export async function seedSelectedTenantApps(database: Kysely<TenantDatabase>, t
 
   await seedCoreTenantDatabase(tenant.dbName);
   if (enabled.has("crm")) {
-    await seedEnquiryModule(database as unknown as Kysely<EnquiryDatabase>);
+    await seedCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
     seededApps.push("crm");
   }
   if (enabled.has("auditor")) {

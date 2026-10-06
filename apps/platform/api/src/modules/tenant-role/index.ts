@@ -6,4 +6,5 @@ export {
   tenantRoleMigration
 } from "./tenant-role.migration.js";
 export { seedTenantRoleModule } from "./tenant-role.seed.js";
+export { TenantRoleService } from "./tenant-role.service.js";
 export type { TenantRole, TenantRoleSavePayload, TenantRoleStatus } from "./tenant-role.types.js";

@@ -55,6 +55,28 @@ async function addClientDetails(database: Kysely<AuditorClientDatabase>) {
   }
 }
 
+async function migrateClientCredentials(database: Kysely<AuditorClientDatabase>) {
+  await sql
+    .raw(
+      `CREATE TABLE IF NOT EXISTS auditor_client_credentials (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(8) NOT NULL DEFAULT (LOWER(SUBSTRING(MD5(UUID()),1,8))) UNIQUE,
+    client_id INT NOT NULL,
+    portal VARCHAR(24) NOT NULL,
+    username VARCHAR(191) NOT NULL,
+    password_secret TEXT NOT NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'active',
+    created_by VARCHAR(191) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY auditor_client_credentials_portal (client_id, portal),
+    CONSTRAINT auditor_client_credentials_client_fk FOREIGN KEY (client_id)
+      REFERENCES auditor_clients(id) ON DELETE CASCADE
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+    )
+    .execute(database);
+}
+
 const batch: MigrationBatch<AuditorClientDatabase> = {
   batch: 1,
   description: "Auditor office client directory.",
@@ -74,6 +96,13 @@ const batch: MigrationBatch<AuditorClientDatabase> = {
       name: "auditor.client.details-v2",
       up: addClientDetails,
       version: 2
+    },
+    {
+      checksum: "auditor.client.credentials-v3:v1",
+      description: "Create encrypted per-client portal credentials.",
+      name: "auditor.client.credentials-v3",
+      up: migrateClientCredentials,
+      version: 3
     }
   ]
 };

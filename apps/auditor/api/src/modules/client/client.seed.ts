@@ -3,9 +3,15 @@ import { sql, type Kysely } from "kysely";
 import type { AuditorClientDatabase } from "./client.types.js";
 
 export async function seedAuditorClientPermissions(database: Kysely<AuditorClientDatabase>) {
-  for (const action of ["view", "create", "update"] as const) {
-    const key = `auditor.client.${action}`;
-    const label = `Auditor client ${action}`;
+  for (const key of [
+    "auditor.client.view",
+    "auditor.client.create",
+    "auditor.client.update",
+    "auditor.client.credentials.view",
+    "auditor.client.credentials.update",
+    "auditor.client.credentials.reveal"
+  ]) {
+    const label = key.replaceAll(".", " ");
     await sql`
       INSERT INTO app_permissions (uuid, \`key\`, label, description, status, is_protected)
       VALUES (${stable(key)}, ${key}, ${label}, ${`Allows ${label}.`}, 'active', TRUE)

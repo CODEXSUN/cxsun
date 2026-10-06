@@ -15,6 +15,7 @@ type Row = {
   status: TenantUserStatus;
   uuid: string;
 };
+type RoleRow = { user_id: number; role_id: number; role_label: string };
 
 export class TenantUserRepository {
   constructor(private readonly database: Kysely<TenantDatabase>) {}
@@ -24,14 +25,17 @@ export class TenantUserRepository {
       WHERE (${filters.search ?? ""}='' OR LOWER(name) LIKE ${term} OR LOWER(email) LIKE ${term}) ORDER BY name`.execute(
       this.database
     );
-    return result.rows.map(mapRow);
+    const roles = await this.rolesForUsers(result.rows.map((row) => Number(row.id)));
+    return result.rows.map((row) => mapRow(row, roles.get(Number(row.id)) ?? []));
   }
   async find(id: string | number) {
     const result =
       await sql<Row>`SELECT id,uuid,name,email,status,is_protected FROM app_users WHERE id=${Number(id)} LIMIT 1`.execute(
         this.database
       );
-    return result.rows[0] ? mapRow(result.rows[0]) : null;
+    if (!result.rows[0]) return null;
+    const roles = await this.rolesForUsers([Number(result.rows[0].id)]);
+    return mapRow(result.rows[0], roles.get(Number(result.rows[0].id)) ?? []);
   }
   async create(input: TenantUserSavePayload, uuid: string, passwordHash: string) {
     const result =
@@ -68,13 +72,38 @@ export class TenantUserRepository {
     await sql`DELETE FROM app_users WHERE id=${id}`.execute(this.database);
     return record;
   }
+  private async rolesForUsers(ids: number[]) {
+    const roles = new Map<number, TenantUser["roles"]>();
+    if (!ids.length) return roles;
+    const result = (await this.database
+      .selectFrom("app_user_roles as assignment")
+      .innerJoin("app_roles as role", "role.id", "assignment.role_id")
+      .select([
+        "assignment.user_id as user_id",
+        "assignment.role_id as role_id",
+        "role.label as role_label"
+      ])
+      .where("assignment.user_id", "in", ids)
+      .where("assignment.status", "=", "active")
+      .where("role.status", "=", "active")
+      .orderBy("assignment.updated_at", "desc")
+      .orderBy("assignment.id", "desc")
+      .execute()) as RoleRow[];
+    for (const row of result) {
+      const current = roles.get(Number(row.user_id)) ?? [];
+      current.push({ id: Number(row.role_id), label: row.role_label });
+      roles.set(Number(row.user_id), current);
+    }
+    return roles;
+  }
 }
-function mapRow(row: Row): TenantUser {
+function mapRow(row: Row, roles: TenantUser["roles"]): TenantUser {
   return {
     email: row.email,
     id: Number(row.id),
     isProtected: Boolean(row.is_protected),
     name: row.name,
+    roles,
     status: row.status,
     uuid: row.uuid
   };

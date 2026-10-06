@@ -5,10 +5,12 @@ import {
   deactivateTenantUser,
   forceDeleteTenantUser,
   listTenantUserTenants,
+  listTenantUserRoleOptions,
   listTenantUsers,
   updateTenantUser
 } from "./tenant-user.services";
 import type { TenantUser, TenantUserSavePayload, TenantUserScope } from "./tenant-user.types";
+import { tenantUserRoleQueryKey } from "../tenant-user-role/index";
 export const tenantUserQueryKey = ["tenant", "access", "users"] as const;
 export const tenantUserTenantQueryKey = ["admin", "tenant-user", "tenants"] as const;
 
@@ -24,10 +26,22 @@ export function useTenantUsersQuery(scope: TenantUserScope, enabled = true) {
     retry: false
   });
 }
+export function useTenantUserRoleOptionsQuery(scope: TenantUserScope, enabled = true) {
+  return useQuery({
+    enabled,
+    queryFn: () => listTenantUserRoleOptions(scope),
+    queryKey: [...queryKey(scope), "role-options"]
+  });
+}
 
 export function useTenantUserMutations(scope: TenantUserScope) {
   const client = useQueryClient();
-  const done = () => client.invalidateQueries({ queryKey: queryKey(scope) });
+  const done = async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: queryKey(scope) }),
+      client.invalidateQueries({ queryKey: tenantUserRoleQueryKey })
+    ]);
+  };
   return {
     activate: useMutation({
       mutationFn: (record: TenantUser) => activateTenantUser(scope, record.id),

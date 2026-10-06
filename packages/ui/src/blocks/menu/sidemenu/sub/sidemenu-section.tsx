@@ -108,15 +108,35 @@ function SidemenuSubItemNode({ item }: { item: SidemenuSubItem }) {
       <SidebarMenuSubItem>
         <Collapsible asChild defaultOpen={active} className="group/sub-collapsible">
           <div>
-            <CollapsibleTrigger asChild>
-              <SidebarMenuSubButton asChild isActive={active}>
-                <button type="button">
-                  {Icon ? <Icon className="size-4 shrink-0" /> : null}
-                  <span>{item.title}</span>
-                  <SidemenuChevron className="group-data-[state=open]/sub-collapsible:rotate-45" />
-                </button>
-              </SidebarMenuSubButton>
-            </CollapsibleTrigger>
+            {item.onSelect ? (
+              <div className="flex min-w-0 items-center">
+                <SidebarMenuSubButton asChild className="flex-1" isActive={item.isActive ?? false}>
+                  <button onClick={item.onSelect} type="button">
+                    {Icon ? <Icon className="size-4 shrink-0" /> : null}
+                    <span>{item.title}</span>
+                  </button>
+                </SidebarMenuSubButton>
+                <CollapsibleTrigger asChild>
+                  <button
+                    aria-label={`Toggle ${item.title} items`}
+                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    type="button"
+                  >
+                    <SidemenuChevron className="!ml-0 group-data-[state=open]/sub-collapsible:rotate-45" />
+                  </button>
+                </CollapsibleTrigger>
+              </div>
+            ) : (
+              <CollapsibleTrigger asChild>
+                <SidebarMenuSubButton asChild isActive={active}>
+                  <button type="button">
+                    {Icon ? <Icon className="size-4 shrink-0" /> : null}
+                    <span>{item.title}</span>
+                    <SidemenuChevron className="group-data-[state=open]/sub-collapsible:rotate-45" />
+                  </button>
+                </SidebarMenuSubButton>
+              </CollapsibleTrigger>
+            )}
             <CollapsibleContent>
               <SidebarMenuSub className="mx-2 mr-0 gap-0.5 py-0.5">
                 {children.map((child) => (

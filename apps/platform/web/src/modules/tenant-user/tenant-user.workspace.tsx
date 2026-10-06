@@ -27,6 +27,7 @@ import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
 import { TenantUserForm } from "./tenant-user.form";
 import {
   useTenantUserMutations,
+  useTenantUserRoleOptionsQuery,
   useTenantUsersQuery,
   useTenantUserTenantsQuery
 } from "./tenant-user.hooks";
@@ -42,6 +43,7 @@ export function TenantUserWorkspace({ mode = "tenant" }: { mode?: "super-admin" 
     : { desk: "tenant" };
   const canManage = !superAdmin || selectedTenantId !== null;
   const query = useTenantUsersQuery(scope, canManage);
+  const roleOptionsQuery = useTenantUserRoleOptionsQuery(scope, canManage);
   const mutations = useTenantUserMutations(scope);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -57,7 +59,8 @@ export function TenantUserWorkspace({ mode = "tenant" }: { mode?: "super-admin" 
         (status === "all" || record.status === status) &&
         (!term ||
           record.name.toLowerCase().includes(term) ||
-          record.email.toLowerCase().includes(term))
+          record.email.toLowerCase().includes(term) ||
+          record.roles.some((role) => role.label.toLowerCase().includes(term)))
     );
   }, [query.data, search, status]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
@@ -229,8 +232,14 @@ export function TenantUserWorkspace({ mode = "tenant" }: { mode?: "super-admin" 
       )}
       <TenantUserForm
         {...(selectedTenant ? { contextLabel: selectedTenant.tenantName } : {})}
-        {...(saveError instanceof Error ? { error: saveError.message } : {})}
+        {...(saveError instanceof Error
+          ? { error: saveError.message }
+          : roleOptionsQuery.error instanceof Error
+            ? { error: roleOptionsQuery.error.message }
+            : {})}
         loading={mutations.create.isPending || mutations.update.isPending}
+        roleOptions={roleOptionsQuery.data ?? []}
+        roleOptionsLoading={roleOptionsQuery.isLoading}
         onCancel={() => setEditing(undefined)}
         onSubmit={(value) => void save(value)}
         open={canManage && editing !== undefined}

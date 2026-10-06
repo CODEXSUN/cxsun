@@ -90,9 +90,9 @@ function platformDevelopmentServer(runtimeEnv: Record<string, string | undefined
         ...proxy,
         rewrite: (path: string) => path.replace(/^\/api\/core/u, "") || "/"
       },
-      "/api/devkit": {
+      "/api/project-manager": {
         ...proxy,
-        rewrite: (path: string) => `/devkit${path.replace(/^\/api\/devkit/u, "") || "/"}`
+        rewrite: (path: string) => `/project-manager${path.replace(/^\/api\/project-manager/u, "") || "/"}`
       },
       "/api/platform": {
         ...proxy,

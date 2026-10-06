@@ -11,6 +11,7 @@ export type PlatformApp = {
     | "billing"
     | "accounts"
     | "devkit"
+    | "project-manager"
     | "mail"
     | "platform-task-manager"
     | "blog"

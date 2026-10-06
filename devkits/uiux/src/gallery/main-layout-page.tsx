@@ -1,78 +1,60 @@
 import { useState } from "react";
-import {
-  BlocksIcon,
-  BookOpenIcon,
-  BotIcon,
-  CheckIcon,
-  ChevronRightIcon,
-  Columns3Icon,
-  CopyIcon,
-  FileTextIcon,
-  FolderTreeIcon,
-  LayoutTemplateIcon,
-  PanelsTopLeftIcon,
-  Table2Icon
-} from "lucide-react";
+import { CheckIcon, ChevronRightIcon, CopyIcon } from "lucide-react";
 import { Button } from "@cxsun/ui/components/button";
-import { MainLayout, type MainLayoutNavigationSection } from "@cxsun/ui/layouts/main-layouts";
-import { galleryApps, galleryUser } from "./main-layout-fixtures";
+import { galleryPageUrl } from "./gallery-routes";
 
 const importPath = "@cxsun/ui/layouts/main-layouts";
 
-const navigation: MainLayoutNavigationSection[] = [
-  {
-    label: "Layouts",
-    icon: LayoutTemplateIcon,
-    items: [
-      { label: "Main Layout", icon: PanelsTopLeftIcon },
-      { label: "Documentation Workspace", icon: BookOpenIcon },
-      { label: "Agent Workspace", icon: BotIcon }
-    ]
-  },
-  {
-    label: "Blocks",
-    icon: BlocksIcon,
-    items: [
-      { label: "Workspace Status" },
-      { label: "Workspace Entity Card" },
-      { label: "Execution Status", icon: BotIcon },
-      { label: "Table", icon: Table2Icon },
-      { label: "Form", icon: FileTextIcon },
-      { label: "App Header" },
-      { label: "Kanban Board", icon: Columns3Icon },
-      { label: "File Tree", icon: FolderTreeIcon }
-    ]
-  }
-];
+function mainLayoutPreviewUrl() {
+  return galleryPageUrl("main-layouts", "main-layout");
+}
 
-const usageCode = `import { LayoutTemplateIcon, PanelsTopLeftIcon } from "lucide-react";
-import { MainLayout } from "@cxsun/ui/layouts/main-layouts";
+const usageCode = `import { AppSidebar } from "@cxsun/ui/blocks/menu/sidemenu/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@cxsun/ui/components/sidebar";
+import {
+  TopologyInspectionControl, TopologyInspector, TopologyRegion,
+  useInterfaceTopology
+} from "@cxsun/ui/features/interface-topology";
+import { AppHeader, AppLayout, StatusBar, TopMenu } from "@cxsun/ui/layouts/main-layouts";
 
-const navigation = [{
-  label: "Layouts",
-  icon: LayoutTemplateIcon,
-  items: [{ label: "Main Layout", icon: PanelsTopLeftIcon }]
-}];
+export function MainLayoutView() {
+  const topology = useInterfaceTopology(topologyDesks);
 
-export function ApplicationShell() {
-  return (
-    <MainLayout
-      appItems={apps}
-      applicationName="UI"
-      navigation={navigation}
-      notificationCount={2}
-      statusLabel="Ready"
-      workspaceTitle="Overview"
-      user={signedInUser}
-    >
-      {/* Application page content */}
-    </MainLayout>
-  );
+  return <SidebarProvider>
+  <AppLayout className="relative h-screen w-full">
+    <TopologyRegion id="S01" topology={topology}>
+      <TopMenu {...topMenuProps} />
+    </TopologyRegion>
+    <div className="relative flex min-h-0 flex-1">
+      <AppSidebar
+        {...topology.regionProps("S02")}
+        brand={brand}
+        className={topology.highlightClassName("S02")}
+        items={menuItems}
+        positioning="container"
+        user={sidebarUser}
+        variant="inset"
+      />
+      <SidebarInset>
+        <TopologyRegion id="S03" topology={topology}>
+          <AppHeader breadcrumbs={[{ label: "Main Layout" }]} homeHref={overviewHref} name="UIUX" />
+        </TopologyRegion>
+        <TopologyRegion className="flex-1" id="S04" topology={topology}>
+          {workspacePage}
+        </TopologyRegion>
+      </SidebarInset>
+    </div>
+    <TopologyRegion id="S05" topology={topology}>
+      <StatusBar status="Ready" workspace={workspaceTitle} />
+    </TopologyRegion>
+    <TopologyInspectionControl topology={topology} />
+    <TopologyInspector topology={topology} />
+  </AppLayout>
+</SidebarProvider>;
 }`;
 
 export function MainLayoutPage() {
   const [copied, setCopied] = useState<"path" | "code" | null>(null);
-  const [demoStatus, setDemoStatus] = useState("Ready");
 
   async function copy(value: string, target: "path" | "code") {
     await navigator.clipboard.writeText(value);
@@ -116,17 +98,10 @@ export function MainLayoutPage() {
             Main Layout
           </span>
         </div>
-        <MainLayout
-          appItems={galleryApps}
-          applicationName="UI"
-          className="h-[min(67vh,44rem)] min-h-[28rem]"
-          navigation={navigation}
-          notificationCount={2}
-          onLogout={() => setDemoStatus("Sign out preview")}
-          onProfile={() => setDemoStatus("Profile preview")}
-          statusLabel={demoStatus}
-          workspaceTitle="Overview"
-          user={galleryUser}
+        <iframe
+          className="h-[min(67vh,44rem)] min-h-[28rem] w-full"
+          src={mainLayoutPreviewUrl()}
+          title="Main Layout live preview"
         />
       </section>
 

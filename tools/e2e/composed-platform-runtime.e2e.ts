@@ -21,8 +21,8 @@ try {
   );
   assert.ok(modules.includes("mail"), "Mail package was not composed into Platform API.");
   assert.ok(
-    modules.includes("devkit.platform-registry"),
-    "DevKit package was not composed into Platform API."
+    modules.includes("project-manager.platform-registry"),
+    "Project Manager package was not composed into Platform API."
   );
 
   const corsResponse = await app.inject({
@@ -82,14 +82,14 @@ try {
     "Billing route is not protected inside Platform API."
   );
 
-  const devkitResponse = await app.inject({
+  const projectManagerResponse = await app.inject({
     method: "GET",
-    url: "/devkit/admin/platform-registry/result"
+    url: "/project-manager/admin/platform-registry/result"
   });
   assert.equal(
-    devkitResponse.statusCode,
+    projectManagerResponse.statusCode,
     403,
-    "DevKit route is not protected by the host authentication adapter."
+    "Project Manager route is not protected by the host authentication adapter."
   );
 
   const applicationHost = new URL(process.env.PLATFORM_WEB_ORIGIN ?? "http://app.codexsun.test");
@@ -218,21 +218,22 @@ try {
   assert.equal(freshSessionResponse.statusCode, 200, freshSessionResponse.body);
   assert.equal(freshSessionResponse.json().data?.authenticated, true);
 
-  const authenticatedDevkitResponse = await app.inject({
+  const authenticatedProjectManagerResponse = await app.inject({
     headers: {
       cookie: cookies,
       host: applicationHost.host,
       origin: applicationHost.origin
     },
     method: "GET",
-    url: "/devkit/admin/platform-registry/result"
+    url: "/project-manager/admin/platform-registry/result"
   });
   assert.equal(
-    authenticatedDevkitResponse.statusCode,
+    authenticatedProjectManagerResponse.statusCode,
     403,
-    "A tenant session was allowed to access the Super Admin-only DevKit API."
+    "A tenant session was allowed to access the Super Admin-only Project Manager API."
   );
   for (const retiredPath of [
+    "/devkit/admin/platform-registry/result",
     "/devkit/admin/project-manager/result",
     "/devkit/task-manager/todos",
     "/devkit/github-dashboard/projects",
@@ -288,29 +289,29 @@ try {
   const superAdminCookies = superAdminLoginResponse.cookies
     .map((cookie) => `${cookie.name}=${cookie.value}`)
     .join("; ");
-  const masterDevkitResponse = await app.inject({
+  const masterProjectManagerResponse = await app.inject({
     headers: {
       cookie: superAdminCookies,
       host: applicationHost.host,
       origin: applicationHost.origin
     },
     method: "GET",
-    url: "/devkit/admin/platform-registry/result"
+    url: "/project-manager/admin/platform-registry/result"
   });
-  assert.equal(masterDevkitResponse.statusCode, 200, masterDevkitResponse.body);
-  const masterDevkit = masterDevkitResponse.json() as {
+  assert.equal(masterProjectManagerResponse.statusCode, 200, masterProjectManagerResponse.body);
+  const masterProjectManager = masterProjectManagerResponse.json() as {
     data?: { summary?: { totalModules?: number } };
     success?: boolean;
   };
-  assert.equal(masterDevkit.success, true);
+  assert.equal(masterProjectManager.success, true);
   assert.ok(
-    (masterDevkit.data?.summary?.totalModules ?? 0) > 0,
-    "DevKit returned no master registry modules for Super Admin."
+    (masterProjectManager.data?.summary?.totalModules ?? 0) > 0,
+    "Project Manager returned no master registry modules for Super Admin."
   );
 
   console.log("Composed Platform runtime E2E passed", {
     apiPort: 7010,
-    composedPackages: ["core", "billing", "mail", "devkit"],
+    composedPackages: ["core", "billing", "mail", "project-manager"],
     corsOrigin: "http://127.0.0.1:7020",
     webPort: 7020
   });

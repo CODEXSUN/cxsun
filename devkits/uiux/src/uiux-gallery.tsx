@@ -4,7 +4,6 @@ import {
   BlocksIcon,
   ComponentIcon,
   LayoutTemplateIcon,
-  MenuIcon,
   PaletteIcon,
   PanelsTopLeftIcon,
   SwatchBookIcon,
@@ -16,8 +15,12 @@ import { AppSidebar } from "@cxsun/ui/blocks/menu/sidemenu/app-sidebar";
 import type { SidemenuItem } from "@cxsun/ui/blocks/menu/sidemenu/sub/sidemenu-section";
 import { Button } from "@cxsun/ui/components/button";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@cxsun/ui/components/sidebar";
+import { useInterfaceTopology } from "@cxsun/ui/features/interface-topology";
+import { mainLayoutTopologyDesks } from "./gallery/interface-topology-fixtures";
 import { MainLayoutPage } from "./gallery/main-layout-page";
+import { MainLayoutLivePreview } from "./gallery/main-layout-live-preview";
 import { LayoutPartPage, type LayoutPart } from "./gallery/layout-part-page";
+import { galleryPageFromUrl, galleryPageUrl } from "./gallery/gallery-routes";
 
 const FoundationsGallery = lazy(() =>
   import("./gallery/foundations-gallery").then((m) => ({ default: m.FoundationsGallery }))
@@ -31,30 +34,37 @@ const WorkspaceGallery = lazy(() =>
 const ComponentsGallery = lazy(() =>
   import("./gallery/components-gallery").then((m) => ({ default: m.ComponentsGallery }))
 );
+const InterfaceTopologyGallery = lazy(() =>
+  import("./gallery/interface-topology-gallery").then((m) => ({
+    default: m.InterfaceTopologyGallery
+  }))
+);
 
 type GalleryPage =
-  "main-layouts" | "layouts" | LayoutPart | "foundations" | "workspace" | "components";
+  | "main-layouts"
+  | "layouts"
+  | LayoutPart
+  | "foundations"
+  | "workspace"
+  | "components"
+  | "interface-topology";
 const pageTitles: Record<GalleryPage, string> = {
   "main-layouts": "Main Layout",
   layouts: "Layout inventory",
   "app-layout": "App Layout",
   "top-menu": "Top Menu",
   "side-menu": "Side Menu",
+  "app-header": "App Header",
   "status-bar": "Status Bar",
   foundations: "Foundations",
   workspace: "Workspace blocks",
-  components: "Components"
+  components: "Components",
+  "interface-topology": "Interface topology"
 };
 
 function pageFromUrl(): GalleryPage {
-  const requested = new URLSearchParams(window.location.search).get("uiux");
+  const requested = galleryPageFromUrl();
   return requested && requested in pageTitles ? (requested as GalleryPage) : "main-layouts";
-}
-
-function pageUrl(page: GalleryPage) {
-  const url = new URL(window.location.href);
-  url.searchParams.set("uiux", page);
-  return `${url.pathname}${url.search}`;
 }
 
 export function UiuxGallery({
@@ -65,15 +75,20 @@ export function UiuxGallery({
   deskRoutesAvailable?: boolean;
 }) {
   const [page, setPage] = useState<GalleryPage>(pageFromUrl);
+  const previewMode = new URLSearchParams(window.location.search).get("uiuxPreview");
+  const topology = useInterfaceTopology(mainLayoutTopologyDesks);
 
   useEffect(() => {
+    if (!deskRoutesAvailable && !window.location.pathname.startsWith("/uiux/")) {
+      window.history.replaceState(window.history.state, "", galleryPageUrl(pageFromUrl()));
+    }
     const syncPage = () => setPage(pageFromUrl());
     window.addEventListener("popstate", syncPage);
     return () => window.removeEventListener("popstate", syncPage);
-  }, []);
+  }, [deskRoutesAvailable]);
 
   function selectPage(nextPage: GalleryPage) {
-    window.history.pushState({ uiux: nextPage }, "", pageUrl(nextPage));
+    window.history.pushState({ uiux: nextPage }, "", galleryPageUrl(nextPage));
     setPage(nextPage);
   }
 
@@ -97,44 +112,57 @@ export function UiuxGallery({
       ]
     },
     {
-      title: "Main Layout parts",
-      icon: MenuIcon,
+      title: "Blocks",
+      icon: BlocksIcon,
       isActive:
         page === "app-layout" ||
         page === "top-menu" ||
         page === "side-menu" ||
+        page === "app-header" ||
         page === "status-bar",
       items: [
         {
           title: "App Layout",
           icon: PanelsTopLeftIcon,
-          isActive: page === "app-layout",
-          onSelect: () => selectPage("app-layout")
-        },
-        {
-          title: "Top Menu",
-          icon: PanelTopIcon,
-          isActive: page === "top-menu",
-          onSelect: () => selectPage("top-menu")
-        },
-        {
-          title: "Side Menu",
-          icon: PanelLeftIcon,
-          isActive: page === "side-menu",
-          onSelect: () => selectPage("side-menu")
-        },
-        {
-          title: "Status Bar",
-          icon: PanelBottomIcon,
-          isActive: page === "status-bar",
-          onSelect: () => selectPage("status-bar")
+          ...(page === "app-layout" ? { isActive: true } : {}),
+          onSelect: () => selectPage("app-layout"),
+          items: [
+            {
+              title: "Top Menu",
+              icon: PanelTopIcon,
+              isActive: page === "top-menu",
+              onSelect: () => selectPage("top-menu")
+            },
+            {
+              title: "Side Menu",
+              icon: PanelLeftIcon,
+              isActive: page === "side-menu",
+              onSelect: () => selectPage("side-menu")
+            },
+            {
+              title: "App Header",
+              icon: PanelsTopLeftIcon,
+              isActive: page === "app-header",
+              onSelect: () => selectPage("app-header")
+            },
+            {
+              title: "Status Bar",
+              icon: PanelBottomIcon,
+              isActive: page === "status-bar",
+              onSelect: () => selectPage("status-bar")
+            }
+          ]
         }
       ]
     },
     {
       title: "Design library",
       icon: PaletteIcon,
-      isActive: page === "foundations" || page === "workspace" || page === "components",
+      isActive:
+        page === "foundations" ||
+        page === "workspace" ||
+        page === "components" ||
+        page === "interface-topology",
       items: [
         {
           title: "Foundations",
@@ -153,15 +181,35 @@ export function UiuxGallery({
           icon: ComponentIcon,
           isActive: page === "components",
           onSelect: () => selectPage("components")
+        },
+        {
+          title: "Interface topology",
+          icon: PanelsTopLeftIcon,
+          isActive: page === "interface-topology",
+          onSelect: () => selectPage("interface-topology")
         }
       ]
     }
   ];
 
+  if (previewMode === "main-layout") {
+    return (
+      <SidebarProvider style={{ "--sidebar-width": "17rem" } as CSSProperties}>
+        <MainLayoutLivePreview
+          appHref={galleryPageUrl("main-layouts")}
+          brandHref={galleryPageUrl("main-layouts")}
+          menuItems={menuItems}
+          pageTitle={pageTitles[page]}
+          topology={topology}
+        />
+      </SidebarProvider>
+    );
+  }
+
   return (
     <SidebarProvider style={{ "--sidebar-width": "17rem" } as CSSProperties}>
       <AppSidebar
-        brand={{ href: pageUrl("main-layouts"), subtitle: "Design workspace", title: "UIUX" }}
+        brand={{ href: galleryPageUrl("main-layouts"), subtitle: "Design workspace", title: "UIUX" }}
         items={menuItems}
         user={{ email: "Shared UI gallery", fallback: "UI", name: "UIUX" }}
         userMenuItems={[]}
@@ -189,23 +237,31 @@ export function UiuxGallery({
           ) : null}
         </header>
         <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 py-6 text-foreground sm:px-6 lg:px-8">
-          <Suspense fallback={<p className="py-8 text-sm text-muted-foreground">Loading page…</p>}>
-            {page === "main-layouts" ? <MainLayoutPage /> : null}
-            {page === "app-layout" ||
-            page === "top-menu" ||
-            page === "side-menu" ||
-            page === "status-bar" ? (
-              <LayoutPartPage part={page} />
-            ) : null}
-            {page === "layouts" ? (
-              <LayoutsGallery deskRoutesAvailable={deskRoutesAvailable} />
-            ) : null}
-            {page === "foundations" ? <FoundationsGallery /> : null}
-            {page === "workspace" ? <WorkspaceGallery /> : null}
-            {page === "components" ? (
-              <ComponentsGallery {...(componentCatalogHref ? { componentCatalogHref } : {})} />
-            ) : null}
-          </Suspense>
+          {previewMode === "side-menu" ? (
+            <div className="text-sm text-muted-foreground">{pageTitles[page]} workspace canvas</div>
+          ) : (
+            <Suspense
+              fallback={<p className="py-8 text-sm text-muted-foreground">Loading page…</p>}
+            >
+              {page === "main-layouts" ? <MainLayoutPage /> : null}
+              {page === "app-layout" ||
+              page === "top-menu" ||
+              page === "side-menu" ||
+              page === "app-header" ||
+              page === "status-bar" ? (
+                <LayoutPartPage part={page} />
+              ) : null}
+              {page === "layouts" ? (
+                <LayoutsGallery deskRoutesAvailable={deskRoutesAvailable} />
+              ) : null}
+              {page === "foundations" ? <FoundationsGallery /> : null}
+              {page === "workspace" ? <WorkspaceGallery /> : null}
+              {page === "components" ? (
+                <ComponentsGallery {...(componentCatalogHref ? { componentCatalogHref } : {})} />
+              ) : null}
+              {page === "interface-topology" ? <InterfaceTopologyGallery /> : null}
+            </Suspense>
+          )}
         </main>
       </SidebarInset>
     </SidebarProvider>

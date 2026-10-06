@@ -29,8 +29,8 @@ const moduleRoots = [
     path: join(process.cwd(), "apps", "platform", "api", "src", "modules")
   },
   {
-    app: "devkit-api",
-    path: join(process.cwd(), "apps", "devkit", "api", "src", "modules")
+    app: "project-manager-api",
+    path: join(process.cwd(), "devkits", "project-manager", "api", "src", "modules")
   }
 ];
 
@@ -66,9 +66,13 @@ const shellOnlyBackendModules = new Set();
 const shellOnlyBackendRoles = ["module", "routes", "types"];
 const capabilityBackendRoles = new Map([
   ["auditor-api/client", ["module", "service", "repository", "routes", "migration", "types"]],
-  ["devkit-api/platform-registry", reducedBackendRoles],
+  ["project-manager-api/platform-registry", reducedBackendRoles],
+  ["project-manager-api/ideas", ["module", "service", "repository", "routes", "migration", "types"]],
   ["billing-api/opening-balance", reducedBackendRoles],
-  ["crm-api/enquiry", reducedBackendRoles]
+  ["crm-api/enquiry", reducedBackendRoles],
+  ["crm-api/list-in", reducedBackendRoles],
+  ["crm-api/status", reducedBackendRoles],
+  ["crm-api/priority", reducedBackendRoles]
 ]);
 
 const webModuleRoots = [
@@ -97,8 +101,8 @@ const webModuleRoots = [
     path: join(process.cwd(), "apps", "platform", "web", "src", "modules")
   },
   {
-    app: "devkit-web",
-    path: join(process.cwd(), "apps", "devkit", "web", "src", "modules")
+    app: "project-manager-web",
+    path: join(process.cwd(), "devkits", "project-manager", "web", "src", "modules")
   }
 ];
 

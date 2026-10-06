@@ -1,33 +1,22 @@
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
 import { WorkspaceTable } from "@cxsun/ui/workspace/table";
-import { WorkspaceStatusBadge } from "@cxsun/ui/workspace/status";
 import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
-import type { EnquiryLookup, EnquiryPriority, EnquiryRecord } from "./enquiry.types";
-
-const statusTone = {
-  new: "info",
-  contacted: "warning",
-  qualified: "success",
-  unqualified: "neutral"
-} as const;
-
-const priorityColor: Record<EnquiryPriority, string> = {
-  low: "var(--color-amber-500)",
-  normal: "var(--primary)",
-  high: "var(--destructive)"
-};
+import { CrmStatusBadge, prioritySwatch } from "../../crm-colors";
+import type { EnquiryLookup, EnquiryRecord } from "./enquiry.types";
 
 export function EnquiryList({
   records,
   users,
   visibleColumns,
   loading,
+  onShow,
   onEdit
 }: {
   records: EnquiryRecord[];
   users: EnquiryLookup[];
   visibleColumns: Record<string, boolean>;
   loading: boolean;
+  onShow: (record: EnquiryRecord) => void;
   onEdit: (record: EnquiryRecord) => void;
 }) {
   const userNames = new Map(users.map((user) => [user.id, user.name]));
@@ -40,7 +29,10 @@ export function EnquiryList({
         <button
           className="cursor-pointer font-medium text-foreground hover:underline"
           type="button"
-          onClick={() => onEdit(row.original)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onShow(row.original);
+          }}
         >
           #{row.original.enquiryNo}
         </button>
@@ -61,7 +53,10 @@ export function EnquiryList({
           className="block max-w-80 cursor-pointer truncate text-left font-medium text-foreground hover:underline"
           title={row.original.description ?? row.original.title}
           type="button"
-          onClick={() => onEdit(row.original)}
+          onClick={(event) => {
+            event.stopPropagation();
+            onShow(row.original);
+          }}
         >
           {row.original.title}
         </button>
@@ -85,11 +80,10 @@ export function EnquiryList({
       header: "Priority",
       cell: ({ row }) => (
         <span
-          className="inline-block size-3 rounded-full"
-          style={{ backgroundColor: priorityColor[row.original.priority] }}
-          title={`${row.original.priority} priority`}
+          className={`inline-block size-3 rounded-full ${prioritySwatch(row.original.priority)}`}
+          title={`${row.original.priorityName} priority`}
         >
-          <span className="sr-only">{row.original.priority} priority</span>
+          <span className="sr-only">{row.original.priorityName} priority</span>
         </span>
       )
     },
@@ -108,10 +102,7 @@ export function EnquiryList({
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => (
-        <WorkspaceStatusBadge
-          label={row.original.status.replaceAll("_", " ")}
-          tone={statusTone[row.original.status]}
-        />
+        <CrmStatusBadge code={row.original.status} label={row.original.statusName} />
       )
     },
     {
@@ -144,6 +135,7 @@ export function EnquiryList({
       emptyState="No enquiries found."
       isLoading={loading}
       minWidth="1020px"
+      onRowClick={onShow}
     />
   );
 }

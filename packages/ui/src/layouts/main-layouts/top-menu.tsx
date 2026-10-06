@@ -1,13 +1,9 @@
-import { useEffect, useRef } from "react";
-import { BellIcon, CommandIcon, MenuIcon, SearchIcon } from "lucide-react";
+import { useEffect } from "react";
+import { CommandIcon, MenuIcon, SearchIcon } from "lucide-react";
 import { Button } from "../../components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from "../../components/dropdown-menu";
 import { TopMenuAppLauncher } from "./top-menu-app-launcher";
+import { TopMenuNotifications, type TopMenuNotification } from "./top-menu-notifications";
+import { TopMenuSearch, type TopMenuSearchItem } from "./top-menu-search";
 import type { TopMenuAppItem, TopMenuUser } from "./top-menu-types";
 import { TopMenuUserMenu } from "./top-menu-user";
 
@@ -15,15 +11,17 @@ export type TopMenuProps = {
   appItems: TopMenuAppItem[];
   applicationName: string;
   logoutHref?: string;
-  notificationCount: number;
+  notifications: TopMenuNotification[];
   onCloseSearch: () => void;
   onLogout?: () => void | Promise<void>;
+  onNotificationDismiss?: (id: string) => void;
   onOpenSearch: () => void;
   onProfile?: () => void;
   onSearchChange: (value: string) => void;
   onToggleSidebar: () => void;
   profileHref?: string;
   search: string;
+  searchItems: TopMenuSearchItem[];
   searchOpen: boolean;
   searchPlaceholder: string;
   user: TopMenuUser;
@@ -33,57 +31,52 @@ export function TopMenu({
   appItems,
   applicationName,
   logoutHref,
-  notificationCount,
+  notifications,
   onCloseSearch,
   onLogout,
+  onNotificationDismiss,
   onOpenSearch,
   onProfile,
   onSearchChange,
   onToggleSidebar,
   profileHref,
   search,
+  searchItems,
   searchOpen,
   searchPlaceholder,
   user
 }: TopMenuProps) {
-  const searchInput = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
-    if (searchOpen) searchInput.current?.focus();
-  }, [searchOpen]);
+    function openSearch(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        onOpenSearch();
+      }
+    }
+    window.addEventListener("keydown", openSearch);
+    return () => window.removeEventListener("keydown", openSearch);
+  }, [onOpenSearch]);
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between border-b">
-      <div className="flex h-full min-w-0 items-center">
-        <Button
-          aria-label="Toggle application navigation"
-          className="h-full w-14 rounded-none border-r"
-          onClick={onToggleSidebar}
-          size="icon"
-          type="button"
-          variant="ghost"
-        >
-          <MenuIcon className="size-4" />
-        </Button>
-        <div className="flex min-w-0 items-center gap-2 px-5 text-sm font-semibold">
-          <CommandIcon className="size-4" />
-          <span className="truncate">{applicationName}</span>
+    <>
+      <header className="flex h-12 shrink-0 items-center justify-between border-b">
+        <div className="flex h-full min-w-0 items-center">
+          <Button
+            aria-label="Toggle application navigation"
+            className="h-full w-12 rounded-none border-r"
+            onClick={onToggleSidebar}
+            size="icon"
+            type="button"
+            variant="ghost"
+          >
+            <MenuIcon className="size-4" />
+          </Button>
+          <div className="flex min-w-0 items-center gap-2 px-5 text-sm font-semibold">
+            <CommandIcon className="size-4" />
+            <span className="truncate">{applicationName}</span>
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2 px-4">
-        {searchOpen ? (
-          <input
-            ref={searchInput}
-            aria-label="Search workspace navigation"
-            className="h-8 w-36 rounded-full border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-52"
-            onChange={(event) => onSearchChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") onCloseSearch();
-            }}
-            placeholder={searchPlaceholder}
-            value={search}
-          />
-        ) : (
+        <div className="flex items-center gap-2 px-4">
           <Button
             className="h-8 gap-2 rounded-full shadow-sm"
             onClick={onOpenSearch}
@@ -96,29 +89,30 @@ export function TopMenu({
               Ctrl K
             </kbd>
           </Button>
-        )}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button aria-label="Notifications" className="relative" size="icon" variant="ghost">
-              <BellIcon className="size-4" />
-              {notificationCount > 0 ? (
-                <span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-destructive" />
-              ) : null}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>{notificationCount} unread notifications</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <TopMenuAppLauncher items={appItems} />
-        <TopMenuUserMenu
-          {...(logoutHref ? { logoutHref } : {})}
-          {...(onLogout ? { onLogout } : {})}
-          {...(onProfile ? { onProfile } : {})}
-          {...(profileHref ? { profileHref } : {})}
-          user={user}
-        />
-      </div>
-    </header>
+          <TopMenuNotifications
+            notifications={notifications}
+            {...(onNotificationDismiss ? { onDismiss: onNotificationDismiss } : {})}
+            user={user}
+            workspaceTitle={applicationName}
+          />
+          <TopMenuAppLauncher items={appItems} />
+          <TopMenuUserMenu
+            {...(logoutHref ? { logoutHref } : {})}
+            {...(onLogout ? { onLogout } : {})}
+            {...(onProfile ? { onProfile } : {})}
+            {...(profileHref ? { profileHref } : {})}
+            user={user}
+          />
+        </div>
+      </header>
+      <TopMenuSearch
+        items={searchItems}
+        onClose={onCloseSearch}
+        onSearchChange={onSearchChange}
+        open={searchOpen}
+        placeholder={searchPlaceholder}
+        search={search}
+      />
+    </>
   );
 }

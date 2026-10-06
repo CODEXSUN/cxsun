@@ -1,24 +1,43 @@
 # UIUX Gallery
 
-`@cxsun/uiux` is a visual gallery for the public `@cxsun/ui` design system. It
-owns examples and documentation, while `packages/ui` owns reusable controls,
-workspace blocks, layouts, and tokens.
+`@cxsun/uiux` shows live examples of the shared `@cxsun/ui` design system.
+`packages/ui` owns reusable components; UIUX owns gallery navigation,
+specimens, and usage examples.
 
-The Super Admin desk opens the gallery at `/sa/uiux`. UIUX owns its grouped
-sidebar, top menu, and page canvas. Main Layout, available at
-`?uiux=main-layouts`, shows the composed app base, top menu, side menu,
-workspace canvas, and status bar with usage code. The existing
-component catalog remains at `/sa/design-system`.
+The Super Admin desk opens the gallery at `/sa/uiux`. The standalone gallery
+runs with local specimen data. It has no API, database, or authentication
+surface; the embedded desk route uses the Super Admin desk's access gate.
 
-The **Main Layout parts** sidebar group has live pages for App Layout,
-Top Menu, Side Menu, and Status Bar (`?uiux=app-layout`, `?uiux=top-menu`,
-`?uiux=side-menu`, and `?uiux=status-bar`). Each page imports the real component
-from `@cxsun/ui/layouts/main-layouts` and provides controls for its behavior.
+## Main Layout
 
-From the repository root, run `npm run dev -w @cxsun/uiux` to open the standalone
-gallery at `http://127.0.0.1:7030`. Run `npm run typecheck -w @cxsun/uiux` and
-`npm run build -w @cxsun/uiux` to check it.
+The Main Layout page (`/uiux/main-layouts`) renders the working gallery
+`AppSidebar` and workspace with the shared `TopMenu`, `AppHeader`, and
+`StatusBar`. Its shell follows the five-region contract in
+[`packages/ui/src/layouts/main-layouts/README.md`](../../packages/ui/src/layouts/main-layouts/README.md).
 
-The standalone gallery uses only local specimen data. It has no API, database,
-or authentication surface. The embedded desk route uses the Super Admin desk's
-existing access gate.
+The **Blocks → App Layout** group has live pages for App Layout, Top Menu, Side
+Menu, App Header, and Status Bar. Open them under `/uiux/` as `app-layout`,
+`top-menu`, `side-menu`, `app-header`, and `status-bar`.
+The Side Menu page uses the gallery's original `AppSidebar`.
+
+**Design library → Interface topology** (`/uiux/interface-topology`) inspects
+the live Main Layout. It shows these regions in screen order:
+
+| Region | Technical name |
+| --- | --- |
+| Top Menu | `main.topMenu` |
+| Side Menu | `main.sideBar` |
+| App Header | `main.AppHeader` |
+| Workspace Canvas | `main.workspace` |
+| Status Bar | `main.StatusBar` |
+
+The gallery reads these case-sensitive values from `mainLayoutTechnicalNames`
+in `@cxsun/ui/layouts/main-layouts`.
+
+## Run
+
+From the repository root, run `npm run dev -w @cxsun/uiux` to open the
+standalone gallery at `http://127.0.0.1:7030/uiux/main-layouts`. The embedded
+Super Admin desk keeps `/sa/uiux?uiux=main-layouts`. Run
+`npm run typecheck -w @cxsun/uiux` and `npm run build -w @cxsun/uiux` to check
+it. The existing component catalog remains at `/sa/design-system`.

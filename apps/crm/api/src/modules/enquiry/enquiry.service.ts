@@ -1,6 +1,7 @@
 import { AppError } from "@cxsun/framework/errors";
 import { EnquiryRepository } from "./enquiry.repository.js";
 import type { EnquiryInput, EnquiryRecord } from "./enquiry.types.js";
+import { commentPlainText, sanitizeCommentHtml } from "./enquiry.comment-html.js";
 
 export type EnquiryRelations = {
   contact: (id: number) => Promise<{ name: string } | null>;
@@ -8,7 +9,10 @@ export type EnquiryRelations = {
     name: string | null;
     mobile: string | null;
   }) => Promise<{ id: number; name: string }>;
-  user: (id: number) => Promise<boolean>;
+  user: (id: number) => Promise<{ name: string } | null>;
+  listIn: (id: number) => Promise<{ name: string } | null>;
+  status: (id: number) => Promise<{ name: string } | null>;
+  priority: (id: number) => Promise<{ name: string } | null>;
 };
 
 export class EnquiryService {
@@ -36,12 +40,69 @@ export class EnquiryService {
     return this.withContact(record);
   }
 
-  async update(id: number, input: EnquiryInput) {
+  async update(id: number, input: EnquiryInput, actor: string) {
     await this.get(id);
     const prepared = await this.prepare(input);
-    const record = await this.repository.update(id, prepared);
+    const record = await this.repository.update(id, prepared, actor);
     if (!record) throw AppError.notFound("Enquiry was not found.");
     return this.withContact(record);
+  }
+
+  async updateProperties(
+    id: number,
+    patch: {
+      listInId?: number | null | undefined;
+      priorityId?: number | undefined;
+      assignedUserId?: number | null | undefined;
+      dueDate?: string | null | undefined;
+      statusId?: number | undefined;
+    },
+    actor: string
+  ) {
+    const current = await this.get(id);
+    const changes = Object.entries(patch).filter(
+      ([key, value]) => value !== undefined && current[key as keyof EnquiryRecord] !== value
+    );
+    if (changes.length === 0) return current;
+    const prepared = await this.prepare({
+      ...current,
+      listInId: patch.listInId === undefined ? current.listInId : patch.listInId,
+      priorityId: patch.priorityId === undefined ? current.priorityId : patch.priorityId,
+      assignedUserId:
+        patch.assignedUserId === undefined ? current.assignedUserId : patch.assignedUserId,
+      dueDate: patch.dueDate === undefined ? current.dueDate : patch.dueDate,
+      statusId: patch.statusId === undefined ? current.statusId : patch.statusId
+    });
+    const details = changes.map(([key, value]) => `${key}: ${value ?? "—"}`).join("; ");
+    const record = await this.repository.update(id, prepared, actor, details);
+    if (!record) throw AppError.notFound("Enquiry was not found.");
+    return this.withContact(record);
+  }
+
+  async listComments(id: number) {
+    await this.get(id);
+    return this.repository.listComments(id);
+  }
+
+  async addComment(
+    id: number,
+    body: string,
+    parentId: number | null,
+    actor: string,
+    bodyFormat: "plain" | "html" = "plain"
+  ) {
+    await this.get(id);
+    const text = bodyFormat === "html" ? sanitizeCommentHtml(body) : body.trim();
+    if (!(bodyFormat === "html" ? commentPlainText(text) : text)) {
+      throw AppError.validation("Enter a comment.");
+    }
+    if (parentId !== null) {
+      const parent = await this.repository.getComment(parentId);
+      if (!parent || parent.enquiry_id !== id || parent.parent_id !== null) {
+        throw AppError.validation("Select a comment from this enquiry to reply to.");
+      }
+    }
+    return this.repository.addComment(id, parentId, text, bodyFormat, actor);
   }
 
   private async prepare(input: EnquiryInput): Promise<EnquiryInput> {
@@ -55,6 +116,15 @@ export class EnquiryService {
     }
     if (input.assignedUserId && !(await this.relations.user(input.assignedUserId))) {
       throw AppError.validation("Select an active user.");
+    }
+    if (input.listInId && !(await this.relations.listIn(input.listInId))) {
+      throw AppError.validation("Select an active List In record.");
+    }
+    if (!(await this.relations.status(input.statusId))) {
+      throw AppError.validation("Select an active enquiry status.");
+    }
+    if (!(await this.relations.priority(input.priorityId))) {
+      throw AppError.validation("Select an active enquiry priority.");
     }
     if (input.contactId) return { ...input, title };
     const contact = await this.relations.resolveOrCreateCustomer({

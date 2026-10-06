@@ -3,7 +3,8 @@ import type {
   AuditorClientDatabase,
   AuditorClientInput,
   AuditorClientRecord,
-  AuditorClientRow
+  AuditorClientRow,
+  AuditorCredentialPortal
 } from "./client.types.js";
 
 export class AuditorClientRepository {
@@ -51,6 +52,47 @@ export class AuditorClientRepository {
       .where("id", "=", id)
       .execute();
     return this.get(id);
+  }
+
+  listCredentials(clientId: number) {
+    return this.database
+      .selectFrom("auditor_client_credentials")
+      .select(["portal", "username", "password_secret", "updated_at"])
+      .where("client_id", "=", clientId)
+      .where("status", "=", "active")
+      .execute();
+  }
+
+  getCredential(clientId: number, portal: AuditorCredentialPortal) {
+    return this.database
+      .selectFrom("auditor_client_credentials")
+      .selectAll()
+      .where("client_id", "=", clientId)
+      .where("portal", "=", portal)
+      .where("status", "=", "active")
+      .executeTakeFirst();
+  }
+
+  async upsertCredential(
+    clientId: number,
+    portal: AuditorCredentialPortal,
+    username: string,
+    passwordSecret: string,
+    actor: string
+  ) {
+    await this.database
+      .insertInto("auditor_client_credentials")
+      .values({
+        client_id: clientId,
+        portal,
+        username,
+        password_secret: passwordSecret,
+        created_by: actor,
+        status: "active"
+      })
+      .onDuplicateKeyUpdate({ username, password_secret: passwordSecret, status: "active" })
+      .execute();
+    return this.getCredential(clientId, portal);
   }
 }
 

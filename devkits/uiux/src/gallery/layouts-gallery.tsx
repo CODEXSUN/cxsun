@@ -1,6 +1,7 @@
 import { ArrowUpRightIcon } from "lucide-react";
 import { Badge } from "@cxsun/ui/components/badge";
 import { GalleryCard, SectionHeading } from "./gallery-card";
+import { galleryPageUrl } from "./gallery-routes";
 
 const layouts = [
   {
@@ -94,7 +95,11 @@ export function LayoutsGallery({ deskRoutesAvailable }: { deskRoutesAvailable: b
                 Open route <ArrowUpRightIcon className="size-4" />
               </a>
             ) : (
-              <p className="mt-4 text-xs text-muted-foreground">Desk route: {layout.route}</p>
+              <p className="mt-4 text-xs text-muted-foreground">
+                {layout.name === "MainLayout" ? "Gallery route" : "Desk route"}: {layout.name === "MainLayout"
+                  ? galleryPageUrl("main-layouts")
+                  : layout.route}
+              </p>
             )}
           </article>
         ))}

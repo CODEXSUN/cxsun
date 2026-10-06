@@ -4,7 +4,7 @@ import { Input } from "@cxsun/ui/components/input";
 import { Textarea } from "@cxsun/ui/components/textarea";
 import { WorkspaceDatePicker } from "@cxsun/ui/workspace/date-picker";
 import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
-import { WorkspaceSelect } from "@cxsun/ui/workspace/select";
+import { prioritySwatch, statusIcon } from "../../crm-colors";
 import {
   WorkspaceFormActions,
   WorkspaceFormBanner,
@@ -15,25 +15,21 @@ import {
 } from "@cxsun/ui/workspace/upsert";
 import { enquirySchema } from "./enquiry.schema";
 import { EnquiryCustomerFields } from "./enquiry.customer-fields";
-import type { EnquiryLookup, EnquiryRecord, EnquirySavePayload } from "./enquiry.types";
-
-const statusOptions = [
-  { label: "New", value: "new" },
-  { label: "Contacted", value: "contacted" },
-  { label: "Qualified", value: "qualified" },
-  { label: "Unqualified", value: "unqualified" }
-];
-const priorityOptions = [
-  { label: "Low", value: "low" },
-  { label: "Normal", value: "normal" },
-  { label: "High", value: "high" }
-];
+import { useEnquiryMasterCreate } from "./enquiry.master-create";
+import type {
+  EnquiryLookup,
+  EnquiryMasterLookup,
+  EnquiryRecord,
+  EnquirySavePayload
+} from "./enquiry.types";
 
 export function EnquiryForm({
   record,
   contacts,
   contactsLoading,
   listOptions,
+  statuses,
+  priorities,
   users,
   loading,
   error,
@@ -45,7 +41,9 @@ export function EnquiryForm({
   record: EnquiryRecord | null;
   contacts: EnquiryLookup[];
   contactsLoading: boolean;
-  listOptions: string[];
+  listOptions: EnquiryMasterLookup[];
+  statuses: EnquiryMasterLookup[];
+  priorities: EnquiryMasterLookup[];
   users: EnquiryLookup[];
   loading: boolean;
   error: string;
@@ -54,8 +52,9 @@ export function EnquiryForm({
   onContactSaved: () => Promise<void>;
   onSubmit: (payload: EnquirySavePayload) => void;
 }) {
+  const createMaster = useEnquiryMasterCreate();
   const [value, setValue] = useState<EnquirySavePayload>(() =>
-    record ? fromRecord(record) : emptyEnquiry()
+    record ? fromRecord(record) : emptyEnquiry(statuses, priorities)
   );
   const [issues, setIssues] = useState<Record<string, string>>({});
   const set = <Key extends keyof EnquirySavePayload>(key: Key, next: EnquirySavePayload[Key]) => {
@@ -154,16 +153,25 @@ export function EnquiryForm({
                 <div className="space-y-5">
                   <WorkspaceFormField label="List in">
                     <WorkspaceLookup
-                      allowTextValue
+                      allowTextValue={false}
                       clearable
+                      createMode="inline"
+                      createLabel="Create List In"
+                      showCreateWhenEmpty
                       showAllOptionsOnFocus
-                      options={listOptions.map((item) => ({ label: item, value: item }))}
-                      placeholder="Choose or enter list"
-                      value={value.listIn ?? ""}
-                      invalid={Boolean(issues.listIn)}
-                      onValueChange={(selected) => set("listIn", selected || null)}
+                      options={listOptions
+                        .filter((item) => item.status === "active")
+                        .map((item) => ({ label: item.name, value: String(item.id) }))}
+                      placeholder="Choose list"
+                      value={value.listInId ? String(value.listInId) : ""}
+                      invalid={Boolean(issues.listInId)}
+                      onCreate={createMaster.listIn}
+                      onTextChange={() => set("listInId", null)}
+                      onValueChange={(selected) =>
+                        set("listInId", selected ? Number(selected) : null)
+                      }
                     />
-                    {issues.listIn ? <FieldError>{issues.listIn}</FieldError> : null}
+                    {issues.listInId ? <FieldError>{issues.listInId}</FieldError> : null}
                   </WorkspaceFormField>
                   <WorkspaceFormField label="Assigned to">
                     <WorkspaceLookup
@@ -179,21 +187,45 @@ export function EnquiryForm({
                     />
                   </WorkspaceFormField>
                   <WorkspaceFormField label="Priority">
-                    <WorkspaceSelect
-                      options={priorityOptions}
-                      value={value.priority}
-                      onValueChange={(selected) =>
-                        set("priority", selected as EnquirySavePayload["priority"])
-                      }
+                    <WorkspaceLookup
+                      allowTextValue={false}
+                      clearable={false}
+                      createMode="inline"
+                      createLabel="Create Priority"
+                      showCreateWhenEmpty
+                      showAllOptionsOnFocus
+                      options={priorities
+                        .filter((item) => item.status === "active")
+                        .map((item) => ({
+                          label: item.name,
+                          value: String(item.id),
+                          swatchClassName: prioritySwatch(item.code ?? "")
+                        }))}
+                      value={value.priorityId ? String(value.priorityId) : ""}
+                      onCreate={createMaster.priority}
+                      onTextChange={() => set("priorityId", 0)}
+                      onValueChange={(selected) => set("priorityId", Number(selected))}
                     />
                   </WorkspaceFormField>
                   <WorkspaceFormField label="Status">
-                    <WorkspaceSelect
-                      options={statusOptions}
-                      value={value.status}
-                      onValueChange={(selected) =>
-                        set("status", selected as EnquirySavePayload["status"])
-                      }
+                    <WorkspaceLookup
+                      allowTextValue={false}
+                      clearable={false}
+                      createMode="inline"
+                      createLabel="Create Status"
+                      showCreateWhenEmpty
+                      showAllOptionsOnFocus
+                      options={statuses
+                        .filter((item) => item.status === "active")
+                        .map((item) => ({
+                          label: item.name,
+                          value: String(item.id),
+                          leadingIcon: statusIcon(item.code ?? "")
+                        }))}
+                      value={value.statusId ? String(value.statusId) : ""}
+                      onCreate={createMaster.status}
+                      onTextChange={() => set("statusId", 0)}
+                      onValueChange={(selected) => set("statusId", Number(selected))}
                     />
                   </WorkspaceFormField>
                   <WorkspaceFormField label="Due date">
@@ -233,7 +265,10 @@ function FieldError({ children }: { children: string }) {
   return <p className="text-xs text-destructive">{children}</p>;
 }
 
-function emptyEnquiry(): EnquirySavePayload {
+function emptyEnquiry(
+  statuses: EnquiryMasterLookup[],
+  priorities: EnquiryMasterLookup[]
+): EnquirySavePayload {
   return {
     title: "",
     description: null,
@@ -243,9 +278,9 @@ function emptyEnquiry(): EnquirySavePayload {
     capturedPhone: null,
     source: "manual",
     sourceReference: null,
-    listIn: null,
-    status: "new",
-    priority: "normal",
+    listInId: null,
+    statusId: statuses.find((item) => item.code === "new")?.id ?? 0,
+    priorityId: priorities.find((item) => item.code === "normal")?.id ?? 0,
     assignedUserId: null,
     enquiredAt: new Date().toISOString(),
     dueDate: null,
@@ -254,17 +289,23 @@ function emptyEnquiry(): EnquirySavePayload {
 }
 
 function fromRecord(record: EnquiryRecord): EnquirySavePayload {
-  const {
-    id: _id,
-    enquiryNo: _enquiryNo,
-    uuid: _uuid,
-    contactName: _contactName,
-    createdBy: _createdBy,
-    createdAt: _createdAt,
-    updatedAt: _updatedAt,
-    ...value
-  } = record;
-  return { ...value, enquiredAt: new Date(record.enquiredAt).toISOString() };
+  return {
+    title: record.title,
+    description: record.description,
+    contactId: record.contactId,
+    capturedName: record.capturedName,
+    capturedEmail: record.capturedEmail,
+    capturedPhone: record.capturedPhone,
+    source: record.source,
+    sourceReference: record.sourceReference,
+    listInId: record.listInId,
+    statusId: record.statusId,
+    priorityId: record.priorityId,
+    assignedUserId: record.assignedUserId,
+    enquiredAt: new Date(record.enquiredAt).toISOString(),
+    dueDate: record.dueDate,
+    closedReason: record.closedReason
+  };
 }
 
 function normalize(value: EnquirySavePayload): EnquirySavePayload {
@@ -277,7 +318,6 @@ function normalize(value: EnquirySavePayload): EnquirySavePayload {
     capturedEmail: value.capturedEmail?.trim() || null,
     capturedPhone: value.capturedPhone?.trim() || null,
     sourceReference: value.sourceReference?.trim() || null,
-    listIn: value.listIn?.trim() || null,
     closedReason: value.closedReason?.trim() || null
   };
 }

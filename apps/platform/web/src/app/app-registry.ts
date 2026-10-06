@@ -32,6 +32,7 @@ export type PlatformAppId =
   | "billing"
   | "accounts"
   | "devkit"
+  | "project-manager"
   | "mail"
   | "task-manager"
   | "blog"
@@ -68,6 +69,7 @@ export type PlatformAppDefinition = {
     | "billing"
     | "accounts"
     | "devkit"
+    | "project-manager"
     | "mail"
     | "platform-task-manager"
     | "blog"
@@ -189,7 +191,7 @@ export function normalizeModuleKeys(moduleKeys: string[]) {
 export function enabledAppIds(moduleKeys: string[]) {
   const enabled = new Set(normalizeModuleKeys(moduleKeys));
   return platformAppRegistry
-    .filter((app) => app.id !== "devkit" && (app.alwaysEnabled || enabled.has(app.moduleKey)))
+    .filter((app) => app.id !== "devkit" && app.id !== "project-manager" && (app.alwaysEnabled || enabled.has(app.moduleKey)))
     .map((app) => app.id);
 }
 
@@ -242,6 +244,15 @@ export function appMenuFor(
           title: "Contacts",
           isActive: activePage === "crm.contacts",
           onSelect: () => onSelect("crm.contacts")
+        },
+        {
+          title: "Common",
+          isActive: activePage === "crm.list-in" || activePage === "crm.status" || activePage === "crm.priority",
+          items: [
+            { title: "List In", isActive: activePage === "crm.list-in", onSelect: () => onSelect("crm.list-in") },
+            { title: "Status", isActive: activePage === "crm.status", onSelect: () => onSelect("crm.status") },
+            { title: "Priority", isActive: activePage === "crm.priority", onSelect: () => onSelect("crm.priority") }
+          ]
         }
       ]
     };
@@ -565,6 +576,16 @@ export function appMenuItemsFor(
         isActive: activePage === "crm.contacts",
         onSelect: () => onSelect("crm.contacts"),
         title: "Contacts"
+      },
+      {
+        icon: PackageIcon,
+        isActive: activePage === "crm.list-in" || activePage === "crm.status" || activePage === "crm.priority",
+        title: "Common",
+        items: [
+          { title: "List In", isActive: activePage === "crm.list-in", onSelect: () => onSelect("crm.list-in") },
+          { title: "Status", isActive: activePage === "crm.status", onSelect: () => onSelect("crm.status") },
+          { title: "Priority", isActive: activePage === "crm.priority", onSelect: () => onSelect("crm.priority") }
+        ]
       }
     ];
   }

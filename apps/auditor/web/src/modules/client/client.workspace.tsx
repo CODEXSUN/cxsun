@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -8,19 +8,49 @@ import { WorkspacePage } from "@cxsun/ui/workspace/page";
 import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
 import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
 import { AuditorClientForm } from "./client.form";
-import { auditorClientsQueryKey, useAuditorClients } from "./client.hooks";
+import { auditorClientsQueryKey, useAuditorClient, useAuditorClients } from "./client.hooks";
 import { AuditorClientList } from "./client.list";
+import { AuditorClientShowPage } from "./client.show";
 import type { AuditorClientGateway } from "./client.services";
 import type { AuditorClientRecord, AuditorClientSavePayload } from "./client.types";
 
-export function AuditorClientWorkspace({ gateway }: { gateway: AuditorClientGateway }) {
+export function AuditorClientWorkspace({
+  gateway,
+  initialRecordId
+}: {
+  gateway: AuditorClientGateway;
+  initialRecordId?: string | undefined;
+}) {
   const client = useQueryClient();
   const [editing, setEditing] = useState<AuditorClientRecord | null | undefined>(undefined);
+  const [viewingId, setViewingId] = useState<number | null>(() => parseRecordId(initialRecordId));
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const query = useAuditorClients(gateway);
+  const selectedQuery = useAuditorClient(gateway, viewingId);
+  useEffect(() => {
+    setViewingId(parseRecordId(initialRecordId));
+  }, [initialRecordId]);
+  useEffect(() => {
+    const syncLocation = () =>
+      setViewingId(parseRecordId(new URLSearchParams(window.location.search).get("record")));
+    window.addEventListener("popstate", syncLocation);
+    return () => window.removeEventListener("popstate", syncLocation);
+  }, []);
+  const openClient = (id: number) => {
+    window.history.pushState(
+      { page: "auditor.clients", recordId: String(id) },
+      "",
+      `/app/auditor/clients?record=${id}`
+    );
+    setViewingId(id);
+  };
+  const showClients = () => {
+    window.history.pushState({ page: "auditor.clients" }, "", "/app/auditor/clients");
+    setViewingId(null);
+  };
   const save = useMutation({
     mutationFn: (payload: AuditorClientSavePayload) =>
       editing ? gateway.update(editing.id, payload) : gateway.create(payload),
@@ -28,6 +58,7 @@ export function AuditorClientWorkspace({ gateway }: { gateway: AuditorClientGate
       await client.invalidateQueries({ queryKey: auditorClientsQueryKey });
       toast.success(`Client ${editing ? "updated" : "created"}`, { description: record.name });
       setEditing(undefined);
+      openClient(record.id);
     },
     onError: (error) => toast.error("Unable to save client", { description: error.message })
   });
@@ -59,6 +90,19 @@ export function AuditorClientWorkspace({ gateway }: { gateway: AuditorClientGate
         error={save.error?.message ?? ""}
         onBack={() => setEditing(undefined)}
         onSubmit={(payload) => save.mutate(payload)}
+      />
+    );
+  }
+  if (viewingId !== null) {
+    return (
+      <AuditorClientShowPage
+        record={selectedQuery.data}
+        gateway={gateway}
+        loading={selectedQuery.isLoading}
+        error={selectedQuery.error?.message ?? null}
+        onBack={showClients}
+        onEdit={setEditing}
+        onRetry={() => void selectedQuery.refetch()}
       />
     );
   }
@@ -112,6 +156,7 @@ export function AuditorClientWorkspace({ gateway }: { gateway: AuditorClientGate
         records={records}
         loading={query.isLoading}
         onEdit={setEditing}
+        onView={(record) => openClient(record.id)}
         startNumber={(currentPage - 1) * rowsPerPage + 1}
       />
       <WorkspacePagination
@@ -131,4 +176,9 @@ export function AuditorClientWorkspace({ gateway }: { gateway: AuditorClientGate
       />
     </WorkspacePage>
   );
+}
+
+function parseRecordId(value: string | null | undefined) {
+  const id = Number(value);
+  return value && Number.isSafeInteger(id) && id > 0 ? id : null;
 }

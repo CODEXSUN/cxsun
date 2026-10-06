@@ -1,6 +1,6 @@
 export { enquiryModule } from "./enquiry.module.js";
 export {
-  crmTenantMigrations,
+  enquiryMigrationBatch,
   migrateCrmTenantDatabase,
   rollbackCrmTenantDatabase
 } from "./enquiry.migration.js";

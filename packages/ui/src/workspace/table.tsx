@@ -29,8 +29,7 @@ export function WorkspaceTable<T extends RowData>({
   emptyState,
   isLoading,
   minWidth = "640px",
-  onRowClick,
-  stickyRightColumnId
+  onRowClick
 }: {
   columns: LegacyColumnDef<T>[];
   data: T[];
@@ -38,7 +37,6 @@ export function WorkspaceTable<T extends RowData>({
   isLoading?: boolean;
   minWidth?: string;
   onRowClick?: (row: T) => void;
-  stickyRightColumnId?: string;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const settledData = useRef(data);
@@ -65,11 +63,6 @@ export function WorkspaceTable<T extends RowData>({
                 {headerGroup.headers.map((header) => (
                   <WorkspaceTableHeaderCell
                     key={header.id}
-                    className={
-                      header.column.id === stickyRightColumnId
-                        ? "sticky right-0 z-20 bg-muted shadow-[-1px_0_0_0_var(--border)]"
-                        : undefined
-                    }
                     style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                   >
                     {header.isPlaceholder ? null : (
@@ -95,18 +88,11 @@ export function WorkspaceTable<T extends RowData>({
             {table.getRowModel().rows.map((row) => (
               <tr
                 key={row.id}
-                className={cn(workspaceTableRowClass, "group", onRowClick && "cursor-pointer")}
+                className={cn(workspaceTableRowClass, onRowClick && "cursor-pointer")}
                 onClick={() => onRowClick?.(row.original)}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={cn(
-                      workspaceTableCellClass,
-                      cell.column.id === stickyRightColumnId &&
-                        "sticky right-0 z-10 bg-card shadow-[-1px_0_0_0_var(--border)] group-hover:bg-muted"
-                    )}
-                  >
+                  <td key={cell.id} className={workspaceTableCellClass}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}

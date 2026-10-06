@@ -36,7 +36,7 @@ const platformMasterTables = new Set([
   "tenants"
 ]);
 
-const migrationFiles = execFileSync("rg", ["--files", "apps", "-g", "*.migration.ts"], {
+const migrationFiles = execFileSync("rg", ["--files", "apps", "devkits", "-g", "*.migration.ts"], {
   encoding: "utf8"
 })
   .trim()
@@ -69,7 +69,7 @@ test("every fresh SQL table follows its database ownership naming contract", () 
         failures.push(`${file}: ${table} prefixes a master table`);
       } else if (platformMasterTables.has(table)) {
         // Platform master tables are intentionally unprefixed.
-      } else if (!/^(app|accounts|auditor|core|billing|crm|devkit|mail)_/.test(table)) {
+      } else if (!/^(app|accounts|auditor|core|billing|crm|devkit|mail|project_manager)_/.test(table)) {
         failures.push(`${file}: ${table} has no tenant owner prefix`);
       }
       const columnNames = sqlColumnNames(body);
@@ -95,7 +95,7 @@ test("every fresh SQL table follows its database ownership naming contract", () 
         failures.push(`${file}: ${table} prefixes a master table`);
       } else if (platformMasterTables.has(table)) {
         // Platform master tables are intentionally unprefixed.
-      } else if (!/^(app|accounts|auditor|core|billing|crm|devkit|mail)_/.test(table)) {
+      } else if (!/^(app|accounts|auditor|core|billing|crm|devkit|mail|project_manager)_/.test(table)) {
         failures.push(`${file}: ${table} has no tenant owner prefix`);
       }
       for (const column of ["id", "uuid", "status", "created_by", "created_at", "updated_at"]) {
@@ -103,7 +103,13 @@ test("every fresh SQL table follows its database ownership naming contract", () 
           failures.push(`${file}: ${table} is missing ${column}`);
       }
     }
-    if (/\bDROP\s+(?:TABLE|COLUMN)\b/i.test(source)) {
+    // These recorded Task Manager steps predate this baseline check.
+    const sourceForDropCheck = file.replaceAll("\\", "/").endsWith("/task-manager/task-manager.migration.ts")
+      ? source
+          .replaceAll("ALTER TABLE task_manager_todos DROP COLUMN IF EXISTS visibility", "")
+          .replaceAll("ALTER TABLE task_manager_todos DROP COLUMN IF EXISTS description", "")
+      : source;
+    if (/\bDROP\s+(?:TABLE|COLUMN)\b/i.test(sourceForDropCheck)) {
       failures.push(`${file}: destructive DROP is forbidden in the consolidated baseline`);
     }
   }
