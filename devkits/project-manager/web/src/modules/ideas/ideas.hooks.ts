@@ -15,7 +15,8 @@ export function useIdeasMutations() {
     archive: useMutation({ mutationFn: archiveIdea, onSuccess: refresh }),
     create: useMutation({ mutationFn: createIdea, onSuccess: refresh }),
     update: useMutation({
-      mutationFn: ({ input, uuid }: { input: IdeaSavePayload; uuid: string }) => updateIdea(uuid, input),
+      mutationFn: ({ input, uuid }: { input: IdeaSavePayload; uuid: string }) =>
+        updateIdea(uuid, input),
       onSuccess: refresh
     })
   };

@@ -108,13 +108,15 @@ export const projectManagerIdeasMigrationBatch: MigrationBatch<ProjectManagerDat
   description: ideasMigration.description,
   scope: "project-manager",
   version: "1.0.80",
-  steps: [{
-    checksum: `${ideasMigration.key}:v1`,
-    description: ideasMigration.description,
-    name: ideasMigration.key,
-    up: migrateIdeasModule,
-    version: 1
-  }]
+  steps: [
+    {
+      checksum: `${ideasMigration.key}:v1`,
+      description: ideasMigration.description,
+      name: ideasMigration.key,
+      up: migrateIdeasModule,
+      version: 1
+    }
+  ]
 };
 
 const projectManagerIdeasAuditBatch: MigrationBatch<ProjectManagerDatabase> = {
@@ -122,13 +124,15 @@ const projectManagerIdeasAuditBatch: MigrationBatch<ProjectManagerDatabase> = {
   description: ideasActivityAuditMigration.description,
   scope: "project-manager",
   version: "1.0.80",
-  steps: [{
-    checksum: `${ideasActivityAuditMigration.key}:v1`,
-    description: ideasActivityAuditMigration.description,
-    name: ideasActivityAuditMigration.key,
-    up: standardizeIdeasActivity,
-    version: 1
-  }]
+  steps: [
+    {
+      checksum: `${ideasActivityAuditMigration.key}:v1`,
+      description: ideasActivityAuditMigration.description,
+      name: ideasActivityAuditMigration.key,
+      up: standardizeIdeasActivity,
+      version: 1
+    }
+  ]
 };
 
 export function getProjectManagerDatabase() {
@@ -187,8 +191,16 @@ export const projectManagerTenantMigrations = [
     migrate: renameProjectManagerTables,
     name: projectManagerTableRenameMigration.key
   },
-  { description: ideasMigration.description, migrate: migrateIdeasModule, name: ideasMigration.key },
-  { description: ideasActivityAuditMigration.description, migrate: standardizeIdeasActivity, name: ideasActivityAuditMigration.key }
+  {
+    description: ideasMigration.description,
+    migrate: migrateIdeasModule,
+    name: ideasMigration.key
+  },
+  {
+    description: ideasActivityAuditMigration.description,
+    migrate: standardizeIdeasActivity,
+    name: ideasActivityAuditMigration.key
+  }
 ] as const;
 
 export const projectManagerDatabaseLifecycle = Object.freeze({

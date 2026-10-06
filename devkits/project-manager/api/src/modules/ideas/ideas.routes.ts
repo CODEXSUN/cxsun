@@ -8,13 +8,15 @@ import { ideaCategories, ideaStatuses } from "./ideas.types.js";
 const path = "/admin/ideas";
 const statusSchema = z.enum(ideaStatuses);
 const categorySchema = z.enum(ideaCategories);
-const saveSchema = z.object({
-  assignee: z.string().trim().max(191),
-  category: categorySchema,
-  content: z.string().max(1_000_000),
-  status: statusSchema,
-  title: z.string().trim().min(1).max(255)
-}).strict();
+const saveSchema = z
+  .object({
+    assignee: z.string().trim().max(191),
+    category: categorySchema,
+    content: z.string().max(1_000_000),
+    status: statusSchema,
+    title: z.string().trim().min(1).max(255)
+  })
+  .strict();
 const recordSchema = saveSchema.extend({
   createdAt: z.string(),
   createdBy: z.string(),

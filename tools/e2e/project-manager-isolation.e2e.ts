@@ -27,7 +27,17 @@ try {
        WHERE TABLE_SCHEMA = ? AND TABLE_NAME LIKE 'project\\_manager\\_%'`,
       [database]
     );
-    assert.equal(tables.length, 6, `${database} is missing Project Manager tables.`);
+    const tableNames = new Set(tables.map((table) => String(table.TABLE_NAME)));
+    for (const name of [
+      "project_manager_platform_registry_platforms",
+      "project_manager_platform_registry_groups",
+      "project_manager_platform_registry_modules",
+      "project_manager_platform_registry_activity",
+      "project_manager_ideas",
+      "project_manager_ideas_activity"
+    ]) {
+      assert.ok(tableNames.has(name), `${database} is missing ${name}.`);
+    }
 
     const [migrations] = await connection.query<RowDataPacket[]>(
       `SELECT name, status

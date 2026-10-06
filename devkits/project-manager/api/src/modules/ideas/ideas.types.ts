@@ -1,5 +1,13 @@
 export const ideaCategories = ["general", "product", "engineering", "design", "research"] as const;
-export const ideaStatuses = ["draft", "open", "planning", "in-progress", "blocked", "completed", "archived"] as const;
+export const ideaStatuses = [
+  "draft",
+  "open",
+  "planning",
+  "in-progress",
+  "blocked",
+  "completed",
+  "archived"
+] as const;
 
 export type IdeaCategory = (typeof ideaCategories)[number];
 export type IdeaStatus = (typeof ideaStatuses)[number];

@@ -67,7 +67,10 @@ const shellOnlyBackendRoles = ["module", "routes", "types"];
 const capabilityBackendRoles = new Map([
   ["auditor-api/client", ["module", "service", "repository", "routes", "migration", "types"]],
   ["project-manager-api/platform-registry", reducedBackendRoles],
-  ["project-manager-api/ideas", ["module", "service", "repository", "routes", "migration", "types"]],
+  [
+    "project-manager-api/ideas",
+    ["module", "service", "repository", "routes", "migration", "types"]
+  ],
   ["billing-api/opening-balance", reducedBackendRoles],
   ["crm-api/enquiry", reducedBackendRoles],
   ["crm-api/list-in", reducedBackendRoles],

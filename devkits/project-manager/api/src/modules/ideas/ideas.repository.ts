@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
-import type { Insertable, Selectable } from "kysely";
+import type { Insertable, Kysely, Selectable } from "kysely";
 import { getProjectManagerDatabase } from "../../database/project-manager-database.js";
-import type { ProjectManagerIdeasTable } from "../../database/schema.js";
+import type { ProjectManagerDatabase, ProjectManagerIdeasTable } from "../../database/schema.js";
 import type { Idea, IdeaSavePayload } from "./ideas.types.js";
 
 type IdeaRow = Selectable<ProjectManagerIdeasTable>;
@@ -19,12 +19,7 @@ export class IdeasRepository {
   }
 
   async find(uuid: string): Promise<Idea | null> {
-    const row = await this.database
-      .selectFrom("project_manager_ideas")
-      .selectAll()
-      .where("uuid", "=", uuid)
-      .executeTakeFirst();
-    return row ? toIdea(row) : null;
+    return findIdea(this.database, uuid);
   }
 
   async create(input: IdeaSavePayload, actorEmail: string): Promise<Idea> {
@@ -37,43 +32,66 @@ export class IdeasRepository {
       title: input.title,
       uuid: randomBytes(4).toString("hex")
     };
-    await this.database.insertInto("project_manager_ideas").values(values).execute();
-    await this.audit(values.uuid as string, "created", actorEmail);
-    const created = await this.find(values.uuid as string);
-    if (!created) throw new Error("The saved idea could not be read.");
-    return created;
+    return this.database.transaction().execute(async (transaction) => {
+      await transaction.insertInto("project_manager_ideas").values(values).execute();
+      await audit(transaction, values.uuid as string, "created", actorEmail);
+      const created = await findIdea(transaction, values.uuid as string);
+      if (!created) throw new Error("The saved idea could not be read.");
+      return created;
+    });
   }
 
   async update(uuid: string, input: IdeaSavePayload, actorEmail: string): Promise<Idea | null> {
-    const result = await this.database
-      .updateTable("project_manager_ideas")
-      .set({
-        assignee: input.assignee,
-        category: input.category,
-        content_html: input.content,
-        status: input.status,
-        title: input.title
-      })
-      .where("uuid", "=", uuid)
-      .executeTakeFirst();
-    if (!Number(result.numUpdatedRows)) return null;
-    await this.audit(uuid, "updated", actorEmail);
-    return this.find(uuid);
+    return this.database.transaction().execute(async (transaction) => {
+      const result = await transaction
+        .updateTable("project_manager_ideas")
+        .set({
+          assignee: input.assignee,
+          category: input.category,
+          content_html: input.content,
+          status: input.status,
+          title: input.title
+        })
+        .where("uuid", "=", uuid)
+        .executeTakeFirst();
+      if (!Number(result.numUpdatedRows)) return null;
+      await audit(transaction, uuid, "updated", actorEmail);
+      return findIdea(transaction, uuid);
+    });
   }
 
   async archive(uuid: string, actorEmail: string): Promise<Idea | null> {
-    const result = await this.database
-      .updateTable("project_manager_ideas")
-      .set({ status: "archived" })
-      .where("uuid", "=", uuid)
-      .executeTakeFirst();
-    if (!Number(result.numUpdatedRows)) return null;
-    await this.audit(uuid, "archived", actorEmail);
-    return this.find(uuid);
+    return this.database.transaction().execute(async (transaction) => {
+      const result = await transaction
+        .updateTable("project_manager_ideas")
+        .set({ status: "archived" })
+        .where("uuid", "=", uuid)
+        .executeTakeFirst();
+      if (!Number(result.numUpdatedRows)) return null;
+      await audit(transaction, uuid, "archived", actorEmail);
+      return findIdea(transaction, uuid);
+    });
   }
+}
 
-  private async audit(ideaUuid: string, action: string, actorEmail: string) {
-    await this.database.insertInto("project_manager_ideas_activity").values({
+async function findIdea(database: Kysely<ProjectManagerDatabase>, uuid: string) {
+  const row = await database
+    .selectFrom("project_manager_ideas")
+    .selectAll()
+    .where("uuid", "=", uuid)
+    .executeTakeFirst();
+  return row ? toIdea(row) : null;
+}
+
+async function audit(
+  database: Kysely<ProjectManagerDatabase>,
+  ideaUuid: string,
+  action: string,
+  actorEmail: string
+) {
+  await database
+    .insertInto("project_manager_ideas_activity")
+    .values({
       action,
       actor_email: actorEmail,
       created_at: new Date(),
@@ -82,8 +100,8 @@ export class IdeasRepository {
       status: "active",
       updated_at: new Date(),
       uuid: randomBytes(4).toString("hex")
-    }).execute();
-  }
+    })
+    .execute();
 }
 
 function toIdea(row: IdeaRow): Idea {

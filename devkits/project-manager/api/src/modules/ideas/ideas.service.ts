@@ -52,7 +52,12 @@ function normalize(input: IdeaSavePayload): IdeaSavePayload {
         }
       },
       allowedTags: [...sanitizeHtml.defaults.allowedTags, "img", "mark", "s", "span", "u"],
-      exclusiveFilter: (frame) => frame.tag === "img" && Boolean(frame.attribs.src?.startsWith("data:") && !/^data:image\/(png|jpeg|gif|webp);base64,/iu.test(frame.attribs.src))
+      exclusiveFilter: (frame) =>
+        frame.tag === "img" &&
+        Boolean(
+          frame.attribs.src?.startsWith("data:") &&
+          !/^data:image\/(png|jpeg|gif|webp);base64,/iu.test(frame.attribs.src)
+        )
     }),
     title: input.title.trim()
   };

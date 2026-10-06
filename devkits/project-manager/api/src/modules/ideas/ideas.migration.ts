@@ -13,7 +13,9 @@ export const ideasActivityAuditMigration = {
 } as const;
 
 export async function migrateIdeasModule(database: Kysely<ProjectManagerDatabase>) {
-  await sql.raw(`
+  await sql
+    .raw(
+      `
     CREATE TABLE IF NOT EXISTS project_manager_ideas (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
       uuid VARCHAR(8) NOT NULL,
@@ -29,8 +31,12 @@ export async function migrateIdeasModule(database: Kysely<ProjectManagerDatabase
       KEY idx_project_manager_ideas_status_updated (status, updated_at),
       KEY idx_project_manager_ideas_category (category)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `).execute(database);
-  await sql.raw(`
+  `
+    )
+    .execute(database);
+  await sql
+    .raw(
+      `
     CREATE TABLE IF NOT EXISTS project_manager_ideas_activity (
       id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
       uuid VARCHAR(8) NOT NULL,
@@ -46,7 +52,9 @@ export async function migrateIdeasModule(database: Kysely<ProjectManagerDatabase
       CONSTRAINT fk_project_manager_ideas_activity_idea
         FOREIGN KEY (idea_uuid) REFERENCES project_manager_ideas (uuid)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `).execute(database);
+  `
+    )
+    .execute(database);
 }
 
 export async function standardizeIdeasActivity(database: Kysely<ProjectManagerDatabase>) {

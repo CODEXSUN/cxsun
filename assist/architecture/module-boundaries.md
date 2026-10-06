@@ -111,7 +111,9 @@ The same ownership discipline applies to Core, Platform, Billing, Project Manage
 Platform Registry behavior belongs under `devkits/project-manager/api` and `devkits/project-manager/web`; Platform may compose only
 the public `@cxsun/project-manager-api` and `@cxsun/project-manager-web` contracts. Project Manager request databases and actors must always
 come from the authenticated Platform host adapter, its API remains namespaced under `/project-manager`, and its master and
-tenant tables use the `project_manager_` owner prefix plus the standard identity, status, and audit columns. Before an
+tenant tables use the `project_manager_` owner prefix plus the standard identity, status, and audit columns. Ideas behavior
+belongs in the `ideas` leaf of each Project Manager package. Platform composes its public bundle and database lifecycle;
+the Ideas leaf owns editor data, validation, routes, persistence, and activity records. Before an
 application change is finalized, audit its complete backend and frontend module tree for wrapper/alias roles,
 inherited or metadata-driven generic CRUD, private cross-module imports, centralized business implementations,
 stale exports and proxies, misplaced files, and business behavior stored in app-level shared folders. Composition

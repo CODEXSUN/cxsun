@@ -104,11 +104,13 @@ Current Platform Web modules:
 
 ### Project Manager
 
-Project Manager owns the Platform Registry application and is composed by Platform through its public API and web contracts.
+Project Manager owns Platform Registry and Ideas and is composed by Platform through its public API and web contracts.
 
-- `devkits/project-manager/api`: the request-scoped Platform Registry Fastify module, registry migration, JSON registry seed,
-  and registry audit activity.
-- `devkits/project-manager/web`: the Platform Registry workspace bundle used by the Super Admin desk.
+- `devkits/project-manager/api`: request-scoped Platform Registry and Ideas Fastify modules, migrations, registry JSON seed,
+  and activity records.
+- `devkits/project-manager/web`: the Platform Registry and Ideas workspaces used by the Super Admin desk.
+- Ideas use `project_manager_ideas` and `project_manager_ideas_activity` in the Project Manager migration scope.
+  Rich content is sanitized before persistence; create, update, and archive write activity in the same transaction.
 - The migration preserves applied DevKit checksums, then renames existing registry tables in place to the
   `project_manager_` prefix in master and tenant databases. Migration state remains in `migration_schema`.
 - Platform supplies the authenticated request database and actor. Project Manager does not resolve tenant identity from

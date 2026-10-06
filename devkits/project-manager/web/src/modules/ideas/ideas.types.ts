@@ -1,5 +1,6 @@
 export type IdeaCategory = "general" | "product" | "engineering" | "design" | "research";
-export type IdeaStatus = "draft" | "open" | "planning" | "in-progress" | "blocked" | "completed" | "archived";
+export type IdeaStatus =
+  "draft" | "open" | "planning" | "in-progress" | "blocked" | "completed" | "archived";
 
 export type Idea = {
   assignee: string;

@@ -26,14 +26,20 @@ export function IdeasWorkspace() {
   const [category, setCategory] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState("");
-  const ideas = useMemo(() => (query.data ?? []).filter((idea) =>
-    (showArchived || idea.status !== "archived") &&
-    (category === "all" || idea.category === category) &&
-    matches(idea, search)
-  ), [category, query.data, search, showArchived]);
+  const ideas = useMemo(
+    () =>
+      (query.data ?? []).filter(
+        (idea) =>
+          (showArchived || idea.status !== "archived") &&
+          (category === "all" || idea.category === category) &&
+          matches(idea, search)
+      ),
+    [category, query.data, search, showArchived]
+  );
 
   async function save(input: IdeaSavePayload) {
-    if (editing && editing !== "new") await mutations.update.mutateAsync({ input, uuid: editing.uuid });
+    if (editing && editing !== "new")
+      await mutations.update.mutateAsync({ input, uuid: editing.uuid });
     else await mutations.create.mutateAsync(input);
     toast.success(editing === "new" ? "Idea created" : "Idea updated");
     setEditing(null);
@@ -65,7 +71,11 @@ export function IdeasWorkspace() {
     <WorkspacePage
       title="Ideas"
       description="Capture proposals and turn rough thinking into clear work."
-      actions={<Button onClick={() => setEditing("new")} type="button"><PlusIcon /> New idea</Button>}
+      actions={
+        <Button onClick={() => setEditing("new")} type="button">
+          <PlusIcon /> New idea
+        </Button>
+      }
     >
       <WorkspaceFilters
         filterOptions={categoryFilters}
@@ -74,22 +84,42 @@ export function IdeasWorkspace() {
         onSearchValueChange={setSearch}
         searchPlaceholder="Search ideas"
         searchValue={search}
-        toolbarAction={(
-          <Button onClick={() => setShowArchived((value) => !value)} size="sm" type="button" variant="outline">
+        toolbarAction={
+          <Button
+            onClick={() => setShowArchived((value) => !value)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
             {showArchived ? "Hide archived" : "Show archived"}
           </Button>
-        )}
+        }
       />
-      {error || query.error ? <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">{error || (query.error instanceof Error ? query.error.message : "Ideas could not be loaded.")}</div> : null}
-      {query.isLoading ? <div className="py-10 text-center text-sm text-muted-foreground">Loading ideas…</div> : (
+      {error || query.error ? (
+        <div
+          className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
+          {error ||
+            (query.error instanceof Error ? query.error.message : "Ideas could not be loaded.")}
+        </div>
+      ) : null}
+      {query.isLoading ? (
+        <div className="py-10 text-center text-sm text-muted-foreground">Loading ideas…</div>
+      ) : (
         <IdeasList ideas={ideas} onArchive={(idea) => void archive(idea)} onOpen={setEditing} />
       )}
-      <p className="text-xs text-muted-foreground">{ideas.length} {ideas.length === 1 ? "idea" : "ideas"}</p>
+      <p className="text-xs text-muted-foreground">
+        {ideas.length} {ideas.length === 1 ? "idea" : "ideas"}
+      </p>
     </WorkspacePage>
   );
 }
 
 function matches(idea: Idea, search: string) {
   const needle = search.trim().toLowerCase();
-  return !needle || [idea.title, idea.content, idea.assignee].some((value) => value.toLowerCase().includes(needle));
+  return (
+    !needle ||
+    [idea.title, idea.content, idea.assignee].some((value) => value.toLowerCase().includes(needle))
+  );
 }
