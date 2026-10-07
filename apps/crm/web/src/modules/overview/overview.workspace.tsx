@@ -1,18 +1,16 @@
-import { ArrowUpRight, BarChart3, Clock3, MessageSquare, PhoneCall } from "lucide-react";
+import { BarChart3, Clock3, MessageSquare, PhoneCall } from "lucide-react";
 import { Button } from "@cxsun/ui/components/button";
 import { Card } from "@cxsun/ui/components/card";
-import { useEnquiries, useEnquiryOverviewActivity, useEnquiryUsers } from "../enquiry/index";
 import {
-  enquiryAgeDays,
-  enquiryInScope,
-  isActiveEnquiry,
-  matchesEnquiryFilter
+  useEnquirySummary,
+  useEnquiryOverviewActivity,
+  useEnquiryAttention,
+  countEnquiryStatuses
 } from "../enquiry/index";
-import type { EnquiryMasterLookup, EnquiryRecord } from "../enquiry/index";
+import type { EnquiryMasterLookup } from "../enquiry/index";
 import { useStatus } from "../status/index";
 
 export function CrmOverviewWorkspace({
-  currentUserEmail,
   currentUserName,
   onOpenMyJob,
   onOpenMyCalls
@@ -22,50 +20,56 @@ export function CrmOverviewWorkspace({
   onOpenMyJob: () => void;
   onOpenMyCalls: () => void;
 }) {
-  const enquiries = useEnquiries();
-  const users = useEnquiryUsers();
+  const summary = useEnquirySummary();
   const activity = useEnquiryOverviewActivity();
+  const followUps = useEnquiryAttention();
   const statuses = useStatus();
-  const userId =
-    users.data?.find((user) => user.email?.toLowerCase() === currentUserEmail.toLowerCase())?.id ??
-    null;
-  const all = enquiries.data ?? [];
-  const jobs = all.filter((record) => enquiryInScope(record, "assigned", userId, currentUserEmail));
-  const calls = all.filter((record) => enquiryInScope(record, "created", userId, currentUserEmail));
-  const newJobs = jobs.filter((record) => record.status === "new").length;
-  const attention = jobs.filter(
-    (record) => isActiveEnquiry(record) && (record.priority === "urgent" || overdue(record))
-  ).length;
-  const activeJobs = jobs.filter(isActiveEnquiry);
-  const activeCalls = calls.filter(isActiveEnquiry);
+  const jobs = summary.data?.assigned;
+  const calls = summary.data?.created;
+  const newJobs = jobs?.newCalls ?? 0;
+  const attention = jobs?.attention ?? 0;
+  const activeJobs = jobs?.active ?? 0;
+  const activeCalls = calls?.active ?? 0;
   return (
     <section className="mx-auto max-w-6xl space-y-7 pb-10">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-muted-foreground">Welcome back</p>
-          <h1 className="mt-1 text-3xl font-semibold">{currentUserName}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {newJobs} new {newJobs === 1 ? "call needs" : "calls need"} your attention.
-          </p>
-        </div>
-        <Button onClick={onOpenMyJob} variant="outline">
-          Open new jobs <ArrowUpRight className="size-4" />
-        </Button>
-      </div>
-      {enquiries.error || users.error || activity.error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {enquiries.error?.message ?? users.error?.message ?? activity.error?.message}
+      <div>
+        <p className="text-sm text-muted-foreground">Welcome back</p>
+        <h1 className="mt-1 text-3xl font-semibold">{currentUserName}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {newJobs} new {newJobs === 1 ? "call needs" : "calls need"} your attention.
         </p>
+      </div>
+      {summary.error || activity.error || followUps.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {summary.error?.message ?? activity.error?.message ?? followUps.error?.message}
+        </p>
+      ) : null}
+      {followUps.data?.assignments.length || followUps.data?.due.length ? (
+        <Card className="flex flex-wrap items-center justify-between gap-3 border-amber-300 p-4">
+          <span>
+            {followUps.data.assignments.length} new assignments ·{" "}
+            {
+              followUps.data.due.filter((record) => record.dueDate && record.dueDate < localToday())
+                .length
+            }{" "}
+            overdue ·{" "}
+            {followUps.data.due.filter((record) => record.dueDate === localToday()).length} due
+            today
+          </span>
+          <Button variant="outline" onClick={onOpenMyJob}>
+            Review follow-ups
+          </Button>
+        </Card>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-3">
         <Metric label="New to open" value={newJobs} tone="border-l-sky-500" />
         <Metric label="Needs attention" value={attention} tone="border-l-amber-500" />
-        <Metric label="Active follow-ups" value={activeJobs.length} tone="border-l-blue-600" />
+        <Metric label="Active follow-ups" value={activeJobs} tone="border-l-blue-600" />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
           <SectionTitle icon={BarChart3} title="Priority focus" />
-          {priorityCounts(activeJobs).map(({ label, count, color }) => (
+          {priorityCounts(jobs?.priorityCounts ?? []).map(({ label, count, color }) => (
             <div className="mt-4" key={label}>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">{label}</span>
@@ -74,7 +78,7 @@ export function CrmOverviewWorkspace({
               <div className="mt-1 h-2 rounded-full bg-muted">
                 <div
                   className={`h-2 rounded-full ${color}`}
-                  style={{ width: `${activeJobs.length ? (count / activeJobs.length) * 100 : 0}%` }}
+                  style={{ width: `${activeJobs ? (count / activeJobs) * 100 : 0}%` }}
                 />
               </div>
             </div>
@@ -85,18 +89,9 @@ export function CrmOverviewWorkspace({
           <MetricGrid
             items={[
               ["Needs attention", attention],
-              [
-                "Updated this week",
-                jobs.filter((record) => withinDays(record.updatedAt, 7)).length
-              ],
-              [
-                "Created in 7 days",
-                jobs.filter((record) => withinDays(record.createdAt, 7)).length
-              ],
-              [
-                "Created in 30 days",
-                jobs.filter((record) => withinDays(record.createdAt, 30)).length
-              ]
+              ["Updated this week", jobs?.updated7 ?? 0],
+              ["Created in 7 days", jobs?.created7 ?? 0],
+              ["Created in 30 days", jobs?.created30 ?? 0]
             ]}
           />
         </Card>
@@ -107,10 +102,7 @@ export function CrmOverviewWorkspace({
               ["Your reactions, 7 days", "—"],
               ["Your reactions, 30 days", "—"],
               ["Comments by you, 30 days", activity.data?.commentsByYou30Days ?? "—"],
-              [
-                "Calls updated, 30 days",
-                jobs.filter((record) => withinDays(record.updatedAt, 30)).length
-              ]
+              ["Calls updated, 30 days", jobs?.updated30 ?? 0]
             ]}
           />
         </Card>
@@ -118,13 +110,10 @@ export function CrmOverviewWorkspace({
           <SectionTitle icon={PhoneCall} title="My Calls at a glance" />
           <MetricGrid
             items={[
-              ["Created by you", calls.length],
-              ["Active", activeCalls.length],
-              [
-                "In progress",
-                calls.filter((record) => matchesEnquiryFilter(record, "in-progress")).length
-              ],
-              ["Oldest active call", oldestDays(activeCalls)]
+              ["Created by you", calls?.total ?? 0],
+              ["Active", activeCalls],
+              ["In progress", countEnquiryStatuses(calls?.statusCounts ?? [], "in-progress")],
+              ["Oldest active call", oldestDays(calls?.oldestActiveDays)]
             ]}
           />
         </Card>
@@ -149,17 +138,17 @@ export function CrmOverviewWorkspace({
               <tr className="border-t" key={label}>
                 <th className="px-4 py-3 text-left font-medium">{label}</th>
                 <td className="px-4 py-3 text-center">
-                  {jobs.filter((record) => matchesEnquiryFilter(record, filter)).length}
+                  {countEnquiryStatuses(jobs?.statusCounts ?? [], filter)}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  {calls.filter((record) => matchesEnquiryFilter(record, filter)).length}
+                  {countEnquiryStatuses(calls?.statusCounts ?? [], filter)}
                 </td>
               </tr>
             ))}
             <tr className="border-t bg-muted/30">
               <th className="px-4 py-3 text-left">Oldest active call</th>
-              <td className="px-4 py-3 text-center">{oldestDays(activeJobs)}</td>
-              <td className="px-4 py-3 text-center">{oldestDays(activeCalls)}</td>
+              <td className="px-4 py-3 text-center">{oldestDays(jobs?.oldestActiveDays)}</td>
+              <td className="px-4 py-3 text-center">{oldestDays(calls?.oldestActiveDays)}</td>
             </tr>
           </tbody>
         </table>
@@ -206,7 +195,7 @@ function MetricGrid({ items }: { items: Array<[string, number | string]> }) {
     </div>
   );
 }
-function priorityCounts(records: EnquiryRecord[]) {
+function priorityCounts(counts: Array<{ code: string; count: number }>) {
   return [
     { label: "Urgent", code: "urgent", color: "bg-rose-500" },
     { label: "High", code: "high", color: "bg-amber-500" },
@@ -215,7 +204,7 @@ function priorityCounts(records: EnquiryRecord[]) {
   ]
     .map((item) => ({
       ...item,
-      count: records.filter((record) => record.priority === item.code).length
+      count: counts.find((entry) => entry.code === item.code)?.count ?? 0
     }))
     .filter((item) => item.count > 0);
 }
@@ -230,15 +219,10 @@ function workMixRows(records: EnquiryMasterLookup[]) {
     .map((record) => ({ label: record.name, filter: record.code ?? "" }));
   return [...fixed, ...statuses];
 }
-function oldestDays(records: EnquiryRecord[]) {
-  return records.length
-    ? `${Math.max(...records.map((record) => enquiryAgeDays(record)))} days`
-    : "—";
+function oldestDays(days: number | null | undefined) {
+  return days === null || days === undefined ? "—" : `${days} days`;
 }
-function withinDays(value: string, days: number) {
-  const elapsed = Date.now() - new Date(value).getTime();
-  return elapsed >= 0 && elapsed < days * 86_400_000;
-}
-function overdue(record: EnquiryRecord) {
-  return Boolean(record.dueDate && record.dueDate < new Date().toISOString().slice(0, 10));
+function localToday() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }

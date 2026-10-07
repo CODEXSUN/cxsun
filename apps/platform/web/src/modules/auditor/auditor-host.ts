@@ -1,4 +1,4 @@
-import { createAuditorClientGateway } from "@cxsun/auditor-web/modules/client";
+import { createAuditorClientGateway } from "@cxsun/auditor-web/modules/client/gateway";
 import { apiGet, apiPost, apiPut } from "../../shared/api/platform-api";
 
 export const auditorClientGateway = createAuditorClientGateway((path, options) => {

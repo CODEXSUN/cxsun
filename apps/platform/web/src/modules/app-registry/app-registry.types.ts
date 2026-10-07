@@ -16,7 +16,8 @@ export type PlatformApp = {
     | "platform-task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   uuid: string;
 };
 export type PlatformAppSavePayload = Omit<PlatformApp, "id" | "uuid">;

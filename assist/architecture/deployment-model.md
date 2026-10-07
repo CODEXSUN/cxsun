@@ -148,11 +148,14 @@ The non-container hosted baseline serves `dist/apps/platform/web` as static file
 Platform API server under systemd. Production nginx must not proxy the web root to Vite, and hosted services must not
 depend on `npm run dev` remaining attached to a shell.
 
-Browser API traffic keeps the stable same-origin paths `/api/platform`, `/api/core`, and `/api/billing`, but nginx and
-the Platform Vite proxy route every path to Platform API `7010`. Platform Web is the only browser runtime on `7020`.
+Browser API traffic uses the same-origin `/api/app` path. The Platform API strips this prefix before dispatching
+to the owning Platform, Core, Billing, CRM, Mail, and add-on routes. The Platform Vite proxy forwards this path
+to Platform API `7010`. Hosted nginx must also forward `/api/app/` to the Platform API. Legacy
+`/api/platform`, `/api/core`, and `/api/billing` proxy paths may remain for older clients.
+Platform Web is the only browser runtime on `7020`.
 Core and Billing retain route ownership inside their packages after composition.
 
-Platform Web embeds `/api/platform` as its browser API base in development and production. It must never embed a
+Platform Web receives `/api/app` as its browser API base at startup in development and production. It must never embed a
 loopback or container-only API hostname in a cloud browser bundle. `PLATFORM_WEB_ORIGIN` defines the canonical CORS
 origin for direct API clients. Wildcard CORS is prohibited because authenticated requests may carry credentials.
 

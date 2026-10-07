@@ -76,7 +76,8 @@ export type PlatformAppsTable = {
     | "platform-task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   updated_at: TimestampColumn;
   uuid: string;
 };

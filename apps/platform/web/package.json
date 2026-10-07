@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json && vite build",
+    "build": "tsc -p tsconfig.json && node ../../../tools/build-platform-web.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "oxlint src"
   },
@@ -13,6 +13,7 @@
     "@cxsun/billing-web": "^1.0.80",
     "@cxsun/core-web": "^1.0.80",
     "@cxsun/crm-web": "^1.0.80",
+    "@cxsun/frappe-web": "^1.0.80",
     "@cxsun/project-manager-web": "^1.0.80",
     "@cxsun/uiux": "^1.0.80",
     "@cxsun/mail-web": "^1.0.80",

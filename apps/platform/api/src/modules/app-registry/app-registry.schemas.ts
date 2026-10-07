@@ -10,7 +10,8 @@ const appId = z.enum([
   "task-manager",
   "blog",
   "auditor",
-  "crm"
+  "crm",
+  "frappe"
 ]);
 const stack = z.enum([
   "platform",
@@ -22,7 +23,8 @@ const stack = z.enum([
   "platform-task-manager",
   "blog",
   "auditor",
-  "crm"
+  "crm",
+  "frappe"
 ]);
 
 export const platformAppSaveSchema = z

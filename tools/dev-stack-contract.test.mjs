@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { previousPreflightPids, takeoverTarget } from "./dev-port-ownership.mjs";
 
 const [
   packageSource,
@@ -59,7 +60,55 @@ test("tenant app breadcrumbs use app IDs and canonical root pages", () => {
 test("combined development runtime restarts one service without stopping its sibling", () => {
   assert.match(stackSource, /restartService\(serviceName, "process exit"\)/u);
   assert.match(stackSource, /restartService\(serviceName, "failed health checks"\)/u);
+  assert.match(stackSource, /await waitForPreflight\(child, service\.label\)/u);
+  assert.match(preflightSource, /cxsun:preflight-ready/u);
+  assert.match(preflightSource, /env\.CXSUN_DEV_PORT_POLICY \?\? "takeover"/u);
   assert.doesNotMatch(stackSource, /stopChildren\(child\)/u);
+});
+
+test("port takeover stops the old watcher tree and its supervisor", () => {
+  const processes = new Map([
+    [10, { pid: 10, parentPid: 20, name: "node.exe", commandLine: "node src/server.ts" }],
+    [20, { pid: 20, parentPid: 30, name: "node.exe", commandLine: "node --watch src/server.ts" }],
+    [
+      30,
+      {
+        pid: 30,
+        parentPid: 40,
+        name: "node.exe",
+        commandLine: "node tools/preflight.mjs platform-api"
+      }
+    ],
+    [40, { pid: 40, parentPid: 0, name: "node.exe", commandLine: "node tools/dev-stack.mjs" }],
+    [
+      50,
+      {
+        pid: 50,
+        parentPid: 0,
+        name: "node.exe",
+        commandLine: "node tools/preflight.mjs platform-api"
+      }
+    ],
+    [
+      60,
+      {
+        pid: 60,
+        parentPid: 30,
+        name: "cmd.exe",
+        commandLine: "cmd /c node tools/preflight.mjs platform-api"
+      }
+    ]
+  ]);
+  assert.equal(takeoverTarget(10, processes, "platform-api", 50), 40);
+  processes.set(50, {
+    pid: 50,
+    parentPid: 40,
+    name: "node.exe",
+    commandLine: "node tools/preflight.mjs platform-api"
+  });
+  assert.equal(takeoverTarget(10, processes, "platform-api", 50), 30);
+  assert.equal(takeoverTarget(10, processes, "platform-web", 50), 10);
+  assert.deepEqual(previousPreflightPids(processes, "platform-api", 50), [30]);
 });
 
 test("development shutdown asks the child to stop before forcing termination", () => {
@@ -68,4 +117,6 @@ test("development shutdown asks the child to stop before forcing termination", (
   assert.ok(gracefulStop >= 0, "The supervisor must request a graceful child shutdown.");
   assert.ok(forcedStop > gracefulStop, "Forced termination must remain a fallback.");
   assert.match(preflightSource, /message\?\.type === "cxsun:shutdown"/u);
+  assert.match(preflightSource, /const portOwners = getPidsOnPort\(port\)/u);
+  assert.match(preflightSource, /process\.exit\(await stopChild\(child, signal\)\)/u);
 });

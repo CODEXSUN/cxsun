@@ -4,6 +4,13 @@ import { closeBullMq, startBullMqWorker } from "./queue-manager.bullmq.js";
 import { QueueManagerService } from "./queue-manager.service.js";
 
 let queueWorkerTimer: NodeJS.Timeout | null = null;
+let queueWorkerFailed = false;
+
+export function isQueueWorkerHealthy() {
+  return (
+    env.CXSUN_QUEUE_WORKER_ENABLED !== "1" || (queueWorkerTimer !== null && !queueWorkerFailed)
+  );
+}
 
 export function startQueueManagerWorker(app: FastifyInstance, service = new QueueManagerService()) {
   if (env.CXSUN_QUEUE_WORKER_ENABLED !== "1" || queueWorkerTimer) {
@@ -33,13 +40,17 @@ export function startQueueManagerWorker(app: FastifyInstance, service = new Queu
         return service.runNextJob();
       })
       .then(async () => {
+        queueWorkerFailed = false;
         cleanupTicks += 1;
         if (cleanupTicks >= 120) {
           cleanupTicks = 0;
           await service.cleanupRetainedJobs();
         }
       })
-      .catch((error) => app.log.error({ error }, "queue worker failed"))
+      .catch((error) => {
+        queueWorkerFailed = true;
+        app.log.error({ error }, "queue worker failed");
+      })
       .finally(() => {
         running = false;
       });
@@ -49,6 +60,7 @@ export function startQueueManagerWorker(app: FastifyInstance, service = new Queu
     if (queueWorkerTimer) {
       clearInterval(queueWorkerTimer);
       queueWorkerTimer = null;
+      queueWorkerFailed = false;
     }
     await closeBullMq();
   });

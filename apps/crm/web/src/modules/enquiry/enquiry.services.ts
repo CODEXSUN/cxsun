@@ -1,20 +1,69 @@
 import { crmRequest as request } from "../../crm-request";
 import type {
   EnquiryActivity,
+  EnquiryAttention,
   EnquiryComment,
   EnquiryEstimate,
   EnquiryEstimateSavePayload,
   EnquiryJob,
   EnquiryJobSavePayload,
   EnquiryLookup,
+  EnquiryPage,
   EnquiryPropertyPatch,
   EnquiryRecord,
-  EnquirySavePayload
+  EnquirySavePayload,
+  EnquirySummary,
+  EnquiryReportFilters,
+  EnquiryReportRow
 } from "./enquiry.types";
 
-export const listEnquiries = () => request<EnquiryRecord[]>("/crm/enquiries");
+export async function listEnquiryPage(options: {
+  scope: "all" | "assigned" | "created";
+  page: number;
+  pageSize: number;
+  search: string;
+  filter: string;
+  reportFilters?: EnquiryReportFilters | undefined;
+}) {
+  const query = new URLSearchParams({
+    scope: options.scope,
+    page: String(options.page),
+    pageSize: String(options.pageSize),
+    search: options.search,
+    filter: options.filter
+  });
+  for (const [key, value] of Object.entries(options.reportFilters ?? {})) {
+    if (value && !["filter", "fromDate", "toDate"].includes(key)) query.set(key, value);
+  }
+  addDateRange(query, options.reportFilters ?? {});
+  return request<EnquiryPage>(`/crm/enquiries?${query}`);
+}
+
+export function listEnquiryReport(filters: EnquiryReportFilters) {
+  const query = new URLSearchParams();
+  addDateRange(query, filters);
+  if (filters.assignedUserId) query.set("assignedUserId", filters.assignedUserId);
+  return request<EnquiryReportRow[]>(`/crm/enquiries/reports?${query}`);
+}
+
+function addDateRange(query: URLSearchParams, filters: EnquiryReportFilters) {
+  if (filters.fromDate) query.set("fromAt", localDateBoundary(filters.fromDate, 0));
+  if (filters.toDate) query.set("toAt", localDateBoundary(filters.toDate, 1));
+}
+
+function localDateBoundary(date: string, nextDay: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year!, month! - 1, day! + nextDay).toISOString();
+}
+
 export const getEnquiryOverviewActivity = () =>
   request<{ commentsByYou30Days: number }>("/crm/enquiries/overview-activity");
+export const getEnquiryAttention = (today: string) =>
+  request<EnquiryAttention>(`/crm/enquiries/attention?today=${today}`);
+export const getEnquirySummary = (today: string) =>
+  request<EnquirySummary>(`/crm/enquiries/summary?today=${today}`);
+export const readEnquiryAlert = (id: number) =>
+  request<{ read: boolean }>(`/crm/enquiries/alerts/${id}/read`, { method: "POST" });
 export const getEnquiry = (id: number) => request<EnquiryRecord>(`/crm/enquiries/${id}`);
 export const listEnquiryComments = (id: number) =>
   request<EnquiryComment[]>(`/crm/enquiries/${id}/comments`);

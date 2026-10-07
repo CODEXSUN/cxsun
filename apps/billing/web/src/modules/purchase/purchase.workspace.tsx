@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -53,34 +54,6 @@ const purchaseColumnCatalog = [
   { id: "action", label: "Action" }
 ] as const;
 
-function printPurchaseFromList(purchaseId: string) {
-  const frame = document.createElement("iframe");
-  let cleanupTimer: number | undefined;
-  const cleanup = () => {
-    if (cleanupTimer !== undefined) window.clearTimeout(cleanupTimer);
-    frame.remove();
-  };
-
-  frame.setAttribute("aria-hidden", "true");
-  frame.tabIndex = -1;
-  frame.style.position = "fixed";
-  frame.style.left = "-10000px";
-  frame.style.width = "1px";
-  frame.style.height = "1px";
-  frame.style.border = "0";
-  frame.addEventListener(
-    "load",
-    () => frame.contentWindow?.addEventListener("afterprint", cleanup, { once: true }),
-    { once: true }
-  );
-  const printPath = window.location.pathname.startsWith("/app/")
-    ? "/app/billing/purchase/print"
-    : "/billing/purchase/print";
-  frame.src = `${printPath}?id=${encodeURIComponent(purchaseId)}&autoprint=1`;
-  document.body.append(frame);
-  cleanupTimer = window.setTimeout(cleanup, 120_000);
-}
-
 export function PurchaseWorkspace({ initialRecordId }: { initialRecordId?: string | undefined }) {
   const queryClient = useQueryClient();
   const settingsQuery = useBillingSettings();
@@ -90,7 +63,59 @@ export function PurchaseWorkspace({ initialRecordId }: { initialRecordId?: strin
   const canEditEntries = accessQuery.data?.canEditEntries ?? false;
   const canEditFinalizedEntries = accessQuery.data?.canEditFinalizedEntries ?? false;
   const canAdminRevoke = canEditFinalizedEntries;
-  const [view, setView] = useState<PurchaseView>({ mode: "list" });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [view, setLocalView] = useState<PurchaseView>({ mode: "list" });
+  const basePath = `${location.pathname.startsWith("/app/") ? "/app" : ""}/billing/purchase`;
+  function setView(update: SetStateAction<PurchaseView>) {
+    const next = typeof update === "function" ? update(view) : update;
+    setLocalView(next);
+    const record = next.mode === "list" ? null : next.purchase;
+    const path =
+      next.mode === "list"
+        ? basePath
+        : next.mode === "upsert" && !record
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record!.id)}${next.mode === "upsert" ? "/edit" : ""}`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalView({ mode: "list" });
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalView({ mode: "upsert", purchase: null, returnTo: "list" });
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && !["edit", "show", "print"].includes(tail[1]))) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    let active = true;
+    void getPurchase(id)
+      .then((purchase) => {
+        if (!active) return;
+        setLocalView(
+          tail[1] === "edit"
+            ? { mode: "upsert", purchase, returnTo: "show" }
+            : { mode: "show", purchase }
+        );
+      })
+      .catch((error) => {
+        if (active)
+          toast.error("Purchase could not be opened", {
+            description: error instanceof Error ? error.message : "Please try again."
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -312,7 +337,9 @@ export function PurchaseWorkspace({ initialRecordId }: { initialRecordId?: strin
         onBack={() => setView({ mode: "list" })}
         onEdit={() => setView({ mode: "upsert", purchase: freshPurchase, returnTo: "show" })}
         onNew={() => setView({ mode: "upsert", purchase: null, returnTo: "list" })}
-        onPrint={() => window.print()}
+        onPrint={() =>
+          void navigate({ to: `${basePath}/${encodeURIComponent(freshPurchase.id)}/print` })
+        }
         canEdit={canEditBillingEntry(freshPurchase.status, canEditEntries, canEditFinalizedEntries)}
         {...(previousPurchase
           ? { onPrevious: () => setView({ mode: "show", purchase: previousPurchase }) }
@@ -463,7 +490,9 @@ export function PurchaseWorkspace({ initialRecordId }: { initialRecordId?: strin
             deleteMutation.mutate(purchase.id);
         }}
         onRevoke={(purchase) => revokeMutation.mutate(purchase.id)}
-        onPrint={(purchase) => printPurchaseFromList(purchase.id)}
+        onPrint={(purchase) =>
+          void navigate({ to: `${basePath}/${encodeURIComponent(purchase.id)}/print` })
+        }
         canAdminRevoke={canAdminRevoke}
         canEditEntries={canEditEntries}
         canEditFinalizedEntries={canEditFinalizedEntries}

@@ -1,6 +1,5 @@
 import {
   lazy,
-  startTransition,
   Suspense,
   useEffect,
   useMemo,
@@ -17,6 +16,7 @@ import {
   LayoutDashboardIcon,
   ListChecksIcon,
   MailIcon,
+  RefreshCwIcon,
   PlusIcon,
   RocketIcon,
   Settings2Icon,
@@ -24,6 +24,7 @@ import {
   UserRoundIcon
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { ApplicationLayout } from "@cxsun/ui/layouts/application-layout";
 import {
   AlertDialog,
@@ -70,7 +71,8 @@ import { setPlatformDocumentTitle } from "../../shared/document/PageTitle";
 import { publishDesktopWorkspace } from "../../shared/desktop/desktop-bridge";
 import { publishAccountingYear, publishCompanyContext } from "../../shared/tenant/runtime-context";
 import { blogEditorHost } from "../../modules/blog/blog-host";
-import { useCrmNavigationCounts } from "@cxsun/crm-web/modules/enquiry";
+import { useCrmNavigationCounts } from "@cxsun/crm-web/modules/enquiry/hooks";
+import type { EnquiryReportFilters } from "@cxsun/crm-web/modules/enquiry";
 import { auditorClientGateway } from "../../modules/auditor/auditor-host";
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
@@ -96,6 +98,12 @@ const AuditorClientWorkspace = lazyWorkspace(() =>
 );
 const CrmOverviewWorkspace = lazyWorkspace(() =>
   import("@cxsun/crm-web/modules/overview").then((module) => module.CrmOverviewWorkspace)
+);
+const FrappeOverviewWorkspace = lazyWorkspace(() =>
+  import("@cxsun/frappe-web/modules/overview").then((module) => module.FrappeOverviewWorkspace)
+);
+const CrmReportsWorkspace = lazyWorkspace(() =>
+  import("@cxsun/crm-web/modules/reports").then((module) => module.CrmReportsWorkspace)
 );
 const EnquiryWorkspace = lazyWorkspace(() =>
   import("@cxsun/crm-web/modules/enquiry").then((module) => module.EnquiryWorkspace)
@@ -265,7 +273,12 @@ const WorkOrderTypesWorkspace = lazyWorkspace(() =>
   )
 );
 const ContactWorkspace = lazyWorkspace(() =>
-  import("@cxsun/core-web/modules/master/contact").then((module) => module.ContactWorkspace)
+  import("@cxsun/core-web/modules/master/contact/workspace").then(
+    (module) => module.ContactWorkspace
+  )
+);
+const Contact360Workspace = lazyWorkspace(() =>
+  import("@cxsun/crm-web/modules/contact-360").then((module) => module.Contact360Workspace)
 );
 const ProductWorkspace = lazyWorkspace(() =>
   import("@cxsun/core-web/modules/master/product").then((module) => module.ProductWorkspace)
@@ -391,9 +404,11 @@ const TenantRolePermissionWorkspace = lazy(() =>
 );
 
 type AppPage =
+  | "frappe.overview"
   | "auditor.overview"
   | "auditor.clients"
   | "crm.overview"
+  | "crm.reports"
   | "crm.enquiries"
   | "crm.enquiries.new"
   | "crm.my-job"
@@ -463,14 +478,17 @@ type AppPage =
   | `core.common.${"accounts" | "contacts" | "others" | "products" | "workorder"}.${string}`;
 export function AppDesk() {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
   const signedInUser = signedInTenantUser();
-  const [page, setPage] = useState<AppPage>(() => pageFromUrl(null));
-  const crmCounts = useCrmNavigationCounts(signedInUser.email, page.startsWith("crm."));
-  const [workspaceResetKey, setWorkspaceResetKey] = useState(0);
+  const routePage = pageFromUrl(null, location.pathname);
+  const crmCounts = useCrmNavigationCounts(signedInUser.email, routePage.startsWith("crm."));
   const [hasUnsavedFormChanges, setHasUnsavedFormChanges] = useState(false);
   const [pendingListPage, setPendingListPage] = useState<AppPage | null>(null);
   const workspaceContentRef = useRef<HTMLElement | null>(null);
-  const [shouldResolveLandingPath, setShouldResolveLandingPath] = useState(() => isAppRootPath());
+  const [shouldResolveLandingPath, setShouldResolveLandingPath] = useState(() =>
+    isAppRootPath(location.pathname)
+  );
   const runtimeQuery = useQuery({
     queryFn: getTenantRuntime,
     queryKey: ["tenant", "runtime"],
@@ -507,6 +525,7 @@ export function AppDesk() {
     persistedLandingApp && enabledApps.includes(persistedLandingApp)
       ? persistedLandingApp
       : "application";
+  const page = pageFromUrl(landingApp, location.pathname);
   const activeApp = appFromPage(page, landingApp, switchableApps);
   const activeCompanies = useMemo(
     () => (companiesQuery.data ?? []).filter((company) => company.isActive),
@@ -534,17 +553,25 @@ export function AppDesk() {
   const appSafePage =
     page.startsWith("devkit") || page.startsWith("project-manager")
       ? pageForApp(landingApp)
-      : page.startsWith("crm") && !switchableApps.includes("crm")
+      : page.startsWith("auditor") && !switchableApps.includes("auditor")
         ? pageForApp(landingApp)
-        : page.startsWith("blog") && !switchableApps.includes("blog")
+        : page.startsWith("frappe") && !switchableApps.includes("frappe")
           ? pageForApp(landingApp)
-          : page.startsWith("accounts") && !switchableApps.includes("accounts")
+          : page.startsWith("task-manager") && !switchableApps.includes("task-manager")
             ? pageForApp(landingApp)
-            : (page.startsWith("billing") ||
-                  (page.startsWith("core") && !page.startsWith("core.organisation"))) &&
-                !switchableApps.includes("billing")
+            : page.startsWith("mail") && !switchableApps.includes("mail")
               ? pageForApp(landingApp)
-              : page;
+              : page.startsWith("crm") && !switchableApps.includes("crm")
+                ? pageForApp(landingApp)
+                : page.startsWith("blog") && !switchableApps.includes("blog")
+                  ? pageForApp(landingApp)
+                  : page.startsWith("accounts") && !switchableApps.includes("accounts")
+                    ? pageForApp(landingApp)
+                    : (page.startsWith("billing") ||
+                          (page.startsWith("core") && !page.startsWith("core.organisation"))) &&
+                        !switchableApps.includes("billing")
+                      ? pageForApp(landingApp)
+                      : page;
   const safePage = resolveBillingFeaturePage(appSafePage, billingSettingsQuery.data?.features);
   const activePageTitle = titleForPage(safePage);
   const accountingYear = selectedFinancialYear?.name ?? "Accounting year";
@@ -567,18 +594,15 @@ export function AppDesk() {
   }, [activePageTitle]);
 
   useEffect(() => {
-    const restorePageFromHistory = () => {
-      const restoredPage = pageFromUrl(landingApp);
-      setHasUnsavedFormChanges(false);
-      setPendingListPage(null);
-      startTransition(() => {
-        setPage(restoredPage);
-        setWorkspaceResetKey((current) => current + 1);
-      });
-    };
-    window.addEventListener("popstate", restorePageFromHistory);
-    return () => window.removeEventListener("popstate", restorePageFromHistory);
-  }, [landingApp]);
+    if (isAppRootPath(location.pathname) || !runtime || !defaultCompanyQuery.isFetched) return;
+    if (tenantPathMatchesPage(location.pathname, safePage)) return;
+    navigatePage(safePage, true);
+  }, [defaultCompanyQuery.isFetched, location.pathname, runtime, safePage]);
+
+  useEffect(() => {
+    setHasUnsavedFormChanges(false);
+    setPendingListPage(null);
+  }, [location.href]);
 
   useEffect(() => {
     if (activeApp !== "billing") return;
@@ -599,12 +623,7 @@ export function AppDesk() {
   useEffect(() => {
     if (!isBillingFeaturePageDisabled(page, billingSettingsQuery.data?.features)) return;
     const fallbackPage: AppPage = "billing.overview";
-    setPage(fallbackPage);
-    window.history.replaceState(
-      { page: fallbackPage },
-      "",
-      `/app/${fallbackPage.replaceAll(".", "/")}`
-    );
+    navigatePage(fallbackPage, true);
   }, [billingSettingsQuery.data?.features, page]);
 
   useEffect(() => {
@@ -647,36 +666,31 @@ export function AppDesk() {
     if (runtimeQuery.isLoading || !defaultCompanyQuery.isFetched) return;
 
     const landingPage = pageForApp(landingApp);
-    setPage(landingPage);
     setShouldResolveLandingPath(false);
-    window.history.replaceState({ page: landingPage }, "", `/app/${landingPage.replace(".", "/")}`);
+    navigatePage(landingPage, true);
     setPlatformDocumentTitle(titleForPage(landingPage));
   }, [defaultCompanyQuery.isFetched, landingApp, runtimeQuery.isLoading, shouldResolveLandingPath]);
 
   function selectPage(nextPage: AppPage) {
     const allowedPage = resolveBillingFeaturePage(nextPage, billingSettingsQuery.data?.features);
-    startTransition(() => setPage(allowedPage));
-    pushPageHistory(allowedPage);
+    navigatePage(allowedPage);
     setPlatformDocumentTitle(titleForPage(allowedPage));
+  }
+
+  function navigatePage(nextPage: AppPage, replace = false) {
+    void navigate({
+      params: { _splat: nextPage.replaceAll(".", "/") },
+      replace,
+      search: {},
+      to: "/app/$"
+    });
   }
 
   function completeListNavigation(nextPage: AppPage, replaceHistory = false) {
     const allowedPage = resolveBillingFeaturePage(nextPage, billingSettingsQuery.data?.features);
     setHasUnsavedFormChanges(false);
     setPendingListPage(null);
-    startTransition(() => {
-      setPage(allowedPage);
-      setWorkspaceResetKey((current) => current + 1);
-    });
-    if (replaceHistory) {
-      window.history.replaceState(
-        { page: allowedPage },
-        "",
-        `/app/${allowedPage.replaceAll(".", "/")}`
-      );
-    } else {
-      pushPageHistory(allowedPage);
-    }
+    navigatePage(allowedPage, replaceHistory);
     setPlatformDocumentTitle(titleForPage(allowedPage));
   }
 
@@ -691,6 +705,15 @@ export function AppDesk() {
     completeListNavigation(nextPage);
   }
 
+  function openReportEnquiries(filters: EnquiryReportFilters) {
+    void navigate({
+      params: { _splat: "crm/enquiries" },
+      search: { report: "1", ...filters },
+      to: "/app/$"
+    });
+    setPlatformDocumentTitle("Enquiries");
+  }
+
   function markUnsavedFormChanges(event: FormEvent<HTMLElement>) {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -701,15 +724,19 @@ export function AppDesk() {
 
   function selectBillingRecord(nextPage: AppPage, recordId: string) {
     const allowedPage = resolveBillingFeaturePage(nextPage, billingSettingsQuery.data?.features);
-    startTransition(() => setPage(allowedPage));
-    const url =
-      allowedPage === nextPage
-        ? `/app/${allowedPage.replaceAll(".", "/")}?record=${encodeURIComponent(recordId)}`
-        : `/app/${allowedPage.replaceAll(".", "/")}`;
-    if (`${window.location.pathname}${window.location.search}` !== url) {
-      window.history.pushState({ page: allowedPage, recordId }, "", url);
-    }
+    const path = `/app/${allowedPage.replaceAll(".", "/")}`;
+    void navigate({
+      to: allowedPage === nextPage ? `${path}/${encodeURIComponent(recordId)}` : path
+    });
     setPlatformDocumentTitle(titleForPage(allowedPage));
+  }
+
+  function selectAuditorRecord(recordId: string | null) {
+    void navigate({
+      params: { _splat: "auditor/clients" },
+      search: recordId ? { record: recordId } : {},
+      to: "/app/$"
+    });
   }
 
   function publishLandingApp(nextLandingApp: PlatformAppId) {
@@ -852,17 +879,23 @@ export function AppDesk() {
           onChangeCapture={markUnsavedFormChanges}
         >
           <Suspense
-            key={`${safePage}:${workspaceResetKey}`}
+            key={
+              safePage.startsWith("core.") || safePage.startsWith("billing.")
+                ? safePage
+                : `${safePage}:${location.href}`
+            }
             fallback={<GlobalLoader className="min-h-[32rem]" fullScreen={false} />}
           >
             {safePage === "blog.overview" || safePage === "blog.articles" ? (
               <BlogsEditorWorkspace host={blogEditorHost} />
             ) : null}
             {safePage === "auditor.overview" ? <AuditorOverviewWorkspace /> : null}
+            {safePage === "frappe.overview" ? <FrappeOverviewWorkspace /> : null}
             {safePage === "auditor.clients" ? (
               <AuditorClientWorkspace
                 gateway={auditorClientGateway}
                 initialRecordId={recordIdFromUrl()}
+                onRecordNavigate={selectAuditorRecord}
               />
             ) : null}
             {safePage === "crm.overview" ? (
@@ -873,9 +906,17 @@ export function AppDesk() {
                 onOpenMyCalls={() => requestListNavigation("crm.my-calls")}
               />
             ) : null}
-            {safePage === "crm.contacts" ? <ContactWorkspace key={safePage} /> : null}
+            {safePage === "crm.reports" ? (
+              <CrmReportsWorkspace onOpenEnquiries={openReportEnquiries} />
+            ) : null}
+            {safePage === "crm.contacts" ? <Contact360Workspace key={safePage} /> : null}
             {safePage === "crm.enquiries" ? (
-              <EnquiryWorkspace key={safePage} currentUserEmail={signedInUser.email} />
+              <EnquiryWorkspace
+                key={`${safePage}:${location.href}`}
+                currentUserEmail={signedInUser.email}
+                reportFilters={reportFiltersFromLocation()}
+                onBackToReports={() => requestListNavigation("crm.reports")}
+              />
             ) : null}
             {safePage === "crm.enquiries.new" ? (
               <EnquiryWorkspace
@@ -1054,21 +1095,53 @@ function uniqueApps(apps: PlatformAppId[]) {
   return Array.from(new Set(["application" as PlatformAppId, ...apps]));
 }
 
-function pushPageHistory(page: AppPage) {
-  const url = `/app/${page.replaceAll(".", "/")}`;
-  if (`${window.location.pathname}${window.location.search}` === url) return;
-  window.history.pushState({ page }, "", url);
-}
-
-function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
-  const [, , app, ...children] = window.location.pathname.split("/");
+function pageFromUrl(landingApp: PlatformAppId | null, pathname: string): AppPage {
+  const [, , app, ...children] = pathname.split("/");
   if (!app) return pageForApp(landingApp ?? "application");
+
+  if (
+    app === "billing" &&
+    ["quotation", "sales", "purchase", "export-sales", "payment", "receipt"].includes(
+      children[0] ?? ""
+    )
+  ) {
+    if (
+      children.length === 3 &&
+      children[2] === "print" &&
+      !["payment", "receipt"].includes(children[0]!)
+    )
+      return `billing.${children[0]}.print` as AppPage;
+    if (
+      children.length === 1 ||
+      (children.length === 2 && Boolean(children[1])) ||
+      (children.length === 3 &&
+        (children[2] === "edit" || children[2] === "show" || children[2] === "print"))
+    ) {
+      return `billing.${children[0]}` as AppPage;
+    }
+  }
+
+  if (app === "core") {
+    const suffix = children.at(-1);
+    const baseChildren = suffix === "edit" ? children.slice(0, -2) : children.slice(0, -1);
+    const base = `core.${baseChildren.join(".")}`;
+    if (
+      (isCommonMasterPage(base) || CORE_RECORD_PAGES.has(base)) &&
+      (suffix === "new" ||
+        suffix === "edit" ||
+        (children.length === baseChildren.length + 1 && Boolean(suffix)))
+    ) {
+      return base as AppPage;
+    }
+  }
 
   const key = `${app}.${children.filter(Boolean).join(".") || "overview"}`;
   if (
+    key === "frappe.overview" ||
     key === "auditor.overview" ||
     key === "auditor.clients" ||
     key === "crm.overview" ||
+    key === "crm.reports" ||
     key === "crm.enquiries" ||
     key === "crm.enquiries.new" ||
     key === "crm.my-job" ||
@@ -1123,6 +1196,8 @@ function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
     key === "mail.sent" ||
     key === "mail.failed" ||
     key === "mail.trash" ||
+    key === "task-manager.overview" ||
+    key === "task-manager.todos" ||
     key === "core.common.location.countries" ||
     key === "core.common.location.states" ||
     key === "core.common.location.districts" ||
@@ -1140,6 +1215,55 @@ function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
   }
   if (key === "mail.overview") return "mail.inbox";
   return pageForApp(landingApp ?? "application");
+}
+
+function tenantPathMatchesPage(pathname: string, page: AppPage): boolean {
+  const canonicalPath = `/app/${page.replaceAll(".", "/")}`;
+  if (pathname === canonicalPath) return true;
+  if (
+    [
+      "billing.quotation",
+      "billing.sales",
+      "billing.purchase",
+      "billing.export-sales",
+      "billing.payment",
+      "billing.receipt"
+    ].includes(page)
+  ) {
+    const prefix = `/app/${page.replaceAll(".", "/")}/`;
+    const tail = pathname.slice(prefix.length);
+    if (!pathname.startsWith(prefix) || !tail) return false;
+    const segments = tail.split("/");
+    return (
+      (segments.length === 1 && Boolean(segments[0])) ||
+      (segments.length === 2 &&
+        Boolean(segments[0]) &&
+        (segments[1] === "edit" || segments[1] === "show" || segments[1] === "print"))
+    );
+  }
+  if (page.startsWith("core.") && (isCommonMasterPage(page) || CORE_RECORD_PAGES.has(page))) {
+    const prefix = `${canonicalPath}/`;
+    if (!pathname.startsWith(prefix)) return false;
+    const segments = pathname.slice(prefix.length).split("/");
+    return (
+      (segments.length === 1 && Boolean(segments[0])) ||
+      (segments.length === 2 && Boolean(segments[0]) && segments[1] === "edit")
+    );
+  }
+  if (
+    [
+      "billing.quotation.print",
+      "billing.sales.print",
+      "billing.purchase.print",
+      "billing.export-sales.print",
+      "billing.payment.print",
+      "billing.receipt.print"
+    ].includes(page)
+  ) {
+    const segments = pathname.slice(`/app/billing/${page.split(".")[1]}/`.length).split("/");
+    return segments.length === 2 && Boolean(segments[0]) && segments[1] === "print";
+  }
+  return false;
 }
 
 function LandingDesk({
@@ -1166,48 +1290,56 @@ function LandingDesk({
         ? "Sales, purchase, receipt, payment, report, master, common, and billing settings."
         : appId === "crm"
           ? "Customer relationships and sales opportunities."
-          : appId === "accounts"
-            ? "Chart of accounts, ledger groups, ledgers, journal, and accounting overview."
-            : appId === "mail"
-              ? "Inbox, compose, scheduled delivery, sent history, failures, and mail settings."
-              : "Shared workspace, company setup, roles, and cross-app launch desk.",
+          : appId === "frappe"
+            ? "Frappe connection and outbound CRM enquiry sync."
+            : appId === "accounts"
+              ? "Chart of accounts, ledger groups, ledgers, journal, and accounting overview."
+              : appId === "mail"
+                ? "Inbox, compose, scheduled delivery, sent history, failures, and mail settings."
+                : "Shared workspace, company setup, roles, and cross-app launch desk.",
     icon:
       appId === "billing"
         ? CreditCardIcon
         : appId === "crm"
           ? ContactRoundIcon
-          : appId === "accounts"
-            ? LayersIcon
-            : appId === "mail"
-              ? MailIcon
-              : appId === "task-manager"
-                ? ListChecksIcon
-                : LayoutDashboardIcon,
+          : appId === "frappe"
+            ? RefreshCwIcon
+            : appId === "accounts"
+              ? LayersIcon
+              : appId === "mail"
+                ? MailIcon
+                : appId === "task-manager"
+                  ? ListChecksIcon
+                  : LayoutDashboardIcon,
     iconClass:
       appId === "billing"
         ? "bg-emerald-600 text-white"
         : appId === "crm"
           ? "bg-rose-600 text-white"
-          : appId === "accounts"
-            ? "bg-cyan-600 text-white"
-            : appId === "mail"
-              ? "bg-sky-600 text-white"
-              : appId === "task-manager"
-                ? "bg-violet-600 text-white"
-                : "bg-slate-950 text-white",
+          : appId === "frappe"
+            ? "bg-teal-600 text-white"
+            : appId === "accounts"
+              ? "bg-cyan-600 text-white"
+              : appId === "mail"
+                ? "bg-sky-600 text-white"
+                : appId === "task-manager"
+                  ? "bg-violet-600 text-white"
+                  : "bg-slate-950 text-white",
     id: appId,
     label:
       appId === "billing"
         ? "Billing"
         : appId === "crm"
           ? "CRM"
-          : appId === "accounts"
-            ? "Accounts"
-            : appId === "mail"
-              ? "Mail"
-              : appId === "task-manager"
-                ? "Task Manager"
-                : "Application"
+          : appId === "frappe"
+            ? "Frappe"
+            : appId === "accounts"
+              ? "Accounts"
+              : appId === "mail"
+                ? "Mail"
+                : appId === "task-manager"
+                  ? "Task Manager"
+                  : "Application"
   })) satisfies Array<{
     description: string;
     icon: typeof LayoutDashboardIcon;
@@ -1492,6 +1624,24 @@ function BillingOverview({
   );
 }
 
+function reportFiltersFromLocation(): EnquiryReportFilters | undefined {
+  const search = new URLSearchParams(window.location.search);
+  if (search.get("report") !== "1") return undefined;
+  const filters: EnquiryReportFilters = {};
+  for (const key of [
+    "fromDate",
+    "toDate",
+    "listInId",
+    "createdBy",
+    "assignedUserId",
+    "filter"
+  ] as const) {
+    const value = search.get(key);
+    if (value) filters[key] = value;
+  }
+  return filters;
+}
+
 function recordIdFromUrl() {
   return new URLSearchParams(window.location.search).get("record") || undefined;
 }
@@ -1576,9 +1726,11 @@ function renderOwnedCommonMasterPage(page: AppPage) {
 
 function titleForPage(page: AppPage) {
   const labels: Partial<Record<AppPage, string>> = {
+    "frappe.overview": "Frappe",
     "auditor.overview": "Overview",
     "auditor.clients": "Clients",
     "crm.overview": "Overview",
+    "crm.reports": "Reports",
     "crm.enquiries": "Enquiries",
     "crm.enquiries.new": "New enquiry",
     "crm.my-job": "My Job",
@@ -1675,6 +1827,19 @@ function isCommonMasterPage(page: string): page is AppPage {
   return COMMON_MASTER_PAGES.has(page);
 }
 
+const CORE_RECORD_PAGES = new Set<string>([
+  "core.common.location.countries",
+  "core.common.location.states",
+  "core.common.location.districts",
+  "core.common.location.cities",
+  "core.common.location.pincodes",
+  "core.master.contact",
+  "core.master.product",
+  "core.master.work-order",
+  "core.organisation.company",
+  "core.organisation.financial-year"
+]);
+
 const COMMON_MASTER_PAGES = new Set<string>([
   "core.common.accounts.ledger-groups",
   "core.common.accounts.ledgers",
@@ -1709,6 +1874,7 @@ function appFromPage(
   landingApp: PlatformAppId,
   enabledApps: PlatformAppId[]
 ): PlatformAppId {
+  if (page.startsWith("frappe")) return enabledApps.includes("frappe") ? "frappe" : landingApp;
   if (page.startsWith("crm")) return enabledApps.includes("crm") ? "crm" : landingApp;
   if (page.startsWith("auditor")) return enabledApps.includes("auditor") ? "auditor" : landingApp;
   if (page.startsWith("blog")) return enabledApps.includes("blog") ? "blog" : landingApp;
@@ -1740,6 +1906,6 @@ function pageForApp(app: PlatformAppId): AppPage {
   return appRootPage(app);
 }
 
-function isAppRootPath() {
-  return window.location.pathname === "/app" || window.location.pathname === "/app/";
+function isAppRootPath(pathname: string) {
+  return pathname === "/app" || pathname === "/app/";
 }

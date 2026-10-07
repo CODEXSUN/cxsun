@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -59,13 +60,62 @@ export function SalesWorkspace({ initialRecordId }: { initialRecordId?: string |
   const canEditEntries = accessQuery.data?.canEditEntries ?? false;
   const canEditFinalizedEntries = accessQuery.data?.canEditFinalizedEntries ?? false;
   const canAdminRevoke = canEditFinalizedEntries;
-  const [view, setView] = useState<SaleView>({ mode: "list" });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [view, setLocalView] = useState<SaleView>({ mode: "list" });
+  const basePath = `${location.pathname.startsWith("/app/") ? "/app" : ""}/billing/sales`;
+  function setView(update: SetStateAction<SaleView>) {
+    const next = typeof update === "function" ? update(view) : update;
+    setLocalView(next);
+    const record = next.mode === "list" ? null : next.sale;
+    const path =
+      next.mode === "list"
+        ? basePath
+        : next.mode === "upsert" && !record
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record!.id)}${next.mode === "upsert" ? "/edit" : ""}`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalView({ mode: "list" });
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalView({ mode: "upsert", sale: null, returnTo: "list" });
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && !["edit", "show", "print"].includes(tail[1]))) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    let active = true;
+    void getSale(id)
+      .then((sale) => {
+        if (!active) return;
+        setLocalView(
+          tail[1] === "edit" ? { mode: "upsert", sale, returnTo: "show" } : { mode: "show", sale }
+        );
+      })
+      .catch((error) => {
+        if (active)
+          toast.error("Sale could not be opened", {
+            description: error instanceof Error ? error.message : "Please try again."
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [totalsView, setTotalsView] = useState<BillingDocumentTotalsViewMode>("bill");
-  const [pendingListPrintId, setPendingListPrintId] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(saleColumnCatalog.map((column) => [column.id, true]))
   );
@@ -79,28 +129,6 @@ export function SalesWorkspace({ initialRecordId }: { initialRecordId?: string |
     search: searchValue,
     status: statusFilter
   });
-
-  useEffect(() => {
-    if (view.mode !== "show" || pendingListPrintId !== view.sale.id) return;
-
-    let printFrame = 0;
-    let settleFrame = 0;
-    const restoreList = () => {
-      setPendingListPrintId(null);
-      setView({ mode: "list" });
-    };
-
-    window.addEventListener("afterprint", restoreList, { once: true });
-    printFrame = window.requestAnimationFrame(() => {
-      settleFrame = window.requestAnimationFrame(() => window.print());
-    });
-
-    return () => {
-      window.cancelAnimationFrame(printFrame);
-      window.cancelAnimationFrame(settleFrame);
-      window.removeEventListener("afterprint", restoreList);
-    };
-  }, [pendingListPrintId, view]);
 
   useEffect(() => {
     if (!initialRecordId) return;
@@ -220,7 +248,9 @@ export function SalesWorkspace({ initialRecordId }: { initialRecordId?: string |
         onBack={() => setView({ mode: "list" })}
         onEdit={() => setView({ mode: "upsert", sale: freshSale, returnTo: "show" })}
         onNew={openNewSale}
-        onPrint={() => window.print()}
+        onPrint={() =>
+          void navigate({ to: `${basePath}/${encodeURIComponent(freshSale.id)}/print` })
+        }
         canEdit={canEditBillingEntry(freshSale.status, canEditEntries, canEditFinalizedEntries)}
         {...(previousSale
           ? { onPrevious: () => setView({ mode: "show", sale: previousSale }) }
@@ -353,10 +383,9 @@ export function SalesWorkspace({ initialRecordId }: { initialRecordId?: string |
             deleteMutation.mutate(sale.id);
         }}
         onRevoke={(sale) => revokeMutation.mutate(sale.id)}
-        onPrint={(sale) => {
-          setPendingListPrintId(sale.id);
-          setView({ mode: "show", sale });
-        }}
+        onPrint={(sale) =>
+          void navigate({ to: `${basePath}/${encodeURIComponent(sale.id)}/print` })
+        }
         canAdminRevoke={canAdminRevoke}
         canEditEntries={canEditEntries}
         canEditFinalizedEntries={canEditFinalizedEntries}

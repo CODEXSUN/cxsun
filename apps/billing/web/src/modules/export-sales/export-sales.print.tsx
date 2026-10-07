@@ -30,7 +30,11 @@ export type ExportSalePrintCopy = "duplicate" | "office-copy" | "original";
 
 export function ExportSalesPrintRoutePage() {
   const search = new URLSearchParams(window.location.search);
-  const exportSaleId = search.get("id");
+  const pathSegments = window.location.pathname.split("/");
+  const exportSaleId =
+    pathSegments.at(-1) === "print" && pathSegments.at(-3) === "export-sales"
+      ? decodeURIComponent(pathSegments.at(-2)!)
+      : search.get("id");
   const autoPrint = search.get("autoprint") === "1";
   const exportSaleQuery = useExportSaleRecord(exportSaleId, true);
   const settingsQuery = useBillingSettings();

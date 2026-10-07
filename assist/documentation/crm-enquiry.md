@@ -4,7 +4,11 @@ The CRM enquiry list opens a detail page when a row or enquiry ID is selected. T
 
 ## Personal workspaces
 
-CRM has Overview, My Job, My Calls, and All Enquiries pages. My Job shows enquiries assigned to the signed-in tenant user; My Calls shows enquiries whose `created_by` email matches the signed-in user. Overview uses the same records for live workload and status counts. The sidebar shows counts for each page. List filter options show counts within the current page scope, and the selected filter appears beside search.
+CRM has Overview, My Job, My Calls, and All Enquiries pages. My Job shows enquiries assigned to the signed-in tenant user; My Calls shows enquiries whose `created_by` email matches the signed-in user. The API applies these scopes before paging and counting. All Enquiries requires `crm.enquiry.view-all` to show every record; otherwise it shows records created by or assigned to the user. Detail and child routes enforce the same record access. The list API applies search and status filters in the database, returns up to 100 records per page, and returns counts for the selected scope. It searches both captured details and linked Core contact names and phone numbers. Ownership and status indexes support paged lists. Overview and sidebar counts use aggregate queries rather than loading every enquiry.
+
+Assigning an enquiry creates an unread alert for the new assignee and records assignment activity. Reassignment dismisses the prior assignee's unread alert. My Job shows assignment alerts and enquiries due today or overdue; the alert can be dismissed without changing the enquiry. The attention query refreshes every minute while the page is open. Due follow-ups are shown for active enquiries assigned to the user, with the first 100 ordered by due date.
+
+Status changes require a reason when an enquiry is marked Won, Lost, or Closed. A New call must be opened before it can be completed. A completed enquiry must move to Re-open before another status can be selected. The reason is stored with the enquiry and displayed in Properties; changing to an active status clears it. Concurrent status edits return a conflict so a stale form cannot overwrite a newer transition.
 
 `GET /crm/enquiries/overview-activity` counts comments written by the signed-in user in the last 30 days. The overview shows a dash for reactions because CRM does not store reactions.
 

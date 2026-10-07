@@ -21,9 +21,23 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     build: {
-      chunkSizeWarningLimit: 900,
+      chunkSizeWarningLimit: 450,
       emptyOutDir: true,
-      outDir: "../../../dist/apps/platform/web"
+      outDir: "../../../dist/apps/platform/web",
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: "rich-text",
+                test: /[\\/]node_modules[\\/](?:@tiptap[\\/]|prosemirror-|linkifyjs[\\/])/u,
+                maxSize: 350_000,
+                includeDependenciesRecursively: false
+              }
+            ]
+          }
+        }
+      }
     },
     cacheDir: "../../../node_modules/.vite/platform-web",
     envDir: "../../..",
@@ -31,7 +45,13 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(rootPackage.version)
     },
     optimizeDeps: {
-      exclude: ["@codexsun/blog/web", "@cxsun/billing-web", "@cxsun/core-web", "@cxsun/crm-web"],
+      exclude: [
+        "@codexsun/blog/web",
+        "@cxsun/billing-web",
+        "@cxsun/core-web",
+        "@cxsun/crm-web",
+        "@cxsun/frappe-web"
+      ],
       include: [
         "react-is",
         "use-sync-external-store/shim",
@@ -43,6 +63,14 @@ export default defineConfig(({ command, mode }) => {
     plugins: [tailwindcss(), react()],
     resolve: {
       alias: {
+        "@cxsun/core-web/modules/master/contact/workspace": resolve(
+          configDir,
+          "../../core/web/src/modules/master/contact/contact.workspace.tsx"
+        ),
+        "@cxsun/crm-web/modules/enquiry/hooks": resolve(
+          configDir,
+          "../../crm/web/src/modules/enquiry/enquiry.hooks.ts"
+        ),
         "@cxsun/ui/layouts/application-layout": resolve(
           configDir,
           "../../../packages/ui/src/layouts/application-layout.tsx"
@@ -90,6 +118,7 @@ function platformDevelopmentServer(runtimeEnv: Record<string, string | undefined
     host: platformRuntime.webBindHost,
     port: requireEnvNumber(runtimeEnv.PLATFORM_WEB_PORT, "PLATFORM_WEB_PORT"),
     proxy: {
+      "/api/app": proxy,
       "/api/billing": {
         ...proxy,
         rewrite: (path: string) => path.replace(/^\/api\/billing/u, "") || "/"

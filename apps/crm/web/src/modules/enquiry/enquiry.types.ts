@@ -31,6 +31,57 @@ export type EnquiryRecord = EnquirySavePayload & {
   updatedAt: string;
 };
 
+export type EnquiryPage = {
+  items: EnquiryRecord[];
+  total: number;
+  statusCounts: Array<{ code: string; count: number }>;
+};
+export type EnquiryReportFilters = {
+  fromDate?: string | undefined;
+  toDate?: string | undefined;
+  listInId?: string | undefined;
+  createdBy?: string | undefined;
+  assignedUserId?: string | undefined;
+  filter?: string | undefined;
+};
+export type EnquiryReportRow = {
+  listInId: number | null;
+  listIn: string | null;
+  createdBy: string;
+  assignedUserId: number | null;
+  status: string;
+  statusName: string;
+  count: number;
+};
+export type EnquiryAttention = {
+  assignments: Array<{
+    id: number;
+    enquiryId: number;
+    enquiryNo: number;
+    title: string;
+    createdAt: string;
+  }>;
+  due: EnquiryRecord[];
+};
+export type EnquiryScopeSummary = {
+  total: number;
+  active: number;
+  newCalls: number;
+  attention: number;
+  updated7: number;
+  updated30: number;
+  created7: number;
+  created30: number;
+  oldestActiveDays: number | null;
+  statusCounts: Array<{ code: string; count: number }>;
+  priorityCounts: Array<{ code: string; count: number }>;
+};
+export type EnquirySummary = {
+  allCount: number;
+  assigned: EnquiryScopeSummary;
+  created: EnquiryScopeSummary;
+};
+
 export type EnquiryLookup = {
   id: number;
   name: string;
@@ -106,5 +157,8 @@ export type EnquiryActivity = {
 };
 
 export type EnquiryPropertyPatch = Partial<
-  Pick<EnquirySavePayload, "listInId" | "priorityId" | "assignedUserId" | "dueDate" | "statusId">
+  Pick<
+    EnquirySavePayload,
+    "listInId" | "priorityId" | "assignedUserId" | "dueDate" | "statusId" | "closedReason"
+  >
 >;

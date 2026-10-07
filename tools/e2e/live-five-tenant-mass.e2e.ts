@@ -8,6 +8,7 @@ import { SubscriptionService } from "../../apps/platform/api/src/modules/subscri
 import { TenantService } from "../../apps/platform/api/src/modules/tenant/tenant.service.js";
 import type { Tenant } from "../../apps/platform/api/src/modules/tenant/tenant.types.js";
 import { signAuthToken } from "../../apps/platform/api/src/auth/jwt.js";
+import { registerSyntheticSession } from "./auth-session-helper.js";
 import { createApp as createPlatformApp } from "../../apps/platform/api/src/app.js";
 import { tenantDatabaseMigrationsFor } from "../../apps/platform/api/src/database/tenant-app-database.js";
 import {
@@ -852,6 +853,7 @@ async function verifyLiveRoutes(
   generated: Array<Awaited<ReturnType<typeof generateTenantLoad>>>
 ) {
   assert.ok(platformApp);
+  await Promise.all(tenants.map(registerTenantRouteSession));
   for (const [index, tenant] of tenants.entries()) {
     const expected = generated[index]?.documentCount ?? maximumRecordsPerTenant;
     for (const path of [
@@ -899,7 +901,9 @@ async function verifyLiveRoutes(
   };
 }
 
-function tenantHeaders(tenant: Tenant) {
+const tenantRouteTokens = new Map<string, string>();
+
+async function registerTenantRouteSession(tenant: Tenant) {
   const token = signAuthToken({
     email: `mass-${tenant.tenantCode.toLowerCase()}@example.test`,
     tenantCode: tenant.tenantCode,
@@ -909,6 +913,13 @@ function tenantHeaders(tenant: Tenant) {
     userId: `mass-${tenant.uuid}`,
     userType: "tenant"
   });
+  await registerSyntheticSession(token);
+  tenantRouteTokens.set(tenant.uuid, token);
+}
+
+function tenantHeaders(tenant: Tenant) {
+  const token = tenantRouteTokens.get(tenant.uuid);
+  assert.ok(token, `Missing route session for ${tenant.tenantCode}.`);
   return {
     authorization: `Bearer ${token}`,
     "x-tenant-db": tenant.dbName,

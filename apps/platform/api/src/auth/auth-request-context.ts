@@ -19,7 +19,7 @@ declare module "fastify" {
   interface FastifyRequest {
     authContext?: {
       payload: AuthTokenPayload;
-      session: AuthSessionRecord | null;
+      session: AuthSessionRecord;
       source: "bearer" | "cookie";
     };
   }
@@ -33,13 +33,15 @@ const publicAuthPaths = new Set([
   "/auth/session/reset",
   "/auth/tenant-context",
   "/health",
+  "/ready",
   "/sitemap.xml"
 ]);
 
 export function registerAuthRequestContext(app: FastifyInstance) {
   app.decorateRequest("authContext", undefined);
-  app.addHook("onRequest", async (request) => {
+  app.addHook("onRequest", async (request, reply) => {
     const requestPath = request.routeOptions.url ?? request.url.split("?")[0] ?? "";
+    if (requestPath === "/health" || requestPath === "/ready") return;
     const authentication = selectRequestAuthentication(
       bearerToken(request),
       readEncryptedSessionCookie(request)
@@ -49,7 +51,7 @@ export function registerAuthRequestContext(app: FastifyInstance) {
 
     const payload = verifyAuthToken(token);
     const session = payload ? await sessions.findActive(payload.jti) : null;
-    if (!payload || (source === "cookie" && !session) || !claimsMatchSession(payload, session)) {
+    if (!payload || !claimsMatchSession(payload, session)) {
       if (isPublicAuthenticationPath(requestPath)) return;
       throw authenticationError("AUTH_SESSION_EXPIRED", "Session expired. Please sign in again.");
     }
@@ -110,7 +112,8 @@ export function registerAuthRequestContext(app: FastifyInstance) {
       request.headers["x-tenant-id"] = tenant.uuid;
       request.headers["x-tenant-db"] = tenant.dbName;
       request.tenantId = tenant.uuid;
-      const defaults = session?.context.defaultCompany;
+      reply.header("x-tenant-id", tenant.uuid);
+      const defaults = session.context.defaultCompany;
       if (defaults) {
         request.headers["x-company-id"] ??= String(defaults.companyId);
         request.headers["x-financial-year-id"] ??= String(defaults.financialYearId);
@@ -119,7 +122,7 @@ export function registerAuthRequestContext(app: FastifyInstance) {
       request.headers.authorization = `Bearer ${token}`;
     }
 
-    if (session && Date.now() - session.lastSeenAt.getTime() > 5 * 60 * 1000) {
+    if (Date.now() - session.lastSeenAt.getTime() > 5 * 60 * 1000) {
       await sessions.touch(payload.jti);
     }
   });
@@ -144,8 +147,11 @@ export function selectRequestAuthentication(bearer: string, cookie: string) {
   return null;
 }
 
-function claimsMatchSession(payload: AuthTokenPayload, session: AuthSessionRecord | null) {
-  if (!session) return true;
+export function claimsMatchSession(
+  payload: AuthTokenPayload,
+  session: AuthSessionRecord | null
+): session is AuthSessionRecord {
+  if (!session) return false;
   return (
     session.jti === payload.jti &&
     session.userUuid === payload.userId &&

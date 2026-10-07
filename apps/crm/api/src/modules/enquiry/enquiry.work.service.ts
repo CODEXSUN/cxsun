@@ -1,12 +1,12 @@
 import { AppError } from "@cxsun/framework/errors";
-import { EnquiryRepository } from "./enquiry.repository.js";
+import { EnquiryService } from "./enquiry.service.js";
 import { EnquiryWorkRepository } from "./enquiry.work.repository.js";
 import type { EnquiryRelations } from "./enquiry.service.js";
 import type { EnquiryEstimateInput, EnquiryJobInput } from "./enquiry.types.js";
 
 export class EnquiryWorkService {
   constructor(
-    private readonly enquiries: EnquiryRepository,
+    private readonly enquiries: EnquiryService,
     private readonly work: EnquiryWorkRepository,
     private readonly relations: EnquiryRelations
   ) {}

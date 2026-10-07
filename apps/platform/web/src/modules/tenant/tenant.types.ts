@@ -17,7 +17,8 @@ export type Tenant = {
     | "task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   id: number;
   mobile: string | null;
   payloadSettings: Record<string, unknown>;
@@ -51,7 +52,8 @@ export type TenantSavePayload = {
     | "task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   mobile: string | null;
   payloadSettings: Record<string, unknown>;
   primaryDomain: string;
@@ -84,7 +86,8 @@ export type TenantRuntime = {
       | "task-manager"
       | "blog"
       | "auditor"
-      | "crm";
+      | "crm"
+      | "frappe";
     label: string;
     moduleKey: string;
     stack:
@@ -97,7 +100,8 @@ export type TenantRuntime = {
       | "platform-task-manager"
       | "blog"
       | "auditor"
-      | "crm";
+      | "crm"
+      | "frappe";
   }>;
   defaultLandingApp:
     | "application"
@@ -109,6 +113,7 @@ export type TenantRuntime = {
     | "task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   tenant: Tenant | null;
 };

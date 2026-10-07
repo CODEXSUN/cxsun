@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { runHealthChecks, type HealthCheck } from "../health/index.js";
 import { ok } from "../http/index.js";
 
-export function registerHealthRoute(app: FastifyInstance, checks: HealthCheck[]) {
-  app.get("/health", async (request, reply) => {
+export function registerHealthRoute(app: FastifyInstance, checks: HealthCheck[], path = "/health") {
+  app.get(path, async (request, reply) => {
     const result = await runHealthChecks(checks);
     if (result.status === "down") {
       reply.code(503);

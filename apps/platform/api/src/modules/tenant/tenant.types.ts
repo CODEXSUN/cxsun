@@ -19,7 +19,8 @@ export type Tenant = {
     | "task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   id: number;
   mobile: string | null;
   payloadSettings: Record<string, unknown>;

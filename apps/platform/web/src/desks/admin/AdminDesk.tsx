@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Building2Icon, ClipboardCheckIcon, LifeBuoyIcon, PanelsTopLeftIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AdminLayout, Button, Card, GlobalLoader, StatusBadge } from "@cxsun/ui";
@@ -8,28 +9,26 @@ import type { PlatformAppDefinition } from "../../app/app-registry";
 
 type AdminPage = "dashboard" | "app-registry" | "tenant-support" | "activation";
 
-function pageFromUrl(): AdminPage {
-  const page = window.location.pathname.split("/")[2];
+function pageFromUrl(pathname: string): AdminPage {
+  const page = pathname.split("/")[2];
   return page === "app-registry" || page === "tenant-support" || page === "activation"
     ? page
     : "dashboard";
 }
 
 export function AdminDesk() {
-  const [page, setPage] = useState<AdminPage>(pageFromUrl);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const page = pageFromUrl(location.pathname);
 
   useEffect(() => {
-    const restorePageFromHistory = () => setPage(pageFromUrl());
-    window.addEventListener("popstate", restorePageFromHistory);
-    return () => window.removeEventListener("popstate", restorePageFromHistory);
-  }, []);
+    const canonicalPath = page === "dashboard" ? "/admin" : `/admin/${page}`;
+    if (location.pathname !== canonicalPath) void navigate({ to: canonicalPath, replace: true });
+  }, [location.pathname, navigate, page]);
 
   function selectPage(nextPage: AdminPage) {
-    setPage(nextPage);
     const path = nextPage === "dashboard" ? "/admin" : `/admin/${nextPage}`;
-    if (window.location.pathname !== path) {
-      window.history.pushState({ page: nextPage }, "", path);
-    }
+    void navigate({ to: path });
   }
 
   async function handleLogout() {

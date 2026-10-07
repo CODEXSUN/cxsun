@@ -1,5 +1,6 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import type { IncomingMessage } from "node:http";
 import Fastify, { type FastifyInstance } from "fastify";
 import { isAppError } from "../errors/index.js";
 import { fail, ok } from "../http/index.js";
@@ -12,6 +13,7 @@ export type CreateApiAppOptions = {
   corsOrigins: string[];
   environment: string;
   onReady?: () => Promise<void> | void;
+  rewriteUrl?: (url: string) => string;
   shutdownHooks?: ShutdownHook[];
 };
 
@@ -26,7 +28,10 @@ function requestMeta(request: { correlationId?: string; id: string; tenantId?: s
 export async function createApiApp(options: CreateApiAppOptions): Promise<FastifyInstance> {
   console.info(`[app.boot] creating ${options.appName} (${options.environment})`);
   const app = Fastify({
-    logger: options.environment === "development" ? false : { level: "warn" }
+    logger: options.environment === "development" ? false : { level: "warn" },
+    ...(options.rewriteUrl
+      ? { rewriteUrl: (request: IncomingMessage) => options.rewriteUrl!(request.url ?? "/") }
+      : {})
   });
 
   app.addHook("onRoute", (route) => {

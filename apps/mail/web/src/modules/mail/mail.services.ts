@@ -1,5 +1,3 @@
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas-pro";
 import type {
   MailComposePayload,
   MailMessage,
@@ -51,6 +49,10 @@ export function restoreMail(id: string) {
 }
 
 export async function captureMailPdf(element: HTMLElement, fileName: string) {
+  const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas-pro")
+  ]);
   const pdf = new jsPDF({ format: "a4", orientation: "portrait", unit: "mm" });
   const width = 190;
   const printSheets = Array.from(element.querySelectorAll<HTMLElement>(".billing-print-document"));

@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
+import { lazy, Suspense, useEffect, type ComponentType } from "react";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   AppWindowIcon,
   Building2Icon,
@@ -15,8 +16,9 @@ import {
 import { SuperLayout } from "@cxsun/ui/layouts/super-layout";
 import type { SidemenuItem } from "@cxsun/ui/blocks/menu/sidemenu/sub/sidemenu-section";
 import { GlobalLoader } from "@cxsun/ui/components/global-loader";
-import { AppOperationsStrip, useAppOperationsQuery } from "../../modules/app-orchestration";
-import type { OrchestratedAppId } from "../../modules/app-orchestration";
+import { AppOperationsStrip } from "../../modules/app-orchestration/app-orchestration.list";
+import { useAppOperationsQuery } from "../../modules/app-orchestration/app-orchestration.hooks";
+import type { OrchestratedAppId } from "../../modules/app-orchestration/app-orchestration.types";
 import { logout } from "../../shared/api/platform-api";
 import { AuthGate } from "../../shared/auth/AuthGate";
 import { requiredClientEnv } from "../../shared/env/client-env";
@@ -113,33 +115,27 @@ type SaPage =
   | "design-system";
 
 export function SaDesk() {
-  const [page, setPage] = useState<SaPage>(pageFromUrl());
-  const [selectedAppId, setSelectedAppId] = useState<OrchestratedAppId>(() => appIdFromUrl());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const page = pageFromUrl(location.pathname);
+  const selectedAppId: OrchestratedAppId = "platform";
 
   useEffect(() => {
-    const restorePageFromHistory = () => {
-      setPage(pageFromUrl());
-      setSelectedAppId(appIdFromUrl());
-    };
-    window.addEventListener("popstate", restorePageFromHistory);
-    return () => window.removeEventListener("popstate", restorePageFromHistory);
-  }, []);
+    const canonicalPath = page === "overview" ? "/sa" : `/sa/${page}`;
+    if (location.pathname !== canonicalPath) void navigate({ to: canonicalPath, replace: true });
+  }, [location.pathname, navigate, page]);
 
   function selectPage(nextPage: SaPage) {
-    setPage(nextPage);
     const path = nextPage === "overview" ? "/sa" : `/sa/${nextPage}`;
-    if (`${window.location.pathname}${window.location.search}` !== path) {
-      window.history.pushState({ page: nextPage }, "", path);
-    }
+    void navigate({ to: path, search: {} });
   }
 
   function openAppOperations(appId: OrchestratedAppId) {
-    setSelectedAppId(appId);
-    setPage("app-operations");
-    const path = `/sa/app-operations?app=${appId}`;
-    if (`${window.location.pathname}${window.location.search}` !== path) {
-      window.history.pushState({ page: "app-operations", appId }, "", path);
-    }
+    void navigate({
+      params: { _splat: "app-operations" },
+      search: { app: appId },
+      to: "/sa/$"
+    });
   }
 
   async function handleLogout() {
@@ -358,8 +354,8 @@ export function SaDesk() {
   );
 }
 
-function pageFromUrl(): SaPage {
-  const page = window.location.pathname.split("/")[2];
+function pageFromUrl(pathname: string): SaPage {
+  const page = pathname.split("/")[2];
   return page === "app-operations" ||
     page === "task-manager" ||
     page === "project-manager-registry" ||
@@ -384,10 +380,6 @@ function pageFromUrl(): SaPage {
     page === "design-system"
     ? page
     : "overview";
-}
-
-function appIdFromUrl(): OrchestratedAppId {
-  return "platform";
 }
 
 function SaOverview({ onOpenApp }: { onOpenApp: (appId: OrchestratedAppId) => void }) {

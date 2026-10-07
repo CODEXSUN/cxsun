@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -55,34 +56,6 @@ const exportSaleColumnCatalog = [
   { id: "action", label: "Action" }
 ] as const;
 
-function printExportSaleFromList(exportSaleId: string) {
-  const frame = document.createElement("iframe");
-  let cleanupTimer: number | undefined;
-  const cleanup = () => {
-    if (cleanupTimer !== undefined) window.clearTimeout(cleanupTimer);
-    frame.remove();
-  };
-
-  frame.setAttribute("aria-hidden", "true");
-  frame.tabIndex = -1;
-  frame.style.position = "fixed";
-  frame.style.left = "-10000px";
-  frame.style.width = "1px";
-  frame.style.height = "1px";
-  frame.style.border = "0";
-  frame.addEventListener(
-    "load",
-    () => frame.contentWindow?.addEventListener("afterprint", cleanup, { once: true }),
-    { once: true }
-  );
-  const printPath = window.location.pathname.startsWith("/app/")
-    ? "/app/billing/export-sales/print"
-    : "/billing/export-sales/print";
-  frame.src = `${printPath}?id=${encodeURIComponent(exportSaleId)}&autoprint=1`;
-  document.body.append(frame);
-  cleanupTimer = window.setTimeout(cleanup, 120_000);
-}
-
 export function ExportSalesWorkspace({
   initialRecordId
 }: {
@@ -96,7 +69,59 @@ export function ExportSalesWorkspace({
   const canEditEntries = accessQuery.data?.canEditEntries ?? false;
   const canEditFinalizedEntries = accessQuery.data?.canEditFinalizedEntries ?? false;
   const canAdminRevoke = canEditFinalizedEntries;
-  const [view, setView] = useState<ExportSaleView>({ mode: "list" });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [view, setLocalView] = useState<ExportSaleView>({ mode: "list" });
+  const basePath = `${location.pathname.startsWith("/app/") ? "/app" : ""}/billing/export-sales`;
+  function setView(update: SetStateAction<ExportSaleView>) {
+    const next = typeof update === "function" ? update(view) : update;
+    setLocalView(next);
+    const record = next.mode === "list" ? null : next.exportSale;
+    const path =
+      next.mode === "list"
+        ? basePath
+        : next.mode === "upsert" && !record
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record!.id)}${next.mode === "upsert" ? "/edit" : ""}`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalView({ mode: "list" });
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalView({ mode: "upsert", exportSale: null, returnTo: "list" });
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && !["edit", "show", "print"].includes(tail[1]))) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    let active = true;
+    void getExportSale(id)
+      .then((exportSale) => {
+        if (!active) return;
+        setLocalView(
+          tail[1] === "edit"
+            ? { mode: "upsert", exportSale, returnTo: "show" }
+            : { mode: "show", exportSale }
+        );
+      })
+      .catch((error) => {
+        if (active)
+          toast.error("Export sale could not be opened", {
+            description: error instanceof Error ? error.message : "Please try again."
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -280,7 +305,9 @@ export function ExportSalesWorkspace({
         onBack={() => setView({ mode: "list" })}
         onEdit={() => setView({ mode: "upsert", exportSale: freshExportSale, returnTo: "show" })}
         onNew={() => void openNewExportSale()}
-        onPrint={() => window.print()}
+        onPrint={() =>
+          void navigate({ to: `${basePath}/${encodeURIComponent(freshExportSale.id)}/print` })
+        }
         canEdit={canEditBillingEntry(
           freshExportSale.status,
           canEditEntries,
@@ -457,7 +484,9 @@ export function ExportSalesWorkspace({
             deleteMutation.mutate(exportSale.id);
         }}
         onRevoke={(exportSale) => revokeMutation.mutate(exportSale.id)}
-        onPrint={(exportSale) => printExportSaleFromList(exportSale.id)}
+        onPrint={(exportSale) =>
+          void navigate({ to: `${basePath}/${encodeURIComponent(exportSale.id)}/print` })
+        }
         canAdminRevoke={canAdminRevoke}
         canEditEntries={canEditEntries}
         canEditFinalizedEntries={canEditFinalizedEntries}

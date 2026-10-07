@@ -36,6 +36,55 @@ export type EnquiryRecord = EnquiryInput & {
   updatedAt: string;
 };
 
+export type EnquiryListScope = "all" | "assigned" | "created";
+export type EnquiryListOptions = {
+  scope: EnquiryListScope;
+  page: number;
+  pageSize: number;
+  search: string;
+  filter: string;
+  fromAt?: string | undefined;
+  toAt?: string | undefined;
+  listInId?: string | undefined;
+  createdBy?: string | undefined;
+  assignedUserId?: string | undefined;
+  actorEmail: string;
+  actorUserId: number | null;
+  canViewAll: boolean;
+};
+export type EnquiryReportRow = {
+  listInId: number | null;
+  listIn: string | null;
+  createdBy: string;
+  assignedUserId: number | null;
+  status: string;
+  statusName: string;
+  count: number;
+};
+export type EnquiryPage = {
+  items: EnquiryRecord[];
+  total: number;
+  statusCounts: Array<{ code: string; count: number }>;
+};
+export type EnquiryScopeSummary = {
+  total: number;
+  active: number;
+  newCalls: number;
+  attention: number;
+  updated7: number;
+  updated30: number;
+  created7: number;
+  created30: number;
+  oldestActiveDays: number | null;
+  statusCounts: Array<{ code: string; count: number }>;
+  priorityCounts: Array<{ code: string; count: number }>;
+};
+export type EnquirySummary = {
+  allCount: number;
+  assigned: EnquiryScopeSummary;
+  created: EnquiryScopeSummary;
+};
+
 export type EnquiryRow = {
   id: Generated<number>;
   enquiry_no: number;
@@ -60,13 +109,36 @@ export type EnquiryRow = {
   updated_at: ColumnType<string, string | undefined, never>;
 };
 
-export type EnquiryDatabase = ListInDatabase & StatusDatabase & PriorityDatabase & {
-  crm_enquiries: EnquiryRow;
-  crm_enquiry_number_sequence: { id: number; next_no: number };
-  crm_enquiry_comments: EnquiryCommentRow;
-  crm_enquiry_jobs: EnquiryJobRow;
-  crm_enquiry_estimates: EnquiryEstimateRow;
-  crm_enquiry_activity: EnquiryActivityRow;
+export type EnquiryDatabase = ListInDatabase &
+  StatusDatabase &
+  PriorityDatabase & {
+    crm_enquiries: EnquiryRow;
+    crm_enquiry_number_sequence: { id: number; next_no: number };
+    crm_enquiry_comments: EnquiryCommentRow;
+    crm_enquiry_jobs: EnquiryJobRow;
+    crm_enquiry_estimates: EnquiryEstimateRow;
+    crm_enquiry_activity: EnquiryActivityRow;
+    crm_enquiry_alerts: EnquiryAlertRow;
+  };
+
+export type EnquiryAlertRow = {
+  id: Generated<number>;
+  uuid: Generated<string>;
+  enquiry_id: number;
+  user_id: number;
+  kind: "assigned";
+  read_at: string | null;
+  status: "active";
+  created_by: string;
+  created_at: ColumnType<string, string | undefined, never>;
+  updated_at: ColumnType<string, string | undefined, never>;
+};
+export type EnquiryAlert = {
+  id: number;
+  enquiryId: number;
+  enquiryNo: number;
+  title: string;
+  createdAt: string;
 };
 
 export type EnquiryCommentRow = {

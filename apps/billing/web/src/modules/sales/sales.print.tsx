@@ -36,7 +36,11 @@ export type SalePrintCopy = "duplicate" | "office-copy" | "original";
 
 export function SalesPrintRoutePage() {
   const search = new URLSearchParams(window.location.search);
-  const saleId = search.get("id");
+  const pathSegments = window.location.pathname.split("/");
+  const saleId =
+    pathSegments.at(-1) === "print" && pathSegments.at(-3) === "sales"
+      ? decodeURIComponent(pathSegments.at(-2)!)
+      : search.get("id");
   const autoPrint = search.get("autoprint") === "1";
   const saleQuery = useSaleRecord(saleId, true);
   const settingsQuery = useBillingSettings();

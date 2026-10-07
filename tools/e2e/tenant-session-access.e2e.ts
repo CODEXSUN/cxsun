@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { createServer } from "node:net";
+import { registerSyntheticSession } from "./auth-session-helper.js";
+import { signAuthToken } from "../../apps/platform/api/src/auth/jwt.js";
 
 const port = await availablePort();
 process.env.PLATFORM_API_PORT = String(port);
@@ -11,6 +13,49 @@ try {
   await app.listen({ host: "127.0.0.1", port });
 
   const applicationHost = new URL(process.env.PLATFORM_WEB_ORIGIN ?? "http://app.codexsun.test");
+  const forgedHealth = await app.inject({
+    headers: {
+      authorization: "Bearer invalid-session",
+      host: applicationHost.host,
+      "x-tenant-id": "forged-tenant"
+    },
+    method: "GET",
+    url: "/health"
+  });
+  assert.equal(forgedHealth.statusCode, 200, forgedHealth.body);
+  assert.equal(forgedHealth.headers["x-tenant-id"], undefined);
+  assert.equal(forgedHealth.json().meta.tenantId, undefined);
+  const readiness = await app.inject({
+    headers: { authorization: "Bearer invalid-session" },
+    method: "GET",
+    url: "/ready"
+  });
+  assert.equal(readiness.statusCode, 200, readiness.body);
+
+  const bearer = signAuthToken({
+    email: "revocation-e2e@example.test",
+    loginHost: applicationHost.hostname,
+    userId: "revocation-e2e",
+    userType: "super_admin"
+  });
+  await registerSyntheticSession(bearer);
+  const bearerHeaders = { authorization: `Bearer ${bearer}`, host: applicationHost.host };
+  const activeBearer = await app.inject({
+    headers: bearerHeaders,
+    method: "GET",
+    url: "/auth/session"
+  });
+  assert.equal(activeBearer.statusCode, 200, activeBearer.body);
+  const logout = await app.inject({ headers: bearerHeaders, method: "POST", url: "/auth/logout" });
+  assert.equal(logout.statusCode, 200, logout.body);
+  const revokedBearer = await app.inject({
+    headers: bearerHeaders,
+    method: "GET",
+    url: "/auth/session"
+  });
+  assert.equal(revokedBearer.statusCode, 401, revokedBearer.body);
+  assert.equal(revokedBearer.json().error?.code, "AUTH_SESSION_EXPIRED");
+
   const loginResponse = await app.inject({
     headers: {
       host: applicationHost.host,
@@ -39,6 +84,21 @@ try {
     coreResponse.statusCode,
     200,
     `The tenant session was rejected by the composed Core API: ${coreResponse.body}`
+  );
+  const tenantSession = await app.inject({
+    headers: {
+      cookie: `${sessionCookie.name}=${sessionCookie.value}`,
+      host: applicationHost.host,
+      origin: applicationHost.origin
+    },
+    method: "GET",
+    url: "/auth/session"
+  });
+  assert.equal(tenantSession.statusCode, 200, tenantSession.body);
+  assert.equal(
+    coreResponse.headers["x-tenant-id"],
+    tenantSession.json().data.tenantId,
+    "Tenant response metadata did not match the validated session."
   );
 
   const defaultCompanyResponse = await app.inject({

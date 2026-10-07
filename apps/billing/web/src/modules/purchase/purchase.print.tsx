@@ -28,7 +28,11 @@ export type PurchasePrintCopy = "duplicate" | "office-copy" | "original";
 
 export function PurchasePrintRoutePage() {
   const search = new URLSearchParams(window.location.search);
-  const purchaseId = search.get("id");
+  const pathSegments = window.location.pathname.split("/");
+  const purchaseId =
+    pathSegments.at(-1) === "print" && pathSegments.at(-3) === "purchase"
+      ? decodeURIComponent(pathSegments.at(-2)!)
+      : search.get("id");
   const autoPrint = search.get("autoprint") === "1";
   const purchaseQuery = usePurchaseRecord(purchaseId, true);
   const settingsQuery = useBillingSettings();

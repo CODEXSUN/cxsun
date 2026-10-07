@@ -19,6 +19,7 @@ import {
   UsersIcon,
   ClipboardListIcon,
   ContactRoundIcon,
+  RefreshCwIcon,
   LayoutDashboardIcon,
   ReceiptTextIcon,
   SendIcon,
@@ -38,7 +39,8 @@ export type PlatformAppId =
   | "task-manager"
   | "blog"
   | "auditor"
-  | "crm";
+  | "crm"
+  | "frappe";
 
 export type PlatformAppRootPage =
   | "application.overview"
@@ -49,7 +51,8 @@ export type PlatformAppRootPage =
   | "blog.overview"
   | "auditor.overview"
   | "auditor.clients"
-  | "crm.overview";
+  | "crm.overview"
+  | "frappe.overview";
 
 export type BillingNavigationFeatures = {
   exportSales: boolean;
@@ -77,7 +80,8 @@ export type PlatformAppDefinition = {
     | "platform-task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
 };
 
 export const defaultTenantModuleKeys = [
@@ -87,7 +91,8 @@ export const defaultTenantModuleKeys = [
   "mail",
   "platform.task-manager",
   "auditor",
-  "crm"
+  "crm",
+  "frappe"
 ] as const;
 
 export const platformAppRegistry: PlatformAppDefinition[] = [
@@ -170,6 +175,17 @@ export const platformAppRegistry: PlatformAppDefinition[] = [
     stack: "crm"
   },
   {
+    accentClass: "bg-teal-600",
+    alwaysEnabled: false,
+    defaultLanding: false,
+    description: "Frappe connection and outbound CRM enquiry sync.",
+    icon: RefreshCwIcon,
+    id: "frappe",
+    label: "Frappe",
+    moduleKey: "frappe",
+    stack: "frappe"
+  },
+  {
     accentClass: "bg-indigo-600",
     alwaysEnabled: false,
     defaultLanding: false,
@@ -198,6 +214,7 @@ export function enabledAppIds(moduleKeys: string[]) {
       (app) =>
         app.id !== "devkit" &&
         app.id !== "project-manager" &&
+        (app.id !== "frappe" || enabled.has("crm")) &&
         (app.alwaysEnabled || enabled.has(app.moduleKey))
     )
     .map((app) => app.id);
@@ -212,6 +229,7 @@ export function defaultLandingApp(value: unknown, moduleKeys: string[]): Platfor
 }
 
 export function appRootPage(appId: PlatformAppId): PlatformAppRootPage {
+  if (appId === "frappe") return "frappe.overview";
   if (appId === "crm") return "crm.overview";
   if (appId === "blog") return "blog.overview";
   if (appId === "auditor") return "auditor.overview";
@@ -233,6 +251,14 @@ export function appMenuFor(
   billingFeatures?: BillingNavigationFeatures,
   crmCounts?: CrmNavigationCounts
 ): SidemenuItem {
+  if (appId === "frappe") {
+    return {
+      icon: RefreshCwIcon,
+      isActive: activePage.startsWith("frappe"),
+      onSelect: () => onSelect("frappe.overview"),
+      title: "Frappe"
+    };
+  }
   if (appId === "crm") {
     return {
       icon: ContactRoundIcon,
@@ -261,6 +287,11 @@ export function appMenuFor(
           count: crmCounts?.all,
           isActive: activePage === "crm.enquiries",
           onSelect: () => onSelect("crm.enquiries")
+        },
+        {
+          title: "Reports",
+          isActive: activePage === "crm.reports",
+          onSelect: () => onSelect("crm.reports")
         },
         {
           title: "Contacts",
@@ -595,6 +626,16 @@ export function appMenuItemsFor(
   billingFeatures?: BillingNavigationFeatures,
   crmCounts?: CrmNavigationCounts
 ): SidemenuItem[] {
+  if (appId === "frappe") {
+    return [
+      {
+        icon: RefreshCwIcon,
+        isActive: activePage === "frappe.overview",
+        onSelect: () => onSelect("frappe.overview"),
+        title: "Overview"
+      }
+    ];
+  }
   if (appId === "crm") {
     return [
       {
@@ -623,6 +664,12 @@ export function appMenuItemsFor(
         onSelect: () => onSelect("crm.enquiries"),
         title: "All Enquiries",
         count: crmCounts?.all
+      },
+      {
+        icon: BarChart3Icon,
+        isActive: activePage === "crm.reports",
+        onSelect: () => onSelect("crm.reports"),
+        title: "Reports"
       },
       {
         icon: ContactRoundIcon,

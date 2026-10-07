@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { registerContractRoute } from "@cxsun/framework/http";
 import { EnquiryRepository } from "./enquiry.repository.js";
+import { EnquiryService } from "./enquiry.service.js";
 import { EnquiryWorkRepository } from "./enquiry.work.repository.js";
 import { EnquiryWorkService } from "./enquiry.work.service.js";
 import type { EnquiryRequestContext } from "./enquiry.routes.js";
@@ -62,7 +63,7 @@ export function registerEnquiryWorkRoutes(
     return {
       scope,
       work: new EnquiryWorkService(
-        new EnquiryRepository(scope.database),
+        new EnquiryService(new EnquiryRepository(scope.database), scope.relations, scope),
         new EnquiryWorkRepository(scope.database),
         scope.relations
       )

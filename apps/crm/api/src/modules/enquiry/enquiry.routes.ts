@@ -42,6 +42,57 @@ const recordSchema = inputSchema.extend({
   updatedAt: z.string()
 });
 const idSchema = z.object({ id: z.coerce.number().int().positive() });
+const alertIdSchema = z.object({ alertId: z.coerce.number().int().positive() });
+const listQuerySchema = z.object({
+  scope: z.enum(["all", "assigned", "created"]).default("all"),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(100),
+  search: z.string().trim().max(191).default(""),
+  filter: z.string().trim().max(80).default("all"),
+  fromAt: z.iso.datetime({ offset: true }).optional(),
+  toAt: z.iso.datetime({ offset: true }).optional(),
+  listInId: z
+    .string()
+    .regex(/^(none|[1-9]\d*)$/)
+    .optional(),
+  createdBy: z.string().trim().min(1).max(191).optional(),
+  assignedUserId: z
+    .string()
+    .regex(/^(none|[1-9]\d*)$/)
+    .optional()
+});
+const reportQuerySchema = listQuerySchema.pick({
+  fromAt: true,
+  toAt: true,
+  assignedUserId: true
+});
+const reportRowSchema = z.object({
+  listInId: z.number().int().positive().nullable(),
+  listIn: nullableText,
+  createdBy: z.string(),
+  assignedUserId: z.number().int().positive().nullable(),
+  status: z.string(),
+  statusName: z.string(),
+  count: z.number().int().nonnegative()
+});
+const pageSchema = z.object({
+  items: z.array(recordSchema),
+  total: z.number().int().nonnegative(),
+  statusCounts: z.array(z.object({ code: z.string(), count: z.number().int().nonnegative() }))
+});
+const scopeSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  active: z.number().int().nonnegative(),
+  newCalls: z.number().int().nonnegative(),
+  attention: z.number().int().nonnegative(),
+  updated7: z.number().int().nonnegative(),
+  updated30: z.number().int().nonnegative(),
+  created7: z.number().int().nonnegative(),
+  created30: z.number().int().nonnegative(),
+  oldestActiveDays: z.number().int().nonnegative().nullable(),
+  statusCounts: z.array(z.object({ code: z.string(), count: z.number().int().nonnegative() })),
+  priorityCounts: z.array(z.object({ code: z.string(), count: z.number().int().nonnegative() }))
+});
 const commentSchema = z.object({
   id: z.number().int().positive(),
   uuid: z.string(),
@@ -63,7 +114,8 @@ const propertySchema = inputSchema
     priorityId: true,
     assignedUserId: true,
     dueDate: true,
-    statusId: true
+    statusId: true,
+    closedReason: true
   })
   .partial()
   .refine((value) => Object.keys(value).length > 0, "Choose a property to update.");
@@ -71,6 +123,8 @@ const propertySchema = inputSchema
 export type EnquiryRequestContext = {
   database: Kysely<EnquiryDatabase>;
   actorEmail: string;
+  actorUserId: number | null;
+  canViewAll: boolean;
   relations: EnquiryRelations;
 };
 
@@ -82,17 +136,23 @@ export function registerEnquiryRoutes(
     const scope = await context(request);
     return {
       scope,
-      enquiry: new EnquiryService(new EnquiryRepository(scope.database), scope.relations)
+      enquiry: new EnquiryService(new EnquiryRepository(scope.database), scope.relations, scope)
     };
   };
   registerContractRoute(app, {
     method: "GET",
     url: "/crm/enquiries",
     schemas: {
-      querystring: z.object({ search: z.string().trim().max(191).optional() }),
-      response: z.array(recordSchema)
+      querystring: listQuerySchema,
+      response: pageSchema
     },
-    handler: async ({ query, request }) => (await service(request)).enquiry.list(query.search)
+    handler: async ({ query, request }) => (await service(request)).enquiry.listPage(query)
+  });
+  registerContractRoute(app, {
+    method: "GET",
+    url: "/crm/enquiries/reports",
+    schemas: { querystring: reportQuerySchema, response: z.array(reportRowSchema) },
+    handler: async ({ query, request }) => (await service(request)).enquiry.report(query)
   });
   registerContractRoute(app, {
     method: "GET",
@@ -102,6 +162,49 @@ export function registerEnquiryRoutes(
       const { enquiry, scope } = await service(request);
       return enquiry.overviewActivity(scope.actorEmail);
     }
+  });
+  registerContractRoute(app, {
+    method: "GET",
+    url: "/crm/enquiries/attention",
+    schemas: {
+      querystring: z.object({ today: z.iso.date() }),
+      response: z.object({
+        assignments: z.array(
+          z.object({
+            id: z.number().int().positive(),
+            enquiryId: z.number().int().positive(),
+            enquiryNo: z.number().int().positive(),
+            title: z.string(),
+            createdAt: z.string()
+          })
+        ),
+        due: z.array(recordSchema)
+      })
+    },
+    handler: async ({ query, request }) => (await service(request)).enquiry.attention(query.today)
+  });
+  registerContractRoute(app, {
+    method: "GET",
+    url: "/crm/enquiries/summary",
+    schemas: {
+      querystring: z.object({ today: z.iso.date() }),
+      response: z.object({
+        allCount: z.number().int().nonnegative(),
+        assigned: scopeSummarySchema,
+        created: scopeSummarySchema
+      })
+    },
+    handler: async ({ query, request }) => (await service(request)).enquiry.summary(query.today)
+  });
+  registerContractRoute(app, {
+    method: "POST",
+    url: "/crm/enquiries/alerts/:alertId/read",
+    schemas: {
+      params: alertIdSchema,
+      response: z.object({ read: z.boolean() })
+    },
+    handler: async ({ params, request }) =>
+      (await service(request)).enquiry.readAlert(params.alertId)
   });
   registerContractRoute(app, {
     method: "GET",

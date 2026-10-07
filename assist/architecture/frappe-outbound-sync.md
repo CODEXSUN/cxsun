@@ -1,0 +1,11 @@
+# Frappe outbound sync
+
+`apps/frappe/api` owns the outbound Frappe connector, and `apps/frappe/web` owns its tenant workspace. CRM enquiries remain in the tenant's local `crm_enquiries` table; CRM list and detail reads never call Frappe.
+
+The connector uses the same site URL and token authentication shape as TechMedia: a server-only base URL, API key, and API secret. Configure `CXSUN_FRAPPE_ENABLED=1`, `CXSUN_FRAPPE_BASE_URL`, `CXSUN_FRAPPE_APP_KEY`, and `CXSUN_FRAPPE_APP_SECRET` in the CXSUN environment. TechMedia uses the corresponding `FRAPPE_*` names. Credentials are never returned by the API.
+
+Enable both CRM and Frappe for the tenant to open `/app/frappe/overview`. The workspace shows connection configuration, local enquiry counts, a searchable record table, posted state, and per-record Sync actions. Posted counts mean a remote document name is stored; compare Local updated and Last post to spot edits that need another post. An authenticated tenant user with CRM enquiry permission can call `GET /frappe/connection` for configuration state and `POST /frappe/connection/verify` for a live authenticated-user handshake. `GET /frappe/overview` reads local records and counts. `POST /frappe/enquiries/:id/sync` posts a local enquiry to Frappe's `Enquiry` DocType the first time and updates the returned document name on later calls. `GET /frappe/enquiries/:id/sync` reads the local sync result. The connection is contacted only for explicit verify and sync requests. No background sync worker or live Frappe read path is installed.
+
+The tenant migration creates `frappe_enquiry_sync` when CRM and Frappe are enabled. Run tenant migrations before calling the sync routes. The target Frappe site must have TechMedia's `Enquiry` DocType and compatible `title`, `enquiry_details`, `mobile`, `date`, `due_date`, `priority`, and `status` fields. Status and priority names are copied from local CRM, so configure matching values on the target site. A Frappe rejection leaves the local enquiry intact; retry the sync after fixing the target or connection.
+
+This is a manual sync base. It has no automatic delivery or retry worker. A first POST that succeeds remotely but fails before `frappe_enquiry_sync` is saved can create a duplicate on retry; durable delivery needs a stable source identifier on the target DocType.

@@ -25,6 +25,10 @@ const moduleRoots = [
     path: join(process.cwd(), "apps", "crm", "api", "src", "modules")
   },
   {
+    app: "frappe-api",
+    path: join(process.cwd(), "apps", "frappe", "api", "src", "modules")
+  },
+  {
     app: "platform-api",
     path: join(process.cwd(), "apps", "platform", "api", "src", "modules")
   },
@@ -64,6 +68,21 @@ const reducedBackendRoles = [
 ];
 const shellOnlyBackendModules = new Set();
 const shellOnlyBackendRoles = ["module", "routes", "types"];
+const crmContact360Leaves = [
+  "contact-profiles",
+  "contact-people",
+  "contact-communication",
+  "contact-preferences",
+  "contact-employments",
+  "contact-roles",
+  "contact-relationships",
+  "contact-classifications",
+  "contact-tags",
+  "contact-person-tags",
+  "contact-notes",
+  "contact-lifecycle",
+  "contact-documents"
+];
 const capabilityBackendRoles = new Map([
   ["auditor-api/client", ["module", "service", "repository", "routes", "migration", "types"]],
   ["project-manager-api/platform-registry", reducedBackendRoles],
@@ -75,7 +94,9 @@ const capabilityBackendRoles = new Map([
   ["crm-api/enquiry", reducedBackendRoles],
   ["crm-api/list-in", reducedBackendRoles],
   ["crm-api/status", reducedBackendRoles],
-  ["crm-api/priority", reducedBackendRoles]
+  ["crm-api/priority", reducedBackendRoles],
+  ...crmContact360Leaves.map((name) => [`crm-api/${name}`, reducedBackendRoles]),
+  ["frappe-api/connection", ["module", "service", "repository", "routes", "migration", "types"]]
 ]);
 
 const webModuleRoots = [
@@ -86,6 +107,10 @@ const webModuleRoots = [
   {
     app: "crm-web",
     path: join(process.cwd(), "apps", "crm", "web", "src", "modules")
+  },
+  {
+    app: "frappe-web",
+    path: join(process.cwd(), "apps", "frappe", "web", "src", "modules")
   },
   {
     app: "mail-web",
@@ -114,7 +139,10 @@ const shellOnlyFrontendModules = new Set();
 const shellOnlyFrontendRoles = ["module", "workspace", "services", "hooks", "types"];
 const capabilityFrontendRoles = new Map([
   ["auditor-web/overview", ["workspace"]],
-  ["crm-web/overview", ["workspace"]]
+  ["crm-web/overview", ["workspace"]],
+  ["frappe-web/overview", ["workspace", "list", "services", "hooks", "types"]],
+  ["crm-web/contact-360", ["workspace", "services", "hooks", "types"]],
+  ...crmContact360Leaves.map((name) => [`crm-web/${name}`, ["services", "hooks", "types"]])
 ]);
 const backendBehaviorMarkers = {
   events: ["create"],

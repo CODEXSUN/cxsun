@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SetStateAction } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Pencil, Plus, Printer, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -47,7 +48,59 @@ export function ReceiptWorkspace({ initialRecordId }: { initialRecordId?: string
   const accessQuery = useBillingAccess();
   const canEditEntries = accessQuery.data?.canEditEntries ?? false;
   const canEditFinalizedEntries = accessQuery.data?.canEditFinalizedEntries ?? false;
-  const [view, setView] = useState<ReceiptView>({ mode: "list" });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [view, setLocalView] = useState<ReceiptView>({ mode: "list" });
+  const basePath = `${location.pathname.startsWith("/app/") ? "/app" : ""}/billing/receipt`;
+  function setView(update: SetStateAction<ReceiptView>) {
+    const next = typeof update === "function" ? update(view) : update;
+    setLocalView(next);
+    const record = next.mode === "list" ? null : next.receipt;
+    const path =
+      next.mode === "list"
+        ? basePath
+        : next.mode === "upsert" && !record
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record!.id)}${next.mode === "upsert" ? "/edit" : ""}`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalView({ mode: "list" });
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalView({ mode: "upsert", receipt: null, returnTo: "list" });
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && !["edit", "show", "print"].includes(tail[1]))) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    let active = true;
+    void getReceipt(id)
+      .then((receipt) => {
+        if (!active) return;
+        setLocalView(
+          tail[1] === "edit"
+            ? { mode: "upsert", receipt, returnTo: "show" }
+            : { mode: "show", receipt }
+        );
+      })
+      .catch((error) => {
+        if (active)
+          toast.error("Receipt could not be opened", {
+            description: error instanceof Error ? error.message : "Please try again."
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -139,6 +192,10 @@ export function ReceiptWorkspace({ initialRecordId }: { initialRecordId?: string
         receipt={view.receipt}
         onBack={() => setView({ mode: "list" })}
         onEdit={() => setView({ mode: "upsert", receipt: view.receipt, returnTo: "show" })}
+        onPrint={() => {
+          if (location.pathname.endsWith("/print")) window.print();
+          else void navigate({ to: `${basePath}/${encodeURIComponent(view.receipt.id)}/print` });
+        }}
         onPost={() => lifecycle.mutate({ action: "post", id: view.receipt.id })}
         onCancel={() => lifecycle.mutate({ action: "cancel", id: view.receipt.id })}
         canEditEntries={canEditEntries}
@@ -259,6 +316,7 @@ function ReceiptShow({
   onBack,
   onCancel,
   onEdit,
+  onPrint,
   onPost
 }: {
   canEditEntries: boolean;
@@ -267,6 +325,7 @@ function ReceiptShow({
   onBack: () => void;
   onCancel: () => void;
   onEdit: () => void;
+  onPrint: () => void;
   onPost: () => void;
 }) {
   const activityQuery = useReceiptActivity(receipt.id);
@@ -292,7 +351,7 @@ function ReceiptShow({
               Cancel
             </Button>
           ) : null}
-          <Button onClick={() => window.print()} type="button" variant="outline">
+          <Button onClick={onPrint} type="button" variant="outline">
             <Printer className="size-4" />
             Print
           </Button>

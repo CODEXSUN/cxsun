@@ -21,6 +21,7 @@ import {
   resolveBillingPrintTerms
 } from "../settings";
 import { useQuotationRecord } from "./quotation.hooks";
+import { quotationRouteFromPath } from "./quotation.route";
 import { formatDate, formatMoney } from "./quotation.services";
 import type { Quotation, QuotationAddressDetails } from "./quotation.types";
 
@@ -28,7 +29,8 @@ export type QuotationPrintCopy = "duplicate" | "office-copy" | "original";
 
 export function QuotationPrintRoutePage() {
   const search = new URLSearchParams(window.location.search);
-  const quotationId = search.get("id");
+  const route = quotationRouteFromPath(window.location.pathname);
+  const quotationId = route.mode === "print" ? route.id : search.get("id");
   const autoPrint = search.get("autoprint") === "1";
   const quotationQuery = useQuotationRecord(quotationId, true);
   const settingsQuery = useBillingSettings();

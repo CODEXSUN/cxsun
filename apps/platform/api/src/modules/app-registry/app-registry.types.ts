@@ -8,7 +8,8 @@ export type PlatformAppId =
   | "task-manager"
   | "blog"
   | "auditor"
-  | "crm";
+  | "crm"
+  | "frappe";
 
 export type PlatformAppDefinition = {
   alwaysEnabled: boolean;
@@ -28,7 +29,8 @@ export type PlatformAppDefinition = {
     | "platform-task-manager"
     | "blog"
     | "auditor"
-    | "crm";
+    | "crm"
+    | "frappe";
   uuid: string;
 };
 

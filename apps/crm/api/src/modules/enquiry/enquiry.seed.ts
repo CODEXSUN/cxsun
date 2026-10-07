@@ -3,7 +3,7 @@ import { sql, type Kysely } from "kysely";
 import type { EnquiryDatabase } from "./enquiry.types.js";
 
 export async function seedEnquiryModule(database: Kysely<EnquiryDatabase>) {
-  for (const action of ["view", "create", "update"] as const) {
+  for (const action of ["view", "view-all", "create", "update"] as const) {
     const key = `crm.enquiry.${action}`;
     const label = `CRM enquiry ${action}`;
     await sql`

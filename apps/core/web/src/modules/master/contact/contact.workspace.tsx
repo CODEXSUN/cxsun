@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -54,11 +55,46 @@ export function ContactWorkspace() {
     [search, setSearch] = useState(""),
     [page, setPage] = useState(1),
     [rowsPerPage, setRowsPerPage] = useState(100),
-    [editing, setEditing] = useState<ContactRecord | null | undefined>(undefined),
+    [editing, setLocalEditing] = useState<ContactRecord | null | undefined>(undefined),
     [newCode, setNewCode] = useState(""),
     query = useContacts(search),
     lookupsQuery = useContactLookups(),
     records = query.data ?? [];
+  const location = useLocation();
+  const navigate = useNavigate();
+  const basePath = "/app/core/master/contact";
+  function setEditing(record: ContactRecord | null | undefined) {
+    setLocalEditing(record);
+    const path =
+      record === undefined
+        ? basePath
+        : record === null
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record.id)}/edit`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalEditing(undefined);
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalEditing(null);
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && tail[1] !== "edit")) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    const record = query.data?.find((entry) => String(entry.id) === id);
+    setLocalEditing((current) =>
+      current && record && current.id === record.id ? current : record
+    );
+  }, [location.pathname, query.data]);
   const totalPages = Math.max(1, Math.ceil(records.length / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
   const visibleRecords = records.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -82,6 +118,16 @@ export function ContactWorkspace() {
     onError: (error) =>
       toast.error("Unable to generate contact code", { description: error.message })
   });
+  useEffect(() => {
+    if (
+      location.pathname !== `${basePath}/new` ||
+      newCode ||
+      generateCode.isPending ||
+      generateCode.isError
+    )
+      return;
+    generateCode.mutate();
+  }, [location.pathname, newCode, generateCode.isPending, generateCode.isError]);
   const action = useMutation({
     mutationFn: ({ record, type }: { record: ContactRecord; type: "delete" | "toggle" }) =>
       type === "delete"

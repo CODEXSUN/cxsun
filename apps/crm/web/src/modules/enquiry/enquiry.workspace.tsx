@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useDeferredValue, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -16,21 +16,18 @@ import {
   enquiryDetailQueryKey,
   enquiryCommentsQueryKey,
   enquiryActivityQueryKey,
+  enquiryAttentionQueryKey,
   enquiryContactsQueryKey,
-  useEnquiries,
+  useEnquiryPage,
   useEnquiryContacts,
   useEnquiryUsers
 } from "./enquiry.hooks";
 import { EnquiryList } from "./enquiry.list";
+import { EnquiryAttention } from "./enquiry.attention";
 import { EnquiryShow } from "./enquiry.show";
 import { createEnquiry, openNewEnquiryCall, updateEnquiry } from "./enquiry.services";
-import {
-  enquiryFilterOptions,
-  enquiryInScope,
-  matchesEnquiryFilter,
-  type EnquiryScope
-} from "./enquiry.filters";
-import type { EnquiryRecord, EnquirySavePayload } from "./enquiry.types";
+import { enquiryFilterOptions, type EnquiryScope } from "./enquiry.filters";
+import type { EnquiryRecord, EnquiryReportFilters, EnquirySavePayload } from "./enquiry.types";
 
 const columnOptions = [
   { id: "customer", label: "Customer" },
@@ -45,11 +42,14 @@ const columnOptions = [
 
 export function EnquiryWorkspace({
   scope = "all",
-  currentUserEmail = "",
+  reportFilters,
+  onBackToReports,
   initialCreate = false,
   onCloseCreate
 }: {
   scope?: EnquiryScope;
+  reportFilters?: EnquiryReportFilters | undefined;
+  onBackToReports?: () => void;
   currentUserEmail?: string;
   initialCreate?: boolean;
   onCloseCreate?: () => void;
@@ -60,30 +60,45 @@ export function EnquiryWorkspace({
   );
   const [showing, setShowing] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState(scope === "assigned" ? "active" : "all");
+  const [status, setStatus] = useState(
+    reportFilters?.filter ?? (scope === "assigned" ? "active" : "all")
+  );
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(100);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
-  const query = useEnquiries();
-  const contacts = useEnquiryContacts();
+  const deferredSearch = useDeferredValue(search);
+  const query = useEnquiryPage({
+    scope,
+    page,
+    pageSize: rowsPerPage,
+    search: deferredSearch.trim(),
+    filter: status,
+    reportFilters
+  });
+  const contacts = useEnquiryContacts(editing !== undefined || showing !== null);
   const users = useEnquiryUsers();
   const lists = useListIn();
   const statuses = useStatus();
   const priorities = usePriority();
-  const currentUserId =
-    users.data?.find((user) => user.email?.toLowerCase() === currentUserEmail.toLowerCase())?.id ??
-    null;
-  const scoped = useMemo(
-    () =>
-      (query.data ?? []).filter((record) =>
-        enquiryInScope(record, scope, currentUserId, currentUserEmail)
-      ),
-    [query.data, scope, currentUserId, currentUserEmail]
-  );
   const filterOptions = useMemo(
-    () => enquiryFilterOptions(scoped, statuses.data ?? []),
-    [scoped, statuses.data]
+    () => enquiryFilterOptions(query.data?.statusCounts ?? [], statuses.data ?? []),
+    [query.data?.statusCounts, statuses.data]
   );
+  const reportContext = reportFilters
+    ? [
+        reportFilters.fromDate && `From ${reportFilters.fromDate}`,
+        reportFilters.toDate && `To ${reportFilters.toDate}`,
+        reportFilters.listInId &&
+          `List in: ${reportFilters.listInId === "none" ? "(no group)" : ((lists.data ?? []).find((item) => String(item.id) === reportFilters.listInId)?.name ?? reportFilters.listInId)}`,
+        reportFilters.createdBy && `Creator: ${reportFilters.createdBy}`,
+        reportFilters.assignedUserId &&
+          `Assignee: ${reportFilters.assignedUserId === "none" ? "Unassigned" : ((users.data ?? []).find((item) => String(item.id) === reportFilters.assignedUserId)?.name ?? reportFilters.assignedUserId)}`,
+        status !== "all" &&
+          `Status: ${filterOptions.find((item) => item.id === status)?.label ?? status}`
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "";
   const openCall = useMutation({
     mutationFn: (record: EnquiryRecord) => openNewEnquiryCall(record.id),
     onSuccess: async (record) => {
@@ -91,7 +106,8 @@ export function EnquiryWorkspace({
         client.invalidateQueries({ queryKey: enquiriesQueryKey }),
         client.invalidateQueries({ queryKey: enquiryDetailQueryKey(record.id) }),
         client.invalidateQueries({ queryKey: enquiryCommentsQueryKey(record.id) }),
-        client.invalidateQueries({ queryKey: enquiryActivityQueryKey(record.id) })
+        client.invalidateQueries({ queryKey: enquiryActivityQueryKey(record.id) }),
+        client.invalidateQueries({ queryKey: enquiryAttentionQueryKey })
       ]);
       toast.success(`Call #${record.enquiryNo} opened`);
     },
@@ -104,6 +120,7 @@ export function EnquiryWorkspace({
       await client.invalidateQueries({ queryKey: enquiriesQueryKey });
       await client.invalidateQueries({ queryKey: enquiryDetailQueryKey(record.id) });
       await client.invalidateQueries({ queryKey: enquiryContactsQueryKey });
+      await client.invalidateQueries({ queryKey: enquiryAttentionQueryKey });
       toast.success(`Enquiry #${record.enquiryNo} ${editing ? "updated" : "created"}`, {
         description: record.title
       });
@@ -112,27 +129,13 @@ export function EnquiryWorkspace({
     },
     onError: (error) => toast.error("Unable to save enquiry", { description: error.message })
   });
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    return scoped.filter(
-      (record) =>
-        matchesEnquiryFilter(record, status) &&
-        (!term ||
-          [
-            String(record.enquiryNo),
-            `#${record.enquiryNo}`,
-            record.title,
-            record.description,
-            record.capturedName,
-            record.contactName,
-            record.capturedPhone,
-            record.capturedEmail
-          ].some((field) => field?.toLowerCase().includes(term)))
-    );
-  }, [scoped, search, status]);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
+  const total = query.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
-  const records = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  const records = query.data?.items ?? [];
+  useEffect(() => {
+    if (query.data && page > totalPages) setPage(totalPages);
+  }, [query.data, page, totalPages]);
   if (editing !== undefined) {
     return (
       <EnquiryForm
@@ -209,6 +212,15 @@ export function EnquiryWorkspace({
         )
       }
     >
+      {reportFilters ? (
+        <div className="flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-4 py-2 text-sm">
+          <span>Report results{reportContext ? ` · ${reportContext}` : ""}</span>
+          <Button type="button" variant="outline" onClick={onBackToReports}>
+            Back to reports
+          </Button>
+        </div>
+      ) : null}
+      {scope === "assigned" ? <EnquiryAttention onOpen={setShowing} /> : null}
       <WorkspaceFilters
         columnOptions={columnOptions
           .filter(
@@ -239,9 +251,9 @@ export function EnquiryWorkspace({
         }}
         filterOptions={filterOptions}
       />
-      {query.error || (scope === "assigned" && users.error) ? (
+      {query.error ? (
         <p role="alert" className="text-sm text-destructive">
-          {query.error?.message ?? users.error?.message}
+          {query.error.message}
         </p>
       ) : null}
       <EnquiryList
@@ -260,9 +272,10 @@ export function EnquiryWorkspace({
       <WorkspacePagination
         page={currentPage}
         rowsPerPage={rowsPerPage}
-        showingLabel={buildShowingLabel(currentPage, rowsPerPage, filtered.length)}
+        rowsPerPageOptions={[20, 50, 100]}
+        showingLabel={buildShowingLabel(currentPage, rowsPerPage, total)}
         singularLabel="enquiry"
-        totalCount={filtered.length}
+        totalCount={total}
         totalPages={totalPages}
         onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
         onPageChange={setPage}

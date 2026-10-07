@@ -42,10 +42,14 @@ and a web restart does not stop the API process.
 
 The API watcher restarts after backend source or `.env` changes. Vite updates frontend
 source through hot reload and restarts its server when its configuration changes. The
-supervisor also restarts only the unhealthy process after repeated health-check failures.
+supervisor also restarts only the unhealthy process after sustained health-check failures.
+Development startup replaces an existing listener on its configured API or web port.
+It stops the previous CXSUN watcher or supervisor process tree before starting fresh.
+Set `CXSUN_DEV_PORT_POLICY=abort` to refuse a port takeover.
 
 Use `npm run dev:api` or `npm run dev:web` when you need only one development process.
 The separate web command waits for a healthy API before it starts.
+Use one runner for each service; an IDE that relaunches a stopped process can race another runner.
 
 Core, Billing, and Mail attach as packages; they have no standalone development
 entrypoints.

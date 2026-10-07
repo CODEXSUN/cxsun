@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type SetStateAction } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Pencil, Plus, Printer, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -47,7 +48,59 @@ export function PaymentWorkspace({ initialRecordId }: { initialRecordId?: string
   const accessQuery = useBillingAccess();
   const canEditEntries = accessQuery.data?.canEditEntries ?? false;
   const canEditFinalizedEntries = accessQuery.data?.canEditFinalizedEntries ?? false;
-  const [view, setView] = useState<PaymentView>({ mode: "list" });
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [view, setLocalView] = useState<PaymentView>({ mode: "list" });
+  const basePath = `${location.pathname.startsWith("/app/") ? "/app" : ""}/billing/payment`;
+  function setView(update: SetStateAction<PaymentView>) {
+    const next = typeof update === "function" ? update(view) : update;
+    setLocalView(next);
+    const record = next.mode === "list" ? null : next.payment;
+    const path =
+      next.mode === "list"
+        ? basePath
+        : next.mode === "upsert" && !record
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record!.id)}${next.mode === "upsert" ? "/edit" : ""}`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalView({ mode: "list" });
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalView({ mode: "upsert", payment: null, returnTo: "list" });
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && !["edit", "show", "print"].includes(tail[1]))) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    let active = true;
+    void getPayment(id)
+      .then((payment) => {
+        if (!active) return;
+        setLocalView(
+          tail[1] === "edit"
+            ? { mode: "upsert", payment, returnTo: "show" }
+            : { mode: "show", payment }
+        );
+      })
+      .catch((error) => {
+        if (active)
+          toast.error("Payment could not be opened", {
+            description: error instanceof Error ? error.message : "Please try again."
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [location.pathname]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -139,6 +192,10 @@ export function PaymentWorkspace({ initialRecordId }: { initialRecordId?: string
         payment={view.payment}
         onBack={() => setView({ mode: "list" })}
         onEdit={() => setView({ mode: "upsert", payment: view.payment, returnTo: "show" })}
+        onPrint={() => {
+          if (location.pathname.endsWith("/print")) window.print();
+          else void navigate({ to: `${basePath}/${encodeURIComponent(view.payment.id)}/print` });
+        }}
         onPost={() => lifecycle.mutate({ action: "post", id: view.payment.id })}
         onCancel={() => lifecycle.mutate({ action: "cancel", id: view.payment.id })}
         canEditEntries={canEditEntries}
@@ -259,6 +316,7 @@ function PaymentShow({
   onBack,
   onCancel,
   onEdit,
+  onPrint,
   onPost
 }: {
   canEditEntries: boolean;
@@ -267,6 +325,7 @@ function PaymentShow({
   onBack: () => void;
   onCancel: () => void;
   onEdit: () => void;
+  onPrint: () => void;
   onPost: () => void;
 }) {
   const activityQuery = usePaymentActivity(payment.id);
@@ -292,7 +351,7 @@ function PaymentShow({
               Cancel
             </Button>
           ) : null}
-          <Button onClick={() => window.print()} type="button" variant="outline">
+          <Button onClick={onPrint} type="button" variant="outline">
             <Printer className="size-4" />
             Print
           </Button>

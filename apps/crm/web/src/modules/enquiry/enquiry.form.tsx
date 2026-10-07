@@ -69,7 +69,13 @@ export function EnquiryForm({
   };
   const shownError = Object.values(issues).find(Boolean) || error;
   const suggestedTitle = titleFromMessage(value.description);
+  const selectedStatus = statuses.find((item) => item.id === value.statusId)?.code ?? "";
+  const needsOutcome = ["won", "lost", "closed"].includes(selectedStatus);
   const submit = () => {
+    if (needsOutcome && !value.closedReason?.trim()) {
+      setIssues((current) => ({ ...current, closedReason: "Enter an outcome reason." }));
+      return;
+    }
     const payload = normalize(value);
     const result = enquirySchema.safeParse(payload);
     if (!result.success) {
@@ -228,6 +234,16 @@ export function EnquiryForm({
                       onValueChange={(selected) => set("statusId", Number(selected))}
                     />
                   </WorkspaceFormField>
+                  {needsOutcome ? (
+                    <WorkspaceFormField label="Outcome reason" required>
+                      <Textarea
+                        value={value.closedReason ?? ""}
+                        aria-invalid={Boolean(issues.closedReason)}
+                        onChange={(event) => set("closedReason", event.target.value)}
+                      />
+                      {issues.closedReason ? <FieldError>{issues.closedReason}</FieldError> : null}
+                    </WorkspaceFormField>
+                  ) : null}
                   <WorkspaceFormField label="Due date">
                     <WorkspaceDatePicker
                       value={value.dueDate ?? ""}

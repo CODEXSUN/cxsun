@@ -132,6 +132,46 @@ async function addEnquiryNumberSequenceAudit(database: Kysely<EnquiryDatabase>) 
   }
 }
 
+async function addEnquiryAlerts(database: Kysely<EnquiryDatabase>) {
+  await sql
+    .raw(
+      `CREATE TABLE IF NOT EXISTS crm_enquiry_alerts (
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(8) NOT NULL DEFAULT (LOWER(SUBSTRING(MD5(UUID()),1,8))) UNIQUE,
+    enquiry_id INT NOT NULL,
+    user_id INT NOT NULL,
+    kind VARCHAR(24) NOT NULL,
+    read_at DATETIME NULL,
+    status VARCHAR(24) NOT NULL DEFAULT 'active',
+    created_by VARCHAR(191) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX crm_enquiry_alerts_user_read (user_id, read_at, created_at),
+    CONSTRAINT crm_enquiry_alerts_enquiry_fk FOREIGN KEY (enquiry_id) REFERENCES crm_enquiries (id) ON DELETE RESTRICT,
+    CONSTRAINT crm_enquiry_alerts_user_fk FOREIGN KEY (user_id) REFERENCES app_users (id) ON DELETE RESTRICT
+  ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+    )
+    .execute(database);
+}
+
+async function addEnquiryListIndexes(database: Kysely<EnquiryDatabase>) {
+  const result = await sql<{ index_name: string }>`
+    SELECT DISTINCT INDEX_NAME AS index_name
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='crm_enquiries'
+  `.execute(database);
+  const indexes = new Set(result.rows.map((row) => row.index_name));
+  for (const [name, columns] of [
+    ["crm_enquiries_created_number", "created_by, enquiry_no"],
+    ["crm_enquiries_assigned_number", "assigned_user_id, enquiry_no"],
+    ["crm_enquiries_status_number", "status_id, enquiry_no"]
+  ] as const) {
+    if (!indexes.has(name)) {
+      await sql.raw(`ALTER TABLE crm_enquiries ADD INDEX ${name} (${columns})`).execute(database);
+    }
+  }
+}
+
 async function addEnquiryComments(database: Kysely<EnquiryDatabase>) {
   await sql
     .raw(
@@ -411,6 +451,20 @@ export const enquiryMigrationBatch: MigrationBatch<EnquiryDatabase> = {
       name: "crm.enquiry.master-references-v9",
       up: addEnquiryMasterReferences,
       version: 9
+    },
+    {
+      checksum: "crm.enquiry.alerts-v10:v1",
+      description: "Add persistent assignment alerts for enquiry assignees.",
+      name: "crm.enquiry.alerts-v10",
+      up: addEnquiryAlerts,
+      version: 10
+    },
+    {
+      checksum: "crm.enquiry.list-indexes-v11:v1",
+      description: "Index enquiry ownership and status for paged lists.",
+      name: "crm.enquiry.list-indexes-v11",
+      up: addEnquiryListIndexes,
+      version: 11
     }
   ]
 };

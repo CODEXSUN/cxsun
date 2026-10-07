@@ -6,10 +6,13 @@
   "exports": {
     ".": "./src/index.ts",
     "./modules/overview": "./src/modules/overview/index.ts",
+    "./modules/reports": "./src/modules/reports/index.ts",
     "./modules/enquiry": "./src/modules/enquiry/index.ts",
+    "./modules/enquiry/hooks": "./src/modules/enquiry/enquiry.hooks.ts",
     "./modules/list-in": "./src/modules/list-in/index.ts",
     "./modules/status": "./src/modules/status/index.ts",
-    "./modules/priority": "./src/modules/priority/index.ts"
+    "./modules/priority": "./src/modules/priority/index.ts",
+    "./modules/contact-360": "./src/modules/contact-360/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

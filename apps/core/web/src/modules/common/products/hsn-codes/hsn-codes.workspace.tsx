@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -37,9 +38,44 @@ export function HsnCodesWorkspace() {
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(100);
-  const [editing, setEditing] = useState<HsnCodesRecord | null | undefined>(undefined);
+  const [editing, setLocalEditing] = useState<HsnCodesRecord | null | undefined>(undefined);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const query = useHsnCodes();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const basePath = "/app/core/common/products/hsn-codes";
+  function setEditing(record: HsnCodesRecord | null | undefined) {
+    setLocalEditing(record);
+    const path =
+      record === undefined
+        ? basePath
+        : record === null
+          ? `${basePath}/new`
+          : `${basePath}/${encodeURIComponent(record.id)}/edit`;
+    if (location.pathname !== path) void navigate({ to: path });
+  }
+  useEffect(() => {
+    const tail = location.pathname.slice(basePath.length).split("/").filter(Boolean);
+    if (tail.length === 0) {
+      setLocalEditing(undefined);
+      return;
+    }
+    if (tail[0] === "new" && tail.length === 1) {
+      setLocalEditing(null);
+      return;
+    }
+    if (tail.length > 2 || (tail[1] && tail[1] !== "edit")) return;
+    let id: string;
+    try {
+      id = decodeURIComponent(tail[0]!);
+    } catch {
+      return;
+    }
+    const record = query.data?.find((entry) => String(entry.id) === id);
+    setLocalEditing((current) =>
+      current && record && current.id === record.id ? current : record
+    );
+  }, [location.pathname, query.data]);
   const saveMutation = useMutation({
     mutationFn: (payload: HsnCodesSavePayload) =>
       editing ? updateHsnCodes(editing.id, payload) : createHsnCodes(payload),

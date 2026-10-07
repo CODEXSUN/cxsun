@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import { Plus, RefreshCw, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
@@ -24,7 +25,8 @@ import {
   totalQuotationQuantity,
   updateQuotation
 } from "./quotation.services";
-import { useQuotationPage } from "./quotation.hooks";
+import { useQuotationPage, useQuotationRecord } from "./quotation.hooks";
+import { quotationRouteFromPath, quotationRoutePath, type QuotationRoute } from "./quotation.route";
 import { QuotationForm } from "./quotation.form";
 import { canSelectQuotation, QuotationList } from "./quotation.list";
 import { canEditBillingEntry, useBillingAccess } from "../../shared/auth/billing-access";
@@ -71,16 +73,22 @@ function printQuotationFromList(quotationId: string) {
     () => frame.contentWindow?.addEventListener("afterprint", cleanup, { once: true }),
     { once: true }
   );
-  const printPath = window.location.pathname.startsWith("/app/")
-    ? "/app/billing/quotation/print"
-    : "/billing/quotation/print";
-  frame.src = `${printPath}?id=${encodeURIComponent(quotationId)}&autoprint=1`;
+  const printPath = quotationRoutePath(
+    { id: quotationId, mode: "print" },
+    window.location.pathname.startsWith("/app/")
+  );
+  frame.src = `${printPath}?autoprint=1`;
   document.body.append(frame);
   cleanupTimer = window.setTimeout(cleanup, 120_000);
 }
 
 export function QuotationWorkspace() {
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const route = quotationRouteFromPath(location.pathname);
+  const recordQuery = useQuotationRecord("id" in route ? route.id : null);
+  const tenantDesk = location.pathname.startsWith("/app/");
   const settingsQuery = useSalesSettings();
   const settings = settingsQuery.data ?? defaultBillingSettings;
   const quotationLayout = settings.layout;
@@ -88,7 +96,18 @@ export function QuotationWorkspace() {
   const canEditEntries = accessQuery.data?.canEditEntries ?? false;
   const canEditFinalizedEntries = accessQuery.data?.canEditFinalizedEntries ?? false;
   const canAdminRevoke = canEditFinalizedEntries;
-  const [view, setView] = useState<QuotationView>({ mode: "list" });
+  const view: QuotationView =
+    route.mode === "new"
+      ? { mode: "upsert", quotation: null, returnTo: "list" }
+      : route.mode === "show" && recordQuery.data
+        ? { mode: "show", quotation: recordQuery.data }
+        : route.mode === "edit" && recordQuery.data
+          ? { mode: "upsert", quotation: recordQuery.data, returnTo: "show" }
+          : { mode: "list" };
+
+  function openQuotation(nextRoute: QuotationRoute) {
+    void navigate({ to: quotationRoutePath(nextRoute, tenantDesk) });
+  }
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
@@ -119,13 +138,11 @@ export function QuotationWorkspace() {
         queryClient.invalidateQueries({ queryKey: ["billing", "settings"] }),
         queryClient.invalidateQueries({ queryKey: ["billing", "document-settings"] })
       ]);
-      toast.success(
-        view.mode === "upsert" && view.quotation ? "Quotation updated" : "Quotation created",
-        {
-          description: `${quotation.quotationNumber} is ready.`
-        }
-      );
-      setView({ mode: "show", quotation });
+      toast.success(route.mode === "edit" ? "Quotation updated" : "Quotation created", {
+        description: `${quotation.quotationNumber} is ready.`
+      });
+      queryClient.setQueryData(["billing", "quotations", quotation.id], quotation);
+      openQuotation({ id: quotation.id, mode: "show" });
     },
     onError: (error) => {
       toast.error("Quotation save failed", {
@@ -142,7 +159,7 @@ export function QuotationWorkspace() {
       toast.success("Quotation status updated", {
         description: `${quotation.quotationNumber} is now ${quotation.status}.`
       });
-      setView((current) => (current.mode === "show" ? { mode: "show", quotation } : current));
+      queryClient.setQueryData(["billing", "quotations", quotation.id], quotation);
     },
     onError: (error) => {
       toast.error("Status update failed", {
@@ -188,7 +205,8 @@ export function QuotationWorkspace() {
       toast.success("Quotation converted", {
         description: `${quotation.quotationNumber} created sales invoice ${sale.invoiceNumber}.`
       });
-      setView({ mode: "show", quotation });
+      queryClient.setQueryData(["billing", "quotations", quotation.id], quotation);
+      openQuotation({ id: quotation.id, mode: "show" });
     },
     onError: (error) => {
       toast.error("Quotation conversion failed", {
@@ -280,6 +298,20 @@ export function QuotationWorkspace() {
     batchConvertMutation.mutate(selectedEntries.map((quotation) => quotation.id));
   }
 
+  if ((route.mode === "show" || route.mode === "edit") && recordQuery.isLoading) {
+    return <WorkspaceTableEmptyState>Loading quotation...</WorkspaceTableEmptyState>;
+  }
+
+  if ((route.mode === "show" || route.mode === "edit") && !recordQuery.data) {
+    return (
+      <WorkspaceTableEmptyState>
+        {recordQuery.error instanceof Error
+          ? recordQuery.error.message
+          : "Quotation was not found."}
+      </WorkspaceTableEmptyState>
+    );
+  }
+
   if (view.mode === "show") {
     const freshQuotation =
       entries.find((entry) => entry.id === view.quotation.id) ?? view.quotation;
@@ -290,22 +322,24 @@ export function QuotationWorkspace() {
     return (
       <QuotationShowPage
         quotation={freshQuotation}
-        onBack={() => setView({ mode: "list" })}
-        onEdit={() => setView({ mode: "upsert", quotation: freshQuotation, returnTo: "show" })}
-        onNew={() => setView({ mode: "upsert", quotation: null, returnTo: "list" })}
-        onPrint={() => window.print()}
+        onBack={() => openQuotation({ mode: "list" })}
+        onEdit={() => openQuotation({ id: freshQuotation.id, mode: "edit" })}
+        onNew={() => openQuotation({ mode: "new" })}
+        onPrint={() => openQuotation({ id: freshQuotation.id, mode: "print" })}
         onConvert={() => convertMutation.mutate(freshQuotation.id)}
-        onLinked={(quotation) => setView({ mode: "show", quotation })}
+        onLinked={(quotation) =>
+          queryClient.setQueryData(["billing", "quotations", quotation.id], quotation)
+        }
         converting={convertMutation.isPending}
         canEdit={
           !freshQuotation.generatedSalesInvoiceNo &&
           canEditBillingEntry(freshQuotation.status, canEditEntries, canEditFinalizedEntries)
         }
         {...(previousQuotation
-          ? { onPrevious: () => setView({ mode: "show", quotation: previousQuotation }) }
+          ? { onPrevious: () => openQuotation({ id: previousQuotation.id, mode: "show" }) }
           : {})}
         {...(nextQuotation
-          ? { onNext: () => setView({ mode: "show", quotation: nextQuotation }) }
+          ? { onNext: () => openQuotation({ id: nextQuotation.id, mode: "show" }) }
           : {})}
       />
     );
@@ -324,16 +358,20 @@ export function QuotationWorkspace() {
           ? { onRevoke: () => revokeMutation.mutate(view.quotation!.id) }
           : {})}
         onBack={() =>
-          setView(
+          openQuotation(
             view.returnTo === "show" && view.quotation
-              ? { mode: "show", quotation: view.quotation }
+              ? { id: view.quotation.id, mode: "show" }
               : { mode: "list" }
           )
         }
         onSubmit={(payload, printAfter) => {
           saveMutation.mutate(view.quotation ? { id: view.quotation.id, payload } : { payload }, {
-            onSuccess: () => {
-              if (printAfter) window.setTimeout(() => window.print(), 250);
+            onSuccess: (quotation) => {
+              if (!printAfter) return;
+              void navigate({
+                search: { autoprint: "1" },
+                to: quotationRoutePath({ id: quotation.id, mode: "print" }, tenantDesk)
+              });
             }
           });
         }}
@@ -370,7 +408,7 @@ export function QuotationWorkspace() {
           </Button>
           <Button
             className="h-9 rounded-md"
-            onClick={() => setView({ mode: "upsert", quotation: null, returnTo: "list" })}
+            onClick={() => openQuotation({ mode: "new" })}
             type="button"
           >
             <Plus className="size-4" />
@@ -441,7 +479,7 @@ export function QuotationWorkspace() {
           taxAmount: quotation.taxAmount
         }))}
         totalsView={totalsView}
-        onEdit={(quotation) => setView({ mode: "upsert", quotation, returnTo: "list" })}
+        onEdit={(quotation) => openQuotation({ id: quotation.id, mode: "edit" })}
         onSetStatus={(quotation, status) => statusMutation.mutate({ id: quotation.id, status })}
         onForceDelete={(quotation) => {
           if (window.confirm(`Force delete ${quotation.quotationNumber}? This cannot be undone.`))
@@ -452,7 +490,7 @@ export function QuotationWorkspace() {
         canAdminRevoke={canAdminRevoke}
         canEditEntries={canEditEntries}
         canEditFinalizedEntries={canEditFinalizedEntries}
-        onView={(quotation) => setView({ mode: "show", quotation })}
+        onView={(quotation) => openQuotation({ id: quotation.id, mode: "show" })}
         page={currentPage}
         rowsPerPage={rowsPerPage}
         pageSelected={pageSelected}

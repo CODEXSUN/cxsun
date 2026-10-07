@@ -1,4 +1,10 @@
-import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  createRoute,
+  createRouter,
+  parseSearchWith,
+  stringifySearchWith
+} from "@tanstack/react-router";
 import { lazy } from "react";
 
 const AdminDesk = lazy(() =>
@@ -223,6 +229,42 @@ const quotationPrintRoute = createRoute({
   path: "/app/billing/quotation/print"
 });
 
+const quotationRecordPrintRoute = createRoute({
+  component: () => <BillingPrintRoute document="quotation" />,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/quotation/$quotationId/print"
+});
+
+const quotationRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/quotation"
+});
+
+const quotationNewRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/quotation/new"
+});
+
+const quotationRecordRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/quotation/$quotationId"
+});
+
+const quotationShowRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/quotation/$quotationId/show"
+});
+
+const quotationEditRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/quotation/$quotationId/edit"
+});
+
 const salesPrintRoute = createRoute({
   component: () => <BillingPrintRoute document="sales" />,
   getParentRoute: () => rootRoute,
@@ -239,6 +281,46 @@ const exportSalesPrintRoute = createRoute({
   component: () => <BillingPrintRoute document="export-sales" />,
   getParentRoute: () => rootRoute,
   path: "/app/billing/export-sales/print"
+});
+
+const billingRecordRoutes = (
+  ["sales", "purchase", "export-sales", "payment", "receipt"] as const
+).flatMap((document) =>
+  (
+    [
+      `/app/billing/${document}`,
+      `/app/billing/${document}/new`,
+      `/app/billing/${document}/$recordId`,
+      `/app/billing/${document}/$recordId/show`,
+      `/app/billing/${document}/$recordId/edit`
+    ] as const
+  ).map((path) =>
+    createRoute({
+      component: AppDesk,
+      getParentRoute: () => rootRoute,
+      path
+    })
+  )
+);
+
+const billingRecordPrintRoutes = (["sales", "purchase", "export-sales"] as const).map((document) =>
+  createRoute({
+    component: () => <BillingPrintRoute document={document} />,
+    getParentRoute: () => rootRoute,
+    path: `/app/billing/${document}/$recordId/print`
+  })
+);
+
+const paymentPrintRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/payment/$recordId/print"
+});
+
+const receiptPrintRoute = createRoute({
+  component: AppDesk,
+  getParentRoute: () => rootRoute,
+  path: "/app/billing/receipt/$recordId/print"
 });
 
 const appSplatRoute = createRoute({
@@ -270,13 +352,27 @@ const routeTree = rootRoute.addChildren([
   adminRoute,
   adminSplatRoute,
   quotationPrintRoute,
+  quotationRecordPrintRoute,
+  quotationRoute,
+  quotationNewRoute,
+  quotationRecordRoute,
+  quotationShowRoute,
+  quotationEditRoute,
   salesPrintRoute,
   purchasePrintRoute,
   exportSalesPrintRoute,
+  ...billingRecordRoutes,
+  ...billingRecordPrintRoutes,
+  paymentPrintRoute,
+  receiptPrintRoute,
   appSplatRoute
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  parseSearch: parseSearchWith((value) => value),
+  routeTree,
+  stringifySearch: stringifySearchWith(JSON.stringify)
+});
 
 declare module "@tanstack/react-router" {
   interface Register {

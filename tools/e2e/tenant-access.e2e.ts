@@ -5,6 +5,7 @@ import { closePlatformDatabase } from "../../apps/platform/api/src/database/plat
 import { closeAllTenantDatabases } from "../../apps/platform/api/src/database/tenant-database.js";
 import { env } from "../../apps/platform/api/src/env.js";
 import { signAuthToken } from "../../apps/platform/api/src/auth/jwt.js";
+import { registerSyntheticSession } from "./auth-session-helper.js";
 
 type TenantRow = RowDataPacket & { db_name: string; id: number; tenant_code: string; uuid: string };
 type RecordValue = { id: number; status: string } & Record<string, unknown>;
@@ -22,6 +23,8 @@ const connection = await createConnection({
   user: env.DB_USER
 });
 const app = await createApp();
+await registerSyntheticSession(superAdminToken);
+const tenantTokens = new Map<string, string>();
 
 try {
   const [tenants] = await connection.query<TenantRow[]>(
@@ -298,15 +301,20 @@ async function request(
   );
   const admin = users[0];
   assert.ok(admin, `${tenant.tenant_code} administrator was not seeded.`);
-  const token = signAuthToken({
-    email: admin.email,
-    tenantCode: tenant.tenant_code,
-    tenantDbName: tenant.db_name,
-    tenantId: tenant.uuid,
-    tenantUuid: tenant.uuid,
-    userId: admin.uuid,
-    userType: "tenant"
-  });
+  let token = tenantTokens.get(tenant.uuid);
+  if (!token) {
+    token = signAuthToken({
+      email: admin.email,
+      tenantCode: tenant.tenant_code,
+      tenantDbName: tenant.db_name,
+      tenantId: tenant.uuid,
+      tenantUuid: tenant.uuid,
+      userId: admin.uuid,
+      userType: "tenant"
+    });
+    await registerSyntheticSession(token);
+    tenantTokens.set(tenant.uuid, token);
+  }
   const response = await app.inject({
     headers: {
       authorization: `Bearer ${token}`,

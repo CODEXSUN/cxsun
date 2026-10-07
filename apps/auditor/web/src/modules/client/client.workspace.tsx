@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -16,42 +16,24 @@ import type { AuditorClientRecord, AuditorClientSavePayload } from "./client.typ
 
 export function AuditorClientWorkspace({
   gateway,
-  initialRecordId
+  initialRecordId,
+  onRecordNavigate
 }: {
   gateway: AuditorClientGateway;
   initialRecordId?: string | undefined;
+  onRecordNavigate: (recordId: string | null) => void;
 }) {
   const client = useQueryClient();
   const [editing, setEditing] = useState<AuditorClientRecord | null | undefined>(undefined);
-  const [viewingId, setViewingId] = useState<number | null>(() => parseRecordId(initialRecordId));
+  const viewingId = parseRecordId(initialRecordId);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const query = useAuditorClients(gateway);
   const selectedQuery = useAuditorClient(gateway, viewingId);
-  useEffect(() => {
-    setViewingId(parseRecordId(initialRecordId));
-  }, [initialRecordId]);
-  useEffect(() => {
-    const syncLocation = () =>
-      setViewingId(parseRecordId(new URLSearchParams(window.location.search).get("record")));
-    window.addEventListener("popstate", syncLocation);
-    return () => window.removeEventListener("popstate", syncLocation);
-  }, []);
-  const openClient = (id: number) => {
-    const url = `/app/auditor/clients?record=${id}`;
-    if (`${window.location.pathname}${window.location.search}` !== url) {
-      window.history.pushState({ page: "auditor.clients", recordId: String(id) }, "", url);
-    }
-    setViewingId(id);
-  };
-  const showClients = () => {
-    if (`${window.location.pathname}${window.location.search}` !== "/app/auditor/clients") {
-      window.history.pushState({ page: "auditor.clients" }, "", "/app/auditor/clients");
-    }
-    setViewingId(null);
-  };
+  const openClient = (id: number) => onRecordNavigate(String(id));
+  const showClients = () => onRecordNavigate(null);
   const save = useMutation({
     mutationFn: (payload: AuditorClientSavePayload) =>
       editing ? gateway.update(editing.id, payload) : gateway.create(payload),

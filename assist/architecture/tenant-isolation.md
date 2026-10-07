@@ -46,6 +46,8 @@ Tenant context should include:
 
 Current implementation note: tenant login resolves the tenant database for tenant user authentication, and Core business requests require a validated `x-tenant-db` context. Core rejects the Platform master database and routes repositories through the request-bound tenant database connection. Core Common master tables therefore do not duplicate tenant identity in `tenant_id` columns; the selected database is their isolation boundary.
 
+Platform requires an active server session for both cookie and bearer requests. After validating the session and tenant registry, Platform replaces tenant routing headers and sets tenant response metadata from that trusted context. The shared Framework never derives response metadata from an incoming `x-tenant-id` header.
+
 Tenant database provisioning follows the tenant's selected application set. Platform identity/access migrations run
 first. Billing activation then runs Core's owned prerequisite migrations and seeds before Billing's owned migrations
 and seeds. Mail migrations run only when Mail is enabled. Task Manager runs its own migrations and seeds when enabled. Tenant

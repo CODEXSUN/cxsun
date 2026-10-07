@@ -3,11 +3,17 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Pencil, Timer, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
+import { Textarea } from "@cxsun/ui/components/textarea";
 import { WorkspaceDatePicker } from "@cxsun/ui/workspace/date-picker";
 import { WorkspaceLookup } from "@cxsun/ui/workspace/lookup";
 import { WorkspaceDetailTable, WorkspaceShowCard } from "@cxsun/ui/workspace/show";
 import { CrmColorLabel, prioritySwatch, statusIcon } from "../../crm-colors";
-import { enquiryActivityQueryKey, enquiryDetailQueryKey, enquiriesQueryKey } from "./enquiry.hooks";
+import {
+  enquiryActivityQueryKey,
+  enquiryAttentionQueryKey,
+  enquiryDetailQueryKey,
+  enquiriesQueryKey
+} from "./enquiry.hooks";
 import { useEnquiryMasterCreate } from "./enquiry.master-create";
 import { updateEnquiryProperties } from "./enquiry.services";
 import { formatDate, formatDateTime } from "./enquiry.view-utils";
@@ -57,7 +63,8 @@ export function EnquiryProperties({
       await Promise.all([
         client.invalidateQueries({ queryKey: enquiryDetailQueryKey(record.id) }),
         client.invalidateQueries({ queryKey: enquiriesQueryKey }),
-        client.invalidateQueries({ queryKey: enquiryActivityQueryKey(record.id) })
+        client.invalidateQueries({ queryKey: enquiryActivityQueryKey(record.id) }),
+        client.invalidateQueries({ queryKey: enquiryAttentionQueryKey })
       ]);
       toast.success("Enquiry properties updated");
     },
@@ -71,12 +78,26 @@ export function EnquiryProperties({
 
   function edit(key: EditableKey) {
     setEditing(key);
-    setDraft({ [key]: record[key] });
+    setDraft(
+      key === "statusId"
+        ? { statusId: record.statusId, closedReason: record.closedReason }
+        : { [key]: record[key] }
+    );
   }
 
   function save(key: EditableKey) {
     if ((key === "priorityId" || key === "statusId") && !draft[key]) {
       toast.error(`Choose a ${key === "priorityId" ? "priority" : "status"}.`);
+      return;
+    }
+    if (key === "statusId") {
+      if (!draft.statusId) return;
+      const code = statuses.find((item) => item.id === draft.statusId)?.code;
+      if (["won", "lost", "closed"].includes(code ?? "") && !draft.closedReason?.trim()) {
+        toast.error("Enter an outcome reason before closing this enquiry.");
+        return;
+      }
+      update.mutate({ statusId: draft.statusId, closedReason: draft.closedReason ?? null });
       return;
     }
     update.mutate({ [key]: draft[key] });
@@ -196,26 +217,43 @@ export function EnquiryProperties({
           onCancel={() => setEditing(null)}
           onSave={() => save("statusId")}
         >
-          <WorkspaceLookup
-            allowTextValue={false}
-            clearable={false}
-            createMode="inline"
-            createLabel="Create Status"
-            showCreateWhenEmpty
-            showAllOptionsOnFocus
-            options={statuses
-              .filter((item) => item.status === "active")
-              .map((item) => ({
-                label: item.name,
-                value: String(item.id),
-                leadingIcon: statusIcon(item.code ?? "")
-              }))}
-            value={draft.statusId ? String(draft.statusId) : ""}
-            onCreate={createMaster.status}
-            onTextChange={() => setDraft({ statusId: 0 })}
-            onValueChange={(value) => setDraft({ statusId: Number(value) })}
-          />
+          <div className="space-y-2">
+            <WorkspaceLookup
+              allowTextValue={false}
+              clearable={false}
+              createMode="inline"
+              createLabel="Create Status"
+              showCreateWhenEmpty
+              showAllOptionsOnFocus
+              options={statuses
+                .filter((item) => item.status === "active")
+                .map((item) => ({
+                  label: item.name,
+                  value: String(item.id),
+                  leadingIcon: statusIcon(item.code ?? "")
+                }))}
+              value={draft.statusId ? String(draft.statusId) : ""}
+              onCreate={createMaster.status}
+              onTextChange={() => setDraft({ statusId: 0 })}
+              onValueChange={(value) => setDraft({ ...draft, statusId: Number(value) })}
+            />
+            {["won", "lost", "closed"].includes(
+              statuses.find((item) => item.id === draft.statusId)?.code ?? ""
+            ) ? (
+              <Textarea
+                aria-label="Outcome reason"
+                placeholder="Outcome reason"
+                value={draft.closedReason ?? ""}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, closedReason: event.target.value }))
+                }
+              />
+            ) : null}
+          </div>
         </EditableRow>
+        {record.closedReason ? (
+          <WorkspaceDetailTable rows={[["Outcome reason", record.closedReason]]} />
+        ) : null}
         <WorkspaceDetailTable rows={[["Updated", formatDateTime(record.updatedAt)]]} />
       </WorkspaceShowCard>
       <WorkspaceShowCard title="Customer">

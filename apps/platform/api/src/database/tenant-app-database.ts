@@ -39,6 +39,12 @@ import {
 } from "@cxsun/mail-api";
 import type { Kysely } from "kysely";
 import {
+  frappeTenantMigrations,
+  migrateFrappeTenantDatabase,
+  rollbackFrappeTenantDatabase,
+  type FrappeDatabase
+} from "@cxsun/frappe-api";
+import {
   migrateProjectManagerDatabase,
   projectManagerTenantMigrations
 } from "@cxsun/project-manager-api";
@@ -76,6 +82,12 @@ export function tenantDatabaseMigrationsFor(tenant: Tenant) {
     })),
     ...(enabled.has("crm")
       ? crmTenantMigrations.map((migration) => ({
+          ...migration,
+          statements: [`RUN ${migration.name}`]
+        }))
+      : []),
+    ...(enabled.has("crm") && enabled.has("frappe")
+      ? frappeTenantMigrations.map((migration) => ({
           ...migration,
           statements: [`RUN ${migration.name}`]
         }))
@@ -123,6 +135,10 @@ export async function migrateSelectedTenantApps(database: Kysely<TenantDatabase>
   if (enabled.has("crm")) {
     await migrateCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
     provisionedApps.push("crm");
+  }
+  if (enabled.has("crm") && enabled.has("frappe")) {
+    await migrateFrappeTenantDatabase(database as unknown as Kysely<FrappeDatabase>);
+    provisionedApps.push("frappe");
   }
   if (enabled.has("auditor")) {
     await migrateAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
@@ -200,8 +216,11 @@ export async function rollbackSelectedTenantApps(database: Kysely<TenantDatabase
   if (enabled.has("platform.task-manager"))
     await rollbackTaskManagerTenantModule(database as never);
   if (enabled.has("mail")) await rollbackMailModule(database as never);
-  if (enabled.has("crm"))
+  if (enabled.has("crm") && enabled.has("frappe"))
+    await rollbackFrappeTenantDatabase(database as unknown as Kysely<FrappeDatabase>);
+  if (enabled.has("crm")) {
     await rollbackCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
+  }
   if (enabled.has("auditor"))
     await rollbackAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
   if (enabled.has("billing.sales")) await rollbackBillingTenantDatabase(tenant.dbName);

@@ -17,6 +17,7 @@ import {
 } from "@cxsun/core-api";
 import {
   enquiryModule,
+  registerContact360Modules,
   listInModule,
   statusModule,
   priorityModule,
@@ -29,6 +30,8 @@ import {
   type PriorityDatabase
 } from "@cxsun/crm-api";
 import { auditorClientModule, type AuditorClientDatabase } from "@cxsun/auditor-api";
+import { frappeConnectionModule, type FrappeDatabase } from "@cxsun/frappe-api";
+import { EnquiryRepository } from "@cxsun/crm-api/enquiry-sync";
 import { AppError } from "@cxsun/framework/errors";
 import type { FastifyRequest } from "fastify";
 import type { HealthCheck } from "@cxsun/framework/health";
@@ -55,6 +58,7 @@ import { credentialRecoveryModule } from "./modules/credential-recovery/index.js
 import { appOrchestrationModule } from "./modules/app-orchestration/index.js";
 import { startQueueManagerWorker } from "./modules/queue-manager/queue-manager.runtime.js";
 import { QueueManagerService } from "./modules/queue-manager/queue-manager.service.js";
+import { platformReadinessChecks } from "./readiness.js";
 import { tenantAccessContext } from "./auth/tenant-access-context.js";
 import { seedDefaultTenant } from "./modules/tenant/tenant.seed.js";
 import { env } from "./env.js";
@@ -68,6 +72,7 @@ import { closeAllTenantDatabases } from "./database/tenant-database.js";
 import { registerAuthRequestContext } from "./auth/auth-request-context.js";
 import { TenantDomainRepository } from "./modules/tenant-domain/tenant-domain.repository.js";
 import { registerProjectManagerHost } from "./project-manager-host.js";
+import { resolvePlatformApiUrl } from "./api-url.js";
 import { projectManagerApiModuleKeys } from "@cxsun/project-manager-api";
 import {
   addonApiModuleKeys,
@@ -88,6 +93,7 @@ export async function createApp() {
     cookieSecret: env.JWT_SECRET,
     corsOrigins: await platformWebOrigins(),
     environment: env.NODE_ENV,
+    rewriteUrl: resolvePlatformApiUrl,
     shutdownHooks: [
       async () => {
         console.info("[shutdown] closing Billing tenant MariaDB pools");
@@ -166,10 +172,11 @@ export async function createApp() {
 
   registerRequestLogging(app);
   registerHealthRoute(app, healthChecks);
+  registerHealthRoute(app, platformReadinessChecks(queueService), "/ready");
   app.get("/public/runtime-config", async () => ({
     data: {
       VITE_DEV_AUTO_TENANT_LOGIN: env.DEV_AUTO_TENANT_LOGIN,
-      VITE_PLATFORM_API_URL: "/api/platform",
+      VITE_PLATFORM_API_URL: "/api/app",
       VITE_TENANT_NAME: env.DEFAULT_TENANT_NAME,
       VITE_TENANCY_MODE: env.CXSUN_TENANCY_MODE
     },
@@ -193,9 +200,16 @@ export async function createApp() {
       .where("status", "=", "active")
       .executeTakeFirst();
     if (!enabled) throw AppError.forbidden("CRM is not enabled for this tenant.");
-    const action = request.method === "GET" ? "view" : request.method === "DELETE" ? "delete"
-      : request.method === "POST" && request.url.split("?")[0] === collection ? "create" : "update";
-    if (action === "view" && resource !== "enquiry") {
+    const path = request.url.split("?")[0] ?? "";
+    const action =
+      request.method === "GET" || /^\/crm\/enquiries\/alerts\/\d+\/read$/u.test(path)
+        ? "view"
+        : request.method === "DELETE"
+          ? "delete"
+          : request.method === "POST" && request.url.split("?")[0] === collection
+            ? "create"
+            : "update";
+    if (action === "view" && ["list-in", "status", "priority"].includes(resource)) {
       try {
         await context.authorize(`crm.${resource}.view`);
       } catch (error) {
@@ -230,8 +244,23 @@ export async function createApp() {
   });
   await enquiryModule.register(app, async (request) => {
     const context = await crmAccess(request, "enquiry", "/crm/enquiries");
+    const actor = await context.database
+      .selectFrom("app_users")
+      .select("id")
+      .where("email", "=", context.actorEmail)
+      .where("status", "=", "active")
+      .executeTakeFirst();
+    let canViewAll = false;
+    try {
+      await context.authorize("crm.enquiry.view-all");
+      canViewAll = true;
+    } catch (error) {
+      if (!(error instanceof AppError) || error.code !== "FORBIDDEN") throw error;
+    }
     return {
       actorEmail: context.actorEmail,
+      actorUserId: actor?.id ?? null,
+      canViewAll,
       database: context.database as unknown as import("kysely").Kysely<EnquiryDatabase>,
       relations: {
         contact: (id: number) => getActiveContactForDatabase(context.tenantDatabase, id),
@@ -244,15 +273,94 @@ export async function createApp() {
             .where("id", "=", id)
             .where("status", "=", "active")
             .executeTakeFirst()) ?? null,
-        listIn: (id: number) => getActiveListInForDatabase(
-          context.database as unknown as import("kysely").Kysely<ListInDatabase>, id),
-        status: (id: number) => getActiveStatusForDatabase(
-          context.database as unknown as import("kysely").Kysely<StatusDatabase>, id),
-        priority: (id: number) => getActivePriorityForDatabase(
-          context.database as unknown as import("kysely").Kysely<PriorityDatabase>, id)
+        listIn: (id: number) =>
+          getActiveListInForDatabase(
+            context.database as unknown as import("kysely").Kysely<ListInDatabase>,
+            id
+          ),
+        status: (id: number) =>
+          getActiveStatusForDatabase(
+            context.database as unknown as import("kysely").Kysely<StatusDatabase>,
+            id
+          ),
+        priority: (id: number) =>
+          getActivePriorityForDatabase(
+            context.database as unknown as import("kysely").Kysely<PriorityDatabase>,
+            id
+          )
       }
     };
   });
+  registerContact360Modules(app, async (request, resource) => {
+    const context = await crmAccess(request, resource, `/crm/${resource}`);
+    return {
+      database: context.database as unknown as import("kysely").Kysely<EnquiryDatabase>,
+      actorEmail: context.actorEmail,
+      customerExists: async (id: number) =>
+        Boolean(await getActiveContactForDatabase(context.tenantDatabase, id)),
+      industryExists: async (id: number) =>
+        Boolean(await industryService.resolveActiveIndustryName(id))
+    };
+  });
+  frappeConnectionModule.register(
+    app,
+    async (request) => {
+      const context = tenantAccessContext(request);
+      const enabled = await context.database
+        .selectFrom("app_module_settings")
+        .select("id")
+        .where("module_key", "in", ["crm", "frappe"])
+        .where("enabled", "=", true)
+        .where("status", "=", "active")
+        .execute();
+      if (enabled.length !== 2)
+        throw AppError.forbidden("CRM and Frappe must be enabled for this tenant.");
+      const path = request.url.split("?")[0] ?? "";
+      const permission =
+        request.method === "POST" && path.endsWith("/sync")
+          ? "crm.enquiry.update"
+          : "crm.enquiry.view";
+      await context.authorize(permission);
+      const actor = await context.database
+        .selectFrom("app_users")
+        .select("id")
+        .where("email", "=", context.actorEmail)
+        .where("status", "=", "active")
+        .executeTakeFirst();
+      let canViewAll = false;
+      try {
+        await context.authorize("crm.enquiry.view-all");
+        canViewAll = true;
+      } catch (error) {
+        if (!(error instanceof AppError) || error.code !== "FORBIDDEN") throw error;
+      }
+      return {
+        database: context.database as unknown as import("kysely").Kysely<FrappeDatabase>,
+        viewer: { actorEmail: context.actorEmail, actorUserId: actor?.id ?? null, canViewAll },
+        loadEnquiry: async (id: number) => {
+          const repository = new EnquiryRepository(
+            context.database as unknown as import("kysely").Kysely<EnquiryDatabase>
+          );
+          const record = await repository.get(id);
+          if (!record) throw AppError.notFound("Local enquiry was not found.");
+          if (
+            !canViewAll &&
+            record.createdBy.toLowerCase() !== context.actorEmail.toLowerCase() &&
+            record.assignedUserId !== actor?.id
+          ) {
+            await context.authorize("crm.enquiry.view-all");
+          }
+          return record;
+        }
+      };
+    },
+    {
+      baseUrl: env.CXSUN_FRAPPE_BASE_URL,
+      apiKey: env.CXSUN_FRAPPE_APP_KEY,
+      apiSecret: env.CXSUN_FRAPPE_APP_SECRET,
+      enabled: env.CXSUN_FRAPPE_ENABLED === "1"
+    }
+  );
   console.info("[platform.routes] CRM package ready");
   await auditorClientModule.register(app, async (request) => {
     const context = tenantAccessContext(request);

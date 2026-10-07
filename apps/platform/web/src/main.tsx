@@ -5,7 +5,6 @@ import "./styles.css";
 import { loadRuntimeConfig } from "./startup-config";
 
 const root = createRoot(document.getElementById("root") as HTMLElement);
-root.render(<GlobalLoader />);
 
 async function start() {
   root.render(<GlobalLoader />);

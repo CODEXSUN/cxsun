@@ -4,6 +4,18 @@
 
 CODEXSUN APIs must be tenant-aware, permission-aware, stable, and clear for web, desktop, mobile, workers, integrations, and AI tools.
 
+## Browser and API URLs
+
+Tenant browser pages use `/app/{app}/{page}`. Record screens use stable paths such as
+`/app/billing/quotation/new`, `/app/billing/quotation/{id}`, `/app/billing/quotation/{id}/edit`,
+and `/app/billing/quotation/{id}/print`. TanStack Router owns these page paths and search state.
+
+Browser data requests use `/api/app/{app}/{resource}`. The Platform API removes `/api/app` before
+dispatching to the existing module-owned resource route. For example, the quotation module owns
+`GET /billing/quotations/{id}` and the public same-origin request is
+`GET /api/app/billing/quotations/{id}`. Page actions such as `new`, `edit`, and `print` are not API
+resources. Keep request validation, permission checks, and business logic in the owning module.
+
 ## API Rules
 
 - Every business API must resolve tenant context.

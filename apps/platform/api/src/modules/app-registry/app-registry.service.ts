@@ -12,7 +12,8 @@ export const defaultTenantModuleKeys = [
   "mail",
   "platform.task-manager",
   "auditor",
-  "crm"
+  "crm",
+  "frappe"
 ] as const;
 
 export const platformAppRegistry: PlatformAppDefinition[] = [
@@ -108,6 +109,17 @@ export const platformAppRegistry: PlatformAppDefinition[] = [
   {
     alwaysEnabled: false,
     defaultLanding: false,
+    description: "Frappe connection and outbound CRM enquiry sync.",
+    appId: "frappe",
+    id: 0,
+    label: "Frappe",
+    moduleKey: "frappe",
+    stack: "frappe",
+    uuid: ""
+  },
+  {
+    alwaysEnabled: false,
+    defaultLanding: false,
     description: "Tenant audit planning, evidence, findings, compliance review, and sign-off.",
     appId: "auditor",
     id: 0,
@@ -124,7 +136,9 @@ export function resolveEnabledApps(enabledModuleKeys: string[]) {
     .filter((app) => app.appId !== "project-manager")
     .map((app) => ({
       ...app,
-      enabled: app.alwaysEnabled || enabled.has(app.moduleKey)
+      enabled:
+        (app.appId !== "frappe" || enabled.has("crm")) &&
+        (app.alwaysEnabled || enabled.has(app.moduleKey))
     }));
 }
 
