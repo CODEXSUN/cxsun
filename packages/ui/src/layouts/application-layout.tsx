@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   BookOpenIcon,
   LifeBuoyIcon,
@@ -21,6 +22,7 @@ type ApplicationLayoutProps = {
   headerTitle?: ReactNode;
   homeHref?: string;
   onLogout?: () => void | Promise<void>;
+  sidebarPrimaryAction?: { icon: LucideIcon; label: string; onSelect: () => void };
   subtitle?: ReactNode;
   title?: ReactNode;
   user?: SidebarUser;
@@ -86,6 +88,7 @@ export function ApplicationLayout({
   homeHref = "/",
   menuItems = applicationMenuItems,
   onLogout,
+  sidebarPrimaryAction,
   subtitle = "Tenant application workspace.",
   title = "Application Desk",
   user,
@@ -105,6 +108,7 @@ export function ApplicationLayout({
       logoutHref="/login"
       menuItems={menuItems}
       {...(onLogout ? { onLogout } : {})}
+      {...(sidebarPrimaryAction ? { sidebarPrimaryAction } : {})}
       subtitle={subtitle}
       title={title}
       {...(user ? { user } : {})}

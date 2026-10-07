@@ -13,6 +13,8 @@ import type {
 } from "./enquiry.types";
 
 export const listEnquiries = () => request<EnquiryRecord[]>("/crm/enquiries");
+export const getEnquiryOverviewActivity = () =>
+  request<{ commentsByYou30Days: number }>("/crm/enquiries/overview-activity");
 export const getEnquiry = (id: number) => request<EnquiryRecord>(`/crm/enquiries/${id}`);
 export const listEnquiryComments = (id: number) =>
   request<EnquiryComment[]>(`/crm/enquiries/${id}/comments`);
@@ -31,6 +33,8 @@ export const updateEnquiryProperties = (id: number, patch: EnquiryPropertyPatch)
     method: "PATCH",
     body: JSON.stringify(patch)
   });
+export const openNewEnquiryCall = (id: number) =>
+  request<EnquiryRecord>(`/crm/enquiries/${id}/open-new-call`, { method: "POST" });
 export const listEnquiryJobs = (id: number) => request<EnquiryJob[]>(`/crm/enquiries/${id}/jobs`);
 export const startEnquiryJob = (id: number) =>
   request<EnquiryJob>(`/crm/enquiries/${id}/jobs/start`, { method: "POST" });

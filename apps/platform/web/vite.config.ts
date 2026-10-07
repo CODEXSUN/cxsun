@@ -31,7 +31,7 @@ export default defineConfig(({ command, mode }) => {
       __APP_VERSION__: JSON.stringify(rootPackage.version)
     },
     optimizeDeps: {
-      exclude: ["@codexsun/blog/web", "@cxsun/billing-web", "@cxsun/core-web"],
+      exclude: ["@codexsun/blog/web", "@cxsun/billing-web", "@cxsun/core-web", "@cxsun/crm-web"],
       include: [
         "react-is",
         "use-sync-external-store/shim",
@@ -43,6 +43,10 @@ export default defineConfig(({ command, mode }) => {
     plugins: [tailwindcss(), react()],
     resolve: {
       alias: {
+        "@cxsun/ui/layouts/application-layout": resolve(
+          configDir,
+          "../../../packages/ui/src/layouts/application-layout.tsx"
+        ),
         "@cxsun/ui/workspace/lookup": resolve(
           configDir,
           "../../../packages/ui/src/workspace/lookup.tsx"
@@ -54,6 +58,10 @@ export default defineConfig(({ command, mode }) => {
         "@cxsun/crm-web/modules/enquiry": resolve(
           configDir,
           "../../crm/web/src/modules/enquiry/index.ts"
+        ),
+        "@cxsun/core-web/modules/master/contact": resolve(
+          configDir,
+          "../../core/web/src/modules/master/contact/index.ts"
         )
       },
       preserveSymlinks: true
@@ -92,7 +100,8 @@ function platformDevelopmentServer(runtimeEnv: Record<string, string | undefined
       },
       "/api/project-manager": {
         ...proxy,
-        rewrite: (path: string) => `/project-manager${path.replace(/^\/api\/project-manager/u, "") || "/"}`
+        rewrite: (path: string) =>
+          `/project-manager${path.replace(/^\/api\/project-manager/u, "") || "/"}`
       },
       "/api/platform": {
         ...proxy,

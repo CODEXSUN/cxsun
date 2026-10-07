@@ -211,6 +211,12 @@ const adminRoute = createRoute({
   path: "/admin"
 });
 
+const adminSplatRoute = createRoute({
+  component: AdminDesk,
+  getParentRoute: () => rootRoute,
+  path: "/admin/$"
+});
+
 const quotationPrintRoute = createRoute({
   component: () => <BillingPrintRoute document="quotation" />,
   getParentRoute: () => rootRoute,
@@ -262,6 +268,7 @@ const routeTree = rootRoute.addChildren([
   resetPasswordRoute,
   saSplatRoute,
   adminRoute,
+  adminSplatRoute,
   quotationPrintRoute,
   salesPrintRoute,
   purchasePrintRoute,

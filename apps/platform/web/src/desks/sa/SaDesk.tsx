@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ComponentType } from "react";
+import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import {
   AppWindowIcon,
   Building2Icon,
@@ -116,23 +116,30 @@ export function SaDesk() {
   const [page, setPage] = useState<SaPage>(pageFromUrl());
   const [selectedAppId, setSelectedAppId] = useState<OrchestratedAppId>(() => appIdFromUrl());
 
+  useEffect(() => {
+    const restorePageFromHistory = () => {
+      setPage(pageFromUrl());
+      setSelectedAppId(appIdFromUrl());
+    };
+    window.addEventListener("popstate", restorePageFromHistory);
+    return () => window.removeEventListener("popstate", restorePageFromHistory);
+  }, []);
+
   function selectPage(nextPage: SaPage) {
     setPage(nextPage);
-    window.history.pushState(
-      { page: nextPage },
-      "",
-      nextPage === "overview" ? "/sa" : `/sa/${nextPage}`
-    );
+    const path = nextPage === "overview" ? "/sa" : `/sa/${nextPage}`;
+    if (`${window.location.pathname}${window.location.search}` !== path) {
+      window.history.pushState({ page: nextPage }, "", path);
+    }
   }
 
   function openAppOperations(appId: OrchestratedAppId) {
     setSelectedAppId(appId);
     setPage("app-operations");
-    window.history.pushState(
-      { page: "app-operations", appId },
-      "",
-      `/sa/app-operations?app=${appId}`
-    );
+    const path = `/sa/app-operations?app=${appId}`;
+    if (`${window.location.pathname}${window.location.search}` !== path) {
+      window.history.pushState({ page: "app-operations", appId }, "", path);
+    }
   }
 
   async function handleLogout() {

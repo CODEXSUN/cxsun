@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   AppWindowIcon,
   BadgeCheckIcon,
@@ -33,6 +34,7 @@ type AppLayoutProps = {
   logoutHref?: string;
   menuItems?: SidemenuItem[];
   onLogout?: () => void | Promise<void>;
+  sidebarPrimaryAction?: { icon: LucideIcon; label: string; onSelect: () => void };
   subtitle?: ReactNode;
   title?: ReactNode;
   user?: SidebarUser;
@@ -173,6 +175,7 @@ export function AppLayout({
   logoutHref = "/login",
   menuItems = defaultAppMenuItems,
   onLogout,
+  sidebarPrimaryAction,
   subtitle,
   title,
   user = defaultSidebarUser,
@@ -192,6 +195,7 @@ export function AppLayout({
       <AppSidebar
         brand={brand}
         items={menuItems}
+        {...(sidebarPrimaryAction ? { primaryAction: sidebarPrimaryAction } : {})}
         user={user}
         userMenuItems={userMenuItems}
         variant="inset"

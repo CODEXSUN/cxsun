@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { ArrowLeftIcon, PanelRightCloseIcon, PanelRightOpenIcon, SaveIcon } from "lucide-react";
+import {
+  ArrowLeftIcon,
+  PanelRightCloseIcon,
+  PanelRightOpenIcon,
+  RotateCcwIcon,
+  SaveIcon
+} from "lucide-react";
 import { Button } from "@cxsun/ui/components/button";
 import { Input } from "@cxsun/ui/components/input";
 import { WorkspaceEditor } from "@cxsun/ui/workspace/editor";
@@ -108,6 +114,17 @@ export function IdeasForm({
             variant="outline"
           >
             {propertiesOpen ? <PanelRightCloseIcon /> : <PanelRightOpenIcon />}
+          </Button>
+          <Button
+            disabled={!dirty || saving}
+            onClick={() => {
+              setDraft(formValues(idea));
+              setError("");
+            }}
+            type="button"
+            variant="outline"
+          >
+            <RotateCcwIcon /> Discard
           </Button>
           <Button disabled={!dirty || saving} onClick={() => void save()} type="button">
             <SaveIcon /> {saving ? "Saving…" : idea ? "Update" : "Save idea"}

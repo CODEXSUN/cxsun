@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -38,7 +38,7 @@ export function PriorityWorkspace() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
   const [editing, setEditing] = useState<PriorityRecord | null | undefined>(undefined);
   const [viewing, setViewing] = useState<PriorityRecord | null>(null);
   const [pending, setPending] = useState<Action | null>(null);
@@ -92,15 +92,6 @@ export function PriorityWorkspace() {
       technicalName="page.crm.priority.list"
       actions={
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={query.isFetching}
-            onClick={() => void query.refetch()}
-          >
-            <RefreshCw className="size-4" />
-            Refresh
-          </Button>
           <Button type="button" onClick={() => setEditing(null)}>
             <Plus className="size-4" />
             New Priority

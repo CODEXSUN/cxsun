@@ -1,5 +1,5 @@
 export function galleryPageFromUrl(): string | null {
-  const pathMatch = window.location.pathname.match(/^\/uiux\/([^/]+)\/?$/);
+  const pathMatch = window.location.pathname.match(/^\/uiux\/(.+?)\/?$/);
   return pathMatch?.[1] ?? new URLSearchParams(window.location.search).get("uiux");
 }
 

@@ -19,6 +19,7 @@ import {
 } from "../../../../components/sidebar";
 
 export type SidemenuSubItem = {
+  count?: number | undefined;
   icon?: LucideIcon;
   isActive?: boolean;
   items?: SidemenuSubItem[];
@@ -28,6 +29,7 @@ export type SidemenuSubItem = {
 };
 
 export type SidemenuItem = {
+  count?: number | undefined;
   title: string;
   url?: string;
   icon: LucideIcon;
@@ -58,6 +60,7 @@ export function SidemenuSection({ items, title }: { items: SidemenuItem[]; title
                     <SidebarMenuButton tooltip={item.title}>
                       <item.icon />
                       <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                      {item.count !== undefined ? <CountBadge count={item.count} /> : null}
                       <SidemenuChevron className="group-data-[collapsible=icon]:hidden group-data-[state=open]/collapsible:rotate-45" />
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
@@ -67,11 +70,13 @@ export function SidemenuSection({ items, title }: { items: SidemenuItem[]; title
                       <button type="button" onClick={item.onSelect}>
                         <item.icon />
                         <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                        {item.count !== undefined ? <CountBadge count={item.count} /> : null}
                       </button>
                     ) : (
                       <a href={item.url ?? "#"}>
                         <item.icon />
                         <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
+                        {item.count !== undefined ? <CountBadge count={item.count} /> : null}
                       </a>
                     )}
                   </SidebarMenuButton>
@@ -114,6 +119,7 @@ function SidemenuSubItemNode({ item }: { item: SidemenuSubItem }) {
                   <button onClick={item.onSelect} type="button">
                     {Icon ? <Icon className="size-4 shrink-0" /> : null}
                     <span>{item.title}</span>
+                    {item.count !== undefined ? <CountBadge count={item.count} /> : null}
                   </button>
                 </SidebarMenuSubButton>
                 <CollapsibleTrigger asChild>
@@ -132,6 +138,7 @@ function SidemenuSubItemNode({ item }: { item: SidemenuSubItem }) {
                   <button type="button">
                     {Icon ? <Icon className="size-4 shrink-0" /> : null}
                     <span>{item.title}</span>
+                    {item.count !== undefined ? <CountBadge count={item.count} /> : null}
                     <SidemenuChevron className="group-data-[state=open]/sub-collapsible:rotate-45" />
                   </button>
                 </SidebarMenuSubButton>
@@ -157,15 +164,25 @@ function SidemenuSubItemNode({ item }: { item: SidemenuSubItem }) {
           <button type="button" onClick={item.onSelect}>
             {Icon ? <Icon className="size-4 shrink-0" /> : null}
             <span>{item.title}</span>
+            {item.count !== undefined ? <CountBadge count={item.count} /> : null}
           </button>
         ) : (
           <a href={item.url ?? "#"}>
             {Icon ? <Icon className="size-4 shrink-0" /> : null}
             <span>{item.title}</span>
+            {item.count !== undefined ? <CountBadge count={item.count} /> : null}
           </a>
         )}
       </SidebarMenuSubButton>
     </SidebarMenuSubItem>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  return (
+    <span className="ml-auto rounded-full border bg-background px-1.5 text-[10px] tabular-nums text-muted-foreground group-data-[collapsible=icon]:hidden">
+      {count}
+    </span>
   );
 }
 

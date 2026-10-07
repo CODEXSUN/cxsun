@@ -34,6 +34,7 @@ export type EnquiryRecord = EnquirySavePayload & {
 export type EnquiryLookup = {
   id: number;
   name: string;
+  email?: string;
   status: string;
   primaryPhone?: string | null;
   phones?: Array<{ phone: string }>;

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
 import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
@@ -14,6 +14,8 @@ import { EnquiryForm } from "./enquiry.form";
 import {
   enquiriesQueryKey,
   enquiryDetailQueryKey,
+  enquiryCommentsQueryKey,
+  enquiryActivityQueryKey,
   enquiryContactsQueryKey,
   useEnquiries,
   useEnquiryContacts,
@@ -21,7 +23,13 @@ import {
 } from "./enquiry.hooks";
 import { EnquiryList } from "./enquiry.list";
 import { EnquiryShow } from "./enquiry.show";
-import { createEnquiry, updateEnquiry } from "./enquiry.services";
+import { createEnquiry, openNewEnquiryCall, updateEnquiry } from "./enquiry.services";
+import {
+  enquiryFilterOptions,
+  enquiryInScope,
+  matchesEnquiryFilter,
+  type EnquiryScope
+} from "./enquiry.filters";
 import type { EnquiryRecord, EnquirySavePayload } from "./enquiry.types";
 
 const columnOptions = [
@@ -30,18 +38,31 @@ const columnOptions = [
   { id: "listIn", label: "List in" },
   { id: "dueDate", label: "Due date" },
   { id: "priority", label: "Priority" },
-  { id: "user", label: "User" },
+  { id: "creator", label: "Creator" },
+  { id: "assignedTo", label: "Assigned to" },
   { id: "status", label: "Status" }
 ];
 
-export function EnquiryWorkspace() {
+export function EnquiryWorkspace({
+  scope = "all",
+  currentUserEmail = "",
+  initialCreate = false,
+  onCloseCreate
+}: {
+  scope?: EnquiryScope;
+  currentUserEmail?: string;
+  initialCreate?: boolean;
+  onCloseCreate?: () => void;
+}) {
   const client = useQueryClient();
-  const [editing, setEditing] = useState<EnquiryRecord | null | undefined>(undefined);
+  const [editing, setEditing] = useState<EnquiryRecord | null | undefined>(
+    initialCreate ? null : undefined
+  );
   const [showing, setShowing] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(scope === "assigned" ? "active" : "all");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [rowsPerPage, setRowsPerPage] = useState(100);
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
   const query = useEnquiries();
   const contacts = useEnquiryContacts();
@@ -49,6 +70,33 @@ export function EnquiryWorkspace() {
   const lists = useListIn();
   const statuses = useStatus();
   const priorities = usePriority();
+  const currentUserId =
+    users.data?.find((user) => user.email?.toLowerCase() === currentUserEmail.toLowerCase())?.id ??
+    null;
+  const scoped = useMemo(
+    () =>
+      (query.data ?? []).filter((record) =>
+        enquiryInScope(record, scope, currentUserId, currentUserEmail)
+      ),
+    [query.data, scope, currentUserId, currentUserEmail]
+  );
+  const filterOptions = useMemo(
+    () => enquiryFilterOptions(scoped, statuses.data ?? []),
+    [scoped, statuses.data]
+  );
+  const openCall = useMutation({
+    mutationFn: (record: EnquiryRecord) => openNewEnquiryCall(record.id),
+    onSuccess: async (record) => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: enquiriesQueryKey }),
+        client.invalidateQueries({ queryKey: enquiryDetailQueryKey(record.id) }),
+        client.invalidateQueries({ queryKey: enquiryCommentsQueryKey(record.id) }),
+        client.invalidateQueries({ queryKey: enquiryActivityQueryKey(record.id) })
+      ]);
+      toast.success(`Call #${record.enquiryNo} opened`);
+    },
+    onError: (error) => toast.error("Unable to open new call", { description: error.message })
+  });
   const save = useMutation({
     mutationFn: (payload: EnquirySavePayload) =>
       editing ? updateEnquiry(editing.id, payload) : createEnquiry(payload),
@@ -60,14 +108,15 @@ export function EnquiryWorkspace() {
         description: record.title
       });
       setEditing(undefined);
+      if (initialCreate) onCloseCreate?.();
     },
     onError: (error) => toast.error("Unable to save enquiry", { description: error.message })
   });
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return (query.data ?? []).filter(
+    return scoped.filter(
       (record) =>
-        (status === "all" || record.status === status) &&
+        matchesEnquiryFilter(record, status) &&
         (!term ||
           [
             String(record.enquiryNo),
@@ -80,7 +129,7 @@ export function EnquiryWorkspace() {
             record.capturedEmail
           ].some((field) => field?.toLowerCase().includes(term)))
     );
-  }, [query.data, search, status]);
+  }, [scoped, search, status]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
   const records = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -105,7 +154,10 @@ export function EnquiryWorkspace() {
           priorities.error?.message ??
           ""
         }
-        onBack={() => setEditing(undefined)}
+        onBack={() => {
+          setEditing(undefined);
+          if (initialCreate) onCloseCreate?.();
+        }}
         onContactSaved={async () => {
           await Promise.all([
             client.invalidateQueries({ queryKey: enquiryContactsQueryKey }),
@@ -130,20 +182,17 @@ export function EnquiryWorkspace() {
   }
   return (
     <WorkspacePage
-      title="Enquiries"
-      description="Capture and qualify customer requests."
-      technicalName="page.crm.enquiries.list"
+      title={scope === "assigned" ? "My Job" : scope === "created" ? "My Calls" : "All Enquiries"}
+      description={
+        scope === "assigned"
+          ? "Enquiries assigned to your user account."
+          : scope === "created"
+            ? "Enquiries created by you."
+            : "Capture and qualify customer requests."
+      }
+      technicalName={`page.crm.${scope}.enquiries.list`}
       actions={
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => void query.refetch()}
-            disabled={query.isFetching}
-          >
-            <RefreshCw className="size-4" />
-            Refresh
-          </Button>
+        scope === "assigned" ? undefined : (
           <Button
             type="button"
             disabled={
@@ -157,16 +206,24 @@ export function EnquiryWorkspace() {
             <Plus className="size-4" />
             New enquiry
           </Button>
-        </div>
+        )
       }
     >
       <WorkspaceFilters
-        columnOptions={columnOptions.map((column) => ({
-          ...column,
-          checked: visibleColumns[column.id] !== false,
-          onCheckedChange: (checked) =>
-            setVisibleColumns((current) => ({ ...current, [column.id]: checked }))
-        }))}
+        columnOptions={columnOptions
+          .filter(
+            (column) =>
+              (column.id !== "creator" || scope !== "created") &&
+              (column.id !== "assignedTo" || scope !== "assigned")
+          )
+          .map((column) => ({
+            ...column,
+            label:
+              column.id === "assignedTo" && scope === "created" ? "Allocated to" : column.label,
+            checked: visibleColumns[column.id] !== false,
+            onCheckedChange: (checked) =>
+              setVisibleColumns((current) => ({ ...current, [column.id]: checked }))
+          }))}
         onShowAllColumns={() => setVisibleColumns({})}
         searchPlaceholder="Search ID, details, phone, or customer"
         searchValue={search}
@@ -175,27 +232,30 @@ export function EnquiryWorkspace() {
           setPage(1);
         }}
         filterValue={status}
+        showSelectedFilterChip
         onFilterValueChange={(value) => {
           setStatus(value);
           setPage(1);
         }}
-        filterOptions={[
-          { id: "all", label: "All statuses" },
-          ...(statuses.data ?? []).map((item) => ({ id: item.code, label: item.name }))
-        ]}
+        filterOptions={filterOptions}
       />
-      {query.error ? (
+      {query.error || (scope === "assigned" && users.error) ? (
         <p role="alert" className="text-sm text-destructive">
-          {query.error.message}
+          {query.error?.message ?? users.error?.message}
         </p>
       ) : null}
       <EnquiryList
         records={records}
         users={users.data ?? []}
+        userColumnMode={
+          scope === "assigned" ? "creator" : scope === "created" ? "allocatedTo" : "both"
+        }
         visibleColumns={visibleColumns}
         loading={query.isLoading}
         onShow={(record) => setShowing(record.id)}
         onEdit={setEditing}
+        onOpenCall={(record) => openCall.mutate(record)}
+        openingCallId={openCall.isPending ? openCall.variables.id : null}
       />
       <WorkspacePagination
         page={currentPage}

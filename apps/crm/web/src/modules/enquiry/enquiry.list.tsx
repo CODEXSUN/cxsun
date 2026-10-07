@@ -1,4 +1,5 @@
 import type { LegacyColumnDef as ColumnDef } from "@tanstack/react-table/legacy";
+import { BellRing } from "lucide-react";
 import { WorkspaceTable } from "@cxsun/ui/workspace/table";
 import { WorkspaceRowActions } from "@cxsun/ui/workspace/row-actions";
 import { CrmStatusBadge, prioritySwatch } from "../../crm-colors";
@@ -7,19 +8,31 @@ import type { EnquiryLookup, EnquiryRecord } from "./enquiry.types";
 export function EnquiryList({
   records,
   users,
+  userColumnMode,
   visibleColumns,
   loading,
   onShow,
-  onEdit
+  onEdit,
+  onOpenCall,
+  openingCallId
 }: {
   records: EnquiryRecord[];
   users: EnquiryLookup[];
+  userColumnMode: "creator" | "allocatedTo" | "both";
   visibleColumns: Record<string, boolean>;
   loading: boolean;
   onShow: (record: EnquiryRecord) => void;
   onEdit: (record: EnquiryRecord) => void;
+  onOpenCall: (record: EnquiryRecord) => void;
+  openingCallId: number | null;
 }) {
   const userNames = new Map(users.map((user) => [user.id, user.name]));
+  const creatorNames = new Map<string, string>();
+  for (const user of users) {
+    if (user.email) creatorNames.set(user.email.toLowerCase(), user.name);
+  }
+  const creatorName = (record: EnquiryRecord) =>
+    creatorNames.get(record.createdBy.toLowerCase()) ?? record.createdBy;
   const columns: ColumnDef<EnquiryRecord>[] = [
     {
       id: "enquiryNo",
@@ -48,19 +61,33 @@ export function EnquiryList({
       id: "details",
       accessorKey: "title",
       header: "Enquiry details",
-      cell: ({ row }) => (
-        <button
-          className="block max-w-80 cursor-pointer truncate text-left font-medium text-foreground hover:underline"
-          title={row.original.description ?? row.original.title}
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onShow(row.original);
-          }}
-        >
-          {row.original.title}
-        </button>
-      )
+      cell: ({ row }) =>
+        row.original.status === "new" ? (
+          <button
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent disabled:cursor-wait"
+            disabled={openingCallId === row.original.id}
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenCall(row.original);
+            }}
+            title="Open this new call"
+            type="button"
+          >
+            <BellRing className="size-3.5" /> New call
+          </button>
+        ) : (
+          <button
+            className="block max-w-80 cursor-pointer truncate text-left font-medium text-foreground hover:underline"
+            title={row.original.description ?? row.original.title}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onShow(row.original);
+            }}
+          >
+            {row.original.title}
+          </button>
+        )
     },
     {
       id: "listIn",
@@ -88,8 +115,14 @@ export function EnquiryList({
       )
     },
     {
-      id: "user",
-      header: "User",
+      id: "creator",
+      header: "Creator",
+      accessorFn: creatorName,
+      cell: ({ row }) => creatorName(row.original)
+    },
+    {
+      id: "assignedTo",
+      header: userColumnMode === "allocatedTo" ? "Allocated to" : "Assigned to",
       accessorFn: (record) =>
         record.assignedUserId ? (userNames.get(record.assignedUserId) ?? "") : "",
       cell: ({ row }) =>
@@ -125,12 +158,15 @@ export function EnquiryList({
 
   return (
     <WorkspaceTable
-      columns={columns.filter(
-        (column) =>
+      columns={columns.filter((column) => {
+        if (column.id === "creator" && userColumnMode === "allocatedTo") return false;
+        if (column.id === "assignedTo" && userColumnMode === "creator") return false;
+        return (
           column.id === "enquiryNo" ||
           column.id === "actions" ||
           visibleColumns[column.id ?? ""] !== false
-      )}
+        );
+      })}
       data={records}
       emptyState="No enquiries found."
       isLoading={loading}

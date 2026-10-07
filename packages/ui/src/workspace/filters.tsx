@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Columns3, Filter, Search } from "lucide-react";
+import { Check, Columns3, Filter, Search, X } from "lucide-react";
 import type { ChangeEvent, ReactNode } from "react";
 import { Button } from "../components/button";
 import {
@@ -27,6 +27,7 @@ export function WorkspaceFilters({
   onShowAllColumns,
   searchPlaceholder,
   searchValue,
+  showSelectedFilterChip = false,
   toolbarAction
 }: {
   className?: string;
@@ -39,6 +40,7 @@ export function WorkspaceFilters({
   onShowAllColumns?: () => void;
   searchPlaceholder?: string;
   searchValue: string;
+  showSelectedFilterChip?: boolean;
   toolbarAction?: ReactNode;
 }) {
   return (
@@ -61,6 +63,26 @@ export function WorkspaceFilters({
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2.5 self-end sm:self-auto">
         {toolbarAction}
+        {showSelectedFilterChip &&
+        filterValue &&
+        filterOptions &&
+        onFilterValueChange &&
+        filterValue !== filterOptions[0]?.id ? (
+          <button
+            className="flex h-8 max-w-64 cursor-pointer items-center gap-2 rounded-md border bg-muted px-2.5 text-xs font-medium"
+            onClick={() => onFilterValueChange(filterOptions[0]?.id ?? filterValue)}
+            title="Clear selected filter"
+            type="button"
+          >
+            <span className="truncate">
+              {filterOptions.find((option) => option.id === filterValue)?.label}
+            </span>
+            <span className="rounded-full bg-background px-1.5 tabular-nums">
+              {filterOptions.find((option) => option.id === filterValue)?.count ?? 0}
+            </span>
+            <X className="size-3 shrink-0" />
+          </button>
+        ) : null}
         {filterOptions && filterOptions.length > 0 && filterValue && onFilterValueChange ? (
           <FilterMenu
             filterOptions={filterOptions}
@@ -124,7 +146,12 @@ function FilterMenu({
                 <span className="flex size-4 items-center justify-center">
                   {selected ? <Check className="size-4" /> : null}
                 </span>
-                <span>{option.label}</span>
+                <span className="flex-1">{option.label}</span>
+                {option.count !== undefined ? (
+                  <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">
+                    {option.count}
+                  </span>
+                ) : null}
               </DropdownMenuItem>
             );
           })}

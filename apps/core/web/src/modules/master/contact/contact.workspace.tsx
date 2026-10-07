@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, RefreshCw } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
 import { WorkspaceFilters } from "@cxsun/ui/workspace/filters";
 import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { WorkspacePagination } from "@cxsun/ui/workspace/pagination";
+import { buildShowingLabel } from "@cxsun/ui/workspace/utils";
 import { ContactForm } from "./contact.form";
 import {
   contactLookupsQueryKey,
@@ -50,11 +52,16 @@ const emptyLookups: ContactLookups = {
 export function ContactWorkspace() {
   const client = useQueryClient(),
     [search, setSearch] = useState(""),
+    [page, setPage] = useState(1),
+    [rowsPerPage, setRowsPerPage] = useState(100),
     [editing, setEditing] = useState<ContactRecord | null | undefined>(undefined),
     [newCode, setNewCode] = useState(""),
     query = useContacts(search),
     lookupsQuery = useContactLookups(),
     records = query.data ?? [];
+  const totalPages = Math.max(1, Math.ceil(records.length / rowsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const visibleRecords = records.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
   const save = useMutation({
     mutationFn: (payload: ContactSavePayload) =>
       editing ? updateContact(editing.id, payload) : createContact(payload),
@@ -125,10 +132,6 @@ export function ContactWorkspace() {
       description="Manage contact identity, tax, communication, address, finance, and lifecycle details."
       actions={
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => void query.refetch()}>
-            <RefreshCw className="size-4" />
-            Refresh
-          </Button>
           <Button disabled={generateCode.isPending} onClick={() => generateCode.mutate()}>
             <Plus className="size-4" />
             New
@@ -139,16 +142,34 @@ export function ContactWorkspace() {
       <WorkspaceFilters
         searchPlaceholder="Search code, contact, phone, or email"
         searchValue={search}
-        onSearchValueChange={setSearch}
+        onSearchValueChange={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
       />
       <ContactList
         loading={query.isFetching && !query.data}
-        records={records}
+        records={visibleRecords}
         onEdit={setEditing}
         onForceDelete={(record) => {
           if (confirm(`Force delete ${record.name}?`)) action.mutate({ record, type: "delete" });
         }}
         onToggle={(record) => action.mutate({ record, type: "toggle" })}
+      />
+      <WorkspacePagination
+        page={currentPage}
+        rowsPerPage={rowsPerPage}
+        showingLabel={buildShowingLabel(currentPage, rowsPerPage, records.length)}
+        singularLabel="contact"
+        totalCount={records.length}
+        totalPages={totalPages}
+        onNextPage={() => setPage((value) => Math.min(totalPages, value + 1))}
+        onPageChange={setPage}
+        onPreviousPage={() => setPage((value) => Math.max(1, value - 1))}
+        onRowsPerPageChange={(value) => {
+          setRowsPerPage(value);
+          setPage(1);
+        }}
       />
     </WorkspacePage>
   );

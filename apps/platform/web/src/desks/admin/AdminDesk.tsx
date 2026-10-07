@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Building2Icon, ClipboardCheckIcon, LifeBuoyIcon, PanelsTopLeftIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AdminLayout, Button, Card, GlobalLoader, StatusBadge } from "@cxsun/ui";
@@ -8,8 +8,29 @@ import type { PlatformAppDefinition } from "../../app/app-registry";
 
 type AdminPage = "dashboard" | "app-registry" | "tenant-support" | "activation";
 
+function pageFromUrl(): AdminPage {
+  const page = window.location.pathname.split("/")[2];
+  return page === "app-registry" || page === "tenant-support" || page === "activation"
+    ? page
+    : "dashboard";
+}
+
 export function AdminDesk() {
-  const [page, setPage] = useState<AdminPage>("dashboard");
+  const [page, setPage] = useState<AdminPage>(pageFromUrl);
+
+  useEffect(() => {
+    const restorePageFromHistory = () => setPage(pageFromUrl());
+    window.addEventListener("popstate", restorePageFromHistory);
+    return () => window.removeEventListener("popstate", restorePageFromHistory);
+  }, []);
+
+  function selectPage(nextPage: AdminPage) {
+    setPage(nextPage);
+    const path = nextPage === "dashboard" ? "/admin" : `/admin/${nextPage}`;
+    if (window.location.pathname !== path) {
+      window.history.pushState({ page: nextPage }, "", path);
+    }
+  }
 
   async function handleLogout() {
     await logout("admin");
@@ -27,28 +48,28 @@ export function AdminDesk() {
             <Button
               size="sm"
               variant={page === "dashboard" ? "default" : "ghost"}
-              onClick={() => setPage("dashboard")}
+              onClick={() => selectPage("dashboard")}
             >
               Dashboard
             </Button>
             <Button
               size="sm"
               variant={page === "app-registry" ? "default" : "ghost"}
-              onClick={() => setPage("app-registry")}
+              onClick={() => selectPage("app-registry")}
             >
               Apps
             </Button>
             <Button
               size="sm"
               variant={page === "tenant-support" ? "default" : "ghost"}
-              onClick={() => setPage("tenant-support")}
+              onClick={() => selectPage("tenant-support")}
             >
               Tenant Support
             </Button>
             <Button
               size="sm"
               variant={page === "activation" ? "default" : "ghost"}
-              onClick={() => setPage("activation")}
+              onClick={() => selectPage("activation")}
             >
               Activation
             </Button>

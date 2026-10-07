@@ -18,6 +18,7 @@
 @source "../../../apps/crm/web/src";
 @source "../../../apps/mail/web/src";
 @source "../../../apps/platform/web/src";
+@source "../../../devkits/project-manager/web/src";
 @source "../../../devkits/uiux/src";
 
 @custom-variant dark (&:is(.dark *));

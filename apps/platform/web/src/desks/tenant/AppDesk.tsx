@@ -17,6 +17,7 @@ import {
   LayoutDashboardIcon,
   ListChecksIcon,
   MailIcon,
+  PlusIcon,
   RocketIcon,
   Settings2Icon,
   ShieldCheckIcon,
@@ -69,6 +70,7 @@ import { setPlatformDocumentTitle } from "../../shared/document/PageTitle";
 import { publishDesktopWorkspace } from "../../shared/desktop/desktop-bridge";
 import { publishAccountingYear, publishCompanyContext } from "../../shared/tenant/runtime-context";
 import { blogEditorHost } from "../../modules/blog/blog-host";
+import { useCrmNavigationCounts } from "@cxsun/crm-web/modules/enquiry";
 import { auditorClientGateway } from "../../modules/auditor/auditor-host";
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
@@ -393,6 +395,9 @@ type AppPage =
   | "auditor.clients"
   | "crm.overview"
   | "crm.enquiries"
+  | "crm.enquiries.new"
+  | "crm.my-job"
+  | "crm.my-calls"
   | "crm.contacts"
   | "crm.list-in"
   | "crm.status"
@@ -460,6 +465,7 @@ export function AppDesk() {
   const queryClient = useQueryClient();
   const signedInUser = signedInTenantUser();
   const [page, setPage] = useState<AppPage>(() => pageFromUrl(null));
+  const crmCounts = useCrmNavigationCounts(signedInUser.email, page.startsWith("crm."));
   const [workspaceResetKey, setWorkspaceResetKey] = useState(0);
   const [hasUnsavedFormChanges, setHasUnsavedFormChanges] = useState(false);
   const [pendingListPage, setPendingListPage] = useState<AppPage | null>(null);
@@ -525,19 +531,20 @@ export function AppDesk() {
     queryKey: ["billing", "settings", companyContextId],
     staleTime: 5 * 60 * 1_000
   });
-  const appSafePage = page.startsWith("devkit") || page.startsWith("project-manager")
-    ? pageForApp(landingApp)
-    : page.startsWith("crm") && !switchableApps.includes("crm")
+  const appSafePage =
+    page.startsWith("devkit") || page.startsWith("project-manager")
       ? pageForApp(landingApp)
-      : page.startsWith("blog") && !switchableApps.includes("blog")
+      : page.startsWith("crm") && !switchableApps.includes("crm")
         ? pageForApp(landingApp)
-        : page.startsWith("accounts") && !switchableApps.includes("accounts")
+        : page.startsWith("blog") && !switchableApps.includes("blog")
           ? pageForApp(landingApp)
-          : (page.startsWith("billing") ||
-                (page.startsWith("core") && !page.startsWith("core.organisation"))) &&
-              !switchableApps.includes("billing")
+          : page.startsWith("accounts") && !switchableApps.includes("accounts")
             ? pageForApp(landingApp)
-            : page;
+            : (page.startsWith("billing") ||
+                  (page.startsWith("core") && !page.startsWith("core.organisation"))) &&
+                !switchableApps.includes("billing")
+              ? pageForApp(landingApp)
+              : page;
   const safePage = resolveBillingFeaturePage(appSafePage, billingSettingsQuery.data?.features);
   const activePageTitle = titleForPage(safePage);
   const accountingYear = selectedFinancialYear?.name ?? "Accounting year";
@@ -558,6 +565,20 @@ export function AppDesk() {
   useEffect(() => {
     setPlatformDocumentTitle(activePageTitle);
   }, [activePageTitle]);
+
+  useEffect(() => {
+    const restorePageFromHistory = () => {
+      const restoredPage = pageFromUrl(landingApp);
+      setHasUnsavedFormChanges(false);
+      setPendingListPage(null);
+      startTransition(() => {
+        setPage(restoredPage);
+        setWorkspaceResetKey((current) => current + 1);
+      });
+    };
+    window.addEventListener("popstate", restorePageFromHistory);
+    return () => window.removeEventListener("popstate", restorePageFromHistory);
+  }, [landingApp]);
 
   useEffect(() => {
     if (activeApp !== "billing") return;
@@ -635,11 +656,11 @@ export function AppDesk() {
   function selectPage(nextPage: AppPage) {
     const allowedPage = resolveBillingFeaturePage(nextPage, billingSettingsQuery.data?.features);
     startTransition(() => setPage(allowedPage));
-    window.history.pushState({ page: allowedPage }, "", `/app/${allowedPage.replaceAll(".", "/")}`);
+    pushPageHistory(allowedPage);
     setPlatformDocumentTitle(titleForPage(allowedPage));
   }
 
-  function completeListNavigation(nextPage: AppPage) {
+  function completeListNavigation(nextPage: AppPage, replaceHistory = false) {
     const allowedPage = resolveBillingFeaturePage(nextPage, billingSettingsQuery.data?.features);
     setHasUnsavedFormChanges(false);
     setPendingListPage(null);
@@ -647,7 +668,15 @@ export function AppDesk() {
       setPage(allowedPage);
       setWorkspaceResetKey((current) => current + 1);
     });
-    window.history.pushState({ page: allowedPage }, "", `/app/${allowedPage.replaceAll(".", "/")}`);
+    if (replaceHistory) {
+      window.history.replaceState(
+        { page: allowedPage },
+        "",
+        `/app/${allowedPage.replaceAll(".", "/")}`
+      );
+    } else {
+      pushPageHistory(allowedPage);
+    }
     setPlatformDocumentTitle(titleForPage(allowedPage));
   }
 
@@ -673,13 +702,13 @@ export function AppDesk() {
   function selectBillingRecord(nextPage: AppPage, recordId: string) {
     const allowedPage = resolveBillingFeaturePage(nextPage, billingSettingsQuery.data?.features);
     startTransition(() => setPage(allowedPage));
-    window.history.pushState(
-      { page: allowedPage, recordId },
-      "",
+    const url =
       allowedPage === nextPage
         ? `/app/${allowedPage.replaceAll(".", "/")}?record=${encodeURIComponent(recordId)}`
-        : `/app/${allowedPage.replaceAll(".", "/")}`
-    );
+        : `/app/${allowedPage.replaceAll(".", "/")}`;
+    if (`${window.location.pathname}${window.location.search}` !== url) {
+      window.history.pushState({ page: allowedPage, recordId }, "", url);
+    }
     setPlatformDocumentTitle(titleForPage(allowedPage));
   }
 
@@ -711,9 +740,10 @@ export function AppDesk() {
     platformAppRegistry.find((app) => app.id === activeApp)?.label ?? "Application";
   const menuItems = appMenuItemsFor(
     activeApp,
-    safePage,
+    safePage === "crm.enquiries.new" ? "crm.enquiries" : safePage,
     (nextPage) => requestListNavigation(nextPage as AppPage),
-    billingSettingsQuery.data?.features
+    billingSettingsQuery.data?.features,
+    crmCounts
   );
   const workspaceItems = appWorkspaceItems(switchableApps, activeApp).map((item) => ({
     ...item,
@@ -800,6 +830,15 @@ export function AppDesk() {
         headerTitle={activePageTitle}
         homeHref="/"
         menuItems={menuItems}
+        {...(activeApp === "crm"
+          ? {
+              sidebarPrimaryAction: {
+                icon: PlusIcon,
+                label: "New enquiry",
+                onSelect: () => requestListNavigation("crm.enquiries.new")
+              }
+            }
+          : {})}
         onLogout={handleLogout}
         subtitle={null}
         title={null}
@@ -828,12 +867,38 @@ export function AppDesk() {
             ) : null}
             {safePage === "crm.overview" ? (
               <CrmOverviewWorkspace
-                onOpenContacts={() => requestListNavigation("crm.contacts")}
-                onOpenEnquiries={() => requestListNavigation("crm.enquiries")}
+                currentUserEmail={signedInUser.email}
+                currentUserName={signedInUser.name}
+                onOpenMyJob={() => requestListNavigation("crm.my-job")}
+                onOpenMyCalls={() => requestListNavigation("crm.my-calls")}
               />
             ) : null}
             {safePage === "crm.contacts" ? <ContactWorkspace key={safePage} /> : null}
-            {safePage === "crm.enquiries" ? <EnquiryWorkspace key={safePage} /> : null}
+            {safePage === "crm.enquiries" ? (
+              <EnquiryWorkspace key={safePage} currentUserEmail={signedInUser.email} />
+            ) : null}
+            {safePage === "crm.enquiries.new" ? (
+              <EnquiryWorkspace
+                key={safePage}
+                currentUserEmail={signedInUser.email}
+                initialCreate
+                onCloseCreate={() => completeListNavigation("crm.enquiries", true)}
+              />
+            ) : null}
+            {safePage === "crm.my-job" ? (
+              <EnquiryWorkspace
+                key={safePage}
+                scope="assigned"
+                currentUserEmail={signedInUser.email}
+              />
+            ) : null}
+            {safePage === "crm.my-calls" ? (
+              <EnquiryWorkspace
+                key={safePage}
+                scope="created"
+                currentUserEmail={signedInUser.email}
+              />
+            ) : null}
             {safePage === "crm.list-in" ? <ListInWorkspace key={safePage} /> : null}
             {safePage === "crm.status" ? <StatusWorkspace key={safePage} /> : null}
             {safePage === "crm.priority" ? <PriorityWorkspace key={safePage} /> : null}
@@ -989,6 +1054,12 @@ function uniqueApps(apps: PlatformAppId[]) {
   return Array.from(new Set(["application" as PlatformAppId, ...apps]));
 }
 
+function pushPageHistory(page: AppPage) {
+  const url = `/app/${page.replaceAll(".", "/")}`;
+  if (`${window.location.pathname}${window.location.search}` === url) return;
+  window.history.pushState({ page }, "", url);
+}
+
 function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
   const [, , app, ...children] = window.location.pathname.split("/");
   if (!app) return pageForApp(landingApp ?? "application");
@@ -999,6 +1070,9 @@ function pageFromUrl(landingApp: PlatformAppId | null): AppPage {
     key === "auditor.clients" ||
     key === "crm.overview" ||
     key === "crm.enquiries" ||
+    key === "crm.enquiries.new" ||
+    key === "crm.my-job" ||
+    key === "crm.my-calls" ||
     key === "crm.contacts" ||
     key === "crm.list-in" ||
     key === "crm.status" ||
@@ -1506,6 +1580,9 @@ function titleForPage(page: AppPage) {
     "auditor.clients": "Clients",
     "crm.overview": "Overview",
     "crm.enquiries": "Enquiries",
+    "crm.enquiries.new": "New enquiry",
+    "crm.my-job": "My Job",
+    "crm.my-calls": "My Calls",
     "crm.contacts": "Contacts",
     "crm.list-in": "List In",
     "crm.status": "Status",

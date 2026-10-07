@@ -1,4 +1,5 @@
-import type { Kysely, Selectable } from "kysely";
+import { sql, type Kysely, type Selectable } from "kysely";
+import { AppError } from "@cxsun/framework/errors";
 import type {
   EnquiryComment,
   EnquiryCommentRow,
@@ -43,18 +44,23 @@ export class EnquiryRepository {
   }
 
   async get(id: number) {
-    const row = await this.detailQuery()
-      .where("enquiry.id", "=", id)
-      .executeTakeFirst();
+    const row = await this.detailQuery().where("enquiry.id", "=", id).executeTakeFirst();
     return row ? toRecord(row) : null;
   }
 
   async create(input: EnquiryInput, actor: string) {
     const id = await this.database.transaction().execute(async (transaction) => {
       const enquiryNo = await this.reserveNextNumber(transaction);
+      // MariaDB DATETIME has no timezone; these values are read back as UTC.
       const result = await transaction
         .insertInto("crm_enquiries")
-        .values({ ...toRow(input), enquiry_no: enquiryNo, created_by: actor })
+        .values({
+          ...toRow(input),
+          enquiry_no: enquiryNo,
+          created_by: actor,
+          created_at: sql`UTC_TIMESTAMP()`,
+          updated_at: sql`UTC_TIMESTAMP()`
+        })
         .executeTakeFirstOrThrow();
       const enquiryId = Number(result.insertId);
       if (input.description?.trim()) {
@@ -65,7 +71,9 @@ export class EnquiryRepository {
             parent_id: null,
             body: input.description.trim(),
             status: "active",
-            created_by: actor
+            created_by: actor,
+            created_at: sql`UTC_TIMESTAMP()`,
+            updated_at: sql`UTC_TIMESTAMP()`
           })
           .execute();
       }
@@ -85,7 +93,7 @@ export class EnquiryRepository {
     await this.database.transaction().execute(async (transaction) => {
       await transaction
         .updateTable("crm_enquiries")
-        .set(toRow(input))
+        .set({ ...toRow(input), updated_at: sql`UTC_TIMESTAMP()` })
         .where("id", "=", id)
         .execute();
       await insertEnquiryActivity(transaction, id, "updated", details, actor);
@@ -102,6 +110,16 @@ export class EnquiryRepository {
       .orderBy("id")
       .execute();
     return rows.map(toComment);
+  }
+
+  async commentsByActorInLast30Days(actor: string) {
+    const result = await this.database
+      .selectFrom("crm_enquiry_comments")
+      .select(({ fn }) => fn.count<number>("id").as("count"))
+      .where("created_by", "=", actor)
+      .where("created_at", ">=", sql<string>`UTC_TIMESTAMP() - INTERVAL 30 DAY`)
+      .executeTakeFirstOrThrow();
+    return Number(result.count);
   }
 
   async getComment(id: number) {
@@ -128,7 +146,9 @@ export class EnquiryRepository {
           body,
           body_format: bodyFormat,
           status: "active",
-          created_by: actor
+          created_by: actor,
+          created_at: sql`UTC_TIMESTAMP()`,
+          updated_at: sql`UTC_TIMESTAMP()`
         })
         .executeTakeFirstOrThrow();
       await insertEnquiryActivity(
@@ -148,6 +168,44 @@ export class EnquiryRepository {
     return toComment(row);
   }
 
+  async openNewCall(id: number, actor: string) {
+    await this.database.transaction().execute(async (transaction) => {
+      const statuses = await transaction
+        .selectFrom("crm_enquiry_statuses")
+        .select(["id", "code"])
+        .where("code", "in", ["new", "open"])
+        .where("status", "=", "active")
+        .execute();
+      const newId = statuses.find((status) => status.code === "new")?.id;
+      const openId = statuses.find((status) => status.code === "open")?.id;
+      if (!newId || !openId) throw AppError.validation("New and Open statuses must be active.");
+      const result = await transaction
+        .updateTable("crm_enquiries")
+        .set({ status_id: openId, updated_at: sql`UTC_TIMESTAMP()` })
+        .where("id", "=", id)
+        .where("status_id", "=", newId)
+        .executeTakeFirst();
+      if (result.numUpdatedRows !== 1n) {
+        throw AppError.validation("This call is no longer New. Refresh the list.");
+      }
+      await transaction
+        .insertInto("crm_enquiry_comments")
+        .values({
+          enquiry_id: id,
+          parent_id: null,
+          body: "New call opened",
+          body_format: "plain",
+          status: "active",
+          created_by: actor,
+          created_at: sql`UTC_TIMESTAMP()`,
+          updated_at: sql`UTC_TIMESTAMP()`
+        })
+        .execute();
+      await insertEnquiryActivity(transaction, id, "new-call-opened", "New call opened", actor);
+    });
+    return this.get(id);
+  }
+
   private async reserveNextNumber(database: Kysely<EnquiryDatabase>) {
     const sequence = await database
       .selectFrom("crm_enquiry_number_sequence")
@@ -164,10 +222,15 @@ export class EnquiryRepository {
   }
 
   private detailQuery() {
-    return this.database.selectFrom("crm_enquiries as enquiry")
+    return this.database
+      .selectFrom("crm_enquiries as enquiry")
       .leftJoin("crm_enquiry_lists as list", "list.id", "enquiry.list_in_id")
       .innerJoin("crm_enquiry_statuses as status_master", "status_master.id", "enquiry.status_id")
-      .innerJoin("crm_enquiry_priorities as priority_master", "priority_master.id", "enquiry.priority_id")
+      .innerJoin(
+        "crm_enquiry_priorities as priority_master",
+        "priority_master.id",
+        "enquiry.priority_id"
+      )
       .selectAll("enquiry")
       .select([
         "list.name as list_name",
@@ -193,7 +256,9 @@ export async function insertEnquiryActivity(
       action,
       details,
       status: "active",
-      created_by: actor
+      created_by: actor,
+      created_at: sql`UTC_TIMESTAMP()`,
+      updated_at: sql`UTC_TIMESTAMP()`
     })
     .execute();
 }

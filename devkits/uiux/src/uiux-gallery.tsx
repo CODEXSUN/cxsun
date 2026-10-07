@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState, type CSSProperties } from "react";
 import {
   ArrowUpRightIcon,
   BlocksIcon,
+  BoxIcon,
   ComponentIcon,
   LayoutTemplateIcon,
   PaletteIcon,
@@ -21,18 +22,21 @@ import { MainLayoutPage } from "./gallery/main-layout-page";
 import { MainLayoutLivePreview } from "./gallery/main-layout-live-preview";
 import { LayoutPartPage, type LayoutPart } from "./gallery/layout-part-page";
 import { galleryPageFromUrl, galleryPageUrl } from "./gallery/gallery-routes";
+import {
+  componentFromPage,
+  componentPage,
+  componentPages,
+  type ComponentPage as ComponentPageRoute
+} from "./gallery/component-pages";
 
 const FoundationsGallery = lazy(() =>
   import("./gallery/foundations-gallery").then((m) => ({ default: m.FoundationsGallery }))
 );
-const LayoutsGallery = lazy(() =>
-  import("./gallery/layouts-gallery").then((m) => ({ default: m.LayoutsGallery }))
-);
 const WorkspaceGallery = lazy(() =>
   import("./gallery/workspace-gallery").then((m) => ({ default: m.WorkspaceGallery }))
 );
-const ComponentsGallery = lazy(() =>
-  import("./gallery/components-gallery").then((m) => ({ default: m.ComponentsGallery }))
+const ComponentDetailPage = lazy(() =>
+  import("./gallery/component-page").then((m) => ({ default: m.ComponentPage }))
 );
 const InterfaceTopologyGallery = lazy(() =>
   import("./gallery/interface-topology-gallery").then((m) => ({
@@ -40,17 +44,12 @@ const InterfaceTopologyGallery = lazy(() =>
   }))
 );
 
-type GalleryPage =
-  | "main-layouts"
-  | "layouts"
-  | LayoutPart
-  | "foundations"
-  | "workspace"
-  | "components"
-  | "interface-topology";
-const pageTitles: Record<GalleryPage, string> = {
+type BaseGalleryPage =
+  "main-layouts" | LayoutPart | "foundations" | "workspace" | "interface-topology";
+type GalleryPage = BaseGalleryPage | ComponentPageRoute;
+
+const pageTitles: Record<BaseGalleryPage, string> = {
   "main-layouts": "Main Layout",
-  layouts: "Layout inventory",
   "app-layout": "App Layout",
   "top-menu": "Top Menu",
   "side-menu": "Side Menu",
@@ -58,13 +57,18 @@ const pageTitles: Record<GalleryPage, string> = {
   "status-bar": "Status Bar",
   foundations: "Foundations",
   workspace: "Workspace blocks",
-  components: "Components",
   "interface-topology": "Interface topology"
 };
 
 function pageFromUrl(): GalleryPage {
   const requested = galleryPageFromUrl();
-  return requested && requested in pageTitles ? (requested as GalleryPage) : "main-layouts";
+  if (requested === "components") return componentPage(componentPages[0].id);
+  if (requested && componentFromPage(requested)) return requested as ComponentPageRoute;
+  return requested && requested in pageTitles ? (requested as BaseGalleryPage) : "main-layouts";
+}
+
+function pageTitle(page: GalleryPage) {
+  return componentFromPage(page)?.name ?? pageTitles[page as BaseGalleryPage];
 }
 
 export function UiuxGallery({
@@ -75,11 +79,17 @@ export function UiuxGallery({
   deskRoutesAvailable?: boolean;
 }) {
   const [page, setPage] = useState<GalleryPage>(pageFromUrl);
+  const selectedComponent = componentFromPage(page);
   const previewMode = new URLSearchParams(window.location.search).get("uiuxPreview");
   const topology = useInterfaceTopology(mainLayoutTopologyDesks);
 
   useEffect(() => {
-    if (!deskRoutesAvailable && !window.location.pathname.startsWith("/uiux/")) {
+    if (
+      !deskRoutesAvailable &&
+      (!window.location.pathname.startsWith("/uiux/") || galleryPageFromUrl() !== pageFromUrl())
+    ) {
+      window.history.replaceState(window.history.state, "", galleryPageUrl(pageFromUrl()));
+    } else if (deskRoutesAvailable && galleryPageFromUrl() !== pageFromUrl()) {
       window.history.replaceState(window.history.state, "", galleryPageUrl(pageFromUrl()));
     }
     const syncPage = () => setPage(pageFromUrl());
@@ -96,18 +106,13 @@ export function UiuxGallery({
     {
       title: "Layouts",
       icon: LayoutTemplateIcon,
-      isActive: page === "main-layouts" || page === "layouts",
+      isActive: page === "main-layouts",
       items: [
         {
           title: "Main Layout",
           icon: PanelsTopLeftIcon,
           isActive: page === "main-layouts",
           onSelect: () => selectPage("main-layouts")
-        },
-        {
-          title: "Layout inventory",
-          isActive: page === "layouts",
-          onSelect: () => selectPage("layouts")
         }
       ]
     },
@@ -156,13 +161,20 @@ export function UiuxGallery({
       ]
     },
     {
+      title: "Components",
+      icon: ComponentIcon,
+      isActive: page.startsWith("components/"),
+      items: componentPages.map((component) => ({
+        title: component.name,
+        icon: BoxIcon,
+        isActive: page === componentPage(component.id),
+        onSelect: () => selectPage(componentPage(component.id))
+      }))
+    },
+    {
       title: "Design library",
       icon: PaletteIcon,
-      isActive:
-        page === "foundations" ||
-        page === "workspace" ||
-        page === "components" ||
-        page === "interface-topology",
+      isActive: page === "foundations" || page === "workspace" || page === "interface-topology",
       items: [
         {
           title: "Foundations",
@@ -175,12 +187,6 @@ export function UiuxGallery({
           icon: BlocksIcon,
           isActive: page === "workspace",
           onSelect: () => selectPage("workspace")
-        },
-        {
-          title: "Components",
-          icon: ComponentIcon,
-          isActive: page === "components",
-          onSelect: () => selectPage("components")
         },
         {
           title: "Interface topology",
@@ -199,7 +205,7 @@ export function UiuxGallery({
           appHref={galleryPageUrl("main-layouts")}
           brandHref={galleryPageUrl("main-layouts")}
           menuItems={menuItems}
-          pageTitle={pageTitles[page]}
+          pageTitle={pageTitle(page)}
           topology={topology}
         />
       </SidebarProvider>
@@ -209,7 +215,11 @@ export function UiuxGallery({
   return (
     <SidebarProvider style={{ "--sidebar-width": "17rem" } as CSSProperties}>
       <AppSidebar
-        brand={{ href: galleryPageUrl("main-layouts"), subtitle: "Design workspace", title: "UIUX" }}
+        brand={{
+          href: galleryPageUrl("main-layouts"),
+          subtitle: "Design workspace",
+          title: "UIUX"
+        }}
         items={menuItems}
         user={{ email: "Shared UI gallery", fallback: "UI", name: "UIUX" }}
         userMenuItems={[]}
@@ -224,7 +234,7 @@ export function UiuxGallery({
             <span aria-hidden="true" className="text-muted-foreground">
               /
             </span>
-            <span className="truncate text-sm text-muted-foreground">{pageTitles[page]}</span>
+            <span className="truncate text-sm text-muted-foreground">{pageTitle(page)}</span>
           </div>
           {deskRoutesAvailable ? (
             <nav aria-label="Gallery top menu">
@@ -238,7 +248,7 @@ export function UiuxGallery({
         </header>
         <main className="mx-auto w-full max-w-[90rem] flex-1 px-4 py-6 text-foreground sm:px-6 lg:px-8">
           {previewMode === "side-menu" ? (
-            <div className="text-sm text-muted-foreground">{pageTitles[page]} workspace canvas</div>
+            <div className="text-sm text-muted-foreground">{pageTitle(page)} workspace canvas</div>
           ) : (
             <Suspense
               fallback={<p className="py-8 text-sm text-muted-foreground">Loading page…</p>}
@@ -251,13 +261,14 @@ export function UiuxGallery({
               page === "status-bar" ? (
                 <LayoutPartPage part={page} />
               ) : null}
-              {page === "layouts" ? (
-                <LayoutsGallery deskRoutesAvailable={deskRoutesAvailable} />
-              ) : null}
               {page === "foundations" ? <FoundationsGallery /> : null}
               {page === "workspace" ? <WorkspaceGallery /> : null}
-              {page === "components" ? (
-                <ComponentsGallery {...(componentCatalogHref ? { componentCatalogHref } : {})} />
+              {selectedComponent ? (
+                <ComponentDetailPage
+                  componentId={selectedComponent.id}
+                  onNavigate={selectPage}
+                  {...(componentCatalogHref ? { componentCatalogHref } : {})}
+                />
               ) : null}
               {page === "interface-topology" ? <InterfaceTopologyGallery /> : null}
             </Suspense>

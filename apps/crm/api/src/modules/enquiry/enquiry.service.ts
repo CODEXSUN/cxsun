@@ -84,6 +84,16 @@ export class EnquiryService {
     return this.repository.listComments(id);
   }
 
+  async overviewActivity(actor: string) {
+    return { commentsByYou30Days: await this.repository.commentsByActorInLast30Days(actor) };
+  }
+
+  async openNewCall(id: number, actor: string) {
+    const record = await this.repository.openNewCall(id, actor);
+    if (!record) throw AppError.notFound("Enquiry was not found.");
+    return this.withContact(record);
+  }
+
   async addComment(
     id: number,
     body: string,

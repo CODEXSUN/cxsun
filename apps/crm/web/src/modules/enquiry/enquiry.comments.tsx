@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CornerUpLeft, MessageSquare, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -6,7 +6,7 @@ import { Button } from "@cxsun/ui/components/button";
 import { WorkspaceMinimalEditor } from "@cxsun/ui/workspace/minimal-editor";
 import { createEnquiryComment } from "./enquiry.services";
 import { enquiryActivityQueryKey, enquiryCommentsQueryKey } from "./enquiry.hooks";
-import { formatDateTime } from "./enquiry.view-utils";
+import { formatCommentByline } from "./enquiry.view-utils";
 import type { EnquiryComment } from "./enquiry.types";
 
 export function EnquiryComments({
@@ -21,6 +21,11 @@ export function EnquiryComments({
   const client = useQueryClient();
   const [body, setBody] = useState("");
   const [replyTo, setReplyTo] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const save = useMutation({
     mutationFn: (parentId: number | null) =>
       createEnquiryComment(enquiryId, body, parentId, "html"),
@@ -36,7 +41,8 @@ export function EnquiryComments({
     onError: (error) => toast.error("Unable to add comment", { description: error.message })
   });
   const topLevel = comments.filter((comment) => comment.parentId === null);
-  const target = topLevel.find((comment) => comment.id === replyTo) ?? topLevel.at(-1);
+  const latestCommentId = topLevel.at(-1)?.id ?? null;
+  const activeReplyTo = replyTo === latestCommentId ? replyTo : null;
   const canSave = hasText(body) && !save.isPending;
 
   return (
@@ -75,19 +81,21 @@ export function EnquiryComments({
                     {comment.body}
                   </p>
                 )}
-                <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                  <span>
-                    {comment.createdBy} · {formatDateTime(comment.createdAt)}
-                  </span>
-                  {!comment.parentId ? (
-                    <button
-                      className="cursor-pointer text-primary hover:underline"
+                <div className="mt-1 flex flex-wrap items-center justify-end gap-4 text-xs text-muted-foreground">
+                  {comment.id === latestCommentId ? (
+                    <Button
+                      className="mr-auto h-7 px-2.5 text-xs"
+                      size="sm"
                       type="button"
+                      variant="outline"
                       onClick={() => setReplyTo(comment.id)}
                     >
                       Reply
-                    </button>
+                    </Button>
                   ) : null}
+                  <span className="text-right">
+                    {formatCommentByline(comment.createdBy, comment.createdAt, now)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -95,9 +103,9 @@ export function EnquiryComments({
         ))}
       </div>
       <div className="border-t border-border/70 bg-card p-3">
-        {replyTo ? (
+        {activeReplyTo ? (
           <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Replying to comment #{replyTo}</span>
+            <span>Replying to comment #{activeReplyTo}</span>
             <button
               className="cursor-pointer text-primary hover:underline"
               type="button"
@@ -110,21 +118,18 @@ export function EnquiryComments({
         <WorkspaceMinimalEditor
           className="[&_.tiptap]:min-h-24"
           content={body}
-          placeholder={replyTo ? "Write a reply…" : "Write a comment…"}
+          placeholder={activeReplyTo ? "Write a reply…" : "Write a comment…"}
           onChange={setBody}
         />
         <div className="mt-2 flex justify-end gap-2">
-          <Button disabled={!canSave} size="sm" type="button" onClick={() => save.mutate(null)}>
-            <Send className="size-4" /> Comment
-          </Button>
           <Button
-            disabled={!canSave || !target}
+            disabled={!canSave}
             size="sm"
             type="button"
-            variant="outline"
-            onClick={() => save.mutate(target?.id ?? null)}
+            onClick={() => save.mutate(activeReplyTo)}
           >
-            <CornerUpLeft className="size-4" /> Reply
+            {activeReplyTo ? <CornerUpLeft className="size-4" /> : <Send className="size-4" />}
+            {activeReplyTo ? "Reply" : "Comment"}
           </Button>
         </div>
       </div>

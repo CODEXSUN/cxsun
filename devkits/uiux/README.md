@@ -20,16 +20,28 @@ Menu, App Header, and Status Bar. Open them under `/uiux/` as `app-layout`,
 `top-menu`, `side-menu`, `app-header`, and `status-bar`.
 The Side Menu page uses the gallery's original `AppSidebar`.
 
+## Components
+
+The **Components** sidebar group has a dedicated page for each module in
+`packages/ui/src/components`. For example, open Accordion at
+`/uiux/components/accordion`. Each page renders the real component variants,
+shows the shared component source, and links to the previous and next page.
+
+The UIUX specimens live in `src/gallery/component-catalog.tsx`. They are a copy
+of the existing catalog examples, so the original `/sa/design-system` catalog
+keeps its current behavior. The Toaster, Use Mobile, and Use Toast pages cover
+the support modules in the same component folder.
+
 **Design library → Interface topology** (`/uiux/interface-topology`) inspects
 the live Main Layout. It shows these regions in screen order:
 
-| Region | Technical name |
-| --- | --- |
-| Top Menu | `main.topMenu` |
-| Side Menu | `main.sideBar` |
-| App Header | `main.AppHeader` |
+| Region           | Technical name   |
+| ---------------- | ---------------- |
+| Top Menu         | `main.topMenu`   |
+| Side Menu        | `main.sideBar`   |
+| App Header       | `main.AppHeader` |
 | Workspace Canvas | `main.workspace` |
-| Status Bar | `main.StatusBar` |
+| Status Bar       | `main.StatusBar` |
 
 The gallery reads these case-sensitive values from `mainLayoutTechnicalNames`
 in `@cxsun/ui/layouts/main-layouts`.

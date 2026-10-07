@@ -2,6 +2,14 @@
 
 The CRM enquiry list opens a detail page when a row or enquiry ID is selected. The detail page shows the Core contact, an optional WhatsApp link based on the contact or captured mobile number, and four tabs: Comments, Jobs, Estimate, and Activity. The Properties card edits list, priority, assignee, schedule date, and status inline. The original enquiry message is kept as the first comment for enquiries created before comments were introduced.
 
+## Personal workspaces
+
+CRM has Overview, My Job, My Calls, and All Enquiries pages. My Job shows enquiries assigned to the signed-in tenant user; My Calls shows enquiries whose `created_by` email matches the signed-in user. Overview uses the same records for live workload and status counts. The sidebar shows counts for each page. List filter options show counts within the current page scope, and the selected filter appears beside search.
+
+`GET /crm/enquiries/overview-activity` counts comments written by the signed-in user in the last 30 days. The overview shows a dash for reactions because CRM does not store reactions.
+
+New enquiries show a **New call** action in the Enquiry details column. `POST /crm/enquiries/:id/open-new-call` atomically changes a New enquiry to Open, posts the plain-text comment `New call opened`, and records activity. A concurrent or repeated request cannot add another opening comment because the status update requires the current New status.
+
 ## Data ownership
 
 CRM stores enquiries, comments, jobs, estimates, activity, the enquiry number sequence, and three reference masters in the tenant database. Contacts remain in Core. Manual job employees reference active tenant users; estimate vendors reference Core contacts. CRM migrations create and reconcile the child tables, including the employee reference on an existing jobs table. Every child record belongs to one enquiry.

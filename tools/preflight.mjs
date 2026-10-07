@@ -79,6 +79,7 @@ const child = spawn(
   }
 );
 
+process.send?.({ type: "cxsun:preflight-ready" });
 child.on("exit", (code) => process.exit(code ?? 0));
 
 process.on("message", (message) => {
@@ -195,9 +196,9 @@ async function freePort(port, host) {
 
   console.log(`  ! ${host}:${port} is already in use by PID ${pids.join(", ")}`);
 
-  if (process.env.CXSUN_DEV_PORT_POLICY === "abort") {
+  if (process.env.CXSUN_DEV_PORT_POLICY !== "takeover") {
     console.error(
-      "  x Port policy is abort. Stop the existing process or change CXSUN_DEV_PORT_POLICY.\n"
+      "  x Another process owns this port. Stop it or set CXSUN_DEV_PORT_POLICY=takeover to replace it.\n"
     );
     process.exit(1);
   }

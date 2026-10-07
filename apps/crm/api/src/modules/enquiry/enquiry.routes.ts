@@ -96,6 +96,15 @@ export function registerEnquiryRoutes(
   });
   registerContractRoute(app, {
     method: "GET",
+    url: "/crm/enquiries/overview-activity",
+    schemas: { response: z.object({ commentsByYou30Days: z.number().int().nonnegative() }) },
+    handler: async ({ request }) => {
+      const { enquiry, scope } = await service(request);
+      return enquiry.overviewActivity(scope.actorEmail);
+    }
+  });
+  registerContractRoute(app, {
+    method: "GET",
     url: "/crm/enquiries/:id",
     schemas: { params: idSchema, response: recordSchema },
     handler: async ({ params, request }) => (await service(request)).enquiry.get(params.id)
@@ -125,6 +134,15 @@ export function registerEnquiryRoutes(
     handler: async ({ body, params, request }) => {
       const { enquiry, scope } = await service(request);
       return enquiry.updateProperties(params.id, body, scope.actorEmail);
+    }
+  });
+  registerContractRoute(app, {
+    method: "POST",
+    url: "/crm/enquiries/:id/open-new-call",
+    schemas: { params: idSchema, response: recordSchema },
+    handler: async ({ params, request }) => {
+      const { enquiry, scope } = await service(request);
+      return enquiry.openNewCall(params.id, scope.actorEmail);
     }
   });
   registerContractRoute(app, {

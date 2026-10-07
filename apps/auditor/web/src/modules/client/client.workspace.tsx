@@ -40,15 +40,16 @@ export function AuditorClientWorkspace({
     return () => window.removeEventListener("popstate", syncLocation);
   }, []);
   const openClient = (id: number) => {
-    window.history.pushState(
-      { page: "auditor.clients", recordId: String(id) },
-      "",
-      `/app/auditor/clients?record=${id}`
-    );
+    const url = `/app/auditor/clients?record=${id}`;
+    if (`${window.location.pathname}${window.location.search}` !== url) {
+      window.history.pushState({ page: "auditor.clients", recordId: String(id) }, "", url);
+    }
     setViewingId(id);
   };
   const showClients = () => {
-    window.history.pushState({ page: "auditor.clients" }, "", "/app/auditor/clients");
+    if (`${window.location.pathname}${window.location.search}` !== "/app/auditor/clients") {
+      window.history.pushState({ page: "auditor.clients" }, "", "/app/auditor/clients");
+    }
     setViewingId(null);
   };
   const save = useMutation({

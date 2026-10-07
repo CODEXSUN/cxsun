@@ -14,6 +14,7 @@ import {
   MailIcon,
   MapPinnedIcon,
   PackageIcon,
+  PhoneCallIcon,
   Settings2Icon,
   UsersIcon,
   ClipboardListIcon,
@@ -54,6 +55,8 @@ export type BillingNavigationFeatures = {
   exportSales: boolean;
   quotation: boolean;
 };
+
+export type CrmNavigationCounts = { assigned: number; created: number; all: number };
 
 export type PlatformAppDefinition = {
   accentClass: string;
@@ -191,7 +194,12 @@ export function normalizeModuleKeys(moduleKeys: string[]) {
 export function enabledAppIds(moduleKeys: string[]) {
   const enabled = new Set(normalizeModuleKeys(moduleKeys));
   return platformAppRegistry
-    .filter((app) => app.id !== "devkit" && app.id !== "project-manager" && (app.alwaysEnabled || enabled.has(app.moduleKey)))
+    .filter(
+      (app) =>
+        app.id !== "devkit" &&
+        app.id !== "project-manager" &&
+        (app.alwaysEnabled || enabled.has(app.moduleKey))
+    )
     .map((app) => app.id);
 }
 
@@ -222,7 +230,8 @@ export function appMenuFor(
   appId: PlatformAppId,
   activePage: string,
   onSelect: (page: string) => void,
-  billingFeatures?: BillingNavigationFeatures
+  billingFeatures?: BillingNavigationFeatures,
+  crmCounts?: CrmNavigationCounts
 ): SidemenuItem {
   if (appId === "crm") {
     return {
@@ -236,7 +245,20 @@ export function appMenuFor(
           onSelect: () => onSelect("crm.overview")
         },
         {
-          title: "Enquiries",
+          title: "My Job",
+          count: crmCounts?.assigned,
+          isActive: activePage === "crm.my-job",
+          onSelect: () => onSelect("crm.my-job")
+        },
+        {
+          title: "My Calls",
+          count: crmCounts?.created,
+          isActive: activePage === "crm.my-calls",
+          onSelect: () => onSelect("crm.my-calls")
+        },
+        {
+          title: "All Enquiries",
+          count: crmCounts?.all,
           isActive: activePage === "crm.enquiries",
           onSelect: () => onSelect("crm.enquiries")
         },
@@ -247,11 +269,26 @@ export function appMenuFor(
         },
         {
           title: "Common",
-          isActive: activePage === "crm.list-in" || activePage === "crm.status" || activePage === "crm.priority",
+          isActive:
+            activePage === "crm.list-in" ||
+            activePage === "crm.status" ||
+            activePage === "crm.priority",
           items: [
-            { title: "List In", isActive: activePage === "crm.list-in", onSelect: () => onSelect("crm.list-in") },
-            { title: "Status", isActive: activePage === "crm.status", onSelect: () => onSelect("crm.status") },
-            { title: "Priority", isActive: activePage === "crm.priority", onSelect: () => onSelect("crm.priority") }
+            {
+              title: "List In",
+              isActive: activePage === "crm.list-in",
+              onSelect: () => onSelect("crm.list-in")
+            },
+            {
+              title: "Status",
+              isActive: activePage === "crm.status",
+              onSelect: () => onSelect("crm.status")
+            },
+            {
+              title: "Priority",
+              isActive: activePage === "crm.priority",
+              onSelect: () => onSelect("crm.priority")
+            }
           ]
         }
       ]
@@ -555,7 +592,8 @@ export function appMenuItemsFor(
   appId: PlatformAppId,
   activePage: string,
   onSelect: (page: string) => void,
-  billingFeatures?: BillingNavigationFeatures
+  billingFeatures?: BillingNavigationFeatures,
+  crmCounts?: CrmNavigationCounts
 ): SidemenuItem[] {
   if (appId === "crm") {
     return [
@@ -567,9 +605,24 @@ export function appMenuItemsFor(
       },
       {
         icon: ClipboardListIcon,
+        isActive: activePage === "crm.my-job",
+        onSelect: () => onSelect("crm.my-job"),
+        title: "My Job",
+        count: crmCounts?.assigned
+      },
+      {
+        icon: PhoneCallIcon,
+        isActive: activePage === "crm.my-calls",
+        onSelect: () => onSelect("crm.my-calls"),
+        title: "My Calls",
+        count: crmCounts?.created
+      },
+      {
+        icon: ClipboardListIcon,
         isActive: activePage === "crm.enquiries",
         onSelect: () => onSelect("crm.enquiries"),
-        title: "Enquiries"
+        title: "All Enquiries",
+        count: crmCounts?.all
       },
       {
         icon: ContactRoundIcon,
@@ -579,12 +632,27 @@ export function appMenuItemsFor(
       },
       {
         icon: PackageIcon,
-        isActive: activePage === "crm.list-in" || activePage === "crm.status" || activePage === "crm.priority",
+        isActive:
+          activePage === "crm.list-in" ||
+          activePage === "crm.status" ||
+          activePage === "crm.priority",
         title: "Common",
         items: [
-          { title: "List In", isActive: activePage === "crm.list-in", onSelect: () => onSelect("crm.list-in") },
-          { title: "Status", isActive: activePage === "crm.status", onSelect: () => onSelect("crm.status") },
-          { title: "Priority", isActive: activePage === "crm.priority", onSelect: () => onSelect("crm.priority") }
+          {
+            title: "List In",
+            isActive: activePage === "crm.list-in",
+            onSelect: () => onSelect("crm.list-in")
+          },
+          {
+            title: "Status",
+            isActive: activePage === "crm.status",
+            onSelect: () => onSelect("crm.status")
+          },
+          {
+            title: "Priority",
+            isActive: activePage === "crm.priority",
+            onSelect: () => onSelect("crm.priority")
+          }
         ]
       }
     ];

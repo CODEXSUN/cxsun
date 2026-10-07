@@ -70,6 +70,7 @@ export type SidebarUserMenuItem = {
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   brand: SidebarBrand;
   items: SidemenuItem[];
+  primaryAction?: { icon: LucideIcon; label: string; onSelect: () => void };
   user: SidebarUser;
   userMenuItems?: SidebarUserMenuItem[];
   versionLabel?: string;
@@ -99,6 +100,7 @@ export function AppSidebar({
   brand,
   className,
   items,
+  primaryAction,
   user,
   userMenuItems = defaultUserMenuItems,
   versionLabel = "v 1.0.1",
@@ -108,6 +110,21 @@ export function AppSidebar({
     <Sidebar collapsible="icon" variant="inset" className={className} {...props}>
       <SidebarHeader>
         <SidebarBrandMenu brand={brand} />
+        {primaryAction ? (
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="h-10 bg-foreground font-medium text-background hover:bg-foreground/90 hover:text-background"
+                onClick={primaryAction.onSelect}
+                tooltip={primaryAction.label}
+                type="button"
+              >
+                <primaryAction.icon className="size-4" />
+                <span className="group-data-[collapsible=icon]:hidden">{primaryAction.label}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        ) : null}
       </SidebarHeader>
       <SidebarContent>
         <SidemenuSection items={items} />

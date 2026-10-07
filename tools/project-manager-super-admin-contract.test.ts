@@ -40,3 +40,14 @@ test("tenant desk and provisioning contain no Project Manager host surface", asy
   assert.match(host, /Project Manager is available only to Super Admin\./);
   assert.doesNotMatch(host, /tenantAccessContext|roles: \["tenant"\]/);
 });
+
+test("Ideas is mounted through the Project Manager Super Admin workspace", async () => {
+  const [desk, bundle, api] = await Promise.all([
+    readFile("apps/platform/web/src/desks/sa/SaDesk.tsx", "utf8"),
+    readFile("devkits/project-manager/web/src/cxsun.tsx", "utf8"),
+    readFile("devkits/project-manager/api/src/app.ts", "utf8")
+  ]);
+  assert.match(desk, /project-manager-ideas/);
+  assert.match(bundle, /IdeasWorkspace/);
+  assert.match(api, /ideasModule\.register/);
+});

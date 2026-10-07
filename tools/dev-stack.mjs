@@ -51,11 +51,15 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 }
 
 async function startAndWait(serviceName) {
-  launchService(serviceName);
+  const runtime = runtimes.get(serviceName);
+  runtime.restarting = true;
+  const child = launchService(serviceName);
   const service = services[serviceName];
   console.log(`  - Waiting for ${service.label}`);
-  await waitForHealthyUrl(service.healthUrl, service.label, service.readyTimeoutMs);
-  runtimes.get(serviceName).failures = 0;
+  await waitForPreflight(child, service.label);
+  await waitForHealthyUrl(service.healthUrl, service.label, service.readyTimeoutMs, child);
+  runtime.failures = 0;
+  runtime.restarting = false;
 }
 
 function launchService(serviceName) {
@@ -78,6 +82,7 @@ function launchService(serviceName) {
     console.error(`${service.color}[${service.label}]${reset} exited with ${reason}`);
     void restartService(serviceName, "process exit");
   });
+  return child;
 }
 
 async function restartService(serviceName, reason) {
@@ -101,8 +106,9 @@ async function restartService(serviceName, reason) {
     await stopServiceChild(runtime.child);
     if (stopping) return;
     await wait(500);
-    launchService(serviceName);
-    await waitForHealthyUrl(service.healthUrl, service.label, service.readyTimeoutMs);
+    const child = launchService(serviceName);
+    await waitForPreflight(child, service.label);
+    await waitForHealthyUrl(service.healthUrl, service.label, service.readyTimeoutMs, child);
     runtime.failures = 0;
     console.log(`${service.color}[${service.label}]${reset} restart complete`);
   } catch (error) {
@@ -117,11 +123,35 @@ async function restartService(serviceName, reason) {
   runtime.restarting = false;
 }
 
-async function waitForHealthyUrl(url, label, timeoutMs) {
+function waitForPreflight(child, label) {
+  return new Promise((resolveReady, rejectReady) => {
+    const timeout = setTimeout(() => finish(new Error(`${label} preflight timed out`)), 90_000);
+    function finish(error) {
+      clearTimeout(timeout);
+      child.off("message", onMessage);
+      child.off("exit", onExit);
+      if (error) rejectReady(error);
+      else resolveReady();
+    }
+    function onMessage(message) {
+      if (message?.type === "cxsun:preflight-ready") finish();
+    }
+    function onExit(code) {
+      finish(new Error(`${label} preflight exited with code ${code ?? 1}`));
+    }
+    child.on("message", onMessage);
+    child.once("exit", onExit);
+  });
+}
+
+async function waitForHealthyUrl(url, label, timeoutMs, child) {
   const startedAt = Date.now();
   let lastStatus = "not reachable";
 
   while (!stopping && Date.now() - startedAt < timeoutMs) {
+    if (child.exitCode !== null) {
+      throw new Error(`${label} process exited before becoming healthy`);
+    }
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
       lastStatus = `HTTP ${response.status}`;
@@ -156,7 +186,7 @@ function monitorStackHealth() {
           runtime.failures += 1;
         }
 
-        if (runtime.failures >= 3) {
+        if (runtime.failures >= 20) {
           runtime.failures = 0;
           void restartService(serviceName, "failed health checks");
         }
