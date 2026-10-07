@@ -8,6 +8,7 @@ import {
   CommandItem,
   CommandList
 } from "../../components/command";
+import { cn } from "../../lib/utils";
 
 export type TopMenuSearchItem = {
   description?: string;
@@ -17,6 +18,7 @@ export type TopMenuSearchItem = {
 };
 
 export type TopMenuSearchProps = {
+  contentClassName?: string;
   items: TopMenuSearchItem[];
   onClose: () => void;
   onSearchChange: (value: string) => void;
@@ -26,6 +28,7 @@ export type TopMenuSearchProps = {
 };
 
 export function TopMenuSearch({
+  contentClassName,
   items,
   onClose,
   onSearchChange,
@@ -44,7 +47,10 @@ export function TopMenuSearch({
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/65 backdrop-blur-sm" />
         <DialogPrimitive.Content
           aria-describedby={undefined}
-          className="fixed left-1/2 top-1/2 z-50 w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-2xl outline-none"
+          className={cn(
+            "fixed left-1/2 top-1/2 z-50 w-[min(42rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-2xl outline-none",
+            contentClassName
+          )}
         >
           <DialogPrimitive.Title className="sr-only">Search workspace</DialogPrimitive.Title>
           <Command className="rounded-none">

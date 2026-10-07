@@ -21,6 +21,7 @@ export type TopMenuProps = {
   onToggleSidebar: () => void;
   profileHref?: string;
   search: string;
+  searchDialogClassName?: string;
   searchItems: TopMenuSearchItem[];
   searchOpen: boolean;
   searchPlaceholder: string;
@@ -41,6 +42,7 @@ export function TopMenu({
   onToggleSidebar,
   profileHref,
   search,
+  searchDialogClassName,
   searchItems,
   searchOpen,
   searchPlaceholder,
@@ -106,6 +108,7 @@ export function TopMenu({
         </div>
       </header>
       <TopMenuSearch
+        {...(searchDialogClassName ? { contentClassName: searchDialogClassName } : {})}
         items={searchItems}
         onClose={onCloseSearch}
         onSearchChange={onSearchChange}

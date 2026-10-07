@@ -30,7 +30,8 @@ test("development commands keep API and web watchers independently available", (
   assert.equal(packageJson.scripts.dev, "node tools/dev-stack.mjs");
   assert.equal(packageJson.scripts["dev:api"], "node tools/preflight.mjs platform-api");
   assert.equal(packageJson.scripts["dev:web"], "node tools/preflight.mjs platform-web");
-  assert.match(preflightSource, /"--watch"/u);
+  assert.match(preflightSource, /watchApiSources\(\)/u);
+  assert.doesNotMatch(preflightSource, /"--watch"/u);
   assert.match(preflightSource, /nodePackageBin\("vite", "bin\/vite\.js"\)/u);
 });
 
@@ -43,11 +44,6 @@ test("API development resolves linked owner packages through the root dependency
 test("web development keeps linked owner source and styles on the root dependency path", () => {
   assert.equal(platformWebTsconfig.compilerOptions.preserveSymlinks, true);
   assert.match(platformWebViteSource, /preserveSymlinks:\s*true/u);
-  assert.match(platformWebViteSource, /exclude:\s*\["@codexsun\/blog\/web"/u);
-  assert.match(platformWebViteSource, /use-sync-external-store\/shim"/u);
-  assert.match(platformWebViteSource, /use-sync-external-store\/shim\/index\.js/u);
-  assert.match(platformWebViteSource, /use-sync-external-store\/shim\/with-selector/u);
-  assert.match(platformWebViteSource, /use-sync-external-store\/shim\/with-selector\.js/u);
 });
 
 test("tenant app breadcrumbs use app IDs and canonical root pages", () => {
@@ -107,7 +103,8 @@ test("port takeover stops the old watcher tree and its supervisor", () => {
     commandLine: "node tools/preflight.mjs platform-api"
   });
   assert.equal(takeoverTarget(10, processes, "platform-api", 50), 30);
-  assert.equal(takeoverTarget(10, processes, "platform-web", 50), 10);
+  assert.equal(takeoverTarget(10, processes, "platform-web", 50), null);
+  assert.equal(takeoverTarget(999, processes, "platform-api", 50), null);
   assert.deepEqual(previousPreflightPids(processes, "platform-api", 50), [30]);
 });
 
@@ -117,6 +114,19 @@ test("development shutdown asks the child to stop before forcing termination", (
   assert.ok(gracefulStop >= 0, "The supervisor must request a graceful child shutdown.");
   assert.ok(forcedStop > gracefulStop, "Forced termination must remain a fallback.");
   assert.match(preflightSource, /message\?\.type === "cxsun:shutdown"/u);
-  assert.match(preflightSource, /const portOwners = getPidsOnPort\(port\)/u);
-  assert.match(preflightSource, /process\.exit\(await stopChild\(child, signal\)\)/u);
+  assert.match(preflightSource, /requestDevApiShutdown\(controlFile, controlToken\)/u);
+  assert.match(preflightSource, /await stopCurrentChild\(signal\)/u);
+});
+
+test("configured ports and API readiness govern startup", () => {
+  assert.match(
+    stackSource,
+    /requiredDevPort\(\s*process\.env\.PLATFORM_API_PORT \?\? env\.PLATFORM_API_PORT/u
+  );
+  assert.match(
+    stackSource,
+    /requiredDevPort\(\s*process\.env\.PLATFORM_WEB_PORT \?\? env\.PLATFORM_WEB_PORT/u
+  );
+  assert.match(stackSource, /readyUrl: `http:\/\/127\.0\.0\.1:\$\{apiPort\}\/ready`/u);
+  assert.match(preflightSource, /`http:\/\/127\.0\.0\.1:\$\{apiPort\}\/ready`/u);
 });

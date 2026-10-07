@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
-import { ApplicationLayout } from "@cxsun/ui/layouts/application-layout";
+import { TenantMainLayout } from "./TenantMainLayout";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -820,7 +820,8 @@ export function AppDesk() {
 
   return (
     <AuthGate desk="tenant">
-      <ApplicationLayout
+      <TenantMainLayout
+        appItems={workspaceItems}
         brand={{
           href: appRootUrl(activeApp),
           ...(companyBranding.lightLogoUrl ? { logoSrc: companyBranding.lightLogoUrl } : {}),
@@ -855,7 +856,7 @@ export function AppDesk() {
           title: companyBranding.brandName ?? activeWorkspaceTitle
         }}
         headerTitle={activePageTitle}
-        homeHref="/"
+        homeHref={appRootUrl(activeApp)}
         menuItems={menuItems}
         {...(activeApp === "crm"
           ? {
@@ -867,11 +868,9 @@ export function AppDesk() {
             }
           : {})}
         onLogout={handleLogout}
-        subtitle={null}
-        title={null}
         user={signedInUser}
         versionLabel={`v ${__APP_VERSION__}`}
-        workspaceItems={workspaceItems}
+        workspaceName={activeWorkspaceTitle}
       >
         <main
           ref={workspaceContentRef}
@@ -1063,7 +1062,7 @@ export function AppDesk() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </ApplicationLayout>
+      </TenantMainLayout>
     </AuthGate>
   );
 }

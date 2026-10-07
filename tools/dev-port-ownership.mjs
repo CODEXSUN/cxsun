@@ -1,7 +1,7 @@
 export function takeoverTarget(ownerPid, processes, app, currentPid) {
   const chain = processChain(ownerPid, processes);
   const preflight = chain.find((entry) => isPreflightFor(entry, app));
-  if (!preflight) return ownerPid;
+  if (!preflight) return null;
 
   const stack = chain.find(
     (entry) =>
@@ -17,21 +17,6 @@ export function previousPreflightPids(processes, app, currentPid) {
   return Array.from(processes.values())
     .filter((entry) => entry.pid !== currentPid && isPreflightFor(entry, app))
     .map((entry) => entry.pid);
-}
-
-export function codexsunTakeoverTarget(ownerPid, processes) {
-  const chain = processChain(ownerPid, processes);
-  const preflight = chain.find((entry) => isPreflightFor(entry, "codexsun-web"));
-  if (preflight) return preflight.pid;
-
-  const runner = chain.find(
-    (entry) =>
-      isNodeProcess(entry) &&
-      /\brun\s+dev:codexsun(?:\s|$)|\brun\s+dev\s+-w\s+@cxsun\/codexsun-web(?:\s|$)/u.test(
-        entry.commandLine
-      )
-  );
-  return runner?.pid ?? null;
 }
 
 function isPreflightFor(entry, app) {

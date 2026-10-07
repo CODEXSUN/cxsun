@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { watch } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { createServer } from "node:net";
 import { pathToFileURL } from "node:url";
-import {
-  codexsunTakeoverTarget,
-  previousPreflightPids,
-  takeoverTarget
-} from "./dev-port-ownership.mjs";
+import { loadDevEnv, requiredDevPort } from "./dev-runtime-env.mjs";
+import { requestProcessStop, startProcessControl } from "./dev-process-control.mjs";
+import { requestDevApiShutdown } from "./dev-shutdown-client.mjs";
+import { takeoverTarget } from "./dev-port-ownership.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const app = process.argv[2];
@@ -23,9 +24,6 @@ const apps = {
     host: "127.0.0.1",
     command: process.execPath,
     args: [
-      "--watch",
-      "--watch-path=src",
-      "--watch-path=../../../.env",
       "--import",
       pathToFileURL(resolve(root, "tools/register-root-package-resolution.mjs")).href,
       "--import",
@@ -40,15 +38,6 @@ const apps = {
     host: "127.0.0.1",
     command: process.execPath,
     args: [nodePackageBin("vite", "bin/vite.js"), "--strictPort"]
-  },
-  "codexsun-web": {
-    displayName: "codexsun",
-    cwd: "apps/codexsun/web",
-    envKey: "CXSUN_SHELL_PORT",
-    defaultPort: "7040",
-    host: "127.0.0.1",
-    command: process.execPath,
-    args: [nodePackageBin("vite", "bin/vite.js"), "--strictPort"]
   }
 };
 
@@ -58,116 +47,156 @@ if (!app || !apps[app]) {
 }
 
 const config = apps[app];
-const env = loadDotEnv();
-const port = parseRequiredPort(env[config.envKey] ?? config.defaultPort, config.envKey);
+const env = loadDevEnv(root);
+const port = requiredDevPort(
+  process.env[config.envKey] ?? env[config.envKey] ?? config.defaultPort,
+  config.envKey
+);
 const host = config.host;
 const portPolicy = process.env.CXSUN_DEV_PORT_POLICY ?? env.CXSUN_DEV_PORT_POLICY ?? "takeover";
+const controlFile = join(tmpdir(), `cxsun-dev-shutdown-${process.pid}.json`);
+const controlToken = randomBytes(32).toString("hex");
+let child;
+let shuttingDown = false;
+let restartTimer;
+let restartPending = false;
+let restarting = false;
+let restartQuietUntil = 0;
+let activeStop;
+const watchers = [];
+let closeProcessControl = async () => {};
+
+process.on("message", (message) => {
+  if (message?.type === "cxsun:shutdown") void shutdown("SIGTERM");
+});
+if (process.send) process.once("disconnect", () => void shutdown("SIGTERM"));
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.once(signal, () => void shutdown(signal));
+}
+closeProcessControl = await startProcessControl("preflight", () => void shutdown("SIGTERM"));
 
 await freePort(port, host);
 
 if (app === "platform-api") {
   ensurePlatformApiDependencies();
 } else if (app === "platform-web") {
-  await waitForPlatformApi(parseRequiredPort(env.PLATFORM_API_PORT, "PLATFORM_API_PORT"));
+  await waitForPlatformApi(
+    requiredDevPort(process.env.PLATFORM_API_PORT ?? env.PLATFORM_API_PORT, "PLATFORM_API_PORT")
+  );
 }
 
-const child = spawn(
-  config.command,
-  [...config.args, ...(app !== "platform-api" ? ["--host", host, "--port", String(port)] : [])],
-  {
-    cwd: resolve(root, config.cwd),
-    detached: process.platform !== "win32",
-    env: {
-      ...process.env,
-      // The API loads the root .env itself. Keeping those values out of the long-lived
-      // watcher lets a child restart read fresh integration credentials after .env changes.
-      ...(app !== "platform-api" ? env : {}),
-      ...(app === "platform-api"
-        ? {
-            CXSUN_DB_FRESH_SESSION_FILE: join(tmpdir(), `cxsun-platform-fresh-${process.pid}.done`)
-          }
-        : {}),
-      [config.envKey]: String(port)
-    },
-    stdio: "inherit"
+if (!shuttingDown) launchChild();
+if (app === "platform-api" && !shuttingDown) {
+  try {
+    watchApiSources();
+  } catch (error) {
+    console.error(`  x API file watcher failed: ${error.message}`);
+    await shutdown("SIGTERM");
   }
-);
-
+}
 process.send?.({ type: "cxsun:preflight-ready" });
-let shuttingDown = false;
-child.on("exit", (code) => {
-  if (!shuttingDown) process.exit(code ?? 0);
-});
-
-process.on("message", (message) => {
-  if (message?.type === "cxsun:shutdown") {
-    void shutdown("SIGTERM");
-  }
-});
-
-for (const signal of ["SIGINT", "SIGTERM"]) {
-  process.once(signal, () => {
-    void shutdown(signal);
-  });
-}
 
 async function shutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
+  if (restartTimer) clearTimeout(restartTimer);
+  for (const watcher of watchers) watcher.close();
+  console.log(`  - Stopping ${config.displayName}`);
   try {
-    process.exit(await stopChild(child, signal));
+    const result = child ? await stopCurrentChild(signal) : 0;
+    await rm(controlFile, { force: true });
+    await closeProcessControl();
+    if (result === 0) console.log(`  ok ${config.displayName} stopped`);
+    process.exit(result);
   } catch (error) {
     console.error(`  x Failed to stop ${config.displayName}: ${error.message}`);
+    await Promise.allSettled([rm(controlFile, { force: true }), closeProcessControl()]);
     process.exit(1);
   }
 }
 
-function loadDotEnv() {
-  const envPath = resolve(root, ".env");
+function launchChild() {
+  const launched = spawn(
+    config.command,
+    [...config.args, ...(app !== "platform-api" ? ["--host", host, "--port", String(port)] : [])],
+    {
+      cwd: resolve(root, config.cwd),
+      detached: process.platform !== "win32",
+      env: {
+        ...process.env,
+        ...(app !== "platform-api" ? env : {}),
+        ...(app === "platform-api"
+          ? {
+              CXSUN_DB_FRESH_SESSION_FILE: join(
+                tmpdir(),
+                `cxsun-platform-fresh-${process.pid}.done`
+              ),
+              CXSUN_DEV_SHUTDOWN_FILE: controlFile,
+              CXSUN_DEV_SHUTDOWN_TOKEN: controlToken
+            }
+          : {}),
+        [config.envKey]: String(port)
+      },
+      stdio: "inherit"
+    }
+  );
+  child = launched;
+  launched.on("exit", async (code, signal) => {
+    if (child !== launched || shuttingDown || activeStop?.child === launched) return;
+    console.error(`  x ${config.displayName} exited with ${signal ?? `code ${code ?? 1}`}`);
+    await rm(controlFile, { force: true });
+    await closeProcessControl();
+    process.exit(code || 1);
+  });
+  launched.on("error", (error) => {
+    if (shuttingDown) return;
+    console.error(`  x Failed to launch ${config.displayName}: ${error.message}`);
+    process.exit(1);
+  });
+}
 
-  if (!existsSync(envPath)) {
-    return {};
-  }
-
-  return Object.fromEntries(
-    readFileSync(envPath, "utf8")
-      .split(/\r?\n/)
-      .map((line) => line.match(/^\s*([^#=]+?)\s*=\s*(.*?)\s*$/))
-      .filter(Boolean)
-      .map((match) => [match[1].trim(), parseEnvValue(match[2])])
+function watchApiSources() {
+  const addWatcher = (watcher) => {
+    watcher.on("error", (error) => {
+      console.error(`  x API file watcher failed: ${error.message}`);
+      void shutdown("SIGTERM");
+    });
+    watchers.push(watcher);
+  };
+  const schedule = () => {
+    if (shuttingDown || restarting || Date.now() < restartQuietUntil) return;
+    restartPending = true;
+    if (restartTimer) clearTimeout(restartTimer);
+    restartTimer = setTimeout(() => void restartApi(), 300);
+  };
+  addWatcher(watch(resolve(root, "apps/platform/api/src"), { recursive: true }, schedule));
+  addWatcher(
+    watch(root, (_event, filename) => {
+      if (String(filename) === ".env") schedule();
+    })
   );
 }
 
-function parseEnvValue(value) {
-  const trimmed = String(value ?? "").trim();
-
-  if (!trimmed) {
-    return "";
-  }
-
-  const quote = trimmed[0];
-
-  if ((quote === '"' || quote === "'") && trimmed.endsWith(quote)) {
-    return trimmed.slice(1, -1);
-  }
-
-  return trimmed.replace(/\s+#.*$/, "").trim();
-}
-
-function parseRequiredPort(value, envKey) {
-  const raw = String(value ?? "").trim();
-  if (!raw) {
-    console.error(`  x Missing required port configuration: ${envKey}`);
+async function restartApi() {
+  if (restarting || shuttingDown) return;
+  restarting = true;
+  try {
+    while (restartPending && !shuttingDown) {
+      restartPending = false;
+      console.log("  - API source or .env changed; stopping current server");
+      const result = await stopCurrentChild("SIGTERM");
+      if (result !== 0) throw new Error("API did not stop before restart");
+      if (shuttingDown) return;
+      launchChild();
+      restartQuietUntil = Date.now() + 1000;
+      console.log("  ok API restarted; waiting for readiness");
+    }
+  } catch (error) {
+    console.error(`  x API restart failed: ${error.message}`);
     process.exit(1);
+  } finally {
+    restarting = false;
   }
-
-  const port = Number(raw);
-  if (!Number.isInteger(port) || port <= 0) {
-    console.error(`  x Invalid port configuration for ${envKey}: ${raw}`);
-    process.exit(1);
-  }
-
-  return port;
 }
 
 function ensurePlatformApiDependencies() {
@@ -211,25 +240,23 @@ async function freePort(port, host) {
 
   const available = await probePort(port, host);
   const pids = available ? [] : getPidsOnPort(port);
-  const processes = getProcessSnapshot();
-  const previous = previousPreflightPids(processes, app, process.pid);
 
-  if (available && previous.length === 0) {
+  if (available) {
     await waitForPortRelease();
     console.log(`  ok ${host}:${port} is ready\n`);
     return;
   }
 
-  if (!pids.length && previous.length === 0) {
-    console.log(`  ok Port ${port} is ready (no blocking process found)\n`);
-    return;
+  if (!pids.length) {
+    if (await probePort(port, host)) {
+      console.log(`  ok ${host}:${port} is ready\n`);
+      return;
+    }
+    console.error(`  x ${host}:${port} is occupied but its owner could not be identified.\n`);
+    process.exit(1);
   }
 
   if (pids.length) console.log(`  ! ${host}:${port} is already in use by PID ${pids.join(", ")}`);
-  if (previous.length) {
-    console.log(`  - Found previous ${config.displayName} preflight PID ${previous.join(", ")}`);
-  }
-
   if (portPolicy === "abort") {
     console.error(
       "  x A previous dev process or another listener is active. Set CXSUN_DEV_PORT_POLICY=takeover to replace it.\n"
@@ -238,18 +265,18 @@ async function freePort(port, host) {
   }
 
   if (portPolicy !== "takeover" && portPolicy !== "force") {
-    console.error(`  x Invalid CXSUN_DEV_PORT_POLICY: ${portPolicy}. Use takeover or abort.\n`);
+    console.error(
+      `  x Invalid CXSUN_DEV_PORT_POLICY: ${portPolicy}. Use takeover, force, or abort.\n`
+    );
     process.exit(1);
   }
 
+  const processes = getProcessSnapshot();
   const targets = new Set();
-  for (const pid of [...pids, ...previous]) {
-    const target =
-      app === "codexsun-web"
-        ? codexsunTakeoverTarget(pid, processes)
-        : takeoverTarget(pid, processes, app, process.pid);
+  for (const pid of pids) {
+    const target = portPolicy === "force" ? pid : takeoverTarget(pid, processes, app, process.pid);
     if (!target) {
-      console.error(`  x Port ${port} belongs to a process outside Codexsun; refusing takeover.\n`);
+      console.error(`  x Port ${port} belongs to another process; refusing takeover.\n`);
       process.exit(1);
     }
     targets.add(target);
@@ -259,9 +286,22 @@ async function freePort(port, host) {
     process.exit(1);
   }
   for (const pid of targets) {
+    const controlName = /dev-stack\.mjs/u.test(processes.get(pid)?.commandLine ?? "")
+      ? "stack"
+      : /preflight\.mjs/u.test(processes.get(pid)?.commandLine ?? "")
+        ? "preflight"
+        : null;
+    if (controlName && (await requestProcessStop(controlName, pid))) {
+      console.log(`  - Waiting for previous ${controlName} PID ${pid} to stop gracefully`);
+      if (await waitForTakeover(pid)) {
+        console.log(`  ok Previous ${controlName} PID ${pid} stopped cleanly`);
+        continue;
+      }
+      console.error(`  ! Previous ${controlName} PID ${pid} did not stop; forcing takeover`);
+    }
     try {
       killPid(pid);
-      console.log(`  ok Stopped previous dev process tree at PID ${pid}`);
+      console.log(`  ! Forced previous dev process tree to stop at PID ${pid}`);
     } catch (error) {
       if (isProcessAlive(pid)) throw error;
       console.log(`  ok Previous dev process PID ${pid} already stopped`);
@@ -282,6 +322,14 @@ async function freePort(port, host) {
   process.exit(1);
 }
 
+async function waitForTakeover(pid) {
+  for (let attempt = 0; attempt < 160; attempt += 1) {
+    if (!isProcessAlive(pid) && (await probePort(port, host))) return true;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 250));
+  }
+  return false;
+}
+
 function probePort(port, host) {
   return new Promise((resolve) => {
     const server = createServer();
@@ -298,7 +346,7 @@ function waitForPortRelease() {
 }
 
 async function waitForPlatformApi(apiPort) {
-  const healthUrl = `http://127.0.0.1:${apiPort}/health`;
+  const healthUrl = `http://127.0.0.1:${apiPort}/ready`;
   const startedAt = Date.now();
   let lastStatus = "not reachable";
 
@@ -441,16 +489,23 @@ function isProcessAlive(pid) {
 }
 
 async function stopChild(childProcess, signal) {
-  const portOwners = getPidsOnPort(port);
   const childPid = childProcess.pid;
+  if (!childPid) return (await waitForStoppedPort()) ? 0 : 1;
+
+  if (app === "platform-api" && (await requestDevApiShutdown(controlFile, controlToken))) {
+    console.log("  - Waiting for API requests and shutdown hooks to finish");
+    if ((await waitForChildExit(childProcess, 32_000)) && (await waitForStoppedPort())) return 0;
+    console.error("  ! API graceful shutdown timed out; forcing process stop");
+  } else if (await waitForChildExit(childProcess, 1500)) {
+    return (await waitForStoppedPort()) ? 0 : 1;
+  }
 
   if (process.platform === "win32") {
-    for (const pid of [childPid, ...portOwners]) {
-      if (!pid || !isProcessAlive(pid)) continue;
+    if (isProcessAlive(childPid)) {
       try {
-        killPid(pid);
+        killPid(childPid);
       } catch (error) {
-        if (isProcessAlive(pid)) throw error;
+        if (isProcessAlive(childPid)) throw error;
       }
     }
   } else if (childPid) {
@@ -459,23 +514,64 @@ async function stopChild(childProcess, signal) {
     } catch (error) {
       if (error?.code !== "ESRCH") throw error;
     }
-    await new Promise((resolveWait) => setTimeout(resolveWait, 1500));
+    if (await waitForChildExit(childProcess, 1500)) {
+      return (await waitForStoppedPort()) ? 0 : 1;
+    }
     try {
       process.kill(-childPid, "SIGKILL");
     } catch (error) {
       if (error?.code !== "ESRCH") throw error;
     }
-    for (const pid of portOwners) {
-      if (isProcessAlive(pid)) process.kill(pid, "SIGKILL");
-    }
   }
 
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    if (await probePort(port, host)) return 0;
-    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  const exited = await waitForChildExit(childProcess, 3000);
+  if (exited && (await waitForStoppedPort())) {
+    console.log(`  ! ${config.displayName} required a forced process stop`);
+    return 0;
   }
   console.error(`  x ${config.displayName} did not release ${host}:${port} during shutdown.`);
   return 1;
+}
+
+function stopCurrentChild(signal) {
+  if (activeStop?.child === child) return activeStop.promise;
+  const target = child;
+  const promise = stopChild(target, signal);
+  activeStop = { child: target, promise };
+  promise.then(
+    () => {
+      if (activeStop?.child === target) activeStop = undefined;
+    },
+    () => {
+      if (activeStop?.child === target) activeStop = undefined;
+    }
+  );
+  return promise;
+}
+
+function waitForChildExit(childProcess, timeoutMs) {
+  if (childProcess.exitCode !== null || childProcess.signalCode !== null)
+    return Promise.resolve(true);
+  if (timeoutMs === 0) return Promise.resolve(false);
+  return new Promise((resolveWait) => {
+    const timer = setTimeout(() => {
+      childProcess.off("exit", onExit);
+      resolveWait(false);
+    }, timeoutMs);
+    function onExit() {
+      clearTimeout(timer);
+      resolveWait(true);
+    }
+    childProcess.once("exit", onExit);
+  });
+}
+
+async function waitForStoppedPort() {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (await probePort(port, host)) return true;
+    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+  }
+  return false;
 }
 
 function nodePackageBin(packageName, binPath) {

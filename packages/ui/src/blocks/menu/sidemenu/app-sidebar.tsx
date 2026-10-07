@@ -69,6 +69,7 @@ export type SidebarUserMenuItem = {
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   brand: SidebarBrand;
+  footerContent?: React.ReactNode;
   items: SidemenuItem[];
   primaryAction?: { icon: LucideIcon; label: string; onSelect: () => void };
   user: SidebarUser;
@@ -99,6 +100,7 @@ const defaultUserMenuItems: SidebarUserMenuItem[] = [
 export function AppSidebar({
   brand,
   className,
+  footerContent,
   items,
   primaryAction,
   user,
@@ -130,57 +132,61 @@ export function AppSidebar({
         <SidemenuSection items={items} />
       </SidebarContent>
       <SidebarFooter className="border-t">
-        <div className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-          {versionLabel}
-        </div>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="h-14">
-                  <Avatar className="size-9 border bg-background">
-                    <AvatarFallback>{user.fallback}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
-                    <div className="truncate font-semibold">{user.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-                  </div>
-                  <ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="right" className="w-56 p-2">
-                <div className="flex items-center gap-3 p-2">
-                  <Avatar className="size-9 border bg-background">
-                    <AvatarFallback>{user.fallback}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold">{user.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">{user.email}</div>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                {userMenuItems.map((item, index) => (
-                  <React.Fragment key={item.title}>
-                    {index === userMenuItems.length - 1 ? <DropdownMenuSeparator /> : null}
-                    <DropdownMenuItem asChild={Boolean(item.url)}>
-                      {item.url ? (
-                        <a href={item.url}>
-                          <item.icon />
-                          {item.title}
-                        </a>
-                      ) : (
-                        <>
-                          <item.icon />
-                          {item.title}
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                  </React.Fragment>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {footerContent ?? (
+          <>
+            <div className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+              {versionLabel}
+            </div>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton size="lg" className="h-14">
+                      <Avatar className="size-9 border bg-background">
+                        <AvatarFallback>{user.fallback}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1 text-left leading-tight group-data-[collapsible=icon]:hidden">
+                        <div className="truncate font-semibold">{user.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+                      </div>
+                      <ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="right" className="w-56 p-2">
+                    <div className="flex items-center gap-3 p-2">
+                      <Avatar className="size-9 border bg-background">
+                        <AvatarFallback>{user.fallback}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold">{user.name}</div>
+                        <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+                      </div>
+                    </div>
+                    <DropdownMenuSeparator />
+                    {userMenuItems.map((item, index) => (
+                      <React.Fragment key={item.title}>
+                        {index === userMenuItems.length - 1 ? <DropdownMenuSeparator /> : null}
+                        <DropdownMenuItem asChild={Boolean(item.url)}>
+                          {item.url ? (
+                            <a href={item.url}>
+                              <item.icon />
+                              {item.title}
+                            </a>
+                          ) : (
+                            <>
+                              <item.icon />
+                              {item.title}
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </React.Fragment>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </>
+        )}
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
