@@ -1,0 +1,24 @@
+{
+  "name": "cxsun-demo",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  },
+  "d1_databases": [
+    {
+      "binding": "PLATFORM_DB",
+      "database_name": "cxsun-demo-platform",
+      "database_id": "40e953a5-3d4c-4f6f-97a8-5f8988091024"
+    },
+    {
+      "binding": "TENANT_DB",
+      "database_name": "cxsun-demo-tenant",
+      "database_id": "8bc1624f-be64-46c0-b4d3-19b7c5427034"
+    }
+  ]
+}

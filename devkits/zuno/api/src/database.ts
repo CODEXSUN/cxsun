@@ -5,6 +5,10 @@ import {
   type MigrationBatch
 } from "@cxsun/framework/db";
 import { casesMigration, migrateCasesModule } from "./modules/cases/cases.migration.js";
+import {
+  conversationsMigration,
+  migrateConversationsModule
+} from "./modules/conversations/conversations.migration.js";
 import type { ZunoDatabase } from "./modules/cases/cases.types.js";
 
 export const zunoMigrationBatch: MigrationBatch<ZunoDatabase> = {
@@ -18,6 +22,13 @@ export const zunoMigrationBatch: MigrationBatch<ZunoDatabase> = {
       description: casesMigration.description,
       name: casesMigration.key,
       up: migrateCasesModule,
+      version: 1
+    },
+    {
+      checksum: `${conversationsMigration.key}:v1`,
+      description: conversationsMigration.description,
+      name: conversationsMigration.key,
+      up: migrateConversationsModule,
       version: 1
     }
   ]

@@ -12,6 +12,7 @@ import { loadDevEnv, requiredDevPort } from "./dev-runtime-env.mjs";
 import { requestProcessStop, startProcessControl } from "./dev-process-control.mjs";
 import { requestDevApiShutdown } from "./dev-shutdown-client.mjs";
 import { takeoverTarget } from "./dev-port-ownership.mjs";
+import { captureApiInputs, changedApiInputs } from "./dev-api-source-changes.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const app = process.argv[2];
@@ -61,7 +62,9 @@ let shuttingDown = false;
 let restartTimer;
 let restartPending = false;
 let restarting = false;
-let restartQuietUntil = 0;
+let apiInputs;
+let checkingApiInputs = false;
+let rescanApiInputs = false;
 let activeStop;
 const watchers = [];
 let closeProcessControl = async () => {};
@@ -85,15 +88,16 @@ if (app === "platform-api") {
   );
 }
 
-if (!shuttingDown) launchChild();
 if (app === "platform-api" && !shuttingDown) {
   try {
+    apiInputs = await captureApiInputs(root);
     watchApiSources();
   } catch (error) {
     console.error(`  x API file watcher failed: ${error.message}`);
     await shutdown("SIGTERM");
   }
 }
+if (!shuttingDown) launchChild();
 process.send?.({ type: "cxsun:preflight-ready" });
 
 async function shutdown(signal) {
@@ -164,10 +168,9 @@ function watchApiSources() {
     watchers.push(watcher);
   };
   const schedule = () => {
-    if (shuttingDown || restarting || Date.now() < restartQuietUntil) return;
-    restartPending = true;
+    if (shuttingDown) return;
     if (restartTimer) clearTimeout(restartTimer);
-    restartTimer = setTimeout(() => void restartApi(), 300);
+    restartTimer = setTimeout(() => void checkApiInputs(), 500);
   };
   addWatcher(watch(resolve(root, "apps/platform/api/src"), { recursive: true }, schedule));
   addWatcher(
@@ -177,26 +180,73 @@ function watchApiSources() {
   );
 }
 
+async function checkApiInputs() {
+  if (shuttingDown) return;
+  if (checkingApiInputs) {
+    rescanApiInputs = true;
+    return;
+  }
+  checkingApiInputs = true;
+  try {
+    do {
+      rescanApiInputs = false;
+      const current = await captureApiInputs(root);
+      const changed = changedApiInputs(apiInputs, current);
+      if (changed.length) {
+        apiInputs = current;
+        console.log(`  - API input changed: ${changed.join(", ")}`);
+        restartPending = true;
+        if (!restarting) void restartApi();
+      }
+    } while (rescanApiInputs && !shuttingDown);
+  } catch (error) {
+    console.error(`  x API source check failed: ${error.message}`);
+    await shutdown("SIGTERM");
+  } finally {
+    checkingApiInputs = false;
+  }
+}
+
 async function restartApi() {
   if (restarting || shuttingDown) return;
   restarting = true;
   try {
     while (restartPending && !shuttingDown) {
       restartPending = false;
+      await waitForApiReady(child);
+      if (shuttingDown) return;
       console.log("  - API source or .env changed; stopping current server");
       const result = await stopCurrentChild("SIGTERM");
       if (result !== 0) throw new Error("API did not stop before restart");
       if (shuttingDown) return;
       launchChild();
-      restartQuietUntil = Date.now() + 1000;
       console.log("  ok API restarted; waiting for readiness");
+      await waitForApiReady(child);
     }
   } catch (error) {
     console.error(`  x API restart failed: ${error.message}`);
-    process.exit(1);
+    await shutdown("SIGTERM");
   } finally {
     restarting = false;
   }
+}
+
+async function waitForApiReady(target) {
+  const readyUrl = `http://${host}:${port}/ready`;
+  const startedAt = Date.now();
+  while (!shuttingDown && Date.now() - startedAt < 90_000) {
+    if (target.exitCode !== null || target.signalCode !== null) {
+      throw new Error("API exited before becoming ready");
+    }
+    try {
+      const response = await fetch(readyUrl, { signal: AbortSignal.timeout(2_000) });
+      if (response.ok) return;
+    } catch {
+      // The listener may not be open while the API is initializing.
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, 500));
+  }
+  if (!shuttingDown) throw new Error("API did not become ready within 90 seconds");
 }
 
 function ensurePlatformApiDependencies() {

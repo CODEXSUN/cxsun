@@ -51,10 +51,15 @@ import {
 } from "@cxsun/frappe-api";
 import {
   zetroChatMigrations,
+  zetroProviderMigrations,
   migrateZetroChatDatabase,
+  migrateZetroProviderDatabase,
   rollbackZetroChatDatabase,
+  rollbackZetroProviderDatabase,
   seedZetroChatPermissions,
-  type ZetroDatabase
+  seedZetroProviderPermission,
+  type ZetroDatabase,
+  type ZetroProviderDatabase
 } from "@cxsun/zetro-api";
 import {
   migrateProjectManagerDatabase,
@@ -122,6 +127,12 @@ export function tenantDatabaseMigrationsFor(tenant: Tenant) {
           statements: [`RUN ${migration.name}`]
         }))
       : []),
+    ...(enabled.has("zetro")
+      ? zetroProviderMigrations.map((migration) => ({
+          ...migration,
+          statements: [`RUN ${migration.name}`]
+        }))
+      : []),
     ...(enabled.has("billing.sales")
       ? billingTenantMigrations.map((migration) => ({
           ...migration,
@@ -173,6 +184,7 @@ export async function migrateSelectedTenantApps(database: Kysely<TenantDatabase>
   }
   if (enabled.has("zetro")) {
     await migrateZetroChatDatabase(database as unknown as Kysely<ZetroDatabase>);
+    await migrateZetroProviderDatabase(database as unknown as Kysely<ZetroProviderDatabase>);
     provisionedApps.push("zetro");
   }
 
@@ -221,6 +233,7 @@ export async function seedSelectedTenantApps(database: Kysely<TenantDatabase>, t
   }
   if (enabled.has("zetro")) {
     await seedZetroChatPermissions(database as unknown as Kysely<ZetroDatabase>);
+    await seedZetroProviderPermission(database as unknown as Kysely<ZetroProviderDatabase>);
     seededApps.push("zetro");
   }
   await setDefaultCompanyLandingAppForDatabase(tenant.dbName, tenant.defaultLandingApp);
@@ -266,8 +279,10 @@ export async function rollbackSelectedTenantApps(database: Kysely<TenantDatabase
   }
   if (enabled.has("auditor"))
     await rollbackAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
-  if (enabled.has("zetro"))
+  if (enabled.has("zetro")) {
+    await rollbackZetroProviderDatabase(database as unknown as Kysely<ZetroProviderDatabase>);
     await rollbackZetroChatDatabase(database as unknown as Kysely<ZetroDatabase>);
+  }
   if (enabled.has("billing.sales")) await rollbackBillingTenantDatabase(tenant.dbName);
   if (enabled.has("accounts.accounting")) await rollbackAccountsTenantDatabase(tenant.dbName);
   await rollbackCoreTenantDatabase(tenant.dbName);

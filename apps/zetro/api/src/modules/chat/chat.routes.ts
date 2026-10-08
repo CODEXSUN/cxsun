@@ -31,14 +31,14 @@ const detailSchema = z.object({
 export type ZetroChatContext = {
   database: Kysely<ZetroDatabase>;
   actorEmail: string;
+  provider: ZetroProviderConfig;
   lookupOutstanding: CustomerOutstandingLookup;
   audit: (action: string, conversation: ZetroConversation) => Promise<void>;
 };
 
 export function registerZetroChatRoutes(
   app: FastifyInstance,
-  context: (request: FastifyRequest) => Promise<ZetroChatContext>,
-  provider: ZetroProviderConfig
+  context: (request: FastifyRequest) => Promise<ZetroChatContext>
 ) {
   const service = async (request: FastifyRequest) => {
     const scope = await context(request);
@@ -47,7 +47,7 @@ export function registerZetroChatRoutes(
       audit: scope.audit,
       chat: new ZetroChatService(
         new ZetroChatRepository(scope.database),
-        provider,
+        scope.provider,
         new ZetroPolicyRepository(scope.database),
         scope.lookupOutstanding
       )

@@ -1,6 +1,17 @@
 export { zetroChatModule } from "./modules/chat/chat.module.js";
 export { registerZetroAdminRoutes } from "./modules/chat/chat.admin.routes.js";
 export {
+  ZetroProviderRepository,
+  seedZetroProviderPermission,
+  registerZetroProviderRoutes,
+  zetroProviderModule,
+  registerZetroProviderAdminRoutes,
+  zetroProviderMigrations,
+  migrateZetroProviderDatabase,
+  rollbackZetroProviderDatabase
+} from "./modules/provider/index.js";
+export type { ZetroProviderDatabase } from "./modules/provider/index.js";
+export {
   zetroChatMigrations,
   migrateZetroChatDatabase,
   rollbackZetroChatDatabase

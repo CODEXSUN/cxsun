@@ -32,6 +32,8 @@ test("Zuno rejects requests before calling diagnostic routes when the host denie
       payload: { question: "Why 403?" }
     });
     assert.equal(deniedWrite.statusCode, 403);
+    const deniedHistory = await app.inject({ method: "GET", url: "/zuno/conversations" });
+    assert.equal(deniedHistory.statusCode, 403);
   } finally {
     await app.close();
   }

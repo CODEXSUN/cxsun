@@ -88,6 +88,14 @@ export default defineConfig(({ command, mode }) => {
           configDir,
           "../../crm/web/src/modules/enquiry/index.ts"
         ),
+        "@cxsun/zetro-web/modules/provider": resolve(
+          configDir,
+          "../../zetro/web/src/modules/provider/index.ts"
+        ),
+        "@cxsun/zetro-web/modules/chat": resolve(
+          configDir,
+          "../../zetro/web/src/modules/chat/index.ts"
+        ),
         "@cxsun/core-web/modules/master/contact": resolve(
           configDir,
           "../../core/web/src/modules/master/contact/index.ts"

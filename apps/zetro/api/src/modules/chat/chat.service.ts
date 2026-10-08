@@ -3,6 +3,7 @@ import { AppError } from "@cxsun/framework/errors";
 import { ZetroChatRepository } from "./chat.repository.js";
 import { ZetroPolicyRepository } from "./chat.policy.js";
 import type { ZetroProviderConfig } from "./chat.types.js";
+import { completeWithCodexCli } from "../provider/provider.codex-cli.js";
 
 const completionSchema = z.object({
   choices: z.array(z.object({ message: z.object({ content: z.string().nullable() }) }))
@@ -50,8 +51,16 @@ export class ZetroChatService {
   }
 
   async send(ownerEmail: string, conversationId: number | null, prompt: string) {
-    if (!this.provider.apiKey || !this.provider.model || !this.provider.baseUrl) {
+    if (
+      this.provider.kind !== "codex_cli" &&
+      (!this.provider.model ||
+        !this.provider.baseUrl ||
+        (!this.provider.apiKey && this.provider.kind !== "local"))
+    ) {
       throw AppError.validation("Zetro AI provider is not configured.");
+    }
+    if (this.provider.kind === "codex_cli" && !this.provider.tenantId) {
+      throw AppError.validation("Zetro local connection is not configured.");
     }
     if (conversationId !== null) await this.repository.get(conversationId, ownerEmail);
     const classification = await this.classify(prompt);
@@ -112,6 +121,9 @@ export class ZetroChatService {
   }
 
   private async complete(messages: Array<{ role: string; content: string }>) {
+    if (this.provider.kind === "codex_cli") {
+      return completeWithCodexCli(this.provider.tenantId!, this.provider.model, messages);
+    }
     let endpoint: URL;
     try {
       endpoint = new URL(`${this.provider.baseUrl.replace(/\/$/u, "")}/chat/completions`);
@@ -128,8 +140,9 @@ export class ZetroChatService {
     try {
       response = await fetch(endpoint, {
         method: "POST",
+        redirect: "error",
         headers: {
-          Authorization: `Bearer ${this.provider.apiKey}`,
+          ...(this.provider.apiKey ? { Authorization: `Bearer ${this.provider.apiKey}` } : {}),
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ model: this.provider.model, messages }),

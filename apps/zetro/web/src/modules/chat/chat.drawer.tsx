@@ -67,7 +67,11 @@ export function ZetroChatDrawer({ scopeKey }: { scopeKey: string }) {
               id="zetro-drawer"
               aria-label="Zetro business assistant"
               className="fixed z-50 flex min-h-0 flex-col overflow-hidden rounded-xl border bg-background shadow-xl"
-              style={drawerPosition}
+              style={{
+                ...drawerPosition,
+                background:
+                  "linear-gradient(180deg, var(--background) 0%, var(--background) 48%, color-mix(in srgb, var(--background) 58%, #b8ddff) 100%)"
+              }}
             >
               <div className="flex items-center justify-between border-b px-4 py-2">
                 <div>

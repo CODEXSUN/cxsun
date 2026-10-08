@@ -97,6 +97,7 @@ const capabilityBackendRoles = new Map([
   ["zuno-api/diagnostics", ["module", "service", "repository", "routes", "types"]],
   ["zuno-api/cases", ["module", "service", "repository", "routes", "migration", "types"]],
   ["zuno-api/watch", ["module", "service", "repository", "routes", "types"]],
+  ["zuno-api/conversations", ["module", "service", "repository", "routes", "migration", "types"]],
   [
     "project-manager-api/ideas",
     ["module", "service", "repository", "routes", "migration", "types"]
@@ -114,7 +115,11 @@ const capabilityBackendRoles = new Map([
   ["frappe-api/user-sync", ["module", "service", "routes", "types"]],
   ["frappe-api/enquiry-sync", ["module", "service", "routes", "types"]],
   ["frappe-api/user-mapping", ["module", "service", "repository", "routes", "migration", "types"]],
-  ["zetro-api/chat", ["module", "service", "repository", "routes", "migration", "seed", "types"]]
+  ["zetro-api/chat", ["module", "service", "repository", "routes", "migration", "seed", "types"]],
+  [
+    "zetro-api/provider",
+    ["module", "service", "repository", "routes", "migration", "seed", "types", "secrets"]
+  ]
 ]);
 
 const webModuleRoots = [
@@ -168,6 +173,10 @@ const capabilityFrontendRoles = new Map([
   ["zuno-web/diagnostics", ["workspace", "list", "form", "services", "hooks", "types", "schema"]],
   ["zuno-web/cases", ["workspace", "list", "form", "services", "hooks", "types", "schema"]],
   ["zuno-web/watch", ["workspace", "list", "services", "hooks", "types"]],
+  [
+    "zuno-web/conversations",
+    ["workspace", "list", "form", "show", "services", "hooks", "types", "schema"]
+  ],
   ["crm-web/overview", ["workspace"]],
   ["frappe-web/overview", ["workspace", "list", "services", "hooks", "types"]],
   ["frappe-web/enquiry-sync", ["workspace", "list", "services", "hooks", "types"]],
@@ -178,6 +187,7 @@ const capabilityFrontendRoles = new Map([
     ["workspace", "list", "form", "services", "hooks", "types", "schema"]
   ],
   ["crm-web/contact-360", ["workspace", "services", "hooks", "types"]],
+  ["zetro-web/provider", ["workspace", "services", "types"]],
   ...crmContact360Leaves.map((name) => [`crm-web/${name}`, ["services", "hooks", "types"]])
 ]);
 const backendBehaviorMarkers = {
@@ -266,7 +276,7 @@ for (const root of webModuleRoots) {
       continue;
 
     for (const role of moduleRoles) {
-      const extension = ["form", "list", "workspace"].includes(role) ? "tsx" : "ts";
+      const extension = ["form", "list", "show", "workspace"].includes(role) ? "tsx" : "ts";
       const filePath = join(modulePath, `${moduleDir.name}.${role}.${extension}`);
       if (!existsSync(filePath)) {
         missing.push(

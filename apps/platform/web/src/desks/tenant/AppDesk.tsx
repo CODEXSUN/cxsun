@@ -1020,6 +1020,7 @@ export function AppDesk() {
                 onNavigate={requestListNavigation}
                 signedInEmail={signedInUser.email}
                 tenantName={runtime?.tenant?.tenantName ?? "—"}
+                zetroEnabled={switchableApps.includes("zetro")}
               />
             ) : null}
             {safePage === "application.access.users" ? <TenantUserWorkspace /> : null}

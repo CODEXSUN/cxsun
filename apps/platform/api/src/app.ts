@@ -42,7 +42,16 @@ import {
   type FrappeUserMappingDatabase
 } from "@cxsun/frappe-api";
 import { EnquiryRepository, EnquiryService } from "@cxsun/crm-api/enquiry-sync";
-import { zetroChatModule, registerZetroAdminRoutes, type ZetroDatabase } from "@cxsun/zetro-api";
+import {
+  zetroChatModule,
+  registerZetroAdminRoutes,
+  zetroProviderModule,
+  registerZetroProviderAdminRoutes,
+  ZetroProviderRepository,
+  type ZetroDatabase,
+  type ZetroProviderConfig,
+  type ZetroProviderDatabase
+} from "@cxsun/zetro-api";
 import { AppError } from "@cxsun/framework/errors";
 import type { FastifyRequest } from "fastify";
 import type { HealthCheck } from "@cxsun/framework/health";
@@ -209,7 +218,68 @@ export async function createApp() {
     resolveIndustryName: (industryId) => industryService.resolveActiveIndustryName(industryId)
   });
   console.info("[platform.routes] Core package ready");
-  zetroChatModule.register(
+  // Tenant provider settings override this deployment fallback at request time.
+  const zetroFallbackProvider: ZetroProviderConfig = {
+    apiKey: env.CXSUN_ZETRO_API_KEY,
+    baseUrl: env.CXSUN_ZETRO_BASE_URL,
+    kind: /^https?:\/\/(?:localhost|127\.0\.0\.1)(?::|\/)/u.test(env.CXSUN_ZETRO_BASE_URL)
+      ? "local"
+      : "openai",
+    model: env.CXSUN_ZETRO_MODEL
+  };
+  zetroChatModule.register(app, async (request) => {
+    const context = tenantAccessContext(request);
+    const enabled = await context.database
+      .selectFrom("app_module_settings")
+      .select("id")
+      .where("module_key", "=", "zetro")
+      .where("enabled", "=", true)
+      .where("status", "=", "active")
+      .executeTakeFirst();
+    if (!enabled) throw AppError.forbidden("Zetro is not enabled for this tenant.");
+    await context.authorize("zetro.chat.use");
+    return {
+      actorEmail: context.actorEmail,
+      database: context.database as unknown as import("kysely").Kysely<ZetroDatabase>,
+      provider: await new ZetroProviderRepository(
+        context.database as unknown as import("kysely").Kysely<ZetroProviderDatabase>,
+        env.JWT_SECRET,
+        context.tenantId,
+        zetroFallbackProvider
+      ).resolve(),
+      lookupOutstanding: async (contact: string) => {
+        const billingEnabled = await context.database
+          .selectFrom("app_module_settings")
+          .select("id")
+          .where("module_key", "=", "billing.sales")
+          .where("enabled", "=", true)
+          .where("status", "=", "active")
+          .executeTakeFirst();
+        if (!billingEnabled) throw AppError.forbidden("Billing is not enabled for this tenant.");
+        const defaults = request.authContext?.session.context.defaultCompany;
+        if (!defaults) throw AppError.validation("Select a default company and financial year.");
+        return lookupCustomerOutstanding({
+          tenantDatabase: context.tenantDatabase,
+          actorEmail: context.actorEmail,
+          companyId: defaults.companyId,
+          financialYearId: defaults.financialYearId,
+          contact
+        });
+      },
+      audit: (action: string, conversation: import("@cxsun/zetro-api").ZetroConversation) =>
+        recordTenantAccessAudit({
+          action,
+          actorEmail: context.actorEmail,
+          moduleKey: "zetro.chat",
+          recordId: conversation.id,
+          recordLabel: "Zetro conversation",
+          recordUuid: conversation.uuid,
+          tenantId: context.tenantId
+        })
+    };
+  });
+  // Provider routes use the signed tenant context and tenant UUID for local Codex login.
+  zetroProviderModule.register(
     app,
     async (request) => {
       const context = tenantAccessContext(request);
@@ -221,46 +291,32 @@ export async function createApp() {
         .where("status", "=", "active")
         .executeTakeFirst();
       if (!enabled) throw AppError.forbidden("Zetro is not enabled for this tenant.");
-      await context.authorize("zetro.chat.use");
+      await context.authorize("zetro.provider.manage");
       return {
         actorEmail: context.actorEmail,
-        database: context.database as unknown as import("kysely").Kysely<ZetroDatabase>,
-        lookupOutstanding: async (contact: string) => {
-          const billingEnabled = await context.database
-            .selectFrom("app_module_settings")
-            .select("id")
-            .where("module_key", "=", "billing.sales")
-            .where("enabled", "=", true)
-            .where("status", "=", "active")
-            .executeTakeFirst();
-          if (!billingEnabled) throw AppError.forbidden("Billing is not enabled for this tenant.");
-          const defaults = request.authContext?.session.context.defaultCompany;
-          if (!defaults) throw AppError.validation("Select a default company and financial year.");
-          return lookupCustomerOutstanding({
-            tenantDatabase: context.tenantDatabase,
-            actorEmail: context.actorEmail,
-            companyId: defaults.companyId,
-            financialYearId: defaults.financialYearId,
-            contact
-          });
-        },
-        audit: (action: string, conversation: import("@cxsun/zetro-api").ZetroConversation) =>
+        database: context.database as unknown as import("kysely").Kysely<ZetroProviderDatabase>,
+        tenantId: context.tenantId,
+        audit: (action) =>
           recordTenantAccessAudit({
-            action,
+            action:
+              action === "device-login"
+                ? "zetro.provider.device-login"
+                : action === "disconnect"
+                  ? "zetro.provider.disconnect"
+                  : action === "bind-local"
+                    ? "zetro.provider.bind-local"
+                    : "zetro.provider.update",
             actorEmail: context.actorEmail,
-            moduleKey: "zetro.chat",
-            recordId: conversation.id,
-            recordLabel: "Zetro conversation",
-            recordUuid: conversation.uuid,
+            moduleKey: "zetro.provider",
+            recordId: 1,
+            recordLabel: "Zetro provider settings",
+            recordUuid: "settings",
             tenantId: context.tenantId
           })
       };
     },
-    {
-      apiKey: env.CXSUN_ZETRO_API_KEY,
-      baseUrl: env.CXSUN_ZETRO_BASE_URL,
-      model: env.CXSUN_ZETRO_MODEL
-    }
+    zetroFallbackProvider,
+    env.JWT_SECRET
   );
   registerZetroAdminRoutes(app, async (request, tenantId) => {
     if (request.authContext?.payload.userType !== "super_admin") {
@@ -283,6 +339,48 @@ export async function createApp() {
       database: getTenantDatabase(tenant) as unknown as import("kysely").Kysely<ZetroDatabase>
     };
   });
+  registerZetroProviderAdminRoutes(
+    app,
+    async (request, tenantId) => {
+      if (request.authContext?.payload.userType !== "super_admin") {
+        throw AppError.forbidden("Super Admin permission is required for Zetro settings.");
+      }
+      const tenant = await new TenantRepository().findByIdOrCode(tenantId);
+      if (!tenant) throw AppError.notFound("Tenant was not found.");
+      if (!tenant.enabledModuleKeys.includes("zetro")) {
+        throw AppError.forbidden("Zetro is not enabled for this tenant.");
+      }
+      const actorEmail = request.authContext.payload.email ?? request.authContext.session.userEmail;
+      await recordTenantAccessAudit({
+        action: "zetro.provider.admin.access",
+        actorEmail,
+        moduleKey: "zetro.provider",
+        recordId: tenant.id,
+        recordLabel: "Zetro provider settings",
+        recordUuid: tenant.uuid,
+        tenantId: tenant.uuid
+      });
+      return {
+        actorEmail,
+        database: getTenantDatabase(
+          tenant
+        ) as unknown as import("kysely").Kysely<ZetroProviderDatabase>,
+        tenantId: tenant.uuid,
+        audit: () =>
+          recordTenantAccessAudit({
+            action: "zetro.provider.admin.update",
+            actorEmail,
+            moduleKey: "zetro.provider",
+            recordId: tenant.id,
+            recordLabel: "Zetro provider settings",
+            recordUuid: tenant.uuid,
+            tenantId: tenant.uuid
+          })
+      };
+    },
+    zetroFallbackProvider,
+    env.JWT_SECRET
+  );
   const crmAccess = async (request: FastifyRequest, resource: string, collection: string) => {
     const context = tenantAccessContext(request);
     const enabled = await context.database

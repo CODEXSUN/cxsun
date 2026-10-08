@@ -1,4 +1,5 @@
 import type { ColumnType, Generated, Kysely } from "kysely";
+import type { ZunoThreadTable, ZunoMessageTable } from "../conversations/conversations.types.js";
 
 export const caseKinds = [
   "incident",
@@ -59,6 +60,8 @@ export type ZunoCaseActivityTable = {
 export type ZunoDatabase = {
   zuno_cases: ZunoCaseTable;
   zuno_case_activity: ZunoCaseActivityTable;
+  zuno_threads: ZunoThreadTable;
+  zuno_messages: ZunoMessageTable;
 };
 
 export type ZunoCase = {

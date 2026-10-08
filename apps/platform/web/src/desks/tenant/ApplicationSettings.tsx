@@ -7,8 +7,10 @@ import {
   MoonIcon,
   PaletteIcon,
   Settings2Icon,
+  SparklesIcon,
   SunIcon
 } from "lucide-react";
+import { ZetroProviderSettingsWorkspace } from "@cxsun/zetro-web/modules/provider";
 import { designSystemVariants } from "@cxsun/ui/design-system";
 import type { DesignSystemVariantId } from "@cxsun/ui/design-system";
 import {
@@ -19,7 +21,7 @@ import {
   type AppearanceMode
 } from "../../app/design-system";
 
-type SettingsSection = "application" | "appearance";
+type SettingsSection = "application" | "appearance" | "zetro";
 
 type ApplicationSettingsProps = {
   companyName: string;
@@ -27,6 +29,7 @@ type ApplicationSettingsProps = {
   onNavigate: (page: "application.landing" | "application.profile") => void;
   signedInEmail: string;
   tenantName: string;
+  zetroEnabled: boolean;
 };
 
 const appearanceModes = [
@@ -45,7 +48,8 @@ export function ApplicationSettings({
   financialYear,
   onNavigate,
   signedInEmail,
-  tenantName
+  tenantName,
+  zetroEnabled
 }: ApplicationSettingsProps) {
   const [section, setSection] = useState<SettingsSection>("application");
   const [appearanceMode, setMode] = useState<AppearanceMode>(getAppearanceMode);
@@ -66,7 +70,7 @@ export function ApplicationSettings({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Manage this workspace and how it looks on your device.
+          Manage this workspace, Zetro, and how it looks on your device.
         </p>
       </div>
       <div className="grid items-start gap-5 md:grid-cols-[15rem_minmax(0,1fr)]">
@@ -86,6 +90,14 @@ export function ApplicationSettings({
             label="Appearance"
             onClick={() => setSection("appearance")}
           />
+          {zetroEnabled ? (
+            <SettingsNavigationButton
+              active={section === "zetro"}
+              icon={SparklesIcon}
+              label="Zetro"
+              onClick={() => setSection("zetro")}
+            />
+          ) : null}
         </nav>
         {section === "application" ? (
           <div className="rounded-md border border-border bg-card p-5">
@@ -117,6 +129,8 @@ export function ApplicationSettings({
               </button>
             </div>
           </div>
+        ) : section === "zetro" ? (
+          <ZetroProviderSettingsWorkspace />
         ) : (
           <div className="space-y-5">
             <div className="rounded-md border border-border bg-card p-5">

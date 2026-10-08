@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
 import { Card } from "@cxsun/ui/components/card";
@@ -14,6 +14,7 @@ import {
 } from "./chat.hooks";
 import { ZetroConversationList } from "./chat.list";
 import { deleteZetroConversation, sendZetroMessage } from "./chat.services";
+import type { ZetroConversation } from "./chat.types";
 
 export function ZetroChatWorkspace({ scopeKey }: { scopeKey: string }) {
   return (
@@ -37,17 +38,47 @@ export function ZetroChatPanel({
   const client = useQueryClient();
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const conversations = useZetroConversations(scopeKey);
   const detail = useZetroConversation(scopeKey, currentId);
   const send = useMutation({
     mutationFn: (prompt: string) => sendZetroMessage(currentId, prompt),
-    onSuccess: async (result) => {
-      setCurrentId(result.conversation.id);
-      client.setQueryData(zetroConversationKey(scopeKey, result.conversation.id), result);
-      await client.invalidateQueries({ queryKey: zetroConversationsKey(scopeKey) });
+    onMutate: (prompt) => {
+      setPendingPrompt(prompt);
+      const previous = client.getQueryData<ZetroConversation[]>(zetroConversationsKey(scopeKey));
+      if (currentId !== null && previous) {
+        const active = previous.find((conversation) => conversation.id === currentId);
+        if (active) {
+          client.setQueryData(zetroConversationsKey(scopeKey), [
+            active,
+            ...previous.filter((conversation) => conversation.id !== currentId)
+          ]);
+        }
+      }
+      return { previous };
     },
-    onError: (error) => toast.error("Zetro could not reply", { description: error.message })
+    onSuccess: (result) => {
+      client.setQueryData(zetroConversationKey(scopeKey, result.conversation.id), result);
+      client.setQueryData<ZetroConversation[]>(zetroConversationsKey(scopeKey), (previous) => [
+        result.conversation,
+        ...(previous ?? []).filter((conversation) => conversation.id !== result.conversation.id)
+      ]);
+      setCurrentId(result.conversation.id);
+      setPendingPrompt(null);
+      void client.invalidateQueries({ queryKey: zetroConversationsKey(scopeKey) });
+    },
+    onError: (error, _prompt, context) => {
+      if (context?.previous) client.setQueryData(zetroConversationsKey(scopeKey), context.previous);
+      setPendingPrompt(null);
+      toast.error("Zetro could not reply", { description: error.message });
+    }
   });
+
+  useEffect(() => {
+    const messages = messagesRef.current;
+    if (messages) messages.scrollTop = messages.scrollHeight;
+  }, [detail.data?.messages.length, pendingPrompt]);
   const remove = useMutation({
     mutationFn: deleteZetroConversation,
     onSuccess: async (_result, id) => {
@@ -63,7 +94,7 @@ export function ZetroChatPanel({
     <Card
       className={
         compact
-          ? "flex h-full min-h-0 flex-col overflow-hidden"
+          ? "flex h-full min-h-0 flex-col overflow-hidden border-0 bg-transparent shadow-none"
           : "grid min-h-[65vh] overflow-hidden md:grid-cols-[16rem_minmax(0,1fr)]"
       }
     >
@@ -74,6 +105,7 @@ export function ZetroChatPanel({
               type="button"
               size="sm"
               variant="outline"
+              disabled={send.isPending}
               onClick={() => {
                 setCurrentId(null);
                 setShowHistory(false);
@@ -97,6 +129,7 @@ export function ZetroChatPanel({
             size="sm"
             variant="outline"
             className="mb-3"
+            disabled={send.isPending}
             onClick={() => setCurrentId(null)}
           >
             <PlusIcon className="size-4" /> New chat
@@ -115,16 +148,24 @@ export function ZetroChatPanel({
                 {conversations.error.message}
               </p>
             ) : null}
+            {pendingPrompt && currentId === null ? (
+              <p role="status" className="mb-1 truncate rounded-md bg-muted px-3 py-2 text-sm">
+                {pendingPrompt.slice(0, 100)}
+                <span className="ml-2 text-xs text-muted-foreground">Sending…</span>
+              </p>
+            ) : null}
             {conversations.data ? (
               <ZetroConversationList
                 conversations={conversations.data}
                 currentId={currentId}
-                deleting={remove.isPending}
+                deleting={remove.isPending || send.isPending}
                 onSelect={(id) => {
+                  if (send.isPending) return;
                   setCurrentId(id);
                   setShowHistory(false);
                 }}
                 onDelete={(id) => {
+                  if (send.isPending) return;
                   if (window.confirm("Delete this conversation?")) remove.mutate(id);
                 }}
               />
@@ -136,12 +177,13 @@ export function ZetroChatPanel({
         className={compact ? "flex min-h-0 flex-1 flex-col" : "flex min-h-[65vh] flex-col"}
         aria-label="Zetro chat"
       >
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
-          {currentId === null ? (
-            <div className="mx-auto mt-16 max-w-md text-center">
-              <h2 className="text-xl font-semibold">How can I help?</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Ask about your business work. Customer balances require permission.
+        <div ref={messagesRef} className="flex-1 space-y-4 overflow-y-auto p-5">
+          {currentId === null && !pendingPrompt ? (
+            <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-3 text-center">
+              <SparklesIcon className="size-7 text-primary" aria-hidden="true" />
+              <h2 className="text-xl font-semibold">How can I help with your work?</h2>
+              <p className="text-sm text-muted-foreground">
+                Ask about your business work and permitted records.
               </p>
             </div>
           ) : null}
@@ -164,10 +206,20 @@ export function ZetroChatPanel({
               <p className="whitespace-pre-wrap break-words">{message.content}</p>
             </div>
           ))}
-          {send.isPending ? (
-            <p role="status" className="text-sm text-muted-foreground">
-              Zetro is thinking…
-            </p>
+          {pendingPrompt ? (
+            <>
+              <div className="ml-auto max-w-[85%] rounded-xl bg-primary px-4 py-3 text-sm text-primary-foreground">
+                <p className="mb-1 text-xs font-semibold opacity-70">You</p>
+                <p className="whitespace-pre-wrap break-words">{pendingPrompt}</p>
+              </div>
+              <div
+                role="status"
+                className="mr-auto max-w-[85%] rounded-xl bg-muted px-4 py-3 text-sm"
+              >
+                <p className="mb-1 text-xs font-semibold text-muted-foreground">Zetro</p>
+                <p className="animate-pulse text-muted-foreground">Thinking…</p>
+              </div>
+            </>
           ) : null}
         </div>
         <ZetroChatForm

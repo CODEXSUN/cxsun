@@ -80,7 +80,9 @@ export type ZetroDatabase = {
 export type ZetroProviderConfig = {
   apiKey: string;
   baseUrl: string;
+  kind?: "openai" | "local" | "codex_cli";
   model: string;
+  tenantId?: string;
 };
 
 export type ZetroConversation = {

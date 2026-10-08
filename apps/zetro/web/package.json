@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./modules/chat": "./src/modules/chat/index.ts"
+    "./modules/chat": "./src/modules/chat/index.ts",
+    "./modules/provider": "./src/modules/provider/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

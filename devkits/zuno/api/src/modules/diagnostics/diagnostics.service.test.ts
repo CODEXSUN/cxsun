@@ -57,3 +57,95 @@ test("Zuno asks the provider to inspect the Platform log before diagnosing", asy
     await rm(sandbox, { recursive: true, force: true });
   }
 });
+
+test("Zuno keeps conversation history and allows a general answer without source mounts", async () => {
+  const originalFetch = globalThis.fetch;
+  const config = {
+    sourceRoot: "",
+    platformLogPath: "",
+    providerBaseUrl: "https://model.example.test/v1",
+    providerModel: "coworker-model",
+    providerApiKey: "test-key"
+  };
+  const requests: Array<{
+    messages: Array<{ role: string; content: string }>;
+    tool_choice: string;
+  }> = [];
+  try {
+    globalThis.fetch = async (_url, init) => {
+      requests.push(JSON.parse(String(init?.body)));
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: "A concise plan.", tool_calls: [] } }] }),
+        { status: 200 }
+      );
+    };
+    const result = await new DiagnosticsService(new DiagnosticsRepository(config), config).diagnose(
+      "What should we do next?",
+      {
+        mode: "plan",
+        history: [
+          { role: "user", content: "We need a safer release." },
+          { role: "assistant", content: "First inspect the rollout." }
+        ]
+      }
+    );
+    assert.equal(result.answer, "A concise plan.");
+    assert.equal(requests[0]?.messages[1]?.content, "We need a safer release.");
+    assert.equal(requests[0]?.tool_choice, "auto");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Operate mode uses the live watch snapshot as evidence", async () => {
+  const originalFetch = globalThis.fetch;
+  const config = {
+    sourceRoot: "",
+    platformLogPath: "",
+    providerBaseUrl: "https://model.example.test/v1",
+    providerModel: "operations-model",
+    providerApiKey: "test-key"
+  };
+  let calls = 0;
+  try {
+    globalThis.fetch = async () => {
+      calls += 1;
+      const message =
+        calls === 1
+          ? {
+              content: null,
+              tool_calls: [
+                {
+                  id: "watch-1",
+                  type: "function",
+                  function: { name: "read_operational_watch", arguments: "{}" }
+                }
+              ]
+            }
+          : { content: "The backup is stale; request a new one.", tool_calls: [] };
+      return new Response(JSON.stringify({ choices: [{ message }] }), { status: 200 });
+    };
+    const result = await new DiagnosticsService(
+      new DiagnosticsRepository(config),
+      config,
+      async () => ({
+        checkedAt: new Date().toISOString(),
+        targets: [
+          {
+            scope: "tenant",
+            name: "acme",
+            databaseStatus: "online",
+            backupStatus: "stale",
+            latestBackupAt: null
+          }
+        ],
+        queue: { pending: 0, failed: 0, running: 0, sampleSize: 0 },
+        api: { responseCount: 0, errorCount: 0, p95Ms: null }
+      })
+    ).diagnose("Are backups healthy?", { mode: "operate" });
+    assert.match(result.evidence[0]?.content ?? "", /stale/u);
+    assert.equal(result.evidence[0]?.source, "Zuno operations watch");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
