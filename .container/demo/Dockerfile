@@ -11,6 +11,8 @@ ENV NODE_ENV=production
 ENV CXSUN_ZETRO_CODEX_CLI_PATH=/opt/cxsun-codex-cli/node_modules/.bin/codex
 ENV CXSUN_ZETRO_CODEX_HOME_ROOT=/var/lib/cxsun/zetro-codex
 ENV PATH="/opt/cxsun-codex-cli/node_modules/.bin:${PATH}"
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app /app
 COPY .container/demo/api-entrypoint.sh /usr/local/bin/cxsun-demo-api-entrypoint
 RUN chmod +x /usr/local/bin/cxsun-demo-api-entrypoint
