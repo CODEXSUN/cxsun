@@ -1,0 +1,9 @@
+{
+  "alias": "cxsun-hostinger",
+  "host": "69.62.81.166",
+  "hostname": "srv914719",
+  "port": 22,
+  "user": "root",
+  "virtualMachineId": 914719,
+  "demoRoot": "/home/cxsun-demo"
+}

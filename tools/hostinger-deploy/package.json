@@ -1,0 +1,9 @@
+{
+  "name": "@cxsun/hostinger-deploy",
+  "version": "1.0.80",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "cxsun-hostinger": "./src/cli.mjs"
+  }
+}

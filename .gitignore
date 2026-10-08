@@ -106,6 +106,9 @@ web_modules/
 .env.*
 !.env.example
 .container/deploy.env
+.container/demo/deploy.env
+**/__pycache__/
+*.pyc
 .container/backups/
 
 # Local SSH private/public keypairs
