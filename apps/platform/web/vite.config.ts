@@ -23,21 +23,7 @@ export default defineConfig(({ command, mode }) => {
     build: {
       chunkSizeWarningLimit: 450,
       emptyOutDir: true,
-      outDir: "../../../dist/apps/platform/web",
-      rolldownOptions: {
-        output: {
-          codeSplitting: {
-            groups: [
-              {
-                name: "rich-text",
-                test: /[\\/]node_modules[\\/](?:@tiptap[\\/]|prosemirror-|linkifyjs[\\/])/u,
-                maxSize: 350_000,
-                includeDependenciesRecursively: false
-              }
-            ]
-          }
-        }
-      }
+      outDir: "../../../dist/apps/platform/web"
     },
     cacheDir: "../../../node_modules/.vite/platform-web",
     envDir: "../../..",
