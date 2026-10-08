@@ -77,7 +77,8 @@ export type PlatformAppsTable = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
   updated_at: TimestampColumn;
   uuid: string;
 };

@@ -9,7 +9,8 @@ export type PlatformAppId =
   | "blog"
   | "auditor"
   | "crm"
-  | "frappe";
+  | "frappe"
+  | "zetro";
 
 export type PlatformAppDefinition = {
   alwaysEnabled: boolean;
@@ -30,7 +31,8 @@ export type PlatformAppDefinition = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
   uuid: string;
 };
 

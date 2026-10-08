@@ -18,19 +18,60 @@ const statusSchema = z.object({
   remoteName: z.string().nullable(),
   syncedAt: z.string().nullable()
 });
+const connectionInputSchema = z.object({
+  connectionName: z.string().trim().min(1).max(191),
+  baseUrl: z
+    .url()
+    .max(2048)
+    .refine((value) => {
+      const url = new URL(value);
+      return (
+        ["http:", "https:"].includes(url.protocol) &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        url.pathname === "/"
+      );
+    }, "Enter an HTTP or HTTPS Frappe origin without a path or credentials."),
+  apiKey: z.string().trim().max(512),
+  apiSecret: z.string().trim().max(512),
+  enabled: z.boolean()
+});
+const connectionResponseSchema = z.object({
+  source: z.enum(["tenant", "environment"]),
+  configured: z.boolean(),
+  enabled: z.boolean(),
+  baseUrl: z.string().nullable(),
+  connectionName: z.string(),
+  appKeyConfigured: z.boolean(),
+  appSecretConfigured: z.boolean(),
+  verificationStatus: z.enum(["unverified", "verified", "failed"]),
+  lastCheckedAt: z.string().nullable(),
+  lastVerifiedAt: z.string().nullable()
+});
 
 export function registerFrappeRoutes(
   app: FastifyInstance,
   context: (request: FastifyRequest) => Promise<{
     database: Kysely<FrappeDatabase>;
     loadEnquiry: (id: number) => Promise<EnquiryRecord>;
+    mappedEmployeeCode: (localEmail: string, baseUrl: string) => Promise<string | null>;
     viewer: Pick<EnquiryListOptions, "actorEmail" | "actorUserId" | "canViewAll">;
   }>,
-  settings: FrappeSettings
+  settings: FrappeSettings,
+  encryptionSecret: string
 ) {
   const service = async (request: FastifyRequest) => {
     const scope = await context(request);
-    return new FrappeConnectionService(scope.database, settings, scope.loadEnquiry, scope.viewer);
+    return new FrappeConnectionService(
+      scope.database,
+      settings,
+      scope.loadEnquiry,
+      scope.viewer,
+      encryptionSecret,
+      scope.mappedEmployeeCode
+    );
   };
 
   registerContractRoute(app, {
@@ -62,20 +103,23 @@ export function registerFrappeRoutes(
   registerContractRoute(app, {
     method: "GET",
     url: "/frappe/connection",
-    schemas: {
-      response: z.object({
-        configured: z.boolean(),
-        enabled: z.boolean(),
-        baseUrl: z.string().nullable()
-      })
-    },
+    schemas: { response: connectionResponseSchema },
     handler: async ({ request }) => (await service(request)).configured()
+  });
+  registerContractRoute(app, {
+    method: "PUT",
+    url: "/frappe/connection",
+    schemas: { body: connectionInputSchema, response: connectionResponseSchema },
+    handler: async ({ body, request }) => (await service(request)).saveConnection(body)
   });
   registerContractRoute(app, {
     method: "POST",
     url: "/frappe/connection/verify",
-    schemas: { response: z.object({ connected: z.boolean(), user: z.string() }) },
-    handler: async ({ request }) => (await service(request)).verify()
+    schemas: {
+      body: connectionInputSchema.partial().optional(),
+      response: z.object({ connected: z.boolean(), user: z.string(), saved: z.boolean() })
+    },
+    handler: async ({ body, request }) => (await service(request)).verify(body)
   });
   registerContractRoute(app, {
     method: "GET",

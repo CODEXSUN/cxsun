@@ -6,6 +6,10 @@ test("tenant, billing, and core deep links match the intended routes", () => {
   const cases = new Map([
     ["/app/task-manager/overview", "/app/$"],
     ["/app/crm/overview", "/app/$"],
+    ["/app/crm/contacts", "/app/$"],
+    ["/app/crm/contacts/new", "/app/$"],
+    ["/app/crm/contacts/1/edit", "/app/$"],
+    ["/app/crm/contact-360", "/app/$"],
     ["/app/billing/quotation", "/app/billing/quotation"],
     ["/app/billing/quotation/new", "/app/billing/quotation/new"],
     ["/app/billing/quotation/1", "/app/billing/quotation/$quotationId"],

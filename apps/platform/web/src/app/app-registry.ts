@@ -24,6 +24,7 @@ import {
   ReceiptTextIcon,
   SendIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   Trash2Icon,
   type LucideIcon
 } from "lucide-react";
@@ -40,7 +41,8 @@ export type PlatformAppId =
   | "blog"
   | "auditor"
   | "crm"
-  | "frappe";
+  | "frappe"
+  | "zetro";
 
 export type PlatformAppRootPage =
   | "application.overview"
@@ -52,7 +54,8 @@ export type PlatformAppRootPage =
   | "auditor.overview"
   | "auditor.clients"
   | "crm.overview"
-  | "frappe.overview";
+  | "frappe.overview"
+  | "zetro.chat";
 
 export type BillingNavigationFeatures = {
   exportSales: boolean;
@@ -81,7 +84,8 @@ export type PlatformAppDefinition = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
 };
 
 export const defaultTenantModuleKeys = [
@@ -92,7 +96,8 @@ export const defaultTenantModuleKeys = [
   "platform.task-manager",
   "auditor",
   "crm",
-  "frappe"
+  "frappe",
+  "zetro"
 ] as const;
 
 export const platformAppRegistry: PlatformAppDefinition[] = [
@@ -178,12 +183,23 @@ export const platformAppRegistry: PlatformAppDefinition[] = [
     accentClass: "bg-teal-600",
     alwaysEnabled: false,
     defaultLanding: false,
-    description: "Frappe connection and outbound CRM enquiry sync.",
+    description: "Frappe connection and manual CRM enquiry sync.",
     icon: RefreshCwIcon,
     id: "frappe",
     label: "Frappe",
     moduleKey: "frappe",
     stack: "frappe"
+  },
+  {
+    accentClass: "bg-fuchsia-600",
+    alwaysEnabled: false,
+    defaultLanding: false,
+    description: "AI coworker with private conversation history.",
+    icon: SparklesIcon,
+    id: "zetro",
+    label: "Zetro",
+    moduleKey: "zetro",
+    stack: "zetro"
   },
   {
     accentClass: "bg-indigo-600",
@@ -229,6 +245,7 @@ export function defaultLandingApp(value: unknown, moduleKeys: string[]): Platfor
 }
 
 export function appRootPage(appId: PlatformAppId): PlatformAppRootPage {
+  if (appId === "zetro") return "zetro.chat";
   if (appId === "frappe") return "frappe.overview";
   if (appId === "crm") return "crm.overview";
   if (appId === "blog") return "blog.overview";
@@ -251,6 +268,14 @@ export function appMenuFor(
   billingFeatures?: BillingNavigationFeatures,
   crmCounts?: CrmNavigationCounts
 ): SidemenuItem {
+  if (appId === "zetro") {
+    return {
+      icon: SparklesIcon,
+      isActive: activePage === "zetro.chat",
+      onSelect: () => onSelect("zetro.chat"),
+      title: "Zetro"
+    };
+  }
   if (appId === "frappe") {
     return {
       icon: RefreshCwIcon,
@@ -297,6 +322,11 @@ export function appMenuFor(
           title: "Contacts",
           isActive: activePage === "crm.contacts",
           onSelect: () => onSelect("crm.contacts")
+        },
+        {
+          title: "Contact 360",
+          isActive: activePage === "crm.contact-360",
+          onSelect: () => onSelect("crm.contact-360")
         },
         {
           title: "Common",
@@ -539,10 +569,7 @@ export function appMenuFor(
       },
       {
         title: "Application",
-        isActive:
-          activePage === "application.landing" ||
-          activePage === "application.profile" ||
-          activePage === "application.settings",
+        isActive: activePage === "application.landing" || activePage === "application.profile",
         items: [
           {
             title: "Landing Desk",
@@ -553,11 +580,6 @@ export function appMenuFor(
             title: "Platform Profile",
             isActive: activePage === "application.profile",
             onSelect: () => onSelect("application.profile")
-          },
-          {
-            title: "Settings",
-            isActive: activePage === "application.settings",
-            onSelect: () => onSelect("application.settings")
           }
         ]
       },
@@ -626,6 +648,16 @@ export function appMenuItemsFor(
   billingFeatures?: BillingNavigationFeatures,
   crmCounts?: CrmNavigationCounts
 ): SidemenuItem[] {
+  if (appId === "zetro") {
+    return [
+      {
+        icon: SparklesIcon,
+        isActive: activePage === "zetro.chat",
+        onSelect: () => onSelect("zetro.chat"),
+        title: "Chat"
+      }
+    ];
+  }
   if (appId === "frappe") {
     return [
       {
@@ -633,6 +665,30 @@ export function appMenuItemsFor(
         isActive: activePage === "frappe.overview",
         onSelect: () => onSelect("frappe.overview"),
         title: "Overview"
+      },
+      {
+        icon: RefreshCwIcon,
+        isActive: activePage === "frappe.enquiry-sync",
+        onSelect: () => onSelect("frappe.enquiry-sync"),
+        title: "Enquiry sync"
+      },
+      {
+        icon: Settings2Icon,
+        isActive: activePage === "frappe.connection",
+        onSelect: () => onSelect("frappe.connection"),
+        title: "Frappe connection"
+      },
+      {
+        icon: UsersIcon,
+        isActive: activePage === "frappe.users",
+        onSelect: () => onSelect("frappe.users"),
+        title: "Frappe users"
+      },
+      {
+        icon: ContactRoundIcon,
+        isActive: activePage === "frappe.user-mapping",
+        onSelect: () => onSelect("frappe.user-mapping"),
+        title: "User mapping"
       }
     ];
   }
@@ -676,6 +732,12 @@ export function appMenuItemsFor(
         isActive: activePage === "crm.contacts",
         onSelect: () => onSelect("crm.contacts"),
         title: "Contacts"
+      },
+      {
+        icon: UsersIcon,
+        isActive: activePage === "crm.contact-360",
+        onSelect: () => onSelect("crm.contact-360"),
+        title: "Contact 360"
       },
       {
         icon: PackageIcon,
@@ -1039,10 +1101,7 @@ export function appMenuItemsFor(
     },
     {
       icon: Building2Icon,
-      isActive:
-        activePage === "application.landing" ||
-        activePage === "application.profile" ||
-        activePage === "application.settings",
+      isActive: activePage === "application.landing" || activePage === "application.profile",
       title: "Application",
       items: [
         {
@@ -1054,11 +1113,6 @@ export function appMenuItemsFor(
           title: "Platform Profile",
           isActive: activePage === "application.profile",
           onSelect: () => onSelect("application.profile")
-        },
-        {
-          title: "Settings",
-          isActive: activePage === "application.settings",
-          onSelect: () => onSelect("application.settings")
         }
       ]
     },

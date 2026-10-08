@@ -1,0 +1,21 @@
+{
+  "name": "@cxsun/zuno-api",
+  "version": "1.0.80",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test src/modules/diagnostics/*.test.ts",
+    "typecheck": "npm run build -w @cxsun/framework && tsc -p tsconfig.json --noEmit",
+    "lint": "oxlint src"
+  },
+  "dependencies": {
+    "@cxsun/framework": "^1.0.80",
+    "fastify": "^5.12.5",
+    "kysely": "^0.29.6",
+    "zod": "^4.6.5"
+  }
+}

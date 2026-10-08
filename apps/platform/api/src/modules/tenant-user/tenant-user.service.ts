@@ -46,6 +46,45 @@ export class TenantUserService {
     if (input.roleId !== undefined) await this.audit("role-assigned", record);
     return record;
   }
+  async importFromFrappe(input: { name: string; email: string; password?: string }) {
+    await this.context.authorize("platform.application.user.view");
+    await this.context.authorize("platform.application.user.create");
+    await this.context.authorize("platform.application.user-role.assign");
+    if (
+      input.password !== undefined &&
+      (input.password.length < 8 ||
+        input.password.length > 128 ||
+        input.password !== input.password.trim())
+    )
+      throw AppError.validation(
+        "Custom password must be 8 to 128 characters without outer spaces."
+      );
+    const email = input.email.trim().toLowerCase();
+    const existing = (await this.repository.list({ search: email })).find(
+      (user) => user.email.toLowerCase() === email
+    );
+    if (existing) return { status: "already-exists" as const, userId: existing.id, password: null };
+    const role = await this.context.database
+      .selectFrom("app_roles")
+      .select("id")
+      .where("key", "=", "user")
+      .where("status", "=", "active")
+      .executeTakeFirst();
+    if (!role) throw AppError.conflict("The standard user role is unavailable.");
+    const password = input.password ?? `Cx!${randomBytes(18).toString("base64url")}`;
+    const user = await this.create({
+      email,
+      name: input.name,
+      password,
+      roleId: role.id,
+      status: "active"
+    });
+    return {
+      status: "created" as const,
+      userId: user.id,
+      password: input.password === undefined ? password : null
+    };
+  }
   async update(id: string, input: TenantUserSavePayload) {
     await this.context.authorize("platform.application.user.update");
     const current = await this.mutable(id);

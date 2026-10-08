@@ -9,6 +9,7 @@ import {
   FolderKanbanIcon,
   ListChecksIcon,
   PaletteIcon,
+  SearchCodeIcon,
   ShieldCheckIcon,
   UsersIcon,
   WorkflowIcon
@@ -23,6 +24,10 @@ import { logout } from "../../shared/api/platform-api";
 import { AuthGate } from "../../shared/auth/AuthGate";
 import { requiredClientEnv } from "../../shared/env/client-env";
 import { ProjectManagerWorkspaceHost } from "@cxsun/project-manager-web";
+
+const ZunoWorkspace = lazyWorkspace(() =>
+  import("@cxsun/zuno-web").then((module) => module.ZunoWorkspace)
+);
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
   return lazy(async () => ({ default: await loader() }));
@@ -95,6 +100,7 @@ type SaPage =
   | "task-manager"
   | "project-manager-registry"
   | "project-manager-ideas"
+  | "zuno"
   | "tenants"
   | "domains"
   | "plans"
@@ -172,6 +178,12 @@ export function SaDesk() {
           onSelect: () => selectPage("project-manager-registry")
         }
       ]
+    },
+    {
+      title: "Zuno",
+      icon: SearchCodeIcon,
+      isActive: page === "zuno",
+      onSelect: () => selectPage("zuno")
     },
     {
       title: "Operations",
@@ -327,6 +339,7 @@ export function SaDesk() {
               />
             ) : null}
             {page === "task-manager" ? <TaskManagerWorkspace /> : null}
+            {page === "zuno" ? <ZunoWorkspace /> : null}
             {page.startsWith("project-manager-") ? (
               <ProjectManagerWorkspaceHost workspaceId={page.slice("project-manager-".length)} />
             ) : null}
@@ -360,6 +373,7 @@ function pageFromUrl(pathname: string): SaPage {
     page === "task-manager" ||
     page === "project-manager-registry" ||
     page === "project-manager-ideas" ||
+    page === "zuno" ||
     page === "tenants" ||
     page === "domains" ||
     page === "plans" ||

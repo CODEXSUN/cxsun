@@ -1,11 +1,18 @@
 import { useState, type CSSProperties, type ReactNode } from "react";
-import { LifeBuoyIcon, LogOutIcon, SearchIcon, Settings2Icon, type LucideIcon } from "lucide-react";
+import { SearchIcon, Settings2Icon, type LucideIcon } from "lucide-react";
 import { AppSidebar, type SidebarBrand } from "@cxsun/ui/blocks/menu/sidemenu/app-sidebar";
 import type {
   SidemenuItem,
   SidemenuSubItem
 } from "@cxsun/ui/blocks/menu/sidemenu/sub/sidemenu-section";
-import { SidebarInset, SidebarProvider, useSidebar } from "@cxsun/ui/components/sidebar";
+import {
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  useSidebar
+} from "@cxsun/ui/components/sidebar";
 import {
   AppHeader,
   AppLayout,
@@ -24,6 +31,8 @@ type TenantMainLayoutProps = {
   homeHref: string;
   menuItems: SidemenuItem[];
   onLogout: () => Promise<void>;
+  onOpenSettings: () => void;
+  settingsActive: boolean;
   sidebarPrimaryAction?: { icon: LucideIcon; label: string; onSelect: () => void };
   user: TopMenuUser;
   versionLabel: string;
@@ -49,6 +58,8 @@ function TenantMainShell({
   homeHref,
   menuItems,
   onLogout,
+  onOpenSettings,
+  settingsActive,
   sidebarPrimaryAction,
   user,
   versionLabel,
@@ -89,7 +100,7 @@ function TenantMainShell({
           onOpenSearch={() => setSearchOpen(true)}
           onSearchChange={setSearch}
           onToggleSidebar={toggleSidebar}
-          profileHref="/app/settings"
+          profileHref="/app/application/profile"
           search={search}
           searchDialogClassName="top-[40%]"
           searchItems={searchItems}
@@ -102,17 +113,28 @@ function TenantMainShell({
         <AppSidebar
           brand={brand}
           className="md:p-1 md:pt-0.5 md:pb-0.5"
+          footerContent={
+            <>
+              <div className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                {versionLabel}
+              </div>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={settingsActive} tooltip="Settings">
+                    <button onClick={onOpenSettings} type="button">
+                      <Settings2Icon />
+                      <span className="group-data-[collapsible=icon]:hidden">Settings</span>
+                    </button>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </>
+          }
           items={menuItems}
           positioning="container"
           {...(sidebarPrimaryAction ? { primaryAction: sidebarPrimaryAction } : {})}
           user={user}
-          userMenuItems={[
-            { icon: LifeBuoyIcon, title: "Support", url: "/status" },
-            { icon: Settings2Icon, title: "Account", url: "/app/settings" },
-            { icon: LogOutIcon, title: "Log out", url: "/login" }
-          ]}
           variant="inset"
-          versionLabel={versionLabel}
         />
         <SidebarInset className="min-h-0 min-w-0 overflow-hidden md:peer-data-[variant=inset]:m-1 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:mt-0 md:peer-data-[variant=inset]:mb-0.5">
           <AppHeader

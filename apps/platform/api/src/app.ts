@@ -30,8 +30,18 @@ import {
   type PriorityDatabase
 } from "@cxsun/crm-api";
 import { auditorClientModule, type AuditorClientDatabase } from "@cxsun/auditor-api";
-import { frappeConnectionModule, type FrappeDatabase } from "@cxsun/frappe-api";
-import { EnquiryRepository } from "@cxsun/crm-api/enquiry-sync";
+import {
+  frappeConnectionModule,
+  frappeEnquirySyncModule,
+  frappeUserMappingModule,
+  mappedEmployeeCodeForLocalUser,
+  mappedLocalUserForEmployeeCode,
+  frappeUserSyncModule,
+  type FrappeDatabase,
+  type FrappeUserMappingDatabase
+} from "@cxsun/frappe-api";
+import { EnquiryRepository, EnquiryService } from "@cxsun/crm-api/enquiry-sync";
+import { zetroChatModule, type ZetroDatabase } from "@cxsun/zetro-api";
 import { AppError } from "@cxsun/framework/errors";
 import type { FastifyRequest } from "fastify";
 import type { HealthCheck } from "@cxsun/framework/health";
@@ -39,7 +49,7 @@ import { registerAuthRoutes } from "./auth/auth.routes.js";
 import { appRegistryModule } from "./modules/app-registry/index.js";
 import { tenantDomainModule } from "./modules/tenant-domain/index.js";
 import { tenantModule } from "./modules/tenant/index.js";
-import { tenantUserModule } from "./modules/tenant-user/index.js";
+import { TenantUserService, tenantUserModule } from "./modules/tenant-user/index.js";
 import { tenantRoleModule } from "./modules/tenant-role/index.js";
 import { tenantPermissionModule } from "./modules/tenant-permission/index.js";
 import { tenantUserRoleModule } from "./modules/tenant-user-role/index.js";
@@ -60,6 +70,7 @@ import { startQueueManagerWorker } from "./modules/queue-manager/queue-manager.r
 import { QueueManagerService } from "./modules/queue-manager/queue-manager.service.js";
 import { platformReadinessChecks } from "./readiness.js";
 import { tenantAccessContext } from "./auth/tenant-access-context.js";
+import { recordTenantAccessAudit } from "./database/tenant-access-audit.js";
 import { seedDefaultTenant } from "./modules/tenant/tenant.seed.js";
 import { env } from "./env.js";
 import { assertSingleTenantRegistry } from "./tenancy-mode.js";
@@ -72,8 +83,10 @@ import { closeAllTenantDatabases } from "./database/tenant-database.js";
 import { registerAuthRequestContext } from "./auth/auth-request-context.js";
 import { TenantDomainRepository } from "./modules/tenant-domain/tenant-domain.repository.js";
 import { registerProjectManagerHost } from "./project-manager-host.js";
+import { registerZunoHost } from "./zuno-host.js";
 import { resolvePlatformApiUrl } from "./api-url.js";
 import { projectManagerApiModuleKeys } from "@cxsun/project-manager-api";
+import { zunoApiModuleKeys } from "@cxsun/zuno-api";
 import {
   addonApiModuleKeys,
   activePlatformAddons,
@@ -120,6 +133,7 @@ export async function createApp() {
   const queueService = new QueueManagerService();
   registerAuthRequestContext(app);
   await registerProjectManagerHost(app);
+  await registerZunoHost(app);
   console.info("[platform.routes] Project Manager package ready");
   const mailModule = createMailModule({
     enqueue: (payload) => queueService.enqueue(payload),
@@ -136,9 +150,11 @@ export async function createApp() {
             ...coreApiModuleKeys,
             enquiryModule.key,
             auditorClientModule.key,
+            zetroChatModule.key,
             ...billingApiModuleKeys,
             ...accountsApiModuleKeys,
             ...projectManagerApiModuleKeys,
+            ...zunoApiModuleKeys,
             ...addonApiModuleKeys,
             appRegistryModule.key,
             tenantModule.key,
@@ -190,6 +206,40 @@ export async function createApp() {
     resolveIndustryName: (industryId) => industryService.resolveActiveIndustryName(industryId)
   });
   console.info("[platform.routes] Core package ready");
+  zetroChatModule.register(
+    app,
+    async (request) => {
+      const context = tenantAccessContext(request);
+      const enabled = await context.database
+        .selectFrom("app_module_settings")
+        .select("id")
+        .where("module_key", "=", "zetro")
+        .where("enabled", "=", true)
+        .where("status", "=", "active")
+        .executeTakeFirst();
+      if (!enabled) throw AppError.forbidden("Zetro is not enabled for this tenant.");
+      await context.authorize("zetro.chat.use");
+      return {
+        actorEmail: context.actorEmail,
+        database: context.database as unknown as import("kysely").Kysely<ZetroDatabase>,
+        audit: (action: string, conversation: import("@cxsun/zetro-api").ZetroConversation) =>
+          recordTenantAccessAudit({
+            action,
+            actorEmail: context.actorEmail,
+            moduleKey: "zetro.chat",
+            recordId: conversation.id,
+            recordLabel: "Zetro conversation",
+            recordUuid: conversation.uuid,
+            tenantId: context.tenantId
+          })
+      };
+    },
+    {
+      apiKey: env.CXSUN_ZETRO_API_KEY,
+      baseUrl: env.CXSUN_ZETRO_BASE_URL,
+      model: env.CXSUN_ZETRO_MODEL
+    }
+  );
   const crmAccess = async (request: FastifyRequest, resource: string, collection: string) => {
     const context = tenantAccessContext(request);
     const enabled = await context.database
@@ -242,6 +292,33 @@ export async function createApp() {
       database: context.database as unknown as import("kysely").Kysely<PriorityDatabase>
     };
   });
+  const enquiryRelations = (context: ReturnType<typeof tenantAccessContext>) => ({
+    contact: (id: number) => getActiveContactForDatabase(context.tenantDatabase, id),
+    resolveOrCreateCustomer: (input: { name: string | null; mobile: string | null }) =>
+      resolveOrCreateCustomerForDatabase(context.tenantDatabase, input),
+    user: async (id: number) =>
+      (await context.database
+        .selectFrom("app_users")
+        .select("name")
+        .where("id", "=", id)
+        .where("status", "=", "active")
+        .executeTakeFirst()) ?? null,
+    listIn: (id: number) =>
+      getActiveListInForDatabase(
+        context.database as unknown as import("kysely").Kysely<ListInDatabase>,
+        id
+      ),
+    status: (id: number) =>
+      getActiveStatusForDatabase(
+        context.database as unknown as import("kysely").Kysely<StatusDatabase>,
+        id
+      ),
+    priority: (id: number) =>
+      getActivePriorityForDatabase(
+        context.database as unknown as import("kysely").Kysely<PriorityDatabase>,
+        id
+      )
+  });
   await enquiryModule.register(app, async (request) => {
     const context = await crmAccess(request, "enquiry", "/crm/enquiries");
     const actor = await context.database
@@ -262,33 +339,7 @@ export async function createApp() {
       actorUserId: actor?.id ?? null,
       canViewAll,
       database: context.database as unknown as import("kysely").Kysely<EnquiryDatabase>,
-      relations: {
-        contact: (id: number) => getActiveContactForDatabase(context.tenantDatabase, id),
-        resolveOrCreateCustomer: (input) =>
-          resolveOrCreateCustomerForDatabase(context.tenantDatabase, input),
-        user: async (id: number) =>
-          (await context.database
-            .selectFrom("app_users")
-            .select("name")
-            .where("id", "=", id)
-            .where("status", "=", "active")
-            .executeTakeFirst()) ?? null,
-        listIn: (id: number) =>
-          getActiveListInForDatabase(
-            context.database as unknown as import("kysely").Kysely<ListInDatabase>,
-            id
-          ),
-        status: (id: number) =>
-          getActiveStatusForDatabase(
-            context.database as unknown as import("kysely").Kysely<StatusDatabase>,
-            id
-          ),
-        priority: (id: number) =>
-          getActivePriorityForDatabase(
-            context.database as unknown as import("kysely").Kysely<PriorityDatabase>,
-            id
-          )
-      }
+      relations: enquiryRelations(context)
     };
   });
   registerContact360Modules(app, async (request, resource) => {
@@ -317,9 +368,11 @@ export async function createApp() {
         throw AppError.forbidden("CRM and Frappe must be enabled for this tenant.");
       const path = request.url.split("?")[0] ?? "";
       const permission =
-        request.method === "POST" && path.endsWith("/sync")
-          ? "crm.enquiry.update"
-          : "crm.enquiry.view";
+        path.startsWith("/frappe/connection") && request.method !== "GET"
+          ? "frappe.connection.manage"
+          : request.method === "POST" && path.endsWith("/sync")
+            ? "crm.enquiry.update"
+            : "crm.enquiry.view";
       await context.authorize(permission);
       const actor = await context.database
         .selectFrom("app_users")
@@ -337,6 +390,12 @@ export async function createApp() {
       return {
         database: context.database as unknown as import("kysely").Kysely<FrappeDatabase>,
         viewer: { actorEmail: context.actorEmail, actorUserId: actor?.id ?? null, canViewAll },
+        mappedEmployeeCode: (localEmail: string, baseUrl: string) =>
+          mappedEmployeeCodeForLocalUser(
+            context.database as unknown as import("kysely").Kysely<FrappeUserMappingDatabase>,
+            localEmail,
+            baseUrl
+          ),
         loadEnquiry: async (id: number) => {
           const repository = new EnquiryRepository(
             context.database as unknown as import("kysely").Kysely<EnquiryDatabase>
@@ -359,7 +418,133 @@ export async function createApp() {
       apiKey: env.CXSUN_FRAPPE_APP_KEY,
       apiSecret: env.CXSUN_FRAPPE_APP_SECRET,
       enabled: env.CXSUN_FRAPPE_ENABLED === "1"
-    }
+    },
+    env.JWT_SECRET
+  );
+  frappeEnquirySyncModule.register(
+    app,
+    async (request) => {
+      const context = tenantAccessContext(request);
+      const enabled = await context.database
+        .selectFrom("app_module_settings")
+        .select("id")
+        .where("module_key", "in", ["crm", "frappe"])
+        .where("enabled", "=", true)
+        .where("status", "=", "active")
+        .execute();
+      if (enabled.length !== 2)
+        throw AppError.forbidden("CRM and Frappe must be enabled for this tenant.");
+      await context.authorize("frappe.connection.manage");
+      await context.authorize("crm.enquiry.view-all");
+      if (request.method === "POST") {
+        await context.authorize("crm.enquiry.create");
+        await context.authorize("crm.enquiry.update");
+      }
+      const database = context.database as unknown as import("kysely").Kysely<EnquiryDatabase>;
+      const enquiries = new EnquiryService(
+        new EnquiryRepository(database),
+        enquiryRelations(context),
+        { actorEmail: context.actorEmail, actorUserId: null, canViewAll: true }
+      );
+      return {
+        database: context.database as unknown as import("kysely").Kysely<FrappeDatabase>,
+        createEnquiry: (input: import("@cxsun/crm-api/enquiry-sync").EnquiryInput) =>
+          enquiries.create(input, context.actorEmail),
+        updateEnquiry: (id: number, input: import("@cxsun/crm-api/enquiry-sync").EnquiryInput) =>
+          enquiries.update(id, input, context.actorEmail),
+        localUserForEmployee: (employeeCode: string, baseUrl: string) =>
+          mappedLocalUserForEmployeeCode(
+            context.database as unknown as import("kysely").Kysely<FrappeUserMappingDatabase>,
+            employeeCode,
+            baseUrl
+          )
+      };
+    },
+    {
+      baseUrl: env.CXSUN_FRAPPE_BASE_URL,
+      apiKey: env.CXSUN_FRAPPE_APP_KEY,
+      apiSecret: env.CXSUN_FRAPPE_APP_SECRET,
+      enabled: env.CXSUN_FRAPPE_ENABLED === "1"
+    },
+    env.JWT_SECRET
+  );
+  frappeUserSyncModule.register(
+    app,
+    async (request) => {
+      const context = tenantAccessContext(request);
+      const enabled = await context.database
+        .selectFrom("app_module_settings")
+        .select("id")
+        .where("module_key", "=", "frappe")
+        .where("enabled", "=", true)
+        .where("status", "=", "active")
+        .executeTakeFirst();
+      if (!enabled) throw AppError.forbidden("Frappe must be enabled for this tenant.");
+      await context.authorize("frappe.connection.manage");
+      const users = new TenantUserService(context);
+      return {
+        database: context.database as unknown as import("kysely").Kysely<FrappeDatabase>,
+        localUsers: async () =>
+          (await users.list()).map(({ id, email, status }) => ({ id, email, status })),
+        importUser: (user: { name: string; email: string; password?: string }) =>
+          users.importFromFrappe(user)
+      };
+    },
+    {
+      baseUrl: env.CXSUN_FRAPPE_BASE_URL,
+      apiKey: env.CXSUN_FRAPPE_APP_KEY,
+      apiSecret: env.CXSUN_FRAPPE_APP_SECRET,
+      enabled: env.CXSUN_FRAPPE_ENABLED === "1"
+    },
+    env.JWT_SECRET
+  );
+  frappeUserMappingModule.register(
+    app,
+    async (request) => {
+      const context = tenantAccessContext(request);
+      const enabled = await context.database
+        .selectFrom("app_module_settings")
+        .select("id")
+        .where("module_key", "=", "frappe")
+        .where("enabled", "=", true)
+        .where("status", "=", "active")
+        .executeTakeFirst();
+      if (!enabled) throw AppError.forbidden("Frappe must be enabled for this tenant.");
+      await context.authorize("frappe.connection.manage");
+      const users = new TenantUserService(context);
+      return {
+        database: context.database as unknown as import("kysely").Kysely<FrappeUserMappingDatabase>,
+        localUsers: async () =>
+          (await users.list()).map(({ id, uuid, name, email, status }) => ({
+            id,
+            uuid,
+            name,
+            email,
+            status
+          })),
+        audit: (
+          action: "linked" | "updated" | "unlinked",
+          user: { id: number; uuid: string; name: string },
+          remoteId: string
+        ) =>
+          recordTenantAccessAudit({
+            action,
+            actorEmail: context.actorEmail,
+            moduleKey: "frappe.user-mapping",
+            recordId: user.id,
+            recordLabel: `${user.name} -> ${remoteId}`,
+            recordUuid: user.uuid,
+            tenantId: context.tenantId
+          })
+      };
+    },
+    {
+      baseUrl: env.CXSUN_FRAPPE_BASE_URL,
+      apiKey: env.CXSUN_FRAPPE_APP_KEY,
+      apiSecret: env.CXSUN_FRAPPE_APP_SECRET,
+      enabled: env.CXSUN_FRAPPE_ENABLED === "1"
+    },
+    env.JWT_SECRET
   );
   console.info("[platform.routes] CRM package ready");
   await auditorClientModule.register(app, async (request) => {

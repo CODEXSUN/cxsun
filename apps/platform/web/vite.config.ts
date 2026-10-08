@@ -50,7 +50,8 @@ export default defineConfig(({ command, mode }) => {
         "@cxsun/billing-web",
         "@cxsun/core-web",
         "@cxsun/crm-web",
-        "@cxsun/frappe-web"
+        "@cxsun/frappe-web",
+        "@cxsun/zetro-web"
       ],
       include: [
         "react-is",
@@ -131,6 +132,10 @@ function platformDevelopmentServer(runtimeEnv: Record<string, string | undefined
         ...proxy,
         rewrite: (path: string) =>
           `/project-manager${path.replace(/^\/api\/project-manager/u, "") || "/"}`
+      },
+      "/api/zuno": {
+        ...proxy,
+        rewrite: (path: string) => `/zuno${path.replace(/^\/api\/zuno/u, "") || "/"}`
       },
       "/api/platform": {
         ...proxy,

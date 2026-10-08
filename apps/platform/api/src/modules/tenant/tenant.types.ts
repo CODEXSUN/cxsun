@@ -20,7 +20,8 @@ export type Tenant = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
   id: number;
   mobile: string | null;
   payloadSettings: Record<string, unknown>;

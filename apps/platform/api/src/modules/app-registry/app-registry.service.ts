@@ -13,7 +13,8 @@ export const defaultTenantModuleKeys = [
   "platform.task-manager",
   "auditor",
   "crm",
-  "frappe"
+  "frappe",
+  "zetro"
 ] as const;
 
 export const platformAppRegistry: PlatformAppDefinition[] = [
@@ -115,6 +116,17 @@ export const platformAppRegistry: PlatformAppDefinition[] = [
     label: "Frappe",
     moduleKey: "frappe",
     stack: "frappe",
+    uuid: ""
+  },
+  {
+    alwaysEnabled: false,
+    defaultLanding: false,
+    description: "AI coworker with private conversation history.",
+    appId: "zetro",
+    id: 0,
+    label: "Zetro",
+    moduleKey: "zetro",
+    stack: "zetro",
     uuid: ""
   },
   {

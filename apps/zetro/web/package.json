@@ -1,0 +1,23 @@
+{
+  "name": "@cxsun/zetro-web",
+  "version": "1.0.80",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./modules/chat": "./src/modules/chat/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "oxlint src"
+  },
+  "dependencies": {
+    "@cxsun/ui": "^1.0.80",
+    "@tanstack/react-query": "^5.104.1",
+    "lucide-react": "^1.52.0",
+    "react": "^19.3.0",
+    "sonner": "^2.0.8",
+    "zod": "^4.6.5"
+  }
+}

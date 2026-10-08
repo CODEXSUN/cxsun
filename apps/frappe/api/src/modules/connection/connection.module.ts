@@ -12,10 +12,12 @@ export const frappeConnectionModule = {
     context: (request: FastifyRequest) => Promise<{
       database: Kysely<FrappeDatabase>;
       loadEnquiry: (id: number) => Promise<EnquiryRecord>;
+      mappedEmployeeCode: (localEmail: string, baseUrl: string) => Promise<string | null>;
       viewer: Pick<EnquiryListOptions, "actorEmail" | "actorUserId" | "canViewAll">;
     }>,
-    settings: FrappeSettings
+    settings: FrappeSettings,
+    encryptionSecret: string
   ) {
-    registerFrappeRoutes(app, context, settings);
+    registerFrappeRoutes(app, context, settings, encryptionSecret);
   }
 };

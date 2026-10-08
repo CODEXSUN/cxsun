@@ -50,7 +50,7 @@ const emptyLookups: ContactLookups = {
   cities: [],
   pincodes: []
 };
-export function ContactWorkspace() {
+export function ContactWorkspace({ basePath = "/app/core/master/contact" }: { basePath?: string }) {
   const client = useQueryClient(),
     [search, setSearch] = useState(""),
     [page, setPage] = useState(1),
@@ -62,7 +62,6 @@ export function ContactWorkspace() {
     records = query.data ?? [];
   const location = useLocation();
   const navigate = useNavigate();
-  const basePath = "/app/core/master/contact";
   function setEditing(record: ContactRecord | null | undefined) {
     setLocalEditing(record);
     const path =
@@ -94,7 +93,7 @@ export function ContactWorkspace() {
     setLocalEditing((current) =>
       current && record && current.id === record.id ? current : record
     );
-  }, [location.pathname, query.data]);
+  }, [basePath, location.pathname, query.data]);
   const totalPages = Math.max(1, Math.ceil(records.length / rowsPerPage));
   const currentPage = Math.min(page, totalPages);
   const visibleRecords = records.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -127,7 +126,7 @@ export function ContactWorkspace() {
     )
       return;
     generateCode.mutate();
-  }, [location.pathname, newCode, generateCode.isPending, generateCode.isError]);
+  }, [basePath, location.pathname, newCode, generateCode.isPending, generateCode.isError]);
   const action = useMutation({
     mutationFn: ({ record, type }: { record: ContactRecord; type: "delete" | "toggle" }) =>
       type === "delete"

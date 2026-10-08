@@ -21,11 +21,13 @@ import {
   RocketIcon,
   Settings2Icon,
   ShieldCheckIcon,
+  SparklesIcon,
   UserRoundIcon
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { TenantMainLayout } from "./TenantMainLayout";
+import { ApplicationSettings } from "./ApplicationSettings";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -101,6 +103,25 @@ const CrmOverviewWorkspace = lazyWorkspace(() =>
 );
 const FrappeOverviewWorkspace = lazyWorkspace(() =>
   import("@cxsun/frappe-web/modules/overview").then((module) => module.FrappeOverviewWorkspace)
+);
+const ZetroChatWorkspace = lazyWorkspace(() =>
+  import("@cxsun/zetro-web/modules/chat").then((module) => module.ZetroChatWorkspace)
+);
+const FrappeEnquirySyncWorkspace = lazyWorkspace(() =>
+  import("@cxsun/frappe-web/modules/enquiry-sync").then(
+    (module) => module.FrappeEnquirySyncWorkspace
+  )
+);
+const FrappeConnectionWorkspace = lazyWorkspace(() =>
+  import("@cxsun/frappe-web/modules/connection").then((module) => module.FrappeConnectionWorkspace)
+);
+const FrappeUserSyncWorkspace = lazyWorkspace(() =>
+  import("@cxsun/frappe-web/modules/user-sync").then((module) => module.FrappeUserSyncWorkspace)
+);
+const FrappeUserMappingWorkspace = lazyWorkspace(() =>
+  import("@cxsun/frappe-web/modules/user-mapping").then(
+    (module) => module.FrappeUserMappingWorkspace
+  )
 );
 const CrmReportsWorkspace = lazyWorkspace(() =>
   import("@cxsun/crm-web/modules/reports").then((module) => module.CrmReportsWorkspace)
@@ -404,7 +425,12 @@ const TenantRolePermissionWorkspace = lazy(() =>
 );
 
 type AppPage =
+  | "zetro.chat"
   | "frappe.overview"
+  | "frappe.enquiry-sync"
+  | "frappe.connection"
+  | "frappe.users"
+  | "frappe.user-mapping"
   | "auditor.overview"
   | "auditor.clients"
   | "crm.overview"
@@ -414,6 +440,7 @@ type AppPage =
   | "crm.my-job"
   | "crm.my-calls"
   | "crm.contacts"
+  | "crm.contact-360"
   | "crm.list-in"
   | "crm.status"
   | "crm.priority"
@@ -868,6 +895,8 @@ export function AppDesk() {
             }
           : {})}
         onLogout={handleLogout}
+        onOpenSettings={() => requestListNavigation("application.settings")}
+        settingsActive={safePage === "application.settings"}
         user={signedInUser}
         versionLabel={`v ${__APP_VERSION__}`}
         workspaceName={activeWorkspaceTitle}
@@ -879,7 +908,9 @@ export function AppDesk() {
         >
           <Suspense
             key={
-              safePage.startsWith("core.") || safePage.startsWith("billing.")
+              safePage.startsWith("core.") ||
+              safePage.startsWith("billing.") ||
+              safePage === "crm.contacts"
                 ? safePage
                 : `${safePage}:${location.href}`
             }
@@ -890,6 +921,11 @@ export function AppDesk() {
             ) : null}
             {safePage === "auditor.overview" ? <AuditorOverviewWorkspace /> : null}
             {safePage === "frappe.overview" ? <FrappeOverviewWorkspace /> : null}
+            {safePage === "zetro.chat" ? <ZetroChatWorkspace /> : null}
+            {safePage === "frappe.enquiry-sync" ? <FrappeEnquirySyncWorkspace /> : null}
+            {safePage === "frappe.connection" ? <FrappeConnectionWorkspace /> : null}
+            {safePage === "frappe.users" ? <FrappeUserSyncWorkspace /> : null}
+            {safePage === "frappe.user-mapping" ? <FrappeUserMappingWorkspace /> : null}
             {safePage === "auditor.clients" ? (
               <AuditorClientWorkspace
                 gateway={auditorClientGateway}
@@ -908,7 +944,10 @@ export function AppDesk() {
             {safePage === "crm.reports" ? (
               <CrmReportsWorkspace onOpenEnquiries={openReportEnquiries} />
             ) : null}
-            {safePage === "crm.contacts" ? <Contact360Workspace key={safePage} /> : null}
+            {safePage === "crm.contacts" ? (
+              <ContactWorkspace key={safePage} basePath="/app/crm/contacts" />
+            ) : null}
+            {safePage === "crm.contact-360" ? <Contact360Workspace key={safePage} /> : null}
             {safePage === "crm.enquiries" ? (
               <EnquiryWorkspace
                 key={`${safePage}:${location.href}`}
@@ -954,7 +993,15 @@ export function AppDesk() {
               />
             ) : null}
             {safePage === "application.profile" ? <ApplicationProfile /> : null}
-            {safePage === "application.settings" ? <ApplicationSettings /> : null}
+            {safePage === "application.settings" ? (
+              <ApplicationSettings
+                companyName={selectedCompany ? companyBrandName(selectedCompany) : "—"}
+                financialYear={selectedFinancialYear?.name ?? "—"}
+                onNavigate={requestListNavigation}
+                signedInEmail={signedInUser.email}
+                tenantName={runtime?.tenant?.tenantName ?? "—"}
+              />
+            ) : null}
             {safePage === "application.access.users" ? <TenantUserWorkspace /> : null}
             {safePage === "application.access.roles" ? <TenantRoleWorkspace /> : null}
             {safePage === "application.access.permissions" ? <TenantPermissionWorkspace /> : null}
@@ -1099,6 +1146,16 @@ function pageFromUrl(landingApp: PlatformAppId | null, pathname: string): AppPag
   if (!app) return pageForApp(landingApp ?? "application");
 
   if (
+    app === "crm" &&
+    children[0] === "contacts" &&
+    (children.length === 1 ||
+      (children.length === 2 && children[1] === "new") ||
+      (children.length === 3 && children[2] === "edit"))
+  ) {
+    return "crm.contacts";
+  }
+
+  if (
     app === "billing" &&
     ["quotation", "sales", "purchase", "export-sales", "payment", "receipt"].includes(
       children[0] ?? ""
@@ -1136,7 +1193,12 @@ function pageFromUrl(landingApp: PlatformAppId | null, pathname: string): AppPag
 
   const key = `${app}.${children.filter(Boolean).join(".") || "overview"}`;
   if (
+    key === "zetro.chat" ||
     key === "frappe.overview" ||
+    key === "frappe.enquiry-sync" ||
+    key === "frappe.connection" ||
+    key === "frappe.users" ||
+    key === "frappe.user-mapping" ||
     key === "auditor.overview" ||
     key === "auditor.clients" ||
     key === "crm.overview" ||
@@ -1146,6 +1208,7 @@ function pageFromUrl(landingApp: PlatformAppId | null, pathname: string): AppPag
     key === "crm.my-job" ||
     key === "crm.my-calls" ||
     key === "crm.contacts" ||
+    key === "crm.contact-360" ||
     key === "crm.list-in" ||
     key === "crm.status" ||
     key === "crm.priority" ||
@@ -1240,7 +1303,10 @@ function tenantPathMatchesPage(pathname: string, page: AppPage): boolean {
         (segments[1] === "edit" || segments[1] === "show" || segments[1] === "print"))
     );
   }
-  if (page.startsWith("core.") && (isCommonMasterPage(page) || CORE_RECORD_PAGES.has(page))) {
+  if (
+    page === "crm.contacts" ||
+    (page.startsWith("core.") && (isCommonMasterPage(page) || CORE_RECORD_PAGES.has(page)))
+  ) {
     const prefix = `${canonicalPath}/`;
     if (!pathname.startsWith(prefix)) return false;
     const segments = pathname.slice(prefix.length).split("/");
@@ -1289,41 +1355,47 @@ function LandingDesk({
         ? "Sales, purchase, receipt, payment, report, master, common, and billing settings."
         : appId === "crm"
           ? "Customer relationships and sales opportunities."
-          : appId === "frappe"
-            ? "Frappe connection and outbound CRM enquiry sync."
-            : appId === "accounts"
-              ? "Chart of accounts, ledger groups, ledgers, journal, and accounting overview."
-              : appId === "mail"
-                ? "Inbox, compose, scheduled delivery, sent history, failures, and mail settings."
-                : "Shared workspace, company setup, roles, and cross-app launch desk.",
+          : appId === "zetro"
+            ? "AI coworker with private conversation history."
+            : appId === "frappe"
+              ? "Frappe connection and manual CRM enquiry sync."
+              : appId === "accounts"
+                ? "Chart of accounts, ledger groups, ledgers, journal, and accounting overview."
+                : appId === "mail"
+                  ? "Inbox, compose, scheduled delivery, sent history, failures, and mail settings."
+                  : "Shared workspace, company setup, roles, and cross-app launch desk.",
     icon:
       appId === "billing"
         ? CreditCardIcon
         : appId === "crm"
           ? ContactRoundIcon
-          : appId === "frappe"
-            ? RefreshCwIcon
-            : appId === "accounts"
-              ? LayersIcon
-              : appId === "mail"
-                ? MailIcon
-                : appId === "task-manager"
-                  ? ListChecksIcon
-                  : LayoutDashboardIcon,
+          : appId === "zetro"
+            ? SparklesIcon
+            : appId === "frappe"
+              ? RefreshCwIcon
+              : appId === "accounts"
+                ? LayersIcon
+                : appId === "mail"
+                  ? MailIcon
+                  : appId === "task-manager"
+                    ? ListChecksIcon
+                    : LayoutDashboardIcon,
     iconClass:
       appId === "billing"
         ? "bg-emerald-600 text-white"
         : appId === "crm"
           ? "bg-rose-600 text-white"
-          : appId === "frappe"
-            ? "bg-teal-600 text-white"
-            : appId === "accounts"
-              ? "bg-cyan-600 text-white"
-              : appId === "mail"
-                ? "bg-sky-600 text-white"
-                : appId === "task-manager"
-                  ? "bg-violet-600 text-white"
-                  : "bg-slate-950 text-white",
+          : appId === "zetro"
+            ? "bg-fuchsia-600 text-white"
+            : appId === "frappe"
+              ? "bg-teal-600 text-white"
+              : appId === "accounts"
+                ? "bg-cyan-600 text-white"
+                : appId === "mail"
+                  ? "bg-sky-600 text-white"
+                  : appId === "task-manager"
+                    ? "bg-violet-600 text-white"
+                    : "bg-slate-950 text-white",
     id: appId,
     label:
       appId === "billing"
@@ -1582,16 +1654,6 @@ function ApplicationProfile() {
   );
 }
 
-function ApplicationSettings() {
-  return (
-    <Card title="Application Settings" description="Tenant-scoped platform settings.">
-      <div className="flex flex-wrap gap-2">
-        <StatusBadge tone="green">Platform</StatusBadge>
-      </div>
-    </Card>
-  );
-}
-
 function BillingSales({ initialRecordId }: { initialRecordId?: string | undefined }) {
   return <SalesWorkspace initialRecordId={initialRecordId} />;
 }
@@ -1726,6 +1788,10 @@ function renderOwnedCommonMasterPage(page: AppPage) {
 function titleForPage(page: AppPage) {
   const labels: Partial<Record<AppPage, string>> = {
     "frappe.overview": "Frappe",
+    "frappe.enquiry-sync": "Enquiry sync",
+    "frappe.connection": "Frappe connection",
+    "frappe.users": "Frappe users",
+    "frappe.user-mapping": "User mapping",
     "auditor.overview": "Overview",
     "auditor.clients": "Clients",
     "crm.overview": "Overview",
@@ -1735,6 +1801,7 @@ function titleForPage(page: AppPage) {
     "crm.my-job": "My Job",
     "crm.my-calls": "My Calls",
     "crm.contacts": "Contacts",
+    "crm.contact-360": "Contact 360",
     "crm.list-in": "List In",
     "crm.status": "Status",
     "crm.priority": "Priority",

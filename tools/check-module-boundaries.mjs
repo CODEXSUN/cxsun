@@ -29,12 +29,20 @@ const moduleRoots = [
     path: join(process.cwd(), "apps", "frappe", "api", "src", "modules")
   },
   {
+    app: "zetro-api",
+    path: join(process.cwd(), "apps", "zetro", "api", "src", "modules")
+  },
+  {
     app: "platform-api",
     path: join(process.cwd(), "apps", "platform", "api", "src", "modules")
   },
   {
     app: "project-manager-api",
     path: join(process.cwd(), "devkits", "project-manager", "api", "src", "modules")
+  },
+  {
+    app: "zuno-api",
+    path: join(process.cwd(), "devkits", "zuno", "api", "src", "modules")
   }
 ];
 
@@ -86,6 +94,7 @@ const crmContact360Leaves = [
 const capabilityBackendRoles = new Map([
   ["auditor-api/client", ["module", "service", "repository", "routes", "migration", "types"]],
   ["project-manager-api/platform-registry", reducedBackendRoles],
+  ["zuno-api/diagnostics", ["module", "service", "repository", "routes", "types"]],
   [
     "project-manager-api/ideas",
     ["module", "service", "repository", "routes", "migration", "types"]
@@ -96,7 +105,14 @@ const capabilityBackendRoles = new Map([
   ["crm-api/status", reducedBackendRoles],
   ["crm-api/priority", reducedBackendRoles],
   ...crmContact360Leaves.map((name) => [`crm-api/${name}`, reducedBackendRoles]),
-  ["frappe-api/connection", ["module", "service", "repository", "routes", "migration", "types"]]
+  [
+    "frappe-api/connection",
+    ["module", "service", "repository", "routes", "migration", "types", "secrets", "seed"]
+  ],
+  ["frappe-api/user-sync", ["module", "service", "routes", "types"]],
+  ["frappe-api/enquiry-sync", ["module", "service", "routes", "types"]],
+  ["frappe-api/user-mapping", ["module", "service", "repository", "routes", "migration", "types"]],
+  ["zetro-api/chat", ["module", "service", "repository", "routes", "migration", "seed", "types"]]
 ]);
 
 const webModuleRoots = [
@@ -111,6 +127,10 @@ const webModuleRoots = [
   {
     app: "frappe-web",
     path: join(process.cwd(), "apps", "frappe", "web", "src", "modules")
+  },
+  {
+    app: "zetro-web",
+    path: join(process.cwd(), "apps", "zetro", "web", "src", "modules")
   },
   {
     app: "mail-web",
@@ -131,6 +151,10 @@ const webModuleRoots = [
   {
     app: "project-manager-web",
     path: join(process.cwd(), "devkits", "project-manager", "web", "src", "modules")
+  },
+  {
+    app: "zuno-web",
+    path: join(process.cwd(), "devkits", "zuno", "web", "src", "modules")
   }
 ];
 
@@ -139,8 +163,16 @@ const shellOnlyFrontendModules = new Set();
 const shellOnlyFrontendRoles = ["module", "workspace", "services", "hooks", "types"];
 const capabilityFrontendRoles = new Map([
   ["auditor-web/overview", ["workspace"]],
+  ["zuno-web/diagnostics", ["workspace", "list", "form", "services", "hooks", "types", "schema"]],
   ["crm-web/overview", ["workspace"]],
   ["frappe-web/overview", ["workspace", "list", "services", "hooks", "types"]],
+  ["frappe-web/enquiry-sync", ["workspace", "list", "services", "hooks", "types"]],
+  ["frappe-web/connection", ["workspace", "form", "services", "hooks", "types", "schema"]],
+  ["frappe-web/user-sync", ["workspace", "list", "form", "services", "hooks", "types"]],
+  [
+    "frappe-web/user-mapping",
+    ["workspace", "list", "form", "services", "hooks", "types", "schema"]
+  ],
   ["crm-web/contact-360", ["workspace", "services", "hooks", "types"]],
   ...crmContact360Leaves.map((name) => [`crm-web/${name}`, ["services", "hooks", "types"]])
 ]);

@@ -4,7 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./modules/overview": "./src/modules/overview/index.ts"
+    "./modules/connection": "./src/modules/connection/index.ts",
+    "./modules/overview": "./src/modules/overview/index.ts",
+    "./modules/enquiry-sync": "./src/modules/enquiry-sync/index.ts",
+    "./modules/user-sync": "./src/modules/user-sync/index.ts",
+    "./modules/user-mapping": "./src/modules/user-mapping/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",
@@ -17,6 +21,7 @@
     "@tanstack/react-table": "^9.2.6",
     "lucide-react": "^1.52.0",
     "react": "^19.3.0",
-    "sonner": "^2.0.8"
+    "sonner": "^2.0.8",
+    "zod": "^4.6.5"
   }
 }

@@ -68,7 +68,7 @@ export function FrappeOverviewWorkspace() {
             {connection.isLoading
               ? "Checking configuration…"
               : !connection.data?.configured
-                ? "Configure the Frappe URL and API credentials on the server."
+                ? "Set up Application connection from the Frappe sidebar."
                 : !connection.data.enabled
                   ? "Frappe sync is disabled."
                   : verifiedUser

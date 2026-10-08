@@ -49,7 +49,18 @@ function requestHeaders(options: RequestInit, token: string | null, database: st
 }
 
 async function readEnvelope<T>(response: Response) {
-  const body = (await response.json()) as Envelope<T>;
+  const rawBody = await response.text();
+  if (!rawBody.trim()) {
+    throw new Error(
+      `Core Contacts returned an empty response (HTTP ${response.status}). Check whether the contact was saved before retrying.`
+    );
+  }
+  let body: Envelope<T>;
+  try {
+    body = JSON.parse(rawBody) as Envelope<T>;
+  } catch {
+    throw new Error(`Core Contacts returned an invalid response (HTTP ${response.status}).`);
+  }
   if (!response.ok || !body.success) {
     throw new Error(body.success ? "Core API request failed." : body.error.message);
   }

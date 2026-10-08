@@ -18,7 +18,8 @@ export type Tenant = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
   id: number;
   mobile: string | null;
   payloadSettings: Record<string, unknown>;
@@ -53,7 +54,8 @@ export type TenantSavePayload = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
   mobile: string | null;
   payloadSettings: Record<string, unknown>;
   primaryDomain: string;
@@ -87,7 +89,8 @@ export type TenantRuntime = {
       | "blog"
       | "auditor"
       | "crm"
-      | "frappe";
+      | "frappe"
+      | "zetro";
     label: string;
     moduleKey: string;
     stack:
@@ -101,7 +104,8 @@ export type TenantRuntime = {
       | "blog"
       | "auditor"
       | "crm"
-      | "frappe";
+      | "frappe"
+      | "zetro";
   }>;
   defaultLandingApp:
     | "application"
@@ -114,6 +118,7 @@ export type TenantRuntime = {
     | "blog"
     | "auditor"
     | "crm"
-    | "frappe";
+    | "frappe"
+    | "zetro";
   tenant: Tenant | null;
 };

@@ -40,10 +40,22 @@ import {
 import type { Kysely } from "kysely";
 import {
   frappeTenantMigrations,
+  frappeUserMappingMigrations,
+  seedFrappeConnectionPermissions,
   migrateFrappeTenantDatabase,
+  migrateFrappeUserMappingDatabase,
   rollbackFrappeTenantDatabase,
-  type FrappeDatabase
+  rollbackFrappeUserMappingDatabase,
+  type FrappeDatabase,
+  type FrappeUserMappingDatabase
 } from "@cxsun/frappe-api";
+import {
+  zetroChatMigrations,
+  migrateZetroChatDatabase,
+  rollbackZetroChatDatabase,
+  seedZetroChatPermissions,
+  type ZetroDatabase
+} from "@cxsun/zetro-api";
 import {
   migrateProjectManagerDatabase,
   projectManagerTenantMigrations
@@ -92,8 +104,20 @@ export function tenantDatabaseMigrationsFor(tenant: Tenant) {
           statements: [`RUN ${migration.name}`]
         }))
       : []),
+    ...(enabled.has("crm") && enabled.has("frappe")
+      ? frappeUserMappingMigrations.map((migration) => ({
+          ...migration,
+          statements: [`RUN ${migration.name}`]
+        }))
+      : []),
     ...(enabled.has("auditor")
       ? auditorMigrations.map((migration) => ({
+          ...migration,
+          statements: [`RUN ${migration.name}`]
+        }))
+      : []),
+    ...(enabled.has("zetro")
+      ? zetroChatMigrations.map((migration) => ({
           ...migration,
           statements: [`RUN ${migration.name}`]
         }))
@@ -138,11 +162,18 @@ export async function migrateSelectedTenantApps(database: Kysely<TenantDatabase>
   }
   if (enabled.has("crm") && enabled.has("frappe")) {
     await migrateFrappeTenantDatabase(database as unknown as Kysely<FrappeDatabase>);
+    await migrateFrappeUserMappingDatabase(
+      database as unknown as Kysely<FrappeUserMappingDatabase>
+    );
     provisionedApps.push("frappe");
   }
   if (enabled.has("auditor")) {
     await migrateAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
     provisionedApps.push("auditor");
+  }
+  if (enabled.has("zetro")) {
+    await migrateZetroChatDatabase(database as unknown as Kysely<ZetroDatabase>);
+    provisionedApps.push("zetro");
   }
 
   if (enabled.has("billing.sales")) {
@@ -180,9 +211,17 @@ export async function seedSelectedTenantApps(database: Kysely<TenantDatabase>, t
     await seedCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
     seededApps.push("crm");
   }
+  if (enabled.has("crm") && enabled.has("frappe")) {
+    await seedFrappeConnectionPermissions(database as unknown as Kysely<FrappeDatabase>);
+    seededApps.push("frappe");
+  }
   if (enabled.has("auditor")) {
     await seedAuditorClientPermissions(database as unknown as Kysely<AuditorClientDatabase>);
     seededApps.push("auditor");
+  }
+  if (enabled.has("zetro")) {
+    await seedZetroChatPermissions(database as unknown as Kysely<ZetroDatabase>);
+    seededApps.push("zetro");
   }
   await setDefaultCompanyLandingAppForDatabase(tenant.dbName, tenant.defaultLandingApp);
 
@@ -216,13 +255,19 @@ export async function rollbackSelectedTenantApps(database: Kysely<TenantDatabase
   if (enabled.has("platform.task-manager"))
     await rollbackTaskManagerTenantModule(database as never);
   if (enabled.has("mail")) await rollbackMailModule(database as never);
-  if (enabled.has("crm") && enabled.has("frappe"))
+  if (enabled.has("crm") && enabled.has("frappe")) {
+    await rollbackFrappeUserMappingDatabase(
+      database as unknown as Kysely<FrappeUserMappingDatabase>
+    );
     await rollbackFrappeTenantDatabase(database as unknown as Kysely<FrappeDatabase>);
+  }
   if (enabled.has("crm")) {
     await rollbackCrmTenantDatabase(database as unknown as Kysely<EnquiryDatabase>);
   }
   if (enabled.has("auditor"))
     await rollbackAuditorDatabase(database as unknown as Kysely<AuditorClientDatabase>);
+  if (enabled.has("zetro"))
+    await rollbackZetroChatDatabase(database as unknown as Kysely<ZetroDatabase>);
   if (enabled.has("billing.sales")) await rollbackBillingTenantDatabase(tenant.dbName);
   if (enabled.has("accounts.accounting")) await rollbackAccountsTenantDatabase(tenant.dbName);
   await rollbackCoreTenantDatabase(tenant.dbName);

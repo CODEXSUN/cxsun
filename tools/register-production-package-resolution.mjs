@@ -10,7 +10,9 @@ const apiPackages = new Map([
   ["@cxsun/billing-api", "billing"],
   ["@cxsun/core-api", "core"],
   ["@cxsun/crm-api", "crm"],
+  ["@cxsun/zetro-api", "zetro"],
   ["@cxsun/project-manager-api", "project-manager"],
+  ["@cxsun/zuno-api", "zuno"],
   ["@cxsun/mail-api", "mail"]
 ]);
 

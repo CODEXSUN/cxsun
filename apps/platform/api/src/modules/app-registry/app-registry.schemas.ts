@@ -11,7 +11,8 @@ const appId = z.enum([
   "blog",
   "auditor",
   "crm",
-  "frappe"
+  "frappe",
+  "zetro"
 ]);
 const stack = z.enum([
   "platform",
@@ -24,7 +25,8 @@ const stack = z.enum([
   "blog",
   "auditor",
   "crm",
-  "frappe"
+  "frappe",
+  "zetro"
 ]);
 
 export const platformAppSaveSchema = z
