@@ -16,6 +16,8 @@ services:
       - ./deploy.env:/app/.env:ro
       - demo-storage:/app/storage
       - demo-media-data:/app/storage/media
+      - demo-codex-cli:/opt/cxsun-codex-cli
+      - demo-codex-auth:/var/lib/cxsun/zetro-codex
     networks:
       - cxapp-network
 
@@ -65,6 +67,10 @@ volumes:
     name: cxsun-demo-media-data
   demo-media-db:
     name: cxsun-demo-media-db
+  demo-codex-cli:
+    name: cxsun-demo-codex-cli
+  demo-codex-auth:
+    name: cxsun-demo-codex-auth
 
 networks:
   cxapp-network:
