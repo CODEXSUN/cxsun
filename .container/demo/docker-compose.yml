@@ -13,6 +13,7 @@ services:
     ports:
       - "127.0.0.1:17210:17210"
     volumes:
+      - ./deploy.env:/app/.env:ro
       - demo-storage:/app/storage
       - demo-media-data:/app/storage/media
     networks:
