@@ -4,7 +4,8 @@ import { z } from "zod";
 import { registerContractRoute } from "@cxsun/framework/http";
 import type {} from "@cxsun/framework/api";
 import { ZetroChatRepository } from "./chat.repository.js";
-import { ZetroChatService } from "./chat.service.js";
+import { ZetroChatService, type CustomerOutstandingLookup } from "./chat.service.js";
+import { ZetroPolicyRepository } from "./chat.policy.js";
 import type { ZetroConversation, ZetroDatabase, ZetroProviderConfig } from "./chat.types.js";
 
 const idParams = z.object({ id: z.coerce.number().int().positive() }).strict();
@@ -30,6 +31,7 @@ const detailSchema = z.object({
 export type ZetroChatContext = {
   database: Kysely<ZetroDatabase>;
   actorEmail: string;
+  lookupOutstanding: CustomerOutstandingLookup;
   audit: (action: string, conversation: ZetroConversation) => Promise<void>;
 };
 
@@ -43,7 +45,12 @@ export function registerZetroChatRoutes(
     return {
       actorEmail: scope.actorEmail,
       audit: scope.audit,
-      chat: new ZetroChatService(new ZetroChatRepository(scope.database), provider)
+      chat: new ZetroChatService(
+        new ZetroChatRepository(scope.database),
+        provider,
+        new ZetroPolicyRepository(scope.database),
+        scope.lookupOutstanding
+      )
     };
   };
 

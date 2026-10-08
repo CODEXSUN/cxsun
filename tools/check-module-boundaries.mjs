@@ -95,6 +95,8 @@ const capabilityBackendRoles = new Map([
   ["auditor-api/client", ["module", "service", "repository", "routes", "migration", "types"]],
   ["project-manager-api/platform-registry", reducedBackendRoles],
   ["zuno-api/diagnostics", ["module", "service", "repository", "routes", "types"]],
+  ["zuno-api/cases", ["module", "service", "repository", "routes", "migration", "types"]],
+  ["zuno-api/watch", ["module", "service", "repository", "routes", "types"]],
   [
     "project-manager-api/ideas",
     ["module", "service", "repository", "routes", "migration", "types"]
@@ -164,6 +166,8 @@ const shellOnlyFrontendRoles = ["module", "workspace", "services", "hooks", "typ
 const capabilityFrontendRoles = new Map([
   ["auditor-web/overview", ["workspace"]],
   ["zuno-web/diagnostics", ["workspace", "list", "form", "services", "hooks", "types", "schema"]],
+  ["zuno-web/cases", ["workspace", "list", "form", "services", "hooks", "types", "schema"]],
+  ["zuno-web/watch", ["workspace", "list", "services", "hooks", "types"]],
   ["crm-web/overview", ["workspace"]],
   ["frappe-web/overview", ["workspace", "list", "services", "hooks", "types"]],
   ["frappe-web/enquiry-sync", ["workspace", "list", "services", "hooks", "types"]],

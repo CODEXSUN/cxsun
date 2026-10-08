@@ -11,6 +11,7 @@ export class ZetroChatRepository {
       .selectFrom("zetro_conversations")
       .select(["id", "uuid", "title", "created_at", "updated_at"])
       .where("owner_email", "=", ownerEmail)
+      .where("deleted_at", "is", null)
       .orderBy("updated_at", "desc")
       .limit(100)
       .execute();
@@ -23,6 +24,7 @@ export class ZetroChatRepository {
       .select(["id", "uuid", "title", "created_at", "updated_at"])
       .where("id", "=", id)
       .where("owner_email", "=", ownerEmail)
+      .where("deleted_at", "is", null)
       .executeTakeFirst();
     if (!row) throw AppError.notFound("Conversation was not found.");
     return conversationRecord(row);
@@ -42,6 +44,16 @@ export class ZetroChatRepository {
       content: row.content,
       createdAt: timestamp(row.created_at)
     }));
+  }
+
+  async hasAllowedToolResult(conversationId: number) {
+    const event = await this.database
+      .selectFrom("zetro_tool_events")
+      .select("id")
+      .where("conversation_id", "=", conversationId)
+      .where("decision", "=", "allowed")
+      .executeTakeFirst();
+    return Boolean(event);
   }
 
   async saveReply(
@@ -68,6 +80,7 @@ export class ZetroChatRepository {
           .select("id")
           .where("id", "=", id)
           .where("owner_email", "=", ownerEmail)
+          .where("deleted_at", "is", null)
           .executeTakeFirst();
         if (!owner) throw AppError.notFound("Conversation was not found.");
       }
@@ -99,11 +112,13 @@ export class ZetroChatRepository {
 
   async delete(id: number, ownerEmail: string) {
     const result = await this.database
-      .deleteFrom("zetro_conversations")
+      .updateTable("zetro_conversations")
+      .set({ deleted_at: sql`CURRENT_TIMESTAMP` })
       .where("id", "=", id)
       .where("owner_email", "=", ownerEmail)
+      .where("deleted_at", "is", null)
       .executeTakeFirst();
-    if (!Number(result.numDeletedRows)) throw AppError.notFound("Conversation was not found.");
+    if (!Number(result.numUpdatedRows)) throw AppError.notFound("Conversation was not found.");
   }
 }
 

@@ -5,14 +5,18 @@ import type { CustomerSummaryResult } from "./customer-summary.types.js";
 export class CustomerSummaryService {
   constructor(private readonly repository = new CustomerSummaryRepository()) {}
 
-  async get(databaseName: string, companyId?: number): Promise<CustomerSummaryResult> {
+  async get(
+    databaseName: string,
+    companyId?: number,
+    contactId?: number
+  ): Promise<CustomerSummaryResult> {
     const context = await this.repository.context(databaseName, companyId);
     if (!context) {
       throw AppError.validation(
         "Configure an active Default Company and Financial Year before opening Customer Summary."
       );
     }
-    const items = await this.repository.summary(databaseName, context.company_id);
+    const items = await this.repository.summary(databaseName, context.company_id, contactId);
     return {
       companyId: context.company_id,
       companyName: context.company_name,

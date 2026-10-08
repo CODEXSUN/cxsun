@@ -9,6 +9,12 @@ test("Zuno rejects requests before calling diagnostic routes when the host denie
     authorize() {
       throw Object.assign(new Error("Forbidden"), { statusCode: 403 });
     },
+    resolveCaseContext() {
+      throw new Error("The unauthorized route must not resolve a case context.");
+    },
+    loadWatchSnapshot() {
+      throw new Error("The unauthorized route must not load a watch snapshot.");
+    },
     config: {
       sourceRoot: "",
       platformLogPath: "",

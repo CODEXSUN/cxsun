@@ -68,6 +68,7 @@ import {
   seedProjectManagerDatabase,
   type ProjectManagerDatabase
 } from "@cxsun/project-manager-api";
+import { migrateZunoDatabase, rollbackZunoDatabase, type ZunoDatabase } from "@cxsun/zuno-api";
 
 let platformDatabase: Kysely<PlatformDatabase> | null = null;
 let bootstrapped = false;
@@ -371,6 +372,7 @@ export async function migratePlatformDatabase() {
   const database = getPlatformDatabase();
   const result = await runMigrationBatch(database, platformMigrationBatch, { batchSize: 8 });
   await migrateProjectManagerDatabase(database as unknown as Kysely<ProjectManagerDatabase>);
+  await migrateZunoDatabase(database as unknown as Kysely<ZunoDatabase>);
   console.info(
     `[database] platform migration batch ${result.batch}: ${result.applied.length} applied, ${result.skipped.length} checksum-validated`
   );
@@ -378,6 +380,7 @@ export async function migratePlatformDatabase() {
 
 export async function rollbackPlatformDatabase() {
   const database = getPlatformDatabase();
+  await rollbackZunoDatabase(database as unknown as Kysely<ZunoDatabase>);
   await rollbackProjectManagerDatabase(database as unknown as Kysely<ProjectManagerDatabase>);
   return rollbackMigrationBatch(database, platformMigrationBatch);
 }

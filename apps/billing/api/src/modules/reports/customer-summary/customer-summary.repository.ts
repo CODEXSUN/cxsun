@@ -34,7 +34,11 @@ export class CustomerSummaryRepository {
     return result.rows[0] ?? null;
   }
 
-  async summary(databaseName: string, companyId: number): Promise<CustomerSummaryItem[]> {
+  async summary(
+    databaseName: string,
+    companyId: number,
+    contactId?: number
+  ): Promise<CustomerSummaryItem[]> {
     const database = await getBillingDatabase(databaseName);
     const { financialYearId } = currentBillingScope();
     const result = await sql<SummaryRow>`
@@ -61,6 +65,7 @@ export class CustomerSummaryRepository {
               AND receipt.customer_id=contact.id AND receipt.status='posted' AND receipt.deleted_at IS NULL), 0) AS balance
       FROM core_contacts contact
       WHERE contact.deleted_at IS NULL
+        ${contactId === undefined ? sql`` : sql`AND contact.id=${contactId}`}
         AND (LOWER(COALESCE(contact.type_name, '')) LIKE '%customer%'
           OR EXISTS (SELECT 1 FROM billing_opening_balances opening WHERE opening.contact_id=contact.id
             AND opening.company_id=${companyId} AND opening.financial_year_id=${financialYearId} AND opening.party_role='customer')

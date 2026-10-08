@@ -1,4 +1,5 @@
 export { zetroChatModule } from "./modules/chat/chat.module.js";
+export { registerZetroAdminRoutes } from "./modules/chat/chat.admin.routes.js";
 export {
   zetroChatMigrations,
   migrateZetroChatDatabase,

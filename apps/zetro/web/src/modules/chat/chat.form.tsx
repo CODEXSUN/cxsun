@@ -40,7 +40,7 @@ export function ZetroChatForm({
           setDraft(event.target.value);
           setError(null);
         }}
-        placeholder="Ask Zetro anything…"
+        placeholder="Ask Zetro about your business…"
         rows={3}
         maxLength={8000}
         disabled={sending}
@@ -51,7 +51,7 @@ export function ZetroChatForm({
           role={error ? "alert" : undefined}
           className={error ? "text-sm text-destructive" : "text-xs text-muted-foreground"}
         >
-          {error ?? "Zetro can help with drafting, planning, and questions."}
+          {error ?? "Business questions and permitted records only."}
         </p>
         <Button type="submit" disabled={sending || !draft.trim()}>
           <SendIcon className="size-4" /> {sending ? "Thinking…" : "Send"}

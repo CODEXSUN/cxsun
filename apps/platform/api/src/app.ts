@@ -6,6 +6,7 @@ import { accountsApiModuleKeys, registerAccountsApi } from "@cxsun/accounts-api"
 import {
   billingApiModuleKeys,
   closeAllBillingDatabases,
+  lookupCustomerOutstanding,
   registerBillingApi
 } from "@cxsun/billing-api";
 import {
@@ -41,7 +42,7 @@ import {
   type FrappeUserMappingDatabase
 } from "@cxsun/frappe-api";
 import { EnquiryRepository, EnquiryService } from "@cxsun/crm-api/enquiry-sync";
-import { zetroChatModule, type ZetroDatabase } from "@cxsun/zetro-api";
+import { zetroChatModule, registerZetroAdminRoutes, type ZetroDatabase } from "@cxsun/zetro-api";
 import { AppError } from "@cxsun/framework/errors";
 import type { FastifyRequest } from "fastify";
 import type { HealthCheck } from "@cxsun/framework/health";
@@ -71,6 +72,8 @@ import { QueueManagerService } from "./modules/queue-manager/queue-manager.servi
 import { platformReadinessChecks } from "./readiness.js";
 import { tenantAccessContext } from "./auth/tenant-access-context.js";
 import { recordTenantAccessAudit } from "./database/tenant-access-audit.js";
+import { TenantRepository } from "./modules/tenant/tenant.repository.js";
+import { getTenantDatabase } from "./database/tenant-database.js";
 import { seedDefaultTenant } from "./modules/tenant/tenant.seed.js";
 import { env } from "./env.js";
 import { assertSingleTenantRegistry } from "./tenancy-mode.js";
@@ -222,6 +225,25 @@ export async function createApp() {
       return {
         actorEmail: context.actorEmail,
         database: context.database as unknown as import("kysely").Kysely<ZetroDatabase>,
+        lookupOutstanding: async (contact: string) => {
+          const billingEnabled = await context.database
+            .selectFrom("app_module_settings")
+            .select("id")
+            .where("module_key", "=", "billing.sales")
+            .where("enabled", "=", true)
+            .where("status", "=", "active")
+            .executeTakeFirst();
+          if (!billingEnabled) throw AppError.forbidden("Billing is not enabled for this tenant.");
+          const defaults = request.authContext?.session.context.defaultCompany;
+          if (!defaults) throw AppError.validation("Select a default company and financial year.");
+          return lookupCustomerOutstanding({
+            tenantDatabase: context.tenantDatabase,
+            actorEmail: context.actorEmail,
+            companyId: defaults.companyId,
+            financialYearId: defaults.financialYearId,
+            contact
+          });
+        },
         audit: (action: string, conversation: import("@cxsun/zetro-api").ZetroConversation) =>
           recordTenantAccessAudit({
             action,
@@ -240,6 +262,27 @@ export async function createApp() {
       model: env.CXSUN_ZETRO_MODEL
     }
   );
+  registerZetroAdminRoutes(app, async (request, tenantId) => {
+    if (request.authContext?.payload.userType !== "super_admin") {
+      throw AppError.forbidden("Super Admin permission is required for Zetro review.");
+    }
+    const tenant = await new TenantRepository().findByIdOrCode(tenantId);
+    if (!tenant) throw AppError.notFound("Tenant was not found.");
+    const actorEmail = request.authContext.payload.email ?? request.authContext.session.userEmail;
+    await recordTenantAccessAudit({
+      action: "zetro.admin.access",
+      actorEmail,
+      moduleKey: "zetro.chat",
+      recordId: tenant.id,
+      recordLabel: "Zetro tenant review",
+      recordUuid: tenant.uuid,
+      tenantId: tenant.uuid
+    });
+    return {
+      actorEmail,
+      database: getTenantDatabase(tenant) as unknown as import("kysely").Kysely<ZetroDatabase>
+    };
+  });
   const crmAccess = async (request: FastifyRequest, resource: string, collection: string) => {
     const context = tenantAccessContext(request);
     const enabled = await context.database

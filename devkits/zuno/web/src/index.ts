@@ -1,1 +1,1 @@
-export { ZunoWorkspace } from "./modules/diagnostics/index.js";
+export { ZunoWorkspace } from "./cxsun.js";

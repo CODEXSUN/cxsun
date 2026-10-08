@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { CommandIcon, MenuIcon, SearchIcon } from "lucide-react";
 import { Button } from "../../components/button";
 import { TopMenuAppLauncher } from "./top-menu-app-launcher";
@@ -25,6 +25,7 @@ export type TopMenuProps = {
   searchItems: TopMenuSearchItem[];
   searchOpen: boolean;
   searchPlaceholder: string;
+  searchLeadingAction?: ReactNode;
   user: TopMenuUser;
 };
 
@@ -46,6 +47,7 @@ export function TopMenu({
   searchItems,
   searchOpen,
   searchPlaceholder,
+  searchLeadingAction,
   user
 }: TopMenuProps) {
   useEffect(() => {
@@ -79,6 +81,7 @@ export function TopMenu({
           </div>
         </div>
         <div className="flex items-center gap-2 px-4">
+          {searchLeadingAction}
           <Button
             className="h-8 gap-2 rounded-full shadow-sm"
             onClick={onOpenSearch}

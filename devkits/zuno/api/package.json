@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "tsx --test src/modules/diagnostics/*.test.ts",
+    "test": "tsx --test src/modules/diagnostics/*.test.ts src/modules/watch/*.test.ts",
     "typecheck": "npm run build -w @cxsun/framework && tsc -p tsconfig.json --noEmit",
     "lint": "oxlint src"
   },

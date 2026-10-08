@@ -107,6 +107,9 @@ const FrappeOverviewWorkspace = lazyWorkspace(() =>
 const ZetroChatWorkspace = lazyWorkspace(() =>
   import("@cxsun/zetro-web/modules/chat").then((module) => module.ZetroChatWorkspace)
 );
+const ZetroChatDrawer = lazyWorkspace(() =>
+  import("@cxsun/zetro-web/modules/chat").then((module) => module.ZetroChatDrawer)
+);
 const FrappeEnquirySyncWorkspace = lazyWorkspace(() =>
   import("@cxsun/frappe-web/modules/enquiry-sync").then(
     (module) => module.FrappeEnquirySyncWorkspace
@@ -582,23 +585,25 @@ export function AppDesk() {
       ? pageForApp(landingApp)
       : page.startsWith("auditor") && !switchableApps.includes("auditor")
         ? pageForApp(landingApp)
-        : page.startsWith("frappe") && !switchableApps.includes("frappe")
+        : page.startsWith("zetro") && !switchableApps.includes("zetro")
           ? pageForApp(landingApp)
-          : page.startsWith("task-manager") && !switchableApps.includes("task-manager")
+          : page.startsWith("frappe") && !switchableApps.includes("frappe")
             ? pageForApp(landingApp)
-            : page.startsWith("mail") && !switchableApps.includes("mail")
+            : page.startsWith("task-manager") && !switchableApps.includes("task-manager")
               ? pageForApp(landingApp)
-              : page.startsWith("crm") && !switchableApps.includes("crm")
+              : page.startsWith("mail") && !switchableApps.includes("mail")
                 ? pageForApp(landingApp)
-                : page.startsWith("blog") && !switchableApps.includes("blog")
+                : page.startsWith("crm") && !switchableApps.includes("crm")
                   ? pageForApp(landingApp)
-                  : page.startsWith("accounts") && !switchableApps.includes("accounts")
+                  : page.startsWith("blog") && !switchableApps.includes("blog")
                     ? pageForApp(landingApp)
-                    : (page.startsWith("billing") ||
-                          (page.startsWith("core") && !page.startsWith("core.organisation"))) &&
-                        !switchableApps.includes("billing")
+                    : page.startsWith("accounts") && !switchableApps.includes("accounts")
                       ? pageForApp(landingApp)
-                      : page;
+                      : (page.startsWith("billing") ||
+                            (page.startsWith("core") && !page.startsWith("core.organisation"))) &&
+                          !switchableApps.includes("billing")
+                        ? pageForApp(landingApp)
+                        : page;
   const safePage = resolveBillingFeaturePage(appSafePage, billingSettingsQuery.data?.features);
   const activePageTitle = titleForPage(safePage);
   const accountingYear = selectedFinancialYear?.name ?? "Accounting year";
@@ -778,6 +783,7 @@ export function AppDesk() {
 
   async function handleLogout() {
     await logout("tenant");
+    queryClient.removeQueries({ queryKey: ["zetro"] });
     window.location.assign("/login");
   }
 
@@ -900,6 +906,16 @@ export function AppDesk() {
         user={signedInUser}
         versionLabel={`v ${__APP_VERSION__}`}
         workspaceName={activeWorkspaceTitle}
+        zetroDrawer={
+          switchableApps.includes("zetro") ? (
+            <Suspense fallback={null}>
+              <ZetroChatDrawer
+                key={`${runtime?.tenant?.uuid ?? "tenant"}:${signedInUser.email}`}
+                scopeKey={`${runtime?.tenant?.uuid ?? "tenant"}:${signedInUser.email}`}
+              />
+            </Suspense>
+          ) : null
+        }
       >
         <main
           ref={workspaceContentRef}
@@ -921,7 +937,11 @@ export function AppDesk() {
             ) : null}
             {safePage === "auditor.overview" ? <AuditorOverviewWorkspace /> : null}
             {safePage === "frappe.overview" ? <FrappeOverviewWorkspace /> : null}
-            {safePage === "zetro.chat" ? <ZetroChatWorkspace /> : null}
+            {safePage === "zetro.chat" ? (
+              <ZetroChatWorkspace
+                scopeKey={`${runtime?.tenant?.uuid ?? "tenant"}:${signedInUser.email}`}
+              />
+            ) : null}
             {safePage === "frappe.enquiry-sync" ? <FrappeEnquirySyncWorkspace /> : null}
             {safePage === "frappe.connection" ? <FrappeConnectionWorkspace /> : null}
             {safePage === "frappe.users" ? <FrappeUserSyncWorkspace /> : null}

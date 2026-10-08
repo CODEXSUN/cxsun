@@ -37,6 +37,7 @@ type TenantMainLayoutProps = {
   user: TopMenuUser;
   versionLabel: string;
   workspaceName: string;
+  zetroDrawer?: ReactNode;
 };
 
 export function TenantMainLayout(props: TenantMainLayoutProps) {
@@ -63,7 +64,8 @@ function TenantMainShell({
   sidebarPrimaryAction,
   user,
   versionLabel,
-  workspaceName
+  workspaceName,
+  zetroDrawer
 }: TenantMainLayoutProps) {
   const { toggleSidebar } = useSidebar();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -106,6 +108,7 @@ function TenantMainShell({
           searchItems={searchItems}
           searchOpen={searchOpen}
           searchPlaceholder="Search applications and commands"
+          searchLeadingAction={zetroDrawer}
           user={user}
         />
       </div>
