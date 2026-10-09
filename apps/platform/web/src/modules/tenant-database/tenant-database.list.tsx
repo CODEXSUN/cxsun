@@ -6,11 +6,13 @@ import type { TenantDatabaseStatus } from "./tenant-database.types";
 export function TenantDatabaseList({
   loading,
   records,
-  onView
+  onView,
+  onBackups
 }: {
   loading: boolean;
   records: TenantDatabaseStatus[];
   onView: (record: TenantDatabaseStatus) => void;
+  onBackups: (record: TenantDatabaseStatus) => void;
 }) {
   const online = records.filter((record) => record.status === "online").length;
   const pending = records
@@ -44,7 +46,7 @@ export function TenantDatabaseList({
               <th className="px-4 py-3 text-left font-semibold">Version</th>
               <th className="px-4 py-3 text-left font-semibold">Tables</th>
               <th className="px-4 py-3 text-left font-semibold">Last run</th>
-              <th className="px-4 py-3 text-right font-semibold">Details</th>
+              <th className="px-4 py-3 text-right font-semibold">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -100,13 +102,20 @@ export function TenantDatabaseList({
                       <span className="text-muted-foreground">No runs</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="space-x-4 px-4 py-3 text-right whitespace-nowrap">
                     <button
                       className="text-sm font-medium text-primary hover:underline"
                       type="button"
                       onClick={() => onView(record)}
                     >
                       Open
+                    </button>
+                    <button
+                      className="text-sm font-medium text-primary hover:underline"
+                      type="button"
+                      onClick={() => onBackups(record)}
+                    >
+                      Backup & Restore
                     </button>
                   </td>
                 </tr>

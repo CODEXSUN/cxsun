@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { SparklesIcon, XIcon } from "lucide-react";
 import { Button } from "@cxsun/ui/components/button";
+import { ZetroLogo } from "../../components/zetro-logo";
 import { ZetroChatPanel } from "./chat.workspace";
 
 export function ZetroChatDrawer({ scopeKey }: { scopeKey: string }) {
@@ -59,37 +59,24 @@ export function ZetroChatDrawer({ scopeKey }: { scopeKey: string }) {
         variant={open ? "secondary" : "ghost"}
         onClick={() => setOpen((value) => !value)}
       >
-        <SparklesIcon className="size-4" />
+        <span className="grid size-6 place-items-center rounded-md bg-white">
+          <ZetroLogo className="size-5" />
+        </span>
       </Button>
       {open
         ? createPortal(
             <aside
               id="zetro-drawer"
               aria-label="Zetro business assistant"
-              className="fixed z-50 flex min-h-0 flex-col overflow-hidden rounded-xl border bg-background shadow-xl"
+              className="fixed z-50 flex min-h-0 flex-col overflow-hidden rounded-lg bg-background shadow-[0_18px_45px_-15px_rgba(0,0,0,0.35),0_4px_16px_rgba(0,0,0,0.12)]"
               style={{
                 ...drawerPosition,
                 background:
                   "linear-gradient(180deg, var(--background) 0%, var(--background) 48%, color-mix(in srgb, var(--background) 58%, #b8ddff) 100%)"
               }}
             >
-              <div className="flex items-center justify-between border-b px-4 py-2">
-                <div>
-                  <h2 className="text-sm font-semibold">Zetro</h2>
-                  <p className="text-xs text-muted-foreground">Your business coworker</p>
-                </div>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  aria-label="Close Zetro"
-                  onClick={() => setOpen(false)}
-                >
-                  <XIcon className="size-4" />
-                </Button>
-              </div>
               <div className="min-h-0 flex-1">
-                <ZetroChatPanel scopeKey={scopeKey} compact />
+                <ZetroChatPanel scopeKey={scopeKey} compact onClose={() => setOpen(false)} />
               </div>
             </aside>,
             document.body

@@ -4,7 +4,12 @@ import { z } from "zod";
 import { registerContractRoute } from "@cxsun/framework/http";
 import type {} from "@cxsun/framework/api";
 import { ZetroChatRepository } from "./chat.repository.js";
-import { ZetroChatService, type CustomerOutstandingLookup } from "./chat.service.js";
+import {
+  ZetroChatService,
+  type BillingPeriodLookup,
+  type CustomerOutstandingLookup,
+  type LongOutstandingSalesLookup
+} from "./chat.service.js";
 import { ZetroPolicyRepository } from "./chat.policy.js";
 import type { ZetroConversation, ZetroDatabase, ZetroProviderConfig } from "./chat.types.js";
 
@@ -33,6 +38,8 @@ export type ZetroChatContext = {
   actorEmail: string;
   provider: ZetroProviderConfig;
   lookupOutstanding: CustomerOutstandingLookup;
+  lookupBillingPeriod: BillingPeriodLookup;
+  lookupLongOutstandingSales: LongOutstandingSalesLookup;
   audit: (action: string, conversation: ZetroConversation) => Promise<void>;
 };
 
@@ -49,7 +56,9 @@ export function registerZetroChatRoutes(
         new ZetroChatRepository(scope.database),
         scope.provider,
         new ZetroPolicyRepository(scope.database),
-        scope.lookupOutstanding
+        scope.lookupOutstanding,
+        scope.lookupBillingPeriod,
+        scope.lookupLongOutstandingSales
       )
     };
   };
@@ -75,18 +84,41 @@ export function registerZetroChatRoutes(
   registerContractRoute(app, {
     method: "POST",
     url: "/zetro/messages",
+    bodyLimit: 8 * 1024 * 1024,
     schemas: {
       body: z
         .object({
           conversationId: z.number().int().positive().nullable(),
-          prompt: z.string().trim().min(1).max(8000)
+          prompt: z.string().trim().min(1).max(8000),
+          attachment: z
+            .object({
+              name: z
+                .string()
+                .trim()
+                .min(1)
+                .max(160)
+                .regex(/\.(txt|md|csv|json)$/iu),
+              content: z
+                .string()
+                .trim()
+                .min(1)
+                .max(1024 * 1024)
+                .refine((content) => !content.includes("\0"), "The attached file must be text.")
+            })
+            .strict()
+            .optional()
         })
-        .strict(),
+        .strict()
+        .refine(
+          (body) =>
+            !body.attachment || Buffer.byteLength(body.attachment.content, "utf8") <= 1024 * 1024,
+          "The attached file exceeds 1 MB."
+        ),
       response: detailSchema
     },
     handler: async ({ body, request }) => {
       const { actorEmail, audit, chat } = await service(request);
-      const result = await chat.send(actorEmail, body.conversationId, body.prompt);
+      const result = await chat.send(actorEmail, body.conversationId, body.prompt, body.attachment);
       await audit("message.create", result.conversation);
       return result;
     }

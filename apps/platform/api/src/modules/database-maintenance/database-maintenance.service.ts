@@ -8,7 +8,13 @@ import { provisionTenantDatabase } from "../tenant/index.js";
 import { PlatformActivityService } from "../platform-activity/index.js";
 import { QueueManagerService } from "../queue-manager/index.js";
 import { env } from "../../env.js";
-import { DatabaseMaintenanceRepository } from "./database-maintenance.repository.js";
+import {
+  DatabaseMaintenanceRepository,
+  tenantRestoreSandboxName
+} from "./database-maintenance.repository.js";
+import { MasterBackupFiles } from "./database-maintenance.backups.js";
+import { TenantBackupFiles } from "./database-maintenance.tenant-backups.js";
+import { restoreSandboxName } from "./database-maintenance.executor.js";
 import type { DatabaseActionPayload } from "./database-maintenance.types.js";
 
 export class DatabaseMaintenanceService {
@@ -20,6 +26,19 @@ export class DatabaseMaintenanceService {
 
   masterStatus() {
     return this.repository.masterStatus();
+  }
+
+  async masterRestoreRun(runId: number) {
+    const run = await this.repository.findRun(runId);
+    if (
+      !run ||
+      run.scope !== "master" ||
+      run.operation !== "restore" ||
+      run.targetKey !== "master"
+    ) {
+      throw AppError.notFound("Master restore job was not found.");
+    }
+    return run;
   }
 
   tenantStatuses() {
@@ -182,14 +201,33 @@ export class DatabaseMaintenanceService {
     return run;
   }
 
-  async requestMasterRestore(input: DatabaseActionPayload = {}) {
+  async requestMasterRestore(input: {
+    backupRunId: number;
+    sandboxMode: "fresh" | "append";
+    note?: string | undefined;
+  }) {
+    const sandboxName = restoreSandboxName(platformDatabaseName());
+    if (await this.repository.activeMasterRestore()) {
+      throw AppError.conflict("A master restore is already queued or running.");
+    }
+    if (
+      input.sandboxMode === "append" &&
+      !(await this.repository.masterSandboxExists(sandboxName))
+    ) {
+      throw AppError.validation("Append requires an existing sandbox. Run Fresh restore first.");
+    }
+    const selected = await new MasterBackupFiles(this.repository, this.activity).selectForRestore(
+      input.backupRunId
+    );
     const run = await this.repository.recordRun({
       databaseName: platformDatabaseName(),
       details: {
         ...input,
+        backupId: selected.backupId,
         host: env.DB_HOST,
         policy: "sandbox-restore-required",
         port: env.DB_PORT,
+        restoreMode: "sandbox",
         user: env.DB_USER
       },
       operation: "restore",
@@ -207,16 +245,49 @@ export class DatabaseMaintenanceService {
     return run;
   }
 
-  async requestTenantRestore(tenantId: number, input: DatabaseActionPayload = {}) {
+  async tenantRestoreRun(tenantId: number, runId: number) {
+    const run = await this.repository.findRun(runId);
+    if (
+      !run ||
+      run.scope !== "tenant" ||
+      run.targetKey !== String(tenantId) ||
+      run.operation !== "restore"
+    ) {
+      throw AppError.notFound("Tenant restore job was not found.");
+    }
+    return run;
+  }
+
+  async requestTenantRestore(
+    tenantId: number,
+    input: { backupRunId: number; sandboxMode: "fresh" | "append"; note?: string | undefined }
+  ) {
     const tenant = await this.repository.findTenant(tenantId);
     if (!tenant) return null;
+    if (await this.repository.activeTenantRestore(tenantId)) {
+      throw AppError.conflict("A restore is already queued or running for this tenant.");
+    }
+    const sandboxName = tenantRestoreSandboxName(tenant.dbName, tenant.id);
+    if (
+      input.sandboxMode === "append" &&
+      !(await this.repository.tenantSandboxExists(tenant, sandboxName))
+    ) {
+      throw AppError.validation("Append requires an existing sandbox. Run Fresh restore first.");
+    }
+    const selected = await new TenantBackupFiles(this.repository, this.activity).selectForRestore(
+      tenant,
+      input.backupRunId
+    );
     const run = await this.repository.recordRun({
       databaseName: tenant.dbName,
       details: {
         ...input,
+        backupId: selected.backupId,
         host: tenant.dbHost,
         policy: "sandbox-restore-required",
         port: tenant.dbPort,
+        restoreMode: "sandbox",
+        sandboxName,
         storageRoot: tenant.storageRoot,
         tenantCode: tenant.tenantCode,
         tenantKey: tenant.slug || tenant.tenantCode,

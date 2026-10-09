@@ -1,16 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowUpRightIcon,
-  CheckCircle2Icon,
-  CopyIcon,
-  LogOutIcon,
-  SparklesIcon
-} from "lucide-react";
+import { ArrowUpRightIcon, CheckCircle2Icon, CopyIcon, LogOutIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@cxsun/ui/components/badge";
 import { Button } from "@cxsun/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@cxsun/ui/components/tabs";
+import { ZetroLogo } from "../../components/zetro-logo";
 import {
   bindZetroLocalCodex,
   disconnectZetroCodex,
@@ -135,7 +130,7 @@ export function ZetroProviderSettingsWorkspace() {
         </TabsList>
         <TabsContent value="device-code" className="space-y-5 pt-3">
           <div className="flex items-start gap-3 rounded-md bg-muted/50 p-4">
-            <SparklesIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+            <ZetroLogo className="mt-0.5 size-5 shrink-0" />
             <div>
               <p className="text-sm font-medium">Connect with a device code</p>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -206,7 +201,7 @@ export function ZetroProviderSettingsWorkspace() {
         </TabsContent>
         <TabsContent value="local" className="space-y-5 pt-3">
           <div className="flex items-start gap-3 rounded-md bg-muted/50 p-4">
-            <SparklesIcon aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
+            <ZetroLogo className="mt-0.5 size-5 shrink-0" />
             <div>
               <p className="text-sm font-medium">Connect with local Codex</p>
               <p className="mt-1 text-sm text-muted-foreground">

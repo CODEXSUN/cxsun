@@ -6,7 +6,9 @@ import { accountsApiModuleKeys, registerAccountsApi } from "@cxsun/accounts-api"
 import {
   billingApiModuleKeys,
   closeAllBillingDatabases,
+  lookupBillingPeriod,
   lookupCustomerOutstanding,
+  lookupLongOutstandingSales,
   registerBillingApi
 } from "@cxsun/billing-api";
 import {
@@ -238,6 +240,24 @@ export async function createApp() {
       .executeTakeFirst();
     if (!enabled) throw AppError.forbidden("Zetro is not enabled for this tenant.");
     await context.authorize("zetro.chat.use");
+    const billingLookupScope = async () => {
+      const billingEnabled = await context.database
+        .selectFrom("app_module_settings")
+        .select("id")
+        .where("module_key", "=", "billing.sales")
+        .where("enabled", "=", true)
+        .where("status", "=", "active")
+        .executeTakeFirst();
+      if (!billingEnabled) throw AppError.forbidden("Billing is not enabled for this tenant.");
+      const defaults = request.authContext?.session.context.defaultCompany;
+      if (!defaults) throw AppError.validation("Select a default company and financial year.");
+      return {
+        tenantDatabase: context.tenantDatabase,
+        actorEmail: context.actorEmail,
+        companyId: defaults.companyId,
+        financialYearId: defaults.financialYearId
+      };
+    };
     return {
       actorEmail: context.actorEmail,
       database: context.database as unknown as import("kysely").Kysely<ZetroDatabase>,
@@ -247,25 +267,12 @@ export async function createApp() {
         context.tenantId,
         zetroFallbackProvider
       ).resolve(),
-      lookupOutstanding: async (contact: string) => {
-        const billingEnabled = await context.database
-          .selectFrom("app_module_settings")
-          .select("id")
-          .where("module_key", "=", "billing.sales")
-          .where("enabled", "=", true)
-          .where("status", "=", "active")
-          .executeTakeFirst();
-        if (!billingEnabled) throw AppError.forbidden("Billing is not enabled for this tenant.");
-        const defaults = request.authContext?.session.context.defaultCompany;
-        if (!defaults) throw AppError.validation("Select a default company and financial year.");
-        return lookupCustomerOutstanding({
-          tenantDatabase: context.tenantDatabase,
-          actorEmail: context.actorEmail,
-          companyId: defaults.companyId,
-          financialYearId: defaults.financialYearId,
-          contact
-        });
-      },
+      lookupOutstanding: async (contact: string) =>
+        lookupCustomerOutstanding({ ...(await billingLookupScope()), contact }),
+      lookupBillingPeriod: async (period: "today" | "month") =>
+        lookupBillingPeriod({ ...(await billingLookupScope()), period }),
+      lookupLongOutstandingSales: async () =>
+        lookupLongOutstandingSales(await billingLookupScope()),
       audit: (action: string, conversation: import("@cxsun/zetro-api").ZetroConversation) =>
         recordTenantAccessAudit({
           action,

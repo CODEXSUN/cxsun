@@ -51,6 +51,8 @@ export type MasterDatabaseStatus = {
   migrations: DatabaseMigrationRow[];
   port: number;
   restoreStatus: "not-configured" | "sandbox-configured";
+  restoreDatabaseName: string | null;
+  restoreSandboxExists: boolean;
   runs: DatabaseMaintenanceRun[];
   status: "online" | "offline";
   tableCount: number;

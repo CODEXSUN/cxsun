@@ -1,10 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PlusIcon, SparklesIcon } from "lucide-react";
+import { EllipsisIcon, HistoryIcon, PlusIcon, SquarePenIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@cxsun/ui/components/button";
 import { Card } from "@cxsun/ui/components/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@cxsun/ui/components/dropdown-menu";
 import { WorkspacePage } from "@cxsun/ui/workspace/page";
+import { ZetroLogo } from "../../components/zetro-logo";
+import type { ZetroTextAttachment } from "./chat.attachment";
 import { ZetroChatForm } from "./chat.form";
 import {
   useZetroConversation,
@@ -30,10 +38,12 @@ export function ZetroChatWorkspace({ scopeKey }: { scopeKey: string }) {
 
 export function ZetroChatPanel({
   scopeKey,
-  compact = false
+  compact = false,
+  onClose
 }: {
   scopeKey: string;
   compact?: boolean;
+  onClose?: () => void;
 }) {
   const client = useQueryClient();
   const [currentId, setCurrentId] = useState<number | null>(null);
@@ -43,9 +53,10 @@ export function ZetroChatPanel({
   const conversations = useZetroConversations(scopeKey);
   const detail = useZetroConversation(scopeKey, currentId);
   const send = useMutation({
-    mutationFn: (prompt: string) => sendZetroMessage(currentId, prompt),
-    onMutate: (prompt) => {
-      setPendingPrompt(prompt);
+    mutationFn: ({ prompt, attachment }: { prompt: string; attachment?: ZetroTextAttachment }) =>
+      sendZetroMessage(currentId, prompt, attachment),
+    onMutate: ({ prompt, attachment }) => {
+      setPendingPrompt(attachment ? `${prompt}\nFile: ${attachment.name}` : prompt);
       const previous = client.getQueryData<ZetroConversation[]>(zetroConversationsKey(scopeKey));
       if (currentId !== null && previous) {
         const active = previous.find((conversation) => conversation.id === currentId);
@@ -98,81 +109,122 @@ export function ZetroChatPanel({
           : "grid min-h-[65vh] overflow-hidden md:grid-cols-[16rem_minmax(0,1fr)]"
       }
     >
-      <aside className={compact ? "border-b p-3" : "border-b p-3 md:border-b-0 md:border-r"}>
-        {compact ? (
-          <div className="mb-2 flex items-center justify-between gap-2">
+      {compact ? (
+        <header className="flex items-center justify-between gap-2 border-b border-foreground/15 bg-background/90 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid size-8 shrink-0 place-items-center">
+              <ZetroLogo className="size-6" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Zetro</h2>
+              <p className="text-xs text-muted-foreground">Your business coworker</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
             <Button
               type="button"
-              size="sm"
-              variant="outline"
+              size="icon"
+              variant="ghost"
+              className="size-8"
+              aria-label="New chat"
+              title="New chat"
               disabled={send.isPending}
               onClick={() => {
                 setCurrentId(null);
                 setShowHistory(false);
               }}
             >
-              <PlusIcon className="size-4" /> New chat
+              <SquarePenIcon className="size-4" />
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="size-8"
+                  aria-label="More Zetro options"
+                  title="More options"
+                >
+                  <EllipsisIcon className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={6}>
+                <DropdownMenuItem onSelect={() => setShowHistory((value) => !value)}>
+                  <HistoryIcon className="size-4" />
+                  {showHistory ? "Hide history" : "Chat history"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="size-8"
+              aria-label="Close Zetro"
+              title="Close Zetro"
+              onClick={onClose}
+            >
+              <XIcon className="size-4" />
+            </Button>
+          </div>
+        </header>
+      ) : null}
+      {!compact || showHistory ? (
+        <aside
+          className={
+            compact
+              ? "max-h-[40%] overflow-y-auto border-b border-foreground/15 p-3"
+              : "border-b p-3 md:border-b-0 md:border-r"
+          }
+        >
+          {!compact ? (
             <Button
               type="button"
               size="sm"
-              variant="ghost"
-              aria-expanded={showHistory}
-              onClick={() => setShowHistory((value) => !value)}
+              variant="outline"
+              className="mb-3"
+              disabled={send.isPending}
+              onClick={() => setCurrentId(null)}
             >
-              History
+              <PlusIcon className="size-4" /> New chat
             </Button>
-          </div>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="mb-3"
-            disabled={send.isPending}
-            onClick={() => setCurrentId(null)}
-          >
-            <PlusIcon className="size-4" /> New chat
-          </Button>
-        )}
-        {!compact || showHistory ? (
-          <>
-            <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Recent chats
+          ) : null}
+          <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Recent chats
+          </p>
+          {conversations.isLoading ? (
+            <p className="px-3 text-sm text-muted-foreground">Loading chats…</p>
+          ) : null}
+          {conversations.error ? (
+            <p role="alert" className="px-3 text-sm text-destructive">
+              {conversations.error.message}
             </p>
-            {conversations.isLoading ? (
-              <p className="px-3 text-sm text-muted-foreground">Loading chats…</p>
-            ) : null}
-            {conversations.error ? (
-              <p role="alert" className="px-3 text-sm text-destructive">
-                {conversations.error.message}
-              </p>
-            ) : null}
-            {pendingPrompt && currentId === null ? (
-              <p role="status" className="mb-1 truncate rounded-md bg-muted px-3 py-2 text-sm">
-                {pendingPrompt.slice(0, 100)}
-                <span className="ml-2 text-xs text-muted-foreground">Sending…</span>
-              </p>
-            ) : null}
-            {conversations.data ? (
-              <ZetroConversationList
-                conversations={conversations.data}
-                currentId={currentId}
-                deleting={remove.isPending || send.isPending}
-                onSelect={(id) => {
-                  if (send.isPending) return;
-                  setCurrentId(id);
-                  setShowHistory(false);
-                }}
-                onDelete={(id) => {
-                  if (send.isPending) return;
-                  if (window.confirm("Delete this conversation?")) remove.mutate(id);
-                }}
-              />
-            ) : null}
-          </>
-        ) : null}
-      </aside>
+          ) : null}
+          {pendingPrompt && currentId === null ? (
+            <p role="status" className="mb-1 truncate rounded-md bg-muted px-3 py-2 text-sm">
+              {pendingPrompt.slice(0, 100)}
+              <span className="ml-2 text-xs text-muted-foreground">Sending…</span>
+            </p>
+          ) : null}
+          {conversations.data ? (
+            <ZetroConversationList
+              conversations={conversations.data}
+              currentId={currentId}
+              deleting={remove.isPending || send.isPending}
+              onSelect={(id) => {
+                if (send.isPending) return;
+                setCurrentId(id);
+                setShowHistory(false);
+              }}
+              onDelete={(id) => {
+                if (send.isPending) return;
+                if (window.confirm("Delete this conversation?")) remove.mutate(id);
+              }}
+            />
+          ) : null}
+        </aside>
+      ) : null}
       <section
         className={compact ? "flex min-h-0 flex-1 flex-col" : "flex min-h-[65vh] flex-col"}
         aria-label="Zetro chat"
@@ -180,7 +232,9 @@ export function ZetroChatPanel({
         <div ref={messagesRef} className="flex-1 space-y-4 overflow-y-auto p-5">
           {currentId === null && !pendingPrompt ? (
             <div className="mx-auto mt-10 flex max-w-md flex-col items-center gap-3 text-center">
-              <SparklesIcon className="size-7 text-primary" aria-hidden="true" />
+              <span className="grid size-12 place-items-center">
+                <ZetroLogo className="size-9" />
+              </span>
               <h2 className="text-xl font-semibold">How can I help with your work?</h2>
               <p className="text-sm text-muted-foreground">
                 Ask about your business work and permitted records.
@@ -224,8 +278,8 @@ export function ZetroChatPanel({
         </div>
         <ZetroChatForm
           sending={send.isPending}
-          onSend={async (prompt) => {
-            await send.mutateAsync(prompt);
+          onSend={async (prompt, attachment) => {
+            await send.mutateAsync({ prompt, ...(attachment ? { attachment } : {}) });
           }}
         />
       </section>

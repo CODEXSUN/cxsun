@@ -2,19 +2,20 @@ import { randomBytes } from "node:crypto";
 import { sql, type Kysely } from "kysely";
 import { AppError } from "@cxsun/framework/errors";
 import type { ZetroDatabase } from "./chat.types.js";
+import type { ZetroRecordCapability } from "./chat.patterns.js";
 
 export const CUSTOMER_OUTSTANDING_CAPABILITY = "billing.customer-outstanding.read";
 
 export class ZetroPolicyRepository {
   constructor(private readonly database: Kysely<ZetroDatabase>) {}
 
-  async canReadCustomerOutstanding(actorEmail: string) {
+  async canReadCapability(actorEmail: string, capabilityKey: ZetroRecordCapability) {
     const result = await sql<{ allowed: number }>`SELECT 1 AS allowed
       FROM app_users user
       JOIN app_user_roles user_role ON user_role.user_id = user.id AND user_role.status = 'active'
       JOIN app_roles role ON role.id = user_role.role_id AND role.status = 'active'
       JOIN zetro_capability_grants grant_record ON grant_record.role_key = role.\`key\`
-        AND grant_record.capability_key = ${CUSTOMER_OUTSTANDING_CAPABILITY}
+        AND grant_record.capability_key = ${capabilityKey}
         AND grant_record.status = 'active'
       JOIN app_role_permissions role_permission ON role_permission.role_id = role.id
         AND role_permission.status = 'active'
@@ -27,6 +28,7 @@ export class ZetroPolicyRepository {
   async recordToolAttempt(input: {
     actorEmail: string;
     conversationId: number | null;
+    capabilityKey: ZetroRecordCapability;
     decision: "allowed" | "denied" | "failed";
     request: unknown;
     result?: unknown;
@@ -37,7 +39,7 @@ export class ZetroPolicyRepository {
         uuid: randomBytes(4).toString("hex"),
         actor_email: input.actorEmail,
         conversation_id: input.conversationId,
-        capability_key: CUSTOMER_OUTSTANDING_CAPABILITY,
+        capability_key: input.capabilityKey,
         decision: input.decision,
         request_json: JSON.stringify(input.request),
         result_json: input.result === undefined ? null : JSON.stringify(input.result)
@@ -45,14 +47,19 @@ export class ZetroPolicyRepository {
       .execute();
   }
 
-  async requestApproval(actorEmail: string, conversationId: number | null, request: unknown) {
+  async requestApproval(
+    actorEmail: string,
+    conversationId: number | null,
+    capabilityKey: ZetroRecordCapability,
+    request: unknown
+  ) {
     await this.database
       .insertInto("zetro_approval_requests")
       .values({
         uuid: randomBytes(4).toString("hex"),
         actor_email: actorEmail,
         conversation_id: conversationId,
-        capability_key: CUSTOMER_OUTSTANDING_CAPABILITY,
+        capability_key: capabilityKey,
         status: "pending",
         request_json: JSON.stringify(request),
         decided_by: null,
@@ -80,6 +87,12 @@ export class ZetroPolicyRepository {
       .execute();
   }
 
+  async roles() {
+    const result = await sql<{ role_key: string; label: string }>`SELECT \`key\` role_key, label
+      FROM app_roles WHERE status='active' ORDER BY label`.execute(this.database);
+    return result.rows;
+  }
+
   async grantEvents() {
     return this.database
       .selectFrom("zetro_policy_events")
@@ -91,6 +104,7 @@ export class ZetroPolicyRepository {
 
   async setGrant(
     roleKey: string,
+    capabilityKey: ZetroRecordCapability,
     status: "active" | "revoked",
     approvedBy: string,
     reason: string
@@ -104,7 +118,7 @@ export class ZetroPolicyRepository {
     await this.database.transaction().execute(async (transaction) => {
       await sql`INSERT INTO zetro_capability_grants
         (uuid, role_key, capability_key, status, approved_by, reason)
-        VALUES (${randomBytes(4).toString("hex")}, ${roleKey}, ${CUSTOMER_OUTSTANDING_CAPABILITY}, ${status}, ${approvedBy}, ${reason})
+        VALUES (${randomBytes(4).toString("hex")}, ${roleKey}, ${capabilityKey}, ${status}, ${approvedBy}, ${reason})
         ON DUPLICATE KEY UPDATE status=${status}, approved_by=${approvedBy}, reason=${reason}, updated_at=CURRENT_TIMESTAMP`.execute(
         transaction
       );
@@ -113,7 +127,7 @@ export class ZetroPolicyRepository {
         .values({
           uuid: randomBytes(4).toString("hex"),
           role_key: roleKey,
-          capability_key: CUSTOMER_OUTSTANDING_CAPABILITY,
+          capability_key: capabilityKey,
           status,
           decided_by: approvedBy,
           reason
@@ -129,7 +143,7 @@ export class ZetroPolicyRepository {
       .where("id", "=", conversationId)
       .executeTakeFirst();
     if (!conversation) throw AppError.notFound("Conversation was not found.");
-    const [messages, notes, events] = await Promise.all([
+    const [messages, notes, events, interactions] = await Promise.all([
       this.database
         .selectFrom("zetro_messages")
         .select(["id", "role", "content", "created_at"])
@@ -155,9 +169,21 @@ export class ZetroPolicyRepository {
         ])
         .where("conversation_id", "=", conversationId)
         .orderBy("id")
+        .execute(),
+      this.database
+        .selectFrom("zetro_interaction_logs")
+        .selectAll()
+        .where("conversation_id", "=", conversationId)
+        .orderBy("id")
         .execute()
     ]);
-    return { conversation, messages, notes, events };
+    return { conversation, messages, notes, events, interactions };
+  }
+
+  async interactions(ownerEmail?: string) {
+    let query = this.database.selectFrom("zetro_interaction_logs").selectAll();
+    if (ownerEmail) query = query.where("actor_email", "=", ownerEmail);
+    return query.orderBy("id", "desc").limit(100).execute();
   }
 
   async listReview(ownerEmail?: string) {

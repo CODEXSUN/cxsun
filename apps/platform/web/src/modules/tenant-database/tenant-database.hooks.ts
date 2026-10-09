@@ -1,16 +1,66 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tenantMaintenanceNote } from "./tenant-database.schema";
 import {
+  downloadTenantBackup,
+  getTenantBackupFiles,
+  getTenantRestoreRun,
   getTenantDatabaseDetails,
   listTenantDatabaseStatus,
   migrateTenantDatabase,
   reinstallTenantDatabase,
   requestTenantDatabaseBackup,
   requestTenantDatabaseRestore,
-  setupTenantDatabase
+  setupTenantDatabase,
+  uploadTenantBackup
 } from "./tenant-database.services";
+import type { TenantBackupFile } from "./tenant-database.types";
 
 export const tenantDatabaseQueryKey = ["admin", "database", "tenants"] as const;
+
+export function useTenantBackupFilesQuery(tenantId: number | null) {
+  return useQuery({
+    enabled: tenantId !== null,
+    queryFn: () => getTenantBackupFiles(tenantId ?? 0),
+    queryKey: [...tenantDatabaseQueryKey, tenantId, "backups"],
+    refetchInterval: 5_000
+  });
+}
+
+export function useTenantRestoreRunQuery(tenantId: number, runId: number | null) {
+  return useQuery({
+    enabled: runId !== null,
+    queryFn: () => getTenantRestoreRun(tenantId, runId ?? 0),
+    queryKey: [...tenantDatabaseQueryKey, tenantId, "restores", runId],
+    refetchInterval: (query) =>
+      query.state.data?.status === "completed" || query.state.data?.status === "failed"
+        ? false
+        : 2_000
+  });
+}
+
+export function useTenantBackupMutations(tenantId: number) {
+  const client = useQueryClient();
+  const done = () => void client.invalidateQueries({ queryKey: tenantDatabaseQueryKey });
+  return {
+    backup: useMutation({
+      mutationFn: () =>
+        requestTenantDatabaseBackup(tenantId, tenantMaintenanceNote(tenantId, "Tenant backup")),
+      onSuccess: done
+    }),
+    upload: useMutation({
+      mutationFn: (file: File) => uploadTenantBackup(tenantId, file),
+      onSuccess: done
+    }),
+    download: useMutation({
+      mutationFn: (file: TenantBackupFile) => downloadTenantBackup(tenantId, file)
+    }),
+    restore: useMutation({
+      mutationFn: (input: { backupRunId: number; sandboxMode: "fresh" | "append" }) =>
+        requestTenantDatabaseRestore(tenantId, input),
+      onSuccess: done
+    })
+  };
+}
 
 export function useTenantDatabaseQuery() {
   return useQuery({
@@ -57,11 +107,6 @@ export function useTenantDatabaseMutations() {
           tenantId,
           tenantMaintenanceNote(tenantId, "Tenant database re-install")
         ),
-      onSuccess: done
-    }),
-    restore: useMutation({
-      mutationFn: (tenantId: number) =>
-        requestTenantDatabaseRestore(tenantId, tenantMaintenanceNote(tenantId, "Tenant restore")),
       onSuccess: done
     }),
     setup: useMutation({

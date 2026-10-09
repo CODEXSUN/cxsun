@@ -112,7 +112,20 @@ export function PurchaseList({
                 {entries.map((purchase, _index) => (
                   <tr
                     key={purchase.id}
-                    className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/20"
+                    aria-label={`View purchase ${purchase.invoiceNumber}`}
+                    className="cursor-pointer border-b border-border/70 last:border-b-0 [&>td]:transition-colors hover:[&>td]:bg-muted/60 focus-visible:[&>td]:bg-muted/60 focus-visible:outline-none"
+                    onClick={(event) => {
+                      if ((event.target as Element).closest("button, input, a")) return;
+                      onView(purchase);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onView(purchase);
+                      }
+                    }}
+                    tabIndex={0}
                   >
                     <td className="px-4 py-2.5 text-center">
                       <input
@@ -129,15 +142,8 @@ export function PurchaseList({
                         type="checkbox"
                       />
                     </td>
-                    <td className="px-4 py-2.5">
-                      <button
-                        className="font-semibold text-foreground underline-offset-4 hover:underline"
-                        onClick={() => onView(purchase)}
-                        title="View purchase"
-                        type="button"
-                      >
-                        {purchase.invoiceNumber}
-                      </button>
+                    <td className="px-4 py-2.5 font-semibold text-foreground">
+                      {purchase.invoiceNumber}
                     </td>
                     {visibleColumns.issuedOn ? (
                       <td className="whitespace-nowrap px-4 py-2.5">
@@ -146,29 +152,7 @@ export function PurchaseList({
                     ) : null}
                     {visibleColumns.supplier ? (
                       <td className="px-4 py-2.5">
-                        <button
-                          className={cn(
-                            "font-medium underline-offset-4",
-                            canEditEntries &&
-                              (purchase.status === "draft" || canEditFinalizedEntries)
-                              ? "hover:underline"
-                              : "cursor-not-allowed text-muted-foreground"
-                          )}
-                          disabled={
-                            !canEditEntries ||
-                            (purchase.status !== "draft" && !canEditFinalizedEntries)
-                          }
-                          onClick={() => onEdit(purchase)}
-                          title={
-                            canEditEntries &&
-                            (purchase.status === "draft" || canEditFinalizedEntries)
-                              ? "Edit purchase"
-                              : "Only an Admin or Super Admin can edit this purchase"
-                          }
-                          type="button"
-                        >
-                          {purchase.supplierName}
-                        </button>
+                        <span className="font-medium">{purchase.supplierName}</span>
                       </td>
                     ) : null}
                     {visibleColumns.items ? (

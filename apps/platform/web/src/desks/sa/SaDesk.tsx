@@ -11,6 +11,7 @@ import {
   PaletteIcon,
   SearchCodeIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   UsersIcon,
   WorkflowIcon
 } from "lucide-react";
@@ -27,6 +28,9 @@ import { ProjectManagerWorkspaceHost } from "@cxsun/project-manager-web";
 
 const ZunoWorkspace = lazyWorkspace(() =>
   import("@cxsun/zuno-web").then((module) => module.ZunoWorkspace)
+);
+const ZetroAdminWorkspace = lazyWorkspace(() =>
+  import("@cxsun/zetro-web/modules/admin").then((module) => module.ZetroAdminWorkspace)
 );
 
 function lazyWorkspace<Props>(loader: () => Promise<ComponentType<Props>>) {
@@ -76,8 +80,14 @@ const PlatformActivityWorkspace = lazyWorkspace(() =>
 const MasterDatabaseWorkspace = lazyWorkspace(() =>
   import("../../modules/master-database").then((module) => module.MasterDatabaseWorkspace)
 );
+const MasterDatabaseBackupsWorkspace = lazyWorkspace(() =>
+  import("../../modules/master-database").then((module) => module.MasterDatabaseBackupsWorkspace)
+);
 const TenantDatabaseWorkspace = lazyWorkspace(() =>
   import("../../modules/tenant-database").then((module) => module.TenantDatabaseWorkspace)
+);
+const TenantDatabaseBackupsRoute = lazyWorkspace(() =>
+  import("../../modules/tenant-database").then((module) => module.TenantDatabaseBackupsRoute)
 );
 const QueueManagementWorkspace = lazyWorkspace(() =>
   import("../../modules/queue-management").then((module) => module.QueueManagementWorkspace)
@@ -101,6 +111,7 @@ type SaPage =
   | "project-manager-registry"
   | "project-manager-ideas"
   | "zuno"
+  | "zetro"
   | "tenants"
   | "domains"
   | "plans"
@@ -112,7 +123,9 @@ type SaPage =
   | "tenant-users"
   | "industries"
   | "master-database"
+  | "master-backups"
   | "tenant-database"
+  | "tenant-backups"
   | "queue-management"
   | "storage-manager"
   | "access"
@@ -134,6 +147,14 @@ export function SaDesk() {
   function selectPage(nextPage: SaPage) {
     const path = nextPage === "overview" ? "/sa" : `/sa/${nextPage}`;
     void navigate({ to: path, search: {} });
+  }
+
+  function openTenantBackups(tenantId: number) {
+    void navigate({
+      params: { _splat: "tenant-backups" },
+      search: { tenant: tenantId },
+      to: "/sa/$"
+    });
   }
 
   function openAppOperations(appId: OrchestratedAppId) {
@@ -184,6 +205,12 @@ export function SaDesk() {
       icon: SearchCodeIcon,
       isActive: page === "zuno",
       onSelect: () => selectPage("zuno")
+    },
+    {
+      title: "Zetro",
+      icon: SparklesIcon,
+      isActive: page === "zetro",
+      onSelect: () => selectPage("zetro")
     },
     {
       title: "Operations",
@@ -278,7 +305,11 @@ export function SaDesk() {
       title: "Database",
       icon: DatabaseIcon,
       isActive:
-        page === "master-database" || page === "tenant-database" || page === "storage-manager",
+        page === "master-database" ||
+        page === "master-backups" ||
+        page === "tenant-database" ||
+        page === "tenant-backups" ||
+        page === "storage-manager",
       items: [
         {
           title: "Master Database",
@@ -286,9 +317,19 @@ export function SaDesk() {
           onSelect: () => selectPage("master-database")
         },
         {
+          title: "Backup & Restore",
+          isActive: page === "master-backups",
+          onSelect: () => selectPage("master-backups")
+        },
+        {
           title: "Tenant Databases",
           isActive: page === "tenant-database",
           onSelect: () => selectPage("tenant-database")
+        },
+        {
+          title: "Tenant Backup & Restore",
+          isActive: page === "tenant-backups",
+          onSelect: () => selectPage("tenant-backups")
         },
         {
           title: "Storage Manager",
@@ -340,6 +381,7 @@ export function SaDesk() {
             ) : null}
             {page === "task-manager" ? <TaskManagerWorkspace /> : null}
             {page === "zuno" ? <ZunoWorkspace /> : null}
+            {page === "zetro" ? <ZetroAdminWorkspace /> : null}
             {page.startsWith("project-manager-") ? (
               <ProjectManagerWorkspaceHost workspaceId={page.slice("project-manager-".length)} />
             ) : null}
@@ -353,8 +395,18 @@ export function SaDesk() {
             {page === "tenant-access" ? <TenantAccessWorkspace /> : null}
             {page === "tenant-users" ? <TenantUserWorkspace mode="super-admin" /> : null}
             {page === "industries" ? <IndustryWorkspace /> : null}
-            {page === "master-database" ? <MasterDatabaseWorkspace /> : null}
-            {page === "tenant-database" ? <TenantDatabaseWorkspace /> : null}
+            {page === "master-database" ? (
+              <MasterDatabaseWorkspace onOpenBackups={() => selectPage("master-backups")} />
+            ) : null}
+            {page === "master-backups" ? (
+              <MasterDatabaseBackupsWorkspace onBack={() => selectPage("master-database")} />
+            ) : null}
+            {page === "tenant-database" ? (
+              <TenantDatabaseWorkspace onOpenBackups={openTenantBackups} />
+            ) : null}
+            {page === "tenant-backups" ? (
+              <TenantDatabaseBackupsRoute onBack={() => selectPage("tenant-database")} />
+            ) : null}
             {page === "queue-management" ? <QueueManagementWorkspace /> : null}
             {page === "storage-manager" ? <StorageManagerWorkspace /> : null}
             {page === "access" ? <AccessControlWorkspace /> : null}
@@ -374,6 +426,7 @@ function pageFromUrl(pathname: string): SaPage {
     page === "project-manager-registry" ||
     page === "project-manager-ideas" ||
     page === "zuno" ||
+    page === "zetro" ||
     page === "tenants" ||
     page === "domains" ||
     page === "plans" ||
@@ -385,7 +438,9 @@ function pageFromUrl(pathname: string): SaPage {
     page === "tenant-users" ||
     page === "industries" ||
     page === "master-database" ||
+    page === "master-backups" ||
     page === "tenant-database" ||
+    page === "tenant-backups" ||
     page === "queue-management" ||
     page === "storage-manager" ||
     page === "access" ||

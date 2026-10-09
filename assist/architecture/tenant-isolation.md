@@ -116,6 +116,15 @@ Each tenant should have a planned backup and restore strategy:
 - Restore testing.
 - Point-in-time recovery where possible.
 
+The Super Admin Tenant Databases workspace can create and download SQL backups for one selected
+tenant. It also accepts SQL files created by this application for that tenant's current database.
+Uploaded files are checked before they are stored in the tenant's private backup folder. A restore
+requires a selected completed backup file and an explicit Fresh or Append choice. Both modes target
+that tenant's separate restore sandbox; neither mode changes the live tenant database. Fresh
+replaces the sandbox contents after a staging restore, while Append inserts rows into an existing
+sandbox and rolls back on conflicts. Backup downloads, uploads, and restore requests are restricted
+to Super Admin and checked against the selected tenant ID and database name.
+
 ## Security Notes
 
 - Tenant database credentials should not be exposed to clients.

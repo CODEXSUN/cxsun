@@ -49,6 +49,8 @@ export type TenantDatabaseStatus = {
   host: string;
   migrations: DatabaseMigrationRow[];
   port: number;
+  restoreDatabaseName: string;
+  restoreSandboxExists: boolean;
   runs: DatabaseMaintenanceRun[];
   status: "online" | "offline";
   tableCount: number;
@@ -70,4 +72,14 @@ export type TenantDatabaseActionPayload = {
   note?: string | undefined;
   restoreMode?: "live" | "sandbox" | undefined;
   tenantId?: number | undefined;
+};
+
+export type TenantBackupFile = {
+  available: boolean;
+  backupId: string;
+  createdAt: string;
+  fileName: string;
+  runId: number;
+  sizeBytes: number;
+  source: "generated" | "uploaded";
 };

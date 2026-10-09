@@ -175,6 +175,10 @@ module work.
 
 ## Strict App Module Shape
 
+Zetro's runtime business rules are in `apps/zetro/agent/skills.md`. Read
+`apps/zetro/agent/README.md` before changing its skills, prompts, or review log.
+The root `AGENTS.md` points repository agents to these rules.
+
 Business apps keep backend and frontend modules paired:
 
 ```text

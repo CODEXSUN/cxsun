@@ -3,11 +3,9 @@ import { MasterDatabaseForm } from "./master-database.form";
 import { useMasterDatabaseMutations, useMasterDatabaseQuery } from "./master-database.hooks";
 import { MasterDatabaseList } from "./master-database.list";
 
-export function MasterDatabaseWorkspace() {
+export function MasterDatabaseWorkspace({ onOpenBackups }: { onOpenBackups: () => void }) {
   const query = useMasterDatabaseQuery();
   const mutations = useMasterDatabaseMutations();
-  const busy =
-    mutations.backup.isPending || mutations.migrate.isPending || mutations.restore.isPending;
   return (
     <WorkspacePage
       title="Master Database"
@@ -15,12 +13,12 @@ export function MasterDatabaseWorkspace() {
       technicalName="page.database.master"
       actions={
         <MasterDatabaseForm
-          busy={busy}
+          busy={mutations.migrate.isPending}
           loading={query.isLoading}
-          onBackup={() => mutations.backup.mutate()}
+          onBackup={onOpenBackups}
           onMigrate={() => mutations.migrate.mutate()}
           onRefresh={() => void query.refetch()}
-          onRestore={() => mutations.restore.mutate()}
+          onRestore={onOpenBackups}
         />
       }
     >

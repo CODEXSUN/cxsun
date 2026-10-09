@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import {
-  ArrowLeftIcon,
-  DownloadIcon,
-  RefreshCwIcon,
-  RotateCcwIcon,
-  UploadIcon
-} from "lucide-react";
+import { ArrowLeftIcon, DownloadIcon, RefreshCwIcon, RotateCcwIcon } from "lucide-react";
 import { GlobalLoader, StatusBadge } from "@cxsun/ui";
 import { Button } from "@cxsun/ui/components/button";
 import {
@@ -35,8 +29,7 @@ export function TenantDatabaseShowPage({
   onBack,
   onBackup,
   onMigrate,
-  onRefresh,
-  onRestore
+  onRefresh
 }: {
   busy: boolean;
   details: TenantDatabaseDetails | undefined;
@@ -46,7 +39,6 @@ export function TenantDatabaseShowPage({
   onBackup: () => void;
   onMigrate: () => void;
   onRefresh: () => void;
-  onRestore: () => void;
 }) {
   const [activeTab, setActiveTab] = useState("details");
   const latestRun = record.runs[0];
@@ -187,17 +179,7 @@ export function TenantDatabaseShowPage({
             onClick={onBackup}
           >
             <DownloadIcon className="size-4" />
-            Backup
-          </Button>
-          <Button
-            disabled={busy}
-            type="button"
-            variant="outline"
-            className="h-9 rounded-md"
-            onClick={onRestore}
-          >
-            <UploadIcon className="size-4" />
-            Restore
+            Backup & Restore
           </Button>
         </div>
       }

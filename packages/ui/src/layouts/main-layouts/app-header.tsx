@@ -18,7 +18,7 @@ export type AppHeaderBreadcrumb = {
 export type AppHeaderProps = {
   breadcrumbs: AppHeaderBreadcrumb[];
   homeHref: string;
-  name: string;
+  name?: string;
   className?: string;
 };
 
@@ -55,7 +55,9 @@ export function AppHeader({ breadcrumbs, homeHref, name, className }: AppHeaderP
           ))}
         </BreadcrumbList>
       </Breadcrumb>
-      <span className="shrink-0 text-sm font-medium text-muted-foreground">{name}</span>
+      {name ? (
+        <span className="shrink-0 text-sm font-medium text-muted-foreground">{name}</span>
+      ) : null}
     </header>
   );
 }

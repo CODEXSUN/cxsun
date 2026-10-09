@@ -6,13 +6,19 @@ Zetro is a tenant application with its own API and web modules. Platform compose
 
 Every chat request uses the signed tenant session and the tenant database selected by Platform. Platform checks that Zetro is enabled and that the active user has `zetro.chat.use`. The conversation API reads only conversations owned by that email. Closing a conversation in the UI soft deletes it; the transcript remains available for Super Admin review. If a balance grant is later revoked, stored assistant replies in conversations with successful balance lookups are redacted for that user. Logout clears the browser's Zetro query cache.
 
-The tenant database owns `zetro_conversations`, `zetro_messages`, `zetro_capability_grants`, `zetro_policy_events`, `zetro_tool_events`, `zetro_review_notes`, `zetro_approval_requests`, and `zetro_provider_settings`. No transcript or tenant provider credential is copied to the Platform master database. Platform access activity stores metadata only. The Zetro migrations are additive for existing tenants; run the tenant app migration after deployment.
+The tenant database owns `zetro_conversations`, `zetro_messages`, `zetro_interaction_logs`, `zetro_query_patterns`, `zetro_capability_grants`, `zetro_policy_events`, `zetro_tool_events`, `zetro_review_notes`, `zetro_approval_requests`, and `zetro_provider_settings`. No transcript or tenant provider credential is copied to the Platform master database. Platform access activity stores metadata only. The Zetro migrations are additive for existing tenants; run the tenant app migration after deployment.
+
+The `zetro.chat.v4` catalog change adds the tenant-local `zetro_query_patterns` table and a nullable `pattern_uuid` column to interaction logs. `zetro.chat.v5` records the daily, monthly, and aged sales patterns. The tenant migration function seeds all six built-in rows on an upgrade. It checks UUID, serial number, query contract, and active status for conflicts. These additive changes do not edit earlier logs or Billing data. On a restored local dump, verify six active rows with `SELECT uuid, serial_no, status FROM zetro_query_patterns ORDER BY serial_no`, confirm existing interaction row counts, and check that new requests populate `pattern_uuid`. Do not apply the migration to an unverified database target. The catalog and review page become available after the tracked tenant migration runs.
 
 ## Business scope and first capability
 
 The provider classifies each message as business chat, customer outstanding, or off topic. An invalid classification fails closed. General business chat has no tool access and is instructed not to claim it has read records. Off topic requests receive a short business scope response. The classifier does not grant permission.
 
+The versioned business rules and numbered query catalog live in `apps/zetro/agent/skills.md`. General business replies load this file at runtime and fail closed when it is unavailable. The production build copies it to `dist/apps/zetro/agent`. Each interaction log stores the user prompt, Zetro response or failure outcome, intent, pattern UUID, skill key, and SHA-256 rule hash. The tenant database mirrors the built-in catalog. Super Admin can review patterns and tenant-scoped interaction logs at `/sa/zetro` or through `/zetro/admin/tenants/:tenantId/patterns` and `/zetro/admin/tenants/:tenantId/interactions`. New catalog entries are drafts and cannot execute a tool. Review notes support human refinement; they do not change runtime rules or grants automatically.
+
 `billing.customer-outstanding.read` is the first tool capability. No role receives it by default. A Super Admin must activate a tenant local role grant, and the user must also have an active `billing.application.records.view` permission. This keeps staff without a grant from reading all customers. Zetro then checks that Billing is enabled and uses the trusted default company and financial year from the signed session. Billing calculates the balance through its Customer Summary owner. Zetro accepts only an exact customer name or code and formats the result itself; it does not generate SQL or ask the model to invent an amount. Ambiguous names require a code. This release has no write tool.
+
+The next read contracts are `billing.daily-summary.read`, `billing.monthly-summary.read`, and `billing.aged-sales.read`. They use the Billing dashboard owner and the same tenant, role grant, Billing permission, company, and financial year checks. Daily and monthly totals group by currency. They count confirmed sales and purchases and posted receipts and payments. Sales include export sales. The aged sales read shows up to ten oldest confirmed invoices with a remaining balance and an age of at least 30 days. It subtracts posted receipt allocations. These reads do not grant access by default. A Super Admin selects the exact role and capability in `/sa/zetro` and records a reason.
 
 Denied tool attempts create a tenant local event and a pending review request. Super Admin can review the request, record a decision, and separately grant or revoke the role capability. An approved request alone does not execute a tool or activate a role grant. The user must ask again after the grant is active. Failed lookups also create an event. Super Admin access to Zetro review is logged in Platform activity.
 
@@ -20,7 +26,10 @@ Denied tool attempts create a tenant local event and a pending review request. S
 
 These endpoints require a signed Super Admin session and are not exposed in the tenant client:
 
-- `GET/PUT /zetro/admin/tenants/:tenantId/grants` lists or changes role grants. A change requires `roleKey`, `status`, and `reason`.
+- `GET/PUT /zetro/admin/tenants/:tenantId/grants` lists or changes role grants. A change requires `roleKey`, `capabilityKey`, `status`, and `reason`.
+- `GET /zetro/admin/tenants/:tenantId/roles` lists active tenant roles for the grant control.
+- `GET/POST /zetro/admin/tenants/:tenantId/patterns` lists the numbered catalog or adds a review-only draft.
+- `GET /zetro/admin/tenants/:tenantId/interactions` lists recent prompts, responses, outcomes, and matched pattern UUIDs.
 - `GET /zetro/admin/tenants/:tenantId/grants/events` reads the grant and revoke history.
 - `GET /zetro/admin/tenants/:tenantId/conversations` lists transcripts, with optional `ownerEmail`.
 - `GET /zetro/admin/tenants/:tenantId/conversations/:id` reads a transcript and its notes and tool events.

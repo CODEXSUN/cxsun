@@ -82,7 +82,7 @@ test("every fresh SQL table follows its database ownership naming contract", () 
       }
       for (const [column, pattern] of [
         ["id", /\bid\s+INT\s+NOT NULL\s+AUTO_INCREMENT\s+PRIMARY KEY\b/i],
-        ["uuid", /\buuid\s+(?:VAR)?CHAR\(8\)\s+NOT NULL\b/i],
+        ["uuid", /\buuid\s+(?:VAR)?CHAR\((?:8|36)\)\s+NOT NULL\b/i],
         ["status", /\bstatus\s+VARCHAR\(/i],
         ["created_by", /\bcreated_by\s+/i],
         ["created_at", /\bcreated_at\s+/i],

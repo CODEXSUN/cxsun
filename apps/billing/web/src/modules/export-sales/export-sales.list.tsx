@@ -112,7 +112,20 @@ export function ExportSalesList({
                 {entries.map((exportSale) => (
                   <tr
                     key={exportSale.id}
-                    className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/20"
+                    aria-label={`View export sale ${exportSale.invoiceNumber}`}
+                    className="cursor-pointer border-b border-border/70 last:border-b-0 [&>td]:transition-colors hover:[&>td]:bg-muted/60 focus-visible:[&>td]:bg-muted/60 focus-visible:outline-none"
+                    onClick={(event) => {
+                      if ((event.target as Element).closest("button, input, a")) return;
+                      onView(exportSale);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onView(exportSale);
+                      }
+                    }}
+                    tabIndex={0}
                   >
                     <td className="px-4 py-2.5 text-center">
                       <input
@@ -124,15 +137,8 @@ export function ExportSalesList({
                         type="checkbox"
                       />
                     </td>
-                    <td className="px-4 py-2.5">
-                      <button
-                        className="font-semibold text-foreground underline-offset-4 hover:underline"
-                        onClick={() => onView(exportSale)}
-                        title="View export sale"
-                        type="button"
-                      >
-                        {exportSale.invoiceNumber}
-                      </button>
+                    <td className="px-4 py-2.5 font-semibold text-foreground">
+                      {exportSale.invoiceNumber}
                     </td>
                     {visibleColumns.date ? (
                       <td className="whitespace-nowrap px-4 py-2.5">
@@ -141,29 +147,7 @@ export function ExportSalesList({
                     ) : null}
                     {visibleColumns.customer ? (
                       <td className="px-4 py-2.5">
-                        <button
-                          className={cn(
-                            "font-medium underline-offset-4",
-                            canEditEntries &&
-                              (exportSale.status === "draft" || canEditFinalizedEntries)
-                              ? "hover:underline"
-                              : "cursor-not-allowed text-muted-foreground"
-                          )}
-                          disabled={
-                            !canEditEntries ||
-                            (exportSale.status !== "draft" && !canEditFinalizedEntries)
-                          }
-                          onClick={() => onEdit(exportSale)}
-                          title={
-                            canEditEntries &&
-                            (exportSale.status === "draft" || canEditFinalizedEntries)
-                              ? "Edit export sale"
-                              : "Only an Admin or Super Admin can edit this export sale"
-                          }
-                          type="button"
-                        >
-                          {exportSale.customerName}
-                        </button>
+                        <span className="font-medium">{exportSale.customerName}</span>
                       </td>
                     ) : null}
                     {visibleColumns.items ? (

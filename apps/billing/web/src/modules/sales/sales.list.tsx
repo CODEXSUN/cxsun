@@ -87,43 +87,28 @@ export function SalesList({
                 {entries.map((sale) => (
                   <tr
                     key={sale.id}
-                    className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/20"
+                    aria-label={`View sale ${sale.saleNumber}`}
+                    className="cursor-pointer border-b border-border/70 last:border-b-0 [&>td]:transition-colors hover:[&>td]:bg-muted/60 focus-visible:[&>td]:bg-muted/60 focus-visible:outline-none"
+                    onClick={(event) => {
+                      if ((event.target as Element).closest("button, input, a")) return;
+                      onView(sale);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onView(sale);
+                      }
+                    }}
+                    tabIndex={0}
                   >
-                    <td className="px-4 py-2.5">
-                      <button
-                        className="font-semibold text-foreground underline-offset-4 hover:underline"
-                        onClick={() => onView(sale)}
-                        title="View sale"
-                        type="button"
-                      >
-                        {sale.saleNumber}
-                      </button>
-                    </td>
+                    <td className="px-4 py-2.5 font-semibold text-foreground">{sale.saleNumber}</td>
                     {visibleColumns.date ? (
                       <td className="whitespace-nowrap px-4 py-2.5">{formatDate(sale.issuedOn)}</td>
                     ) : null}
                     {visibleColumns.customer ? (
                       <td className="px-4 py-2.5">
-                        <button
-                          className={cn(
-                            "font-medium underline-offset-4",
-                            canEditEntries && (sale.status === "draft" || canEditFinalizedEntries)
-                              ? "hover:underline"
-                              : "cursor-not-allowed text-muted-foreground"
-                          )}
-                          disabled={
-                            !canEditEntries || (sale.status !== "draft" && !canEditFinalizedEntries)
-                          }
-                          onClick={() => onEdit(sale)}
-                          title={
-                            canEditEntries && (sale.status === "draft" || canEditFinalizedEntries)
-                              ? "Edit sale"
-                              : "Only an Admin or Super Admin can edit this sale"
-                          }
-                          type="button"
-                        >
-                          {sale.customerName}
-                        </button>
+                        <span className="font-medium">{sale.customerName}</span>
                       </td>
                     ) : null}
                     {visibleColumns.items ? (

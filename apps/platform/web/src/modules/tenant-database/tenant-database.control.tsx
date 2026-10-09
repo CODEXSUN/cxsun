@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  DatabaseIcon,
-  DownloadIcon,
-  RefreshCwIcon,
-  RotateCcwIcon,
-  UploadIcon,
-  WrenchIcon
-} from "lucide-react";
+import { DatabaseIcon, DownloadIcon, RefreshCwIcon, RotateCcwIcon, WrenchIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -27,7 +20,6 @@ import { useTenantDatabaseDetailsQuery, useTenantDatabaseMutations } from "./ten
 
 export function TenantDatabaseControl({ tenantId }: { tenantId: number }) {
   const [confirmReinstall, setConfirmReinstall] = useState(false);
-  const [confirmRestore, setConfirmRestore] = useState(false);
   const details = useTenantDatabaseDetailsQuery(tenantId, "manual");
   const mutations = useTenantDatabaseMutations();
   const busy = Object.values(mutations).some((mutation) => mutation.isPending);
@@ -56,18 +48,13 @@ export function TenantDatabaseControl({ tenantId }: { tenantId: number }) {
     });
   };
 
-  const runMaintenance = (operation: "backup" | "migrate" | "restore") => {
+  const runMaintenance = (operation: "backup" | "migrate") => {
     const mutation = mutations[operation];
     mutation.mutate(tenantId, {
       onError: (error) => showError(`Database ${operation} failed`, error),
       onSuccess: () => {
-        setConfirmRestore(false);
         toast.success(
-          operation === "restore"
-            ? "Sandbox restore requested"
-            : operation === "backup"
-              ? "Database backup requested"
-              : "Tenant migrations applied"
+          operation === "backup" ? "Database backup requested" : "Tenant migrations applied"
         );
         void details.refetch();
       }
@@ -198,15 +185,10 @@ export function TenantDatabaseControl({ tenantId }: { tenantId: number }) {
                 <DownloadIcon className="size-4" />
                 Backup
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={busy}
-                onClick={() => setConfirmRestore(true)}
-              >
-                <UploadIcon className="size-4" />
-                Restore sandbox
-              </Button>
+              <p className="text-sm text-muted-foreground">
+                Use Super Admin → Database → Tenant Databases to select a backup file and restore it
+                to a sandbox.
+              </p>
             </div>
           </WorkspaceShowCard>
           <WorkspaceShowCard title="Recent database runs">
@@ -249,24 +231,6 @@ export function TenantDatabaseControl({ tenantId }: { tenantId: number }) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={runReinstall}>Re-install</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={confirmRestore} onOpenChange={setConfirmRestore}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Restore the latest backup to a sandbox?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The live tenant database will not be overwritten. The queued restore uses the
-              configured sandbox target.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => runMaintenance("restore")}>
-              Request sandbox restore
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

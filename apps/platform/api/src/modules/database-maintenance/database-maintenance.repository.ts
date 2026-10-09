@@ -22,6 +22,9 @@ export class DatabaseMaintenanceRepository {
 
   async masterStatus() {
     const databaseName = platformDatabaseName();
+    const restoreDatabaseName =
+      env.CXSUN_RESTORE_TEST_DB_NAME ||
+      (env.NODE_ENV === "production" ? null : `${databaseName}_restore_sandbox`);
     const probe = await this.probeDatabase({
       databaseName,
       host: env.DB_HOST,
@@ -36,12 +39,79 @@ export class DatabaseMaintenanceRepository {
       host: env.DB_HOST,
       migrations: await this.masterMigrations(databaseName),
       port: env.DB_PORT,
-      restoreStatus: process.env.CXSUN_RESTORE_TEST_DB_NAME
-        ? ("sandbox-configured" as const)
-        : ("not-configured" as const),
+      restoreDatabaseName,
+      restoreSandboxExists: restoreDatabaseName
+        ? await this.masterSandboxExists(restoreDatabaseName).catch(() => false)
+        : false,
+      restoreStatus:
+        restoreDatabaseName && restoreDatabaseName.toLowerCase() !== databaseName.toLowerCase()
+          ? ("sandbox-configured" as const)
+          : ("not-configured" as const),
       runs: await this.runs("master", "master"),
       ...probe
     };
+  }
+
+  async activeMasterRestore() {
+    const row = await getPlatformDatabase()
+      .selectFrom("database_maintenance_runs")
+      .select("id")
+      .where("database_scope", "=", "master")
+      .where("target_key", "=", "master")
+      .where("operation", "=", "restore")
+      .where("status", "in", ["requested", "running"])
+      .limit(1)
+      .executeTakeFirst();
+    return Boolean(row);
+  }
+
+  async activeTenantRestore(tenantId: number) {
+    const row = await getPlatformDatabase()
+      .selectFrom("database_maintenance_runs")
+      .select("id")
+      .where("database_scope", "=", "tenant")
+      .where("target_key", "=", String(tenantId))
+      .where("operation", "=", "restore")
+      .where("status", "in", ["requested", "running"])
+      .limit(1)
+      .executeTakeFirst();
+    return Boolean(row);
+  }
+
+  async tenantSandboxExists(tenant: Tenant, databaseName: string) {
+    const connection = await createConnection({
+      host: tenant.dbHost || env.DB_HOST,
+      password: resolveTenantDatabasePassword(tenant),
+      port: tenant.dbPort || env.DB_PORT,
+      user: tenant.dbUser || env.DB_USER
+    });
+    try {
+      const [rows] = await connection.query(
+        "SELECT schema_name FROM information_schema.schemata WHERE schema_name = ?",
+        [databaseName]
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    } finally {
+      await connection.end();
+    }
+  }
+
+  async masterSandboxExists(databaseName: string) {
+    const connection = await createConnection({
+      host: env.DB_HOST,
+      password: env.DB_PASSWORD,
+      port: env.DB_PORT,
+      user: env.DB_USER
+    });
+    try {
+      const [rows] = await connection.query(
+        "SELECT schema_name FROM information_schema.schemata WHERE schema_name = ?",
+        [databaseName]
+      );
+      return Array.isArray(rows) && rows.length > 0;
+    } finally {
+      await connection.end();
+    }
   }
 
   async tenantStatuses() {
@@ -67,6 +137,11 @@ export class DatabaseMaintenanceRepository {
       host: tenant.dbHost || env.DB_HOST,
       migrations: await this.tenantMigrations(tenant),
       port: tenant.dbPort || env.DB_PORT,
+      restoreDatabaseName: tenantRestoreSandboxName(tenant.dbName, tenant.id),
+      restoreSandboxExists: await this.tenantSandboxExists(
+        tenant,
+        tenantRestoreSandboxName(tenant.dbName, tenant.id)
+      ).catch(() => false),
       runs: await this.runs("tenant", String(tenant.id)),
       tenantCode: tenant.tenantCode,
       tenantId: tenant.id,
@@ -152,6 +227,34 @@ export class DatabaseMaintenanceRepository {
       .limit(1)
       .execute();
     return rows[0] ? toRun(rows[0]) : null;
+  }
+
+  async completedMasterBackups() {
+    const rows = await getPlatformDatabase()
+      .selectFrom("database_maintenance_runs")
+      .selectAll()
+      .where("database_scope", "=", "master")
+      .where("target_key", "=", "master")
+      .where("operation", "=", "backup")
+      .where("status", "=", "completed")
+      .orderBy("id", "desc")
+      .limit(100)
+      .execute();
+    return rows.map(toRun);
+  }
+
+  async completedTenantBackups(tenantId: number) {
+    const rows = await getPlatformDatabase()
+      .selectFrom("database_maintenance_runs")
+      .selectAll()
+      .where("database_scope", "=", "tenant")
+      .where("target_key", "=", String(tenantId))
+      .where("operation", "=", "backup")
+      .where("status", "=", "completed")
+      .orderBy("id", "desc")
+      .limit(100)
+      .execute();
+    return rows.map(toRun);
   }
 
   private async runs(scope: DatabaseScope, targetKey: string) {
@@ -334,6 +437,11 @@ export class DatabaseMaintenanceRepository {
   }
 }
 
+export function tenantRestoreSandboxName(databaseName: string, tenantId: number) {
+  const suffix = `_restore_${tenantId}`;
+  return `${databaseName.slice(0, 64 - suffix.length)}${suffix}`;
+}
+
 function toIsoDate(value: unknown) {
   if (!value) return null;
   const date = new Date(value as string | Date);
@@ -363,7 +471,7 @@ function toRun(row: {
   created_at: Date | string;
   database_name: string;
   database_scope: DatabaseScope;
-  details_json: string;
+  details_json: string | Record<string, unknown>;
   id: number;
   operation: DatabaseOperation;
   status: DatabaseRunStatus;
@@ -384,9 +492,9 @@ function toRun(row: {
   };
 }
 
-function parseDetails(value: string) {
+function parseDetails(value: string | Record<string, unknown>) {
   try {
-    const parsed = JSON.parse(value);
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
     return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};

@@ -112,7 +112,20 @@ export function QuotationList({
                 {entries.map((quotation, _index) => (
                   <tr
                     key={quotation.id}
-                    className="border-b border-border/70 transition-colors last:border-b-0 hover:bg-muted/20"
+                    aria-label={`View quotation ${quotation.quotationNumber}`}
+                    className="cursor-pointer border-b border-border/70 last:border-b-0 [&>td]:transition-colors hover:[&>td]:bg-muted/60 focus-visible:[&>td]:bg-muted/60 focus-visible:outline-none"
+                    onClick={(event) => {
+                      if ((event.target as Element).closest("button, input, a")) return;
+                      onView(quotation);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onView(quotation);
+                      }
+                    }}
+                    tabIndex={0}
                   >
                     <td className="px-4 py-2.5 text-center">
                       <input
@@ -129,47 +142,13 @@ export function QuotationList({
                         type="checkbox"
                       />
                     </td>
-                    <td className="px-4 py-2.5">
-                      <button
-                        className="font-semibold text-foreground underline-offset-4 hover:underline"
-                        onClick={() => onView(quotation)}
-                        title="View quotation"
-                        type="button"
-                      >
-                        {quotation.quotationNumber}
-                      </button>
+                    <td className="px-4 py-2.5 font-semibold text-foreground">
+                      {quotation.quotationNumber}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5">{formatDate(quotation.date)}</td>
                     {visibleColumns.customer ? (
                       <td className="px-4 py-2.5">
-                        <button
-                          className={cn(
-                            "font-medium underline-offset-4",
-                            canEditEntries &&
-                              !quotation.generatedSalesInvoiceNo &&
-                              (quotation.status === "draft" || canEditFinalizedEntries)
-                              ? "hover:underline"
-                              : "cursor-not-allowed text-muted-foreground"
-                          )}
-                          disabled={
-                            Boolean(quotation.generatedSalesInvoiceNo) ||
-                            !canEditEntries ||
-                            (quotation.status !== "draft" && !canEditFinalizedEntries)
-                          }
-                          onClick={() => onEdit(quotation)}
-                          title={
-                            canEditEntries &&
-                            !quotation.generatedSalesInvoiceNo &&
-                            (quotation.status === "draft" || canEditFinalizedEntries)
-                              ? "Edit quotation"
-                              : quotation.generatedSalesInvoiceNo
-                                ? "Linked quotations cannot be edited"
-                                : "Only an Admin or Super Admin can edit this quotation"
-                          }
-                          type="button"
-                        >
-                          {quotation.customerName}
-                        </button>
+                        <span className="font-medium">{quotation.customerName}</span>
                       </td>
                     ) : null}
                     {visibleColumns.items ? (

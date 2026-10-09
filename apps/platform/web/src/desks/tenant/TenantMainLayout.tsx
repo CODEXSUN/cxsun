@@ -143,9 +143,11 @@ function TenantMainShell({
           <AppHeader
             breadcrumbs={[{ label: workspaceName, href: homeHref }, { label: headerTitle }]}
             homeHref={homeHref}
-            name={brand.title}
           />
-          <div aria-label="Workspace canvas" className="min-h-0 flex-1 overflow-y-auto">
+          <div
+            aria-label="Workspace canvas"
+            className="workspace-scroll min-h-0 flex-1 overflow-y-auto"
+          >
             {children}
           </div>
         </SidebarInset>

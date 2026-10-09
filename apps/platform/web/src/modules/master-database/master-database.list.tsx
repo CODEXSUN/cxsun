@@ -122,7 +122,21 @@ export function MasterDatabaseList({ record }: { record: MasterDatabaseStatus | 
           <tbody>
             {record.runs.map((run) => (
               <tr className="border-t" key={run.uuid}>
-                <td className="px-4 py-3 font-medium">{run.operation}</td>
+                <td className="px-4 py-3 font-medium">
+                  {run.operation}
+                  {typeof run.details.error === "string" && run.status === "failed" && (
+                    <span className="block max-w-md text-xs font-normal text-destructive">
+                      {run.details.error}
+                    </span>
+                  )}
+                  {typeof run.details.restoredDatabaseName === "string" &&
+                    run.operation === "restore" &&
+                    run.status === "completed" && (
+                      <span className="block text-xs font-normal text-muted-foreground">
+                        Sandbox: {run.details.restoredDatabaseName}
+                      </span>
+                    )}
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge
                     tone={

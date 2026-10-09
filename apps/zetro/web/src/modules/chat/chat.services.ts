@@ -1,4 +1,5 @@
 import type { ZetroConversation, ZetroConversationDetail } from "./chat.types";
+import type { ZetroTextAttachment } from "./chat.attachment";
 
 type Envelope<T> = { data: T; success: true } | { error: { message: string }; success: false };
 
@@ -34,7 +35,15 @@ export const listZetroConversations = () =>
   zetroRequest<ZetroConversation[]>("/zetro/conversations");
 export const getZetroConversation = (id: number) =>
   zetroRequest<ZetroConversationDetail>(`/zetro/conversations/${id}`);
-export const sendZetroMessage = (conversationId: number | null, prompt: string) =>
-  zetroRequest<ZetroConversationDetail>("/zetro/messages", "POST", { conversationId, prompt });
+export const sendZetroMessage = (
+  conversationId: number | null,
+  prompt: string,
+  attachment?: ZetroTextAttachment
+) =>
+  zetroRequest<ZetroConversationDetail>("/zetro/messages", "POST", {
+    conversationId,
+    prompt,
+    ...(attachment ? { attachment } : {})
+  });
 export const deleteZetroConversation = (id: number) =>
   zetroRequest<{ deleted: true }>(`/zetro/conversations/${id}`, "DELETE");

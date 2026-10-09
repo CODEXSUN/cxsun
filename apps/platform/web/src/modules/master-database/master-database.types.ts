@@ -26,10 +26,22 @@ export type MasterDatabaseStatus = {
   migrations: DatabaseMigrationRow[];
   port: number;
   restoreStatus: "not-configured" | "sandbox-configured";
+  restoreDatabaseName: string | null;
+  restoreSandboxExists: boolean;
   runs: DatabaseMaintenanceRun[];
   status: "online" | "offline";
   tableCount: number;
   version: string;
+};
+
+export type MasterBackupFile = {
+  available: boolean;
+  backupId: string;
+  createdAt: string;
+  fileName: string;
+  runId: number;
+  sizeBytes: number;
+  source: "generated" | "uploaded";
 };
 
 export type DatabaseActionPayload = {

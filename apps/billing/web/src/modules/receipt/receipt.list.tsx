@@ -69,9 +69,21 @@ export function ReceiptList({
               <tbody>
                 {entries.map((receipt) => (
                   <tr
-                    className="cursor-pointer border-b border-border/70 transition-colors last:border-0 hover:bg-muted/20"
+                    aria-label={`View receipt ${receipt.receiptNumber}`}
+                    className="cursor-pointer border-b border-border/70 last:border-0 [&>td]:transition-colors hover:[&>td]:bg-muted/60 focus-visible:[&>td]:bg-muted/60 focus-visible:outline-none"
                     key={receipt.id}
-                    onClick={() => onView(receipt)}
+                    onClick={(event) => {
+                      if ((event.target as Element).closest("button, input, a")) return;
+                      onView(receipt);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onView(receipt);
+                      }
+                    }}
+                    tabIndex={0}
                   >
                     <td className="px-4 py-3 font-semibold">{receipt.receiptNumber}</td>
                     <td className="px-4 py-3">{formatReceiptDate(receipt.receiptDate)}</td>
@@ -84,7 +96,7 @@ export function ReceiptList({
                     <td className="px-4 py-3">
                       <ReceiptStatus receipt={receipt} />
                     </td>
-                    <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
+                    <td className="px-4 py-3">
                       <WorkspaceRowActions
                         actions={[
                           {

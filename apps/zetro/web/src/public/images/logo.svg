@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1333 1321" fill="none">
+  <title>Zetro</title>
+  <defs>
+    <linearGradient id="zetro-mark" x1="220" y1="143" x2="940" y2="1190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="0.58" stop-color="#0EA5E9"/>
+      <stop offset="1" stop-color="#0CBFB5"/>
+    </linearGradient>
+    <linearGradient id="zetro-spark" x1="1050" y1="540" x2="1290" y2="840" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD166"/>
+      <stop offset="1" stop-color="#FF7A59"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#zetro-mark)" d="M789.55 268.85c-24.09 292.54-39.59 419.98-25.73 612.7 13.86 192.72 178.35 176.71 293.23 104.45-113.39 118.37-158.71 178.9-269.45 281.4-110.73 102.5-275.03 43.03-271.38-141 3.65-184.02 54.69-528.17 55.8-730.09-90.04 90.51-251.27 282.23-339.61 386.09-107.29 126.15-330.91.4-175.48-190.45 117.94-144.82 286.57-325.47 426.89-481.71 162.63-181.08 329.81-133.94 305.72 158.61Z"/>
+  <path fill="url(#zetro-spark)" d="M1167.5 519.5c24.2 102.7 58.3 136.8 161 168.3-102.7 31.5-136.8 65.6-161 168.3-24.2-102.7-58.3-136.8-161-168.3 102.7-31.5 136.8-65.6 161-168.3Z"/>
+</svg>

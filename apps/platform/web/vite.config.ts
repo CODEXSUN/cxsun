@@ -70,6 +70,30 @@ export default defineConfig(({ command, mode }) => {
           configDir,
           "../../billing/web/src/modules/reports/index.ts"
         ),
+        "@cxsun/billing-web/modules/quotation": resolve(
+          configDir,
+          "../../billing/web/src/modules/quotation/index.ts"
+        ),
+        "@cxsun/billing-web/modules/sales": resolve(
+          configDir,
+          "../../billing/web/src/modules/sales/index.ts"
+        ),
+        "@cxsun/billing-web/modules/purchase": resolve(
+          configDir,
+          "../../billing/web/src/modules/purchase/index.ts"
+        ),
+        "@cxsun/billing-web/modules/export-sales": resolve(
+          configDir,
+          "../../billing/web/src/modules/export-sales/index.ts"
+        ),
+        "@cxsun/billing-web/modules/receipt": resolve(
+          configDir,
+          "../../billing/web/src/modules/receipt/index.ts"
+        ),
+        "@cxsun/billing-web/modules/payment": resolve(
+          configDir,
+          "../../billing/web/src/modules/payment/index.ts"
+        ),
         "@cxsun/crm-web/modules/enquiry": resolve(
           configDir,
           "../../crm/web/src/modules/enquiry/index.ts"
@@ -77,6 +101,10 @@ export default defineConfig(({ command, mode }) => {
         "@cxsun/zetro-web/modules/provider": resolve(
           configDir,
           "../../zetro/web/src/modules/provider/index.ts"
+        ),
+        "@cxsun/zetro-web/modules/admin": resolve(
+          configDir,
+          "../../zetro/web/src/modules/admin/index.ts"
         ),
         "@cxsun/zetro-web/modules/chat": resolve(
           configDir,

@@ -21,7 +21,6 @@ import {
   RocketIcon,
   Settings2Icon,
   ShieldCheckIcon,
-  SparklesIcon,
   UserRoundIcon
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -74,6 +73,7 @@ import { publishDesktopWorkspace } from "../../shared/desktop/desktop-bridge";
 import { publishAccountingYear, publishCompanyContext } from "../../shared/tenant/runtime-context";
 import { blogEditorHost } from "../../modules/blog/blog-host";
 import { useCrmNavigationCounts } from "@cxsun/crm-web/modules/enquiry/hooks";
+import { ZetroLogo } from "@cxsun/zetro-web/logo";
 import type { EnquiryReportFilters } from "@cxsun/crm-web/modules/enquiry";
 import { auditorClientGateway } from "../../modules/auditor/auditor-host";
 
@@ -1391,7 +1391,7 @@ function LandingDesk({
         : appId === "crm"
           ? ContactRoundIcon
           : appId === "zetro"
-            ? SparklesIcon
+            ? ZetroLogo
             : appId === "frappe"
               ? RefreshCwIcon
               : appId === "accounts"
@@ -1407,7 +1407,7 @@ function LandingDesk({
         : appId === "crm"
           ? "bg-rose-600 text-white"
           : appId === "zetro"
-            ? "bg-fuchsia-600 text-white"
+            ? "border border-border bg-white"
             : appId === "frappe"
               ? "bg-teal-600 text-white"
               : appId === "accounts"
@@ -1434,7 +1434,7 @@ function LandingDesk({
                   : "Application"
   })) satisfies Array<{
     description: string;
-    icon: typeof LayoutDashboardIcon;
+    icon: ComponentType<{ className?: string }>;
     iconClass: string;
     id: PlatformAppId;
     label: string;

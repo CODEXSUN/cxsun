@@ -3,6 +3,14 @@ import { sql, type Kysely } from "kysely";
 import { AppError } from "@cxsun/framework/errors";
 import type { ZetroConversation, ZetroDatabase, ZetroMessage } from "./chat.types.js";
 
+export type ZetroInteraction = {
+  intent: ZetroDatabase["zetro_interaction_logs"]["intent"];
+  skillKey: string | null;
+  skillDecision: ZetroDatabase["zetro_interaction_logs"]["skill_decision"];
+  rulesHash: string;
+  patternUuid: string | null;
+};
+
 export class ZetroChatRepository {
   constructor(private readonly database: Kysely<ZetroDatabase>) {}
 
@@ -46,21 +54,23 @@ export class ZetroChatRepository {
     }));
   }
 
-  async hasAllowedToolResult(conversationId: number) {
-    const event = await this.database
+  async allowedCapabilities(conversationId: number) {
+    const events = await this.database
       .selectFrom("zetro_tool_events")
-      .select("id")
+      .select("capability_key")
       .where("conversation_id", "=", conversationId)
       .where("decision", "=", "allowed")
-      .executeTakeFirst();
-    return Boolean(event);
+      .distinct()
+      .execute();
+    return events.map((event) => event.capability_key);
   }
 
   async saveReply(
     ownerEmail: string,
     conversationId: number | null,
     prompt: string,
-    reply: string
+    reply: string,
+    interaction: ZetroInteraction
   ) {
     return this.database.transaction().execute(async (transaction) => {
       let id = conversationId;
@@ -102,12 +112,54 @@ export class ZetroChatRepository {
         ])
         .execute();
       await transaction
+        .insertInto("zetro_interaction_logs")
+        .values({
+          uuid: randomBytes(4).toString("hex"),
+          conversation_id: id,
+          actor_email: ownerEmail,
+          prompt_text: prompt,
+          response_text: reply,
+          intent: interaction.intent,
+          skill_key: interaction.skillKey,
+          skill_decision: interaction.skillDecision,
+          outcome: "completed",
+          error_code: null,
+          rules_hash: interaction.rulesHash,
+          pattern_uuid: interaction.patternUuid
+        })
+        .execute();
+      await transaction
         .updateTable("zetro_conversations")
         .set({ updated_at: sql`CURRENT_TIMESTAMP` })
         .where("id", "=", id)
         .execute();
       return id;
     });
+  }
+
+  async logFailed(
+    ownerEmail: string,
+    prompt: string,
+    interaction: ZetroInteraction,
+    errorCode: string
+  ) {
+    await this.database
+      .insertInto("zetro_interaction_logs")
+      .values({
+        uuid: randomBytes(4).toString("hex"),
+        conversation_id: null,
+        actor_email: ownerEmail,
+        prompt_text: prompt,
+        response_text: null,
+        intent: interaction.intent,
+        skill_key: interaction.skillKey,
+        skill_decision: interaction.skillDecision,
+        outcome: "failed",
+        error_code: errorCode,
+        rules_hash: interaction.rulesHash,
+        pattern_uuid: interaction.patternUuid
+      })
+      .execute();
   }
 
   async delete(id: number, ownerEmail: string) {

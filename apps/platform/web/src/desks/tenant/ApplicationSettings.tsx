@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import {
   ArrowUpRightIcon,
   Building2Icon,
@@ -7,10 +7,10 @@ import {
   MoonIcon,
   PaletteIcon,
   Settings2Icon,
-  SparklesIcon,
   SunIcon
 } from "lucide-react";
 import { ZetroProviderSettingsWorkspace } from "@cxsun/zetro-web/modules/provider";
+import { ZetroLogo } from "@cxsun/zetro-web/logo";
 import { designSystemVariants } from "@cxsun/ui/design-system";
 import type { DesignSystemVariantId } from "@cxsun/ui/design-system";
 import {
@@ -93,7 +93,7 @@ export function ApplicationSettings({
           {zetroEnabled ? (
             <SettingsNavigationButton
               active={section === "zetro"}
-              icon={SparklesIcon}
+              icon={ZetroLogo}
               label="Zetro"
               onClick={() => setSection("zetro")}
             />
@@ -203,7 +203,7 @@ function SettingsNavigationButton({
   onClick
 }: {
   active: boolean;
-  icon: typeof Settings2Icon;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   onClick: () => void;
 }) {
@@ -214,7 +214,9 @@ function SettingsNavigationButton({
       onClick={onClick}
       type="button"
     >
-      <Icon aria-hidden="true" className="size-4 shrink-0" />
+      <span aria-hidden="true" className="size-4 shrink-0">
+        <Icon className="size-4" />
+      </span>
       {label}
     </button>
   );

@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./modules/chat": "./src/modules/chat/index.ts",
-    "./modules/provider": "./src/modules/provider/index.ts"
+    "./modules/admin": "./src/modules/admin/index.ts",
+    "./modules/provider": "./src/modules/provider/index.ts",
+    "./logo": "./src/components/zetro-logo.tsx"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

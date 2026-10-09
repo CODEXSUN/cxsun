@@ -12,15 +12,18 @@ import type { TenantDatabaseStatus } from "./tenant-database.types";
 
 type TenantDatabaseView = { mode: "list" } | { mode: "show"; record: TenantDatabaseStatus };
 
-export function TenantDatabaseWorkspace() {
+export function TenantDatabaseWorkspace({
+  onOpenBackups
+}: {
+  onOpenBackups: (tenantId: number) => void;
+}) {
   const [view, setView] = useState<TenantDatabaseView>({ mode: "list" });
   const query = useTenantDatabaseQuery();
   const detailsQuery = useTenantDatabaseDetailsQuery(
     view.mode === "show" ? view.record.tenantId : null
   );
   const mutations = useTenantDatabaseMutations();
-  const busy =
-    mutations.backup.isPending || mutations.migrate.isPending || mutations.restore.isPending;
+  const busy = mutations.migrate.isPending;
   const selectedRecord =
     view.mode === "show"
       ? (detailsQuery.data ??
@@ -36,13 +39,12 @@ export function TenantDatabaseWorkspace() {
         loading={query.isFetching || detailsQuery.isFetching}
         record={selectedRecord}
         onBack={() => setView({ mode: "list" })}
-        onBackup={() => mutations.backup.mutate(selectedRecord.tenantId)}
+        onBackup={() => onOpenBackups(selectedRecord.tenantId)}
         onMigrate={() => mutations.migrate.mutate(selectedRecord.tenantId)}
         onRefresh={() => {
           void query.refetch();
           void detailsQuery.refetch();
         }}
-        onRestore={() => mutations.restore.mutate(selectedRecord.tenantId)}
       />
     );
   }
@@ -60,6 +62,7 @@ export function TenantDatabaseWorkspace() {
         loading={query.isFetching}
         records={query.data ?? []}
         onView={(record) => setView({ mode: "show", record })}
+        onBackups={(record) => onOpenBackups(record.tenantId)}
       />
     </WorkspacePage>
   );
